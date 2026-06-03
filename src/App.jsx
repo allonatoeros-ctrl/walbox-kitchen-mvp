@@ -63,30 +63,32 @@ export default function App() {
   return (
     <>
       {/* Dev Quick Link Bar - Helps switch between screens easily in the same tab */}
-      <nav className="dev-navigation">
-        <strong style={{ color: "white", marginRight: "10px" }}>⚡ DEV ROUTING:</strong>
-        <NavLink to="/entry" activePath={currentPath}>Entry (Cliente)</NavLink>
-        <NavLink to="/request?table=4" activePath={currentPath}>Request (Tavolo 4)</NavLink>
-        <NavLink to="/staff" activePath={currentPath}>Staff Dashboard</NavLink>
-        <NavLink to="/tv" activePath={currentPath}>Live TV Screen</NavLink>
-        
-        <button 
-          onClick={() => {
-            if (window.confirm("Resettare tutti i dati alle impostazioni di fabbrica (demo)?")) {
-              localStorage.clear();
-              window.location.reload();
-            }
-          }}
-          style={{ 
-            marginLeft: "auto", 
-            background: "rgba(255, 0, 127, 0.1)", 
-            borderColor: "rgba(255, 0, 127, 0.3)", 
-            color: "var(--accent-primary)" 
-          }}
-        >
-          Reset Demo 🔄
-        </button>
-      </nav>
+      {currentPath !== "/tv" && (
+        <nav className="dev-navigation">
+          <strong style={{ color: "white", marginRight: "10px" }}>⚡ DEV ROUTING:</strong>
+          <NavLink to="/entry" activePath={currentPath}>Entry (Cliente)</NavLink>
+          <NavLink to="/request?table=4" activePath={currentPath}>Request (Tavolo 4)</NavLink>
+          <NavLink to="/staff" activePath={currentPath}>Staff Dashboard</NavLink>
+          <NavLink to="/tv" activePath={currentPath}>Live TV Screen</NavLink>
+          
+          <button 
+            onClick={() => {
+              if (window.confirm("Resettare tutti i dati alle impostazioni di fabbrica (demo)?")) {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+            style={{ 
+              marginLeft: "auto", 
+              background: "rgba(255, 0, 127, 0.1)", 
+              borderColor: "rgba(255, 0, 127, 0.3)", 
+              color: "var(--accent-primary)" 
+            }}
+          >
+            Reset Demo 🔄
+          </button>
+        </nav>
+      )}
 
       {/* Render selected component */}
       {renderRoute()}
