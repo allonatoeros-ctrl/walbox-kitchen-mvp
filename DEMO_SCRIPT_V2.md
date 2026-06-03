@@ -8,10 +8,11 @@ Mostrare come Walbox trasforma la musica del locale in un'esperienza sociale e v
 1. **Per il cliente**: richiedere canzoni e mandare dediche in 3 click, senza scaricare app o registrarsi.
 2. **Per lo staff**: supervisionare e riordinare la coda con un'interfaccia immediata e senza interruzioni.
 3. **Per la sala**: intrattenere i clienti con un display TV cinematico e interattivo.
+4. **Per la viralità**: stimolare la condivisione social spontanea del locale tramite notifiche in tempo reale e cartoline digitali pronte per Instagram.
 
 ---
 
-## 2. Setup Prima della Demo
+## 2. Setup e Test Rapido Prima della Demo
 Prima di iniziare la presentazione, prepara le finestre sul tuo schermo (o proiettale su schermi diversi):
 *   **Finestra 1 (Smartphone Cliente)**: Apri un browser in modalità cellulare (es. tasto destro -> *Ispeziona* -> attiva la modalità mobile su Chrome) sull'URL: `http://localhost:5174/entry`
 *   **Finestra 2 (Dashboard Staff)**: Apri una scheda del browser standard sull'URL: `http://localhost:5174/staff`
@@ -19,6 +20,13 @@ Prima di iniziare la presentazione, prepara le finestre sul tuo schermo (o proie
 
 > [!IMPORTANT]
 > Nella barra di sviluppo in cima alla finestra dello **Staff** o del **Cliente**, clicca su **Reset Demo 🔄** e premi OK. Questo caricherà i dati dimostrativi di fabbrica e avvierà il player in uno stato pulito e sincronizzato.
+
+### **Test Rapido (1 Minuto Prima)**
+Per accertarti che le notifiche in tempo reale siano pronte:
+1. Digita il tavolo `4` sulla Finestra 1, cerca un brano ed invialo con una dedica.
+2. Sulla Finestra 2 (Staff) clicca su **Approva 👍**, quindi clicca su **Salta** per forzare la riproduzione del brano.
+3. Verifica che sulla Finestra 3 (TV) parta il takeover e che sulla Finestra 1 (Cliente) compaia istantaneamente l'overlay **LOOK UP!**.
+4. Chiudi l'alert cliccando su "Torna al Jukebox ✕" sul telefono e clicca nuovamente su **Reset Demo 🔄** per pulire la sessione prima dell'inizio ufficiale.
 
 ---
 
@@ -50,16 +58,25 @@ Prima di iniziare la presentazione, prepara le finestre sul tuo schermo (o proie
 *   **Cosa dire**:
     > "Allo stesso tempo, lo staff ha il controllo totale sulla console di amministrazione. Vediamo arrivare la richiesta del tavolo 4. Possiamo approvarla o rifiutarla per evitare canzoni inappropriate. Decido di approvarla e posso anche riordinare la coda con un click se voglio dare priorità a un tavolo speciale."
 
-### **Minuto 3:00 - 4:15 | L'Effetto Wow in Sala (Live TV Screen)**
+### **Minuto 3:00 - 4:00 | L'Effetto Wow in Sala (Live TV Screen)**
 *   **Azione**: Torna alla **Finestra 3 (TV)** e clicca su **Salta** nella dashboard dello staff (se vuoi forzare la riproduzione immediata del brano appena approvato).
 *   **Passaggi**:
-    1. Osserva la TV durante il cambio canzone: si attiva il **Takeover** di 4 secondi a schermo intero con la copertina gigante.
+    1. Osserva la TV durante il cambio canzone: si attiva il **Takeover** di 4 secondi a schermo intero con la copertina gigante e il banner *"📸 Condividi il tuo momento. Tagga @WalboxVenue"*.
     2. Mostra lo sfondo che cambia colore e si adatta al mood *"Party"* (tonalità neon fucsia/viola).
     3. Mostra il vinile 3D che scivola fuori dalla custodia e gira a tempo, l'equalizzatore animato e il ticker scorrevole in basso con la dedica del tavolo 4.
 *   **Cosa dire**:
-    > "Guardate lo schermo della TV in sala: non appena la canzone precedente finisce, parte una transizione a tutto schermo che annuncia il nuovo brano e mostra chi l'ha richiesto. Lo sfondo cambia tonalità per riflettere il mood della canzone. Il vinile gira ed in basso scorre il nastro delle dediche dei clienti. Questo crea un senso di community incredibile all'interno del locale."
+    > "Guardate lo schermo della TV in sala: non appena la canzone precedente finisce, parte una transizione a tutto schermo che annuncia il nuovo brano e mostra chi l'ha richiesto con un invito a condividere sui social. Lo sfondo cambia tonalità per riflettere il mood della canzone. Il vinile gira ed in basso scorre il nastro delle dediche dei clienti. Questo crea un senso di community incredibile all'interno del locale."
 
-### **Minuto 4:15 - 5:00 | Chiusura e Opzioni Gestore**
+### **Minuto 4:00 - 4:30 | Il Coinvolgimento Mobile: LOOK UP! & Story Canvas**
+*   **Azione**: Sposta rapidamente lo sguardo o la schermata sulla **Finestra 1 (Cliente)** per mostrare l'overlay apparso sul telefono del tavolo 4.
+*   **Passaggi**:
+    1. Mostra l'overlay **LOOK UP! 📺** con lo sfondo radiale colorato a tema.
+    2. Fai scorrere visivamente la card **Story Canvas** in formato 9:16 per mostrare la dedica, il tavolo e l'invito a fare uno screenshot per Instagram.
+    3. Clicca su **Torna al Jukebox ✕**.
+*   **Cosa dire**:
+    > "E guardate qui sul telefono del cliente! Nell'esatto istante in cui la canzone parte sulla TV, il telefono vibra e mostra questo avviso a tutto schermo: 'LOOK UP! La tua traccia è ora in onda'. L'applicazione ha preparato per l'utente una cartolina digitale personalizzata in stile Instagram Story con la sua dedica, il tavolo e la copertina dell'album. Il cliente deve solo fare uno screenshot e condividerlo nelle sue storie taggando il locale. È pubblicità virale spontanea e organica ad ogni cambio canzone!"
+
+### **Minuto 4:30 - 5:00 | Chiusura e Opzioni Gestore**
 *   **Azione**: Torna alla dashboard dello **Staff**.
 *   **Passaggi**:
     1. Clicca su **Sospeso ⏸️** sotto *Blocca Richieste*.
@@ -78,6 +95,9 @@ Prima di iniziare la presentazione, prepara le finestre sul tuo schermo (o proie
 *   **Lo stato è disallineato o i dispositivi non si aggiornano**:
     *   *Causa*: Conflitto di localStorage o sessione sporca.
     *   *Soluzione*: Clicca sul pulsante **Reset Demo 🔄** nella barra di navigazione dello sviluppatore (in cima a qualsiasi finestra tranne la TV) e ricarica le pagine.
+*   **L'alert LOOK UP! non compare sul telefono del cliente**:
+    *   *Causa*: La canzone potrebbe essere stata avviata prima che il client caricasse la sottoscrizione corretta, o c'è una perdita di focus nella scheda mobile.
+    *   *Soluzione (Fallback in tempo reale)*: Ricarica semplicemente la pagina del cliente (`/request?table=4`). Al ricaricamento, il client rileverà immediatamente che la canzone del tavolo 4 è in stato `playing` e forzerà l'apertura immediata del pop-up **LOOK UP!**.
 
 ---
 
@@ -91,7 +111,7 @@ Prima di iniziare la presentazione, prepara le finestre sul tuo schermo (o proie
 Fai queste domande al gestore del locale dopo la demo per raccogliere feedback prezioso:
 1. *"Pensi che il sistema di approvazione dello staff sia abbastanza rapido da usare durante un venerdì sera affollato?"*
 2. *"Che tipo di musica o playlist di sottofondo vorresti che suonasse in automatico quando non ci sono richieste dei clienti?"*
-3. *"La grafica della TV si adatta bene allo stile visivo del tuo locale o preferiresti temi più scuri/minimalisti?"*
+3. *"La cartolina LOOK UP! da condividere su Instagram è un buon incentivo per far taggare il tuo locale dai clienti?"*
 
 ---
 
