@@ -421,7 +421,8 @@ export default function CustomerRequest() {
                   gap: "8px", 
                   overflowX: "auto", 
                   paddingBottom: "5px",
-                  whiteSpace: "nowrap"
+                  whiteSpace: "nowrap",
+                  WebkitOverflowScrolling: "touch"
                 }}>
                   {Object.keys(MOOD_EMOJIS).map((mood) => (
                     <button
@@ -449,7 +450,7 @@ export default function CustomerRequest() {
                   value={dedication}
                   onChange={(e) => setDedication(e.target.value)}
                   className="text-input"
-                  style={{ resize: "none", width: "100%", fontSize: "14px" }}
+                  style={{ resize: "none", width: "100%", fontSize: "16px" }}
                 ></textarea>
                 <span style={{ fontSize: "11px", color: "var(--text-secondary)", textAlign: "right" }}>
                   {dedication.length}/100 caratteri

@@ -63,7 +63,7 @@ export default function App() {
   return (
     <>
       {/* Dev Quick Link Bar - Helps switch between screens easily in the same tab */}
-      {currentPath !== "/tv" && (
+      {currentPath === "/staff" && (
         <nav className="dev-navigation">
           <strong style={{ color: "white", marginRight: "10px" }}>⚡ DEV ROUTING:</strong>
           <NavLink to="/entry" activePath={currentPath}>Entry (Cliente)</NavLink>
