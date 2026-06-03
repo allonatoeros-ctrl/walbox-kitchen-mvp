@@ -19,6 +19,28 @@ export default function StaffDashboard() {
   const [requests, setRequests] = useState([]);
   const [playback, setPlayback] = useState({ isPlaying: false, progress: 0, duration: 0, currentRequestId: null });
   const [settings, setSettings] = useState({ queuePaused: false });
+  const [cooldown, setCooldown] = useState(0);
+
+  // Reaction triggering
+  const handleTriggerReaction = (type) => {
+    const reaction = { type, timestamp: Date.now() };
+    localStorage.setItem("walbox_tv_reaction", JSON.stringify(reaction));
+    // Trigger storage event manually for same window updates (debugging)
+    window.dispatchEvent(new StorageEvent("storage", {
+      key: "walbox_tv_reaction",
+      newValue: JSON.stringify(reaction)
+    }));
+    setCooldown(15);
+  };
+
+  // Cooldown timer decrement
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const interval = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldown]);
 
   // Sync state helper
   const syncState = () => {
@@ -438,6 +460,51 @@ export default function StaffDashboard() {
               >
                 Carica Demo 🔄
               </button>
+            </div>
+          </div>
+
+          {/* HYPE TRIGGER / STAFF REACTIONS */}
+          <div className="glass-panel staff-reaction-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "15px", border: "1px solid rgba(255, 0, 127, 0.15)" }}>
+            <div>
+              <h3 style={{ fontSize: "16px", fontWeight: "700", display: "flex", alignItems: "center", gap: "8px" }}>
+                Hype Trigger ⚡
+              </h3>
+              <p style={{ fontSize: "11px", color: "var(--text-secondary)", marginTop: "2px" }}>
+                Lancia un'animazione temporanea sulla Live TV
+              </p>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "12px" }}>
+              <div className="reaction-buttons-grid">
+                <button
+                  onClick={() => handleTriggerReaction("hype")}
+                  disabled={cooldown > 0}
+                  className={`btn-reaction btn-reaction-hype ${cooldown > 0 ? "disabled" : ""}`}
+                >
+                  Hype Moment 🔥
+                </button>
+                <button
+                  onClick={() => handleTriggerReaction("party")}
+                  disabled={cooldown > 0}
+                  className={`btn-reaction btn-reaction-party ${cooldown > 0 ? "disabled" : ""}`}
+                >
+                  Party Vibe 🎉
+                </button>
+                <button
+                  onClick={() => handleTriggerReaction("cheers")}
+                  disabled={cooldown > 0}
+                  className={`btn-reaction btn-reaction-cheers ${cooldown > 0 ? "disabled" : ""}`}
+                >
+                  Cheers! 🥂
+                </button>
+              </div>
+              
+              {cooldown > 0 && (
+                <div className="reaction-cooldown-bar">
+                  <div className="cooldown-progress-fill" style={{ width: `${(cooldown / 15) * 100}%` }}></div>
+                  <span className="cooldown-text">Cooldown attivo: {cooldown}s</span>
+                </div>
+              )}
             </div>
           </div>
 

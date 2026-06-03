@@ -12,6 +12,22 @@ export default function LiveTvScreen() {
   const [showTakeover, setShowTakeover] = useState(false);
   const [takeoverRequest, setTakeoverRequest] = useState(null);
   
+  // Reaction state
+  const [tvReaction, setTvReaction] = useState(() => {
+    try {
+      const saved = localStorage.getItem("walbox_tv_reaction");
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (data && data.timestamp && (Date.now() - data.timestamp < 6000)) {
+          return data;
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return null;
+  });
+  
   const prevSongIdRef = useRef(null);
 
   // Sync state helper
@@ -30,6 +46,16 @@ export default function LiveTvScreen() {
     const handleStorage = (e) => {
       if (e.key && e.key.startsWith("walbox_")) {
         syncState();
+        if (e.key === "walbox_tv_reaction" && e.newValue) {
+          try {
+            const data = JSON.parse(e.newValue);
+            if (data && data.type && data.timestamp) {
+              setTvReaction(data);
+            }
+          } catch (error) {
+            console.error(error);
+          }
+        }
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -39,6 +65,25 @@ export default function LiveTvScreen() {
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
+
+  // Clear reaction after 6 seconds
+  useEffect(() => {
+    if (!tvReaction) return;
+    
+    const elapsed = Date.now() - tvReaction.timestamp;
+    const remaining = Math.max(0, 6000 - elapsed);
+    
+    if (remaining <= 0) {
+      setTvReaction(null);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setTvReaction(null);
+    }, remaining);
+
+    return () => clearTimeout(timer);
+  }, [tvReaction]);
 
   // Derived calculations
   const currentRequest = requests.find((r) => r.id === playback.currentRequestId && r.status === "playing");
@@ -103,9 +148,42 @@ export default function LiveTvScreen() {
 
   const playingClass = playback.isPlaying ? "tv-viewport-playing" : "";
   const moodClass = currentRequest?.mood ? `tv-mood-${currentRequest.mood}` : "tv-mood-default";
+  const hasReactionClass = tvReaction ? "tv-has-reaction" : "";
 
   return (
-    <div className={`tv-viewport ${playingClass} ${moodClass}`}>
+    <div className={`tv-viewport ${playingClass} ${moodClass} ${hasReactionClass}`}>
+      {/* STAFF REACTION OVERLAY */}
+      {tvReaction && (
+        <div className={`tv-reaction-overlay reaction-${tvReaction.type}`}>
+          <div className="reaction-glow-border"></div>
+          <div className="reaction-particles">
+            {[...Array(15)].map((_, i) => (
+              <div key={i} className={`reaction-particle p-${i + 1}`} />
+            ))}
+          </div>
+          <div className="reaction-content">
+            {tvReaction.type === "hype" && (
+              <>
+                <h1 className="reaction-title">TURN UP THE HYPE!</h1>
+                <p className="reaction-subtitle">FATE RUMORE IN SALA 🔥</p>
+              </>
+            )}
+            {tvReaction.type === "party" && (
+              <>
+                <h1 className="reaction-title">LET'S PARTY!</h1>
+                <p className="reaction-subtitle">FESTEGGIAMO INSIEME 🎉</p>
+              </>
+            )}
+            {tvReaction.type === "cheers" && (
+              <>
+                <h1 className="reaction-title">ALZATE I CALICI!</h1>
+                <p className="reaction-subtitle">UN BRINDISI COLLETTIVO 🥂</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Animated gradient background mesh */}
       <div className="tv-background-mesh">
         <div className="tv-bg-blob tv-bg-blob-1" style={{ backgroundColor: colors.blob1 }}></div>

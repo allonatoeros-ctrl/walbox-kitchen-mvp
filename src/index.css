@@ -1735,3 +1735,376 @@ input, textarea, select {
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* --- STAFF REACTION / HYPE TRIGGER --- */
+
+/* Dashboard UI */
+.staff-reaction-panel {
+  transition: all 0.3s ease;
+}
+
+.reaction-buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.btn-reaction {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 13px;
+  padding: 14px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: var(--font-sans);
+}
+
+.btn-reaction:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.btn-reaction:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.btn-reaction-hype {
+  border-color: rgba(255, 0, 127, 0.2);
+}
+.btn-reaction-hype:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 15px rgba(255, 0, 127, 0.3);
+}
+
+.btn-reaction-party {
+  border-color: rgba(138, 43, 226, 0.2);
+}
+.btn-reaction-party:hover:not(:disabled) {
+  border-color: var(--accent-secondary);
+  box-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
+}
+
+.btn-reaction-cheers {
+  border-color: rgba(255, 170, 0, 0.2);
+}
+.btn-reaction-cheers:hover:not(:disabled) {
+  border-color: hsl(35, 90%, 55%);
+  box-shadow: 0 0 15px rgba(255, 170, 0, 0.3);
+}
+
+.btn-reaction.disabled,
+.btn-reaction:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Cooldown Bar */
+.reaction-cooldown-bar {
+  position: relative;
+  height: 24px;
+  background: rgba(255, 0, 127, 0.05);
+  border: 1px solid rgba(255, 0, 127, 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cooldown-progress-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: rgba(255, 0, 127, 0.25);
+  transition: width 1s linear;
+}
+
+.cooldown-text {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--accent-primary);
+  z-index: 2;
+  letter-spacing: 0.5px;
+}
+
+/* TV Overlay Fullscreen */
+.tv-reaction-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: rgba(3, 4, 8, 0.55);
+  backdrop-filter: blur(25px) saturate(180%);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  opacity: 0;
+  animation: reactionFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.reaction-glow-border {
+  position: absolute;
+  inset: 15px;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 2;
+  transition: all 0.5s ease;
+}
+
+.reaction-content {
+  z-index: 5;
+  padding: 0 40px;
+}
+
+.reaction-title {
+  font-family: var(--font-display);
+  font-size: 5rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.reaction-subtitle {
+  font-family: var(--font-sans);
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin: 20px 0 0 0;
+  letter-spacing: 1px;
+}
+
+/* Particles Container */
+.reaction-particles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.reaction-particle {
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* --- Type 1: HYPE --- */
+.reaction-hype {
+  background: radial-gradient(circle, rgba(255, 0, 127, 0.25) 0%, rgba(3, 4, 8, 0.96) 80%);
+}
+
+.reaction-hype .reaction-glow-border {
+  border: 3px solid rgba(255, 0, 127, 0.35);
+  box-shadow: inset 0 0 60px rgba(255, 0, 127, 0.2);
+}
+
+.reaction-hype .reaction-title {
+  color: #fff;
+  text-shadow: 0 0 20px var(--accent-primary), 0 0 40px var(--accent-primary);
+  background: linear-gradient(135deg, #fff 30%, var(--accent-primary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: reactionPulse 1.5s infinite alternate ease-in-out;
+}
+
+.reaction-hype .reaction-subtitle {
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(255, 0, 127, 0.5);
+}
+
+/* Hype Particles (Embers) */
+.reaction-hype .reaction-particle {
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(135deg, var(--accent-primary), #ff8800);
+  box-shadow: 0 0 10px var(--accent-primary);
+  bottom: -20px;
+  animation: hypeEmber 4s infinite linear;
+}
+
+/* --- Type 2: PARTY --- */
+.reaction-party {
+  background: radial-gradient(circle, rgba(138, 43, 226, 0.25) 0%, rgba(3, 4, 8, 0.96) 80%);
+}
+
+.reaction-party .reaction-glow-border {
+  border: 3px solid rgba(138, 43, 226, 0.35);
+  box-shadow: inset 0 0 60px rgba(138, 43, 226, 0.2);
+}
+
+.reaction-party .reaction-title {
+  color: #fff;
+  text-shadow: 0 0 20px var(--accent-secondary), 0 0 40px var(--accent-secondary);
+  background: linear-gradient(135deg, #fff 30%, var(--accent-glow) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: reactionPulse 1.5s infinite alternate ease-in-out;
+}
+
+.reaction-party .reaction-subtitle {
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
+}
+
+/* Party Particles (Confetti) */
+.reaction-party .reaction-particle {
+  width: 14px;
+  height: 6px;
+  border-radius: 2px;
+  top: -20px;
+  animation: partyConfetti 5s infinite linear;
+}
+
+/* --- Type 3: CHEERS --- */
+.reaction-cheers {
+  background: radial-gradient(circle, rgba(255, 170, 0, 0.2) 0%, rgba(3, 4, 8, 0.96) 80%);
+}
+
+.reaction-cheers .reaction-glow-border {
+  border: 3px solid rgba(255, 170, 0, 0.3);
+  box-shadow: inset 0 0 60px rgba(255, 170, 0, 0.15);
+}
+
+.reaction-cheers .reaction-title {
+  color: #fff;
+  text-shadow: 0 0 20px hsl(35, 90%, 55%), 0 0 40px hsl(35, 90%, 55%);
+  background: linear-gradient(135deg, #fff 30%, hsl(35, 90%, 55%) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: reactionPulse 1.5s infinite alternate ease-in-out;
+}
+
+.reaction-cheers .reaction-subtitle {
+  color: var(--text-primary);
+  text-shadow: 0 0 10px rgba(255, 170, 0, 0.4);
+}
+
+/* Cheers Particles (Bubbles) */
+.reaction-cheers .reaction-particle {
+  width: 12px;
+  height: 12px;
+  background: rgba(255, 190, 60, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: inset 0 0 4px rgba(255, 255, 255, 0.5);
+  bottom: -20px;
+  animation: cheersBubble 4s infinite linear;
+}
+
+/* --- Particle Positions and Delays --- */
+.reaction-particle.p-1  { left: 10%; animation-delay: 0.1s; }
+.reaction-particle.p-2  { left: 20%; animation-delay: 1.2s; }
+.reaction-particle.p-3  { left: 30%; animation-delay: 0.5s; }
+.reaction-particle.p-4  { left: 40%; animation-delay: 2.3s; }
+.reaction-particle.p-5  { left: 50%; animation-delay: 0.8s; }
+.reaction-particle.p-6  { left: 60%; animation-delay: 1.7s; }
+.reaction-particle.p-7  { left: 70%; animation-delay: 0.3s; }
+.reaction-particle.p-8  { left: 80%; animation-delay: 2.9s; }
+.reaction-particle.p-9  { left: 90%; animation-delay: 1.1s; }
+.reaction-particle.p-10 { left: 15%; animation-delay: 2.0s; }
+.reaction-particle.p-11 { left: 35%; animation-delay: 1.4s; }
+.reaction-particle.p-12 { left: 55%; animation-delay: 0.2s; }
+.reaction-particle.p-13 { left: 75%; animation-delay: 2.5s; }
+.reaction-particle.p-14 { left: 85%; animation-delay: 0.9s; }
+.reaction-particle.p-15 { left: 45%; animation-delay: 1.8s; }
+
+/* Colors for party confetti */
+.reaction-party .p-1, .reaction-party .p-4, .reaction-party .p-7, .reaction-party .p-10, .reaction-party .p-13 { background: var(--accent-primary); }
+.reaction-party .p-2, .reaction-party .p-5, .reaction-party .p-8, .reaction-party .p-11, .reaction-party .p-14 { background: var(--accent-secondary); }
+.reaction-party .p-3, .reaction-party .p-6, .reaction-party .p-9, .reaction-party .p-12, .reaction-party .p-15 { background: var(--accent-glow); }
+
+/* --- TV Viewport Reaction Mode: Hide Ticker --- */
+.tv-viewport.tv-has-reaction .tv-ticker-ribbon {
+  opacity: 0;
+  transform: translateY(50px);
+  pointer-events: none;
+}
+
+/* --- KEYFRAMES --- */
+
+@keyframes reactionFadeIn {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px) saturate(100%);
+    -webkit-backdrop-filter: blur(0px) saturate(100%);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+  }
+}
+
+@keyframes reactionPulse {
+  from {
+    transform: scale(0.98);
+    text-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+  to {
+    transform: scale(1.02);
+    text-shadow: 0 0 35px currentColor, 0 0 50px currentColor;
+  }
+}
+
+@keyframes hypeEmber {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.8) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-105vh) translateX(40px) scale(1.2) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes partyConfetti {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(105vh) rotate(720deg) translateX(30px);
+    opacity: 0;
+  }
+}
+
+@keyframes cheersBubble {
+  0% {
+    transform: translateY(0) translateX(0) scale(0.6);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.6;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-105vh) translateX(-20px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+
