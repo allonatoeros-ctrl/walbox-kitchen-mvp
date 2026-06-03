@@ -2107,4 +2107,458 @@ input, textarea, select {
   }
 }
 
+/* --- WALRUS LIVE TV VARIANT --- */
+.tv-walrus-variant {
+  /* Brand color tokens */
+  --walrus-charcoal: #121212;
+  --walrus-white-warm: #F7F5F0;
+  --walrus-brick-red: #9E3F2B;
+  --walrus-copper: #D48952;
+  --walrus-amber-beer: #FFBF00;
+  --walrus-trunk-green: #37533D;
+  --walrus-trunk-brown: #5C4033;
+  --walrus-neon-fuchsia: #FF1493;
+
+  --font-walrus-title: 'Syne', Georgia, serif;
+  --font-walrus-body: 'Outfit', sans-serif;
+
+  /* Overrides for local variables */
+  --tv-accent: var(--walrus-amber-beer);
+  --tv-accent-rgb: 255, 191, 0;
+  --tv-glow: var(--walrus-copper);
+
+  background-color: var(--walrus-charcoal) !important;
+  background-image: radial-gradient(circle at center, rgba(158, 63, 43, 0.22) 0%, rgba(18, 18, 18, 0.98) 100%) !important;
+  font-family: var(--font-walrus-body);
+}
+
+.tv-walrus-variant::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.055;
+  pointer-events: none;
+  z-index: 10;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Mood overrides for Walrus theme */
+.tv-walrus-variant.tv-mood-party {
+  --tv-accent: var(--walrus-neon-fuchsia);
+  --tv-accent-rgb: 255, 20, 147;
+  --tv-glow: var(--walrus-copper);
+}
+
+.tv-walrus-variant.tv-mood-chill {
+  --tv-accent: var(--walrus-trunk-green);
+  --tv-accent-rgb: 55, 83, 61;
+  --tv-glow: var(--walrus-copper);
+}
+
+.tv-walrus-variant.tv-mood-energetic {
+  --tv-accent: var(--walrus-amber-beer);
+  --tv-accent-rgb: 255, 191, 0;
+  --tv-glow: var(--walrus-neon-fuchsia);
+}
+
+.tv-walrus-variant.tv-mood-romantic {
+  --tv-accent: var(--walrus-brick-red);
+  --tv-accent-rgb: 158, 63, 43;
+  --tv-glow: var(--walrus-neon-fuchsia);
+}
+
+.tv-walrus-variant.tv-mood-retro {
+  --tv-accent: var(--walrus-trunk-brown);
+  --tv-accent-rgb: 92, 64, 51;
+  --tv-glow: var(--walrus-copper);
+}
+
+/* Sparks/embers animation */
+.tv-walrus-variant.walrus-tv-sparks .tv-particle,
+.tv-walrus-variant .walrus-tv-sparks .tv-particle {
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(212, 137, 82, 0.4) 0%, rgba(255, 191, 0, 0.15) 50%, transparent 70%) !important;
+  opacity: 0.65;
+  animation: walrusSparkRise 25s infinite linear !important;
+}
+
+/* Adjust size and horizontal position for sparks */
+.tv-walrus-variant .tv-particle-1 { width: 8px; height: 8px; left: 15%; animation-duration: 18s; animation-delay: -2s; }
+.tv-walrus-variant .tv-particle-2 { width: 14px; height: 14px; left: 45%; animation-duration: 28s; animation-delay: -5s; }
+.tv-walrus-variant .tv-particle-3 { width: 10px; height: 10px; left: 70%; animation-duration: 22s; animation-delay: -10s; }
+.tv-walrus-variant .tv-particle-4 { width: 16px; height: 16px; left: 30%; animation-duration: 32s; animation-delay: -12s; }
+.tv-walrus-variant .tv-particle-5 { width: 12px; height: 12px; left: 85%; animation-duration: 24s; animation-delay: -8s; }
+.tv-walrus-variant .tv-particle-6 { width: 9px; height: 9px; left: 60%; animation-duration: 20s; animation-delay: -15s; }
+.tv-walrus-variant .tv-particle-7 { width: 15px; height: 15px; left: 10%; animation-duration: 26s; animation-delay: -3s; }
+.tv-walrus-variant .tv-particle-8 { width: 11px; height: 11px; left: 50%; animation-duration: 23s; animation-delay: -7s; }
+
+@keyframes walrusSparkRise {
+  0% {
+    transform: translateY(110vh) translateX(0) scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.75;
+  }
+  90% {
+    opacity: 0.75;
+  }
+  100% {
+    transform: translateY(-10vh) translateX(100px) scale(1.3) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Arched Now Playing card */
+.tv-walrus-variant .walrus-tv-now-playing-panel {
+  background: radial-gradient(ellipse at top, rgba(92, 64, 51, 0.45) 0%, rgba(18, 18, 18, 0.95) 100%) !important;
+  border: 1px solid rgba(212, 137, 82, 0.25) !important;
+  border-top: 4px solid var(--walrus-copper) !important;
+  border-radius: 40px 40px 16px 16px !important;
+  box-shadow: 
+    0 30px 60px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(212, 137, 82, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 0.05) !important;
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+}
+
+.tv-walrus-variant .tv-vinyl-sleeve {
+  border-radius: 24px 24px 8px 8px !important;
+  border: 2px solid rgba(212, 137, 82, 0.35) !important;
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.8),
+    0 0 25px rgba(212, 137, 82, 0.1) !important;
+}
+
+.tv-walrus-variant .tv-vinyl-disc {
+  border: 3px solid #1a1512 !important;
+  box-shadow: 
+    0 15px 30px rgba(0, 0, 0, 0.7),
+    0 0 20px rgba(255, 191, 0, 0.15) !important;
+}
+
+/* Suitcase Badges */
+.tv-walrus-variant .walrus-tv-table-badge,
+.tv-walrus-variant .walrus-tv-queue-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  font-family: var(--font-walrus-title);
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--walrus-trunk-green) !important;
+  border: 2px solid #8B5A2B !important;
+  color: var(--walrus-white-warm) !important;
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+  position: relative;
+  text-shadow: none !important;
+}
+
+.tv-walrus-variant .walrus-tv-queue-badge {
+  font-size: 11px;
+  padding: 4px 10px !important;
+}
+
+.tv-walrus-variant .tv-queue-card:nth-child(even) .walrus-tv-queue-badge {
+  background: var(--walrus-trunk-brown) !important;
+}
+
+.tv-walrus-variant .tv-queue-card:nth-child(3n) .walrus-tv-queue-badge {
+  background: var(--walrus-brick-red) !important;
+}
+
+/* Copper progress pipeline */
+.tv-walrus-variant .tv-progress-track {
+  height: 12px !important;
+  background: rgba(18, 18, 18, 0.8) !important;
+  border: 2px solid #8B4513 !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8) !important;
+  border-radius: 6px !important;
+}
+
+.tv-walrus-variant .tv-progress-fill {
+  background: linear-gradient(90deg, #D48952 0%, #FFBF00 50%, #FFD700 100%) !important;
+  box-shadow: 0 0 15px rgba(255, 191, 0, 0.8) !important;
+  border-radius: 4px !important;
+}
+
+.tv-walrus-variant .tv-progress-dot {
+  width: 18px !important;
+  height: 18px !important;
+  background: #FFD700 !important;
+  border: 3px solid #8B4513 !important;
+  box-shadow: 
+    0 0 10px #FFD700, 
+    0 0 20px #FFBF00 !important;
+}
+
+/* Circular QR coaster styling */
+.tv-walrus-variant .walrus-tv-qr-coaster {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 35px auto !important;
+  border-radius: 50% !important;
+  background: #121212 !important;
+  border: 5px solid var(--walrus-neon-fuchsia) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 15px !important;
+  box-shadow: 
+    0 10px 25px rgba(0, 0, 0, 0.8),
+    0 0 25px rgba(255, 20, 147, 0.45),
+    inset 0 0 15px rgba(0, 0, 0, 0.9) !important;
+  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+  animation: coasterPulse 3s infinite ease-in-out;
+}
+
+@keyframes coasterPulse {
+  0%, 100% {
+    box-shadow: 
+      0 10px 25px rgba(0, 0, 0, 0.8),
+      0 0 20px rgba(255, 20, 147, 0.4),
+      inset 0 0 15px rgba(0, 0, 0, 0.9);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 
+      0 10px 25px rgba(0, 0, 0, 0.8),
+      0 0 35px rgba(255, 20, 147, 0.75),
+      inset 0 0 15px rgba(0, 0, 0, 0.9);
+    transform: scale(1.02);
+  }
+}
+
+.tv-walrus-variant .walrus-tv-qr-coaster svg {
+  border-radius: 50% !important;
+  padding: 10px !important;
+  width: 75px !important;
+  height: 75px !important;
+}
+
+.tv-walrus-variant .walrus-tv-qr-coaster h4 {
+  display: block !important;
+  font-size: 11px !important;
+  margin-top: 4px !important;
+  color: var(--walrus-white-warm) !important;
+  font-family: var(--font-walrus-title) !important;
+}
+
+.tv-walrus-variant .walrus-tv-qr-coaster p {
+  display: block !important;
+  font-size: 9px !important;
+  margin-top: 1px !important;
+  color: var(--walrus-neon-fuchsia) !important;
+  text-transform: uppercase !important;
+}
+
+/* EQ premium slow animation */
+.tv-walrus-variant .eq-bar-premium {
+  background: linear-gradient(to top, var(--walrus-amber-beer), var(--walrus-copper)) !important;
+  animation-duration: 2.2s !important;
+}
+
+/* Typography display stacks */
+.tv-walrus-variant .tv-now-playing-title {
+  font-family: var(--font-walrus-title) !important;
+  font-size: 56px !important;
+  font-weight: 800 !important;
+  letter-spacing: -1px !important;
+  background: linear-gradient(135deg, var(--walrus-white-warm) 40%, rgba(247, 245, 240, 0.75) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  text-shadow: 0 4px 15px rgba(0, 0, 0, 0.8) !important;
+}
+
+.tv-walrus-variant .tv-now-playing-artist {
+  color: var(--walrus-copper) !important;
+  font-size: 28px !important;
+  font-weight: 600 !important;
+}
+
+.tv-walrus-variant .tv-side-panel {
+  background: rgba(18, 18, 18, 0.82) !important;
+  border-left: 2px solid rgba(212, 137, 82, 0.2) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.tv-walrus-variant .tv-dedication-box {
+  background: linear-gradient(135deg, rgba(26, 20, 18, 0.75) 0%, rgba(18, 18, 18, 0.9) 100%) !important;
+  border: 1px solid rgba(212, 137, 82, 0.25) !important;
+  border-left: 5px solid var(--walrus-amber-beer) !important;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5) !important;
+}
+
+.tv-walrus-variant .tv-dedication-label {
+  color: var(--walrus-amber-beer) !important;
+  font-family: var(--font-walrus-body) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+}
+
+.tv-walrus-variant .tv-dedication-text {
+  color: var(--walrus-white-warm) !important;
+  font-family: var(--font-walrus-body) !important;
+}
+
+.tv-walrus-variant .tv-queue-card {
+  background: rgba(26, 20, 18, 0.45) !important;
+  border: 1px solid rgba(212, 137, 82, 0.15) !important;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.4) !important;
+}
+
+.tv-walrus-variant .tv-queue-card:hover {
+  background: rgba(36, 28, 25, 0.65) !important;
+  border-color: rgba(212, 137, 82, 0.3) !important;
+  transform: translateX(-4px) !important;
+}
+
+.tv-walrus-variant .tv-queue-num {
+  color: var(--walrus-copper) !important;
+}
+
+.tv-walrus-variant .tv-ticker-ribbon {
+  background: #121212 !important;
+  border-top: 2px solid var(--walrus-copper) !important;
+}
+
+.tv-walrus-variant .tv-ticker-label {
+  background: linear-gradient(135deg, var(--walrus-brick-red), var(--walrus-copper)) !important;
+  color: var(--walrus-white-warm) !important;
+  font-family: var(--font-walrus-title) !important;
+  font-weight: 800 !important;
+}
+
+.tv-walrus-variant .tv-ticker-scroll {
+  color: var(--walrus-white-warm) !important;
+  font-family: var(--font-walrus-body) !important;
+}
+
+.tv-walrus-variant .tv-takeover-screen {
+  background: radial-gradient(circle at center, #1b120f 0%, #0d0d0d 100%) !important;
+}
+
+.tv-walrus-variant .tv-takeover-glow {
+  background: radial-gradient(circle, rgba(255, 20, 147, 0.18) 0%, transparent 70%) !important;
+}
+
+.tv-walrus-variant .tv-takeover-subtitle {
+  font-family: var(--font-walrus-title) !important;
+  color: var(--walrus-neon-fuchsia) !important;
+  text-shadow: 0 0 10px rgba(255, 20, 147, 0.6) !important;
+  animation: neonFlicker 0.2s 3 alternate ease-in-out !important;
+}
+
+.tv-walrus-variant .tv-takeover-cover-wrapper {
+  border: 3px solid var(--walrus-copper) !important;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.9) !important;
+}
+
+.tv-walrus-variant .tv-takeover-title {
+  font-family: var(--font-walrus-title) !important;
+  color: var(--walrus-white-warm) !important;
+}
+
+.tv-walrus-variant .tv-takeover-artist {
+  color: var(--walrus-copper) !important;
+}
+
+.tv-walrus-variant .walrus-tv-takeover-badge {
+  background: var(--walrus-trunk-brown) !important;
+  border: 2px solid var(--walrus-copper) !important;
+  color: var(--walrus-white-warm) !important;
+  padding: 8px 20px !important;
+  border-radius: 6px !important;
+  font-family: var(--font-walrus-title) !important;
+}
+
+.tv-walrus-variant .tv-takeover-social {
+  color: var(--walrus-neon-fuchsia) !important;
+  font-weight: 700 !important;
+}
+
+@keyframes neonFlicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Staff Reaction Overlays */
+.tv-walrus-variant .tv-reaction-overlay {
+  background: rgba(18, 18, 18, 0.75) !important;
+}
+
+.tv-walrus-variant .reaction-title {
+  font-family: var(--font-walrus-title) !important;
+  font-size: 5.5rem !important;
+}
+
+.tv-walrus-variant .reaction-subtitle {
+  font-family: var(--font-walrus-body) !important;
+  font-size: 2.4rem !important;
+}
+
+.tv-walrus-variant .reaction-hype {
+  background: radial-gradient(circle, rgba(255, 20, 147, 0.3) 0%, rgba(18, 18, 18, 0.98) 80%) !important;
+}
+
+.tv-walrus-variant .reaction-hype .reaction-glow-border {
+  border: 4px solid rgba(255, 20, 147, 0.45) !important;
+  box-shadow: inset 0 0 60px rgba(255, 20, 147, 0.3) !important;
+}
+
+.tv-walrus-variant .reaction-hype .reaction-title {
+  color: var(--walrus-white-warm) !important;
+  text-shadow: 0 0 25px var(--walrus-neon-fuchsia), 0 0 50px var(--walrus-neon-fuchsia) !important;
+  background: linear-gradient(135deg, #fff 30%, var(--walrus-neon-fuchsia) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.tv-walrus-variant .reaction-party {
+  background: radial-gradient(circle, rgba(212, 137, 82, 0.3) 0%, rgba(18, 18, 18, 0.98) 80%) !important;
+}
+
+.tv-walrus-variant .reaction-party .reaction-glow-border {
+  border: 4px solid rgba(212, 137, 82, 0.45) !important;
+  box-shadow: inset 0 0 60px rgba(212, 137, 82, 0.3) !important;
+}
+
+.tv-walrus-variant .reaction-party .reaction-title {
+  color: var(--walrus-white-warm) !important;
+  text-shadow: 0 0 25px var(--walrus-copper), 0 0 50px var(--walrus-copper) !important;
+  background: linear-gradient(135deg, #fff 30%, var(--walrus-copper) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.tv-walrus-variant .reaction-cheers {
+  background: radial-gradient(circle, rgba(255, 191, 0, 0.3) 0%, rgba(18, 18, 18, 0.98) 80%) !important;
+}
+
+.tv-walrus-variant .reaction-cheers .reaction-glow-border {
+  border: 4px solid rgba(255, 191, 0, 0.45) !important;
+  box-shadow: inset 0 0 60px rgba(255, 191, 0, 0.3) !important;
+}
+
+.tv-walrus-variant .reaction-cheers .reaction-title {
+  color: var(--walrus-white-warm) !important;
+  text-shadow: 0 0 25px var(--walrus-amber-beer), 0 0 50px var(--walrus-amber-beer) !important;
+  background: linear-gradient(135deg, #fff 30%, var(--walrus-amber-beer) 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+
 
