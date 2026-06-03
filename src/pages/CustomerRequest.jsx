@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   MOCK_SONGS, 
   MOOD_EMOJIS, 
@@ -19,6 +19,23 @@ export default function CustomerRequest() {
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [venueSettings, setVenueSettings] = useState({ queuePaused: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const notifiedSongIds = useRef(new Set());
+  const [showLookUpAlert, setShowLookUpAlert] = useState(false);
+  const [currentAlertSong, setCurrentAlertSong] = useState(null);
+
+  // Monitor for playing songs from this table to trigger LookUp alert
+  useEffect(() => {
+    if (!submittedRequests || submittedRequests.length === 0) return;
+    const playingRequest = submittedRequests.find((r) => r.status === "playing");
+    if (playingRequest) {
+      if (!notifiedSongIds.current.has(playingRequest.id)) {
+        notifiedSongIds.current.add(playingRequest.id);
+        setCurrentAlertSong(playingRequest);
+        setShowLookUpAlert(true);
+      }
+    }
+  }, [submittedRequests]);
 
   // Load table from URL query param on mount
   useEffect(() => {
@@ -564,6 +581,62 @@ export default function CustomerRequest() {
               );
             })
           )}
+        </div>
+      )}
+
+      {showLookUpAlert && currentAlertSong && (
+        <div className="look-up-overlay" onClick={() => setShowLookUpAlert(false)}>
+          <div className="look-up-bg-glow" style={{ background: `radial-gradient(circle, ${getMoodColor(currentAlertSong.mood)} 0%, transparent 70%)` }}></div>
+          
+          <div className="look-up-content" onClick={(e) => e.stopPropagation()}>
+            <div className="look-up-header-text">
+              <h2>LOOK UP! 📺</h2>
+              <h3>La tua traccia è ora in onda.</h3>
+              <p>Alza lo sguardo al maxischermo. Abbiamo preparato una cartolina della tua serata da condividere.</p>
+            </div>
+
+            {/* Story Canvas Card */}
+            <div className="story-canvas" style={{ borderColor: getMoodColor(currentAlertSong.mood) }}>
+              <div className="story-canvas-header">
+                <span>WALBOX LIVE SESSION</span>
+                <span className="story-canvas-table">TAVOLO {currentAlertSong.table}</span>
+              </div>
+
+              <div className="story-canvas-body">
+                <div className="story-canvas-cover-container">
+                  <img 
+                    src={currentAlertSong.song.cover} 
+                    alt="" 
+                    className="story-canvas-cover"
+                    style={{ boxShadow: `0 0 20px ${getMoodColor(currentAlertSong.mood)}40` }}
+                  />
+                </div>
+                
+                <h4 className="story-canvas-title">{currentAlertSong.song.title}</h4>
+                <p className="story-canvas-artist">{currentAlertSong.song.artist}</p>
+                
+                <span className="story-canvas-mood" style={{ borderColor: getMoodColor(currentAlertSong.mood), color: getMoodColor(currentAlertSong.mood) }}>
+                  {MOOD_EMOJIS[currentAlertSong.mood]} {currentAlertSong.mood.toUpperCase()}
+                </span>
+              </div>
+
+              <div className="story-canvas-dedication" style={{ borderLeftColor: getMoodColor(currentAlertSong.mood) }}>
+                {currentAlertSong.dedication ? `“${currentAlertSong.dedication}”` : "“Soundtrack of the night.”"}
+              </div>
+
+              <div className="story-canvas-footer">
+                <span className="story-canvas-location">📍 @WalboxVenue</span>
+                <span className="story-canvas-watermark">📸 Screenshot & share your vibe</span>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => setShowLookUpAlert(false)} 
+              className="btn-secondary look-up-close-btn"
+            >
+              Torna al Jukebox ✕
+            </button>
+          </div>
         </div>
       )}
     </div>

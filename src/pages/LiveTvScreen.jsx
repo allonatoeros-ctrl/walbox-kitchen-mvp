@@ -156,6 +156,10 @@ export default function LiveTvScreen() {
             <div className="tv-takeover-badge">
               Richiesto dal Tavolo {takeoverRequest.table}
             </div>
+
+            <div className="tv-takeover-social">
+              📸 Condividi il tuo momento. Tagga @WalboxVenue
+            </div>
           </div>
         </div>
       )}
