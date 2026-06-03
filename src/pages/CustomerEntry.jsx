@@ -30,15 +30,25 @@ export default function CustomerEntry() {
     <div className="mobile-wrapper" style={{ justifyContent: "center" }}>
       <div className="mobile-bg-glow"></div>
       
-      <div className="glass-panel" style={{ padding: "40px 30px", textAlign: "center", display: "flex", flexDirection: "column", gap: "30px" }}>
+      <div className="glass-panel" style={{ 
+        width: "100%",
+        maxWidth: "400px",
+        margin: "0 auto",
+        padding: "40px min(24px, 6vw)", 
+        textAlign: "center", 
+        display: "flex", 
+        flexDirection: "column", 
+        gap: "30px",
+        boxSizing: "border-box"
+      }}>
         
         {/* Brand Header */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
           <h1 style={{ 
             fontFamily: "var(--font-display)", 
-            fontSize: "42px", 
+            fontSize: "clamp(32px, 9vw, 42px)", 
             fontWeight: "800",
-            letterSpacing: "-1px",
+            letterSpacing: "-0.5px",
             lineHeight: "1",
             margin: "0",
             background: "linear-gradient(to right, var(--accent-primary), var(--accent-secondary))",
