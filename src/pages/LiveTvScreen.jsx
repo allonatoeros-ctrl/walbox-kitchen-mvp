@@ -101,8 +101,11 @@ export default function LiveTvScreen() {
     ? tickerDedications.map((r) => `Tavolo ${r.table} dedica "${r.song.title}" : "${r.dedication}"`).join("  •  ")
     : "Scegli la musica! Scansiona il QR code al tavolo e richiedi la tua traccia preferita.  •  Benvenuto in Walbox Social Jukebox.";
 
+  const playingClass = playback.isPlaying ? "tv-viewport-playing" : "";
+  const moodClass = currentRequest?.mood ? `tv-mood-${currentRequest.mood}` : "tv-mood-default";
+
   return (
-    <div className="tv-viewport">
+    <div className={`tv-viewport ${playingClass} ${moodClass}`}>
       {/* Animated gradient background mesh */}
       <div className="tv-background-mesh">
         <div className="tv-bg-blob tv-bg-blob-1" style={{ backgroundColor: colors.blob1 }}></div>
@@ -110,70 +113,49 @@ export default function LiveTvScreen() {
         <div className="tv-bg-blob tv-bg-blob-3" style={{ backgroundColor: colors.blob3 }}></div>
       </div>
 
+      {/* Floating particles */}
+      <div className="tv-particles-container">
+        <div className="tv-particle tv-particle-1"></div>
+        <div className="tv-particle tv-particle-2"></div>
+        <div className="tv-particle tv-particle-3"></div>
+        <div className="tv-particle tv-particle-4"></div>
+        <div className="tv-particle tv-particle-5"></div>
+        <div className="tv-particle tv-particle-6"></div>
+        <div className="tv-particle tv-particle-7"></div>
+        <div className="tv-particle tv-particle-8"></div>
+      </div>
+
       {/* NEW SONG TAKEOVER SCREEN */}
       {showTakeover && takeoverRequest && (
-        <div style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          width: "100%",
-          height: "100%",
-          background: "rgba(5, 7, 14, 0.95)",
-          backdropFilter: "blur(40px)",
-          zIndex: 100,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "30px",
-          color: "white",
-          animation: "fadeIn 0.5s ease-out"
-        }}>
-          <span style={{ 
-            fontSize: "14px", 
-            letterSpacing: "8px", 
-            color: getMoodColors(takeoverRequest.mood).main, 
-            fontWeight: "bold",
-            textTransform: "uppercase"
-          }}>
-            Prossimo Brano in Onda 🚀
-          </span>
+        <div className="tv-takeover-screen">
+          <div className="tv-takeover-glow"></div>
+          
+          <div className="tv-takeover-content">
+            <span className="tv-takeover-subtitle">
+              Prossimo Brano in Onda 🚀
+            </span>
 
-          <img 
-            src={takeoverRequest.song.cover} 
-            alt="" 
-            style={{ 
-              width: "250px", 
-              height: "250px", 
-              borderRadius: "20px", 
-              boxShadow: `0 0 50px ${getMoodColors(takeoverRequest.mood).main}50`,
-              border: `2px solid ${getMoodColors(takeoverRequest.mood).main}`
-            }} 
-          />
+            <div className="tv-takeover-cover-wrapper">
+              <div className="tv-takeover-cover-shadow"></div>
+              <img 
+                src={takeoverRequest.song.cover} 
+                alt="" 
+                className="tv-takeover-cover"
+              />
+            </div>
 
-          <div style={{ textAlign: "center" }}>
-            <h1 style={{ 
-              fontFamily: "var(--font-display)", 
-              fontSize: "48px", 
-              fontWeight: "900", 
-              margin: "0",
-              letterSpacing: "-1px"
-            }}>
-              {takeoverRequest.song.title}
-            </h1>
-            <p style={{ fontSize: "24px", color: "var(--text-secondary)", marginTop: "5px" }}>
-              {takeoverRequest.song.artist}
-            </p>
-          </div>
+            <div>
+              <h1 className="tv-takeover-title">
+                {takeoverRequest.song.title}
+              </h1>
+              <p className="tv-takeover-artist">
+                {takeoverRequest.song.artist}
+              </p>
+            </div>
 
-          <div className="glass-panel" style={{ 
-            padding: "12px 30px", 
-            borderColor: getMoodColors(takeoverRequest.mood).main,
-            color: "white",
-            fontSize: "18px",
-            fontWeight: "bold"
-          }}>
-            Richiesto dal Tavolo {takeoverRequest.table}
+            <div className="tv-takeover-badge">
+              Richiesto dal Tavolo {takeoverRequest.table}
+            </div>
           </div>
         </div>
       )}
@@ -193,14 +175,8 @@ export default function LiveTvScreen() {
           </div>
           {currentRequest && (
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span className="glass-panel" style={{ 
-                padding: "6px 15px", 
-                fontSize: "14px", 
-                fontWeight: "bold",
-                color: colors.main,
-                borderColor: colors.main
-              }}>
-                {MOOD_EMOJIS[currentRequest.mood]} {currentRequest.mood.toUpperCase()}
+              <span className="tv-table-badge">
+                {MOOD_EMOJIS[currentRequest.mood]} {currentRequest.mood}
               </span>
             </div>
           )}
@@ -210,89 +186,56 @@ export default function LiveTvScreen() {
         {currentRequest ? (
           <div style={{ display: "flex", gap: "50px", alignItems: "center", margin: "40px 0" }}>
             
-            {/* Album Cover */}
-            <div style={{ position: "relative" }}>
-              <div style={{
-                position: "absolute",
-                top: "10px",
-                left: "10px",
-                width: "280px",
-                height: "280px",
-                borderRadius: "20px",
-                background: colors.main,
-                filter: "blur(30px)",
-                opacity: "0.4",
-                zIndex: -1
-              }}></div>
-              <img 
-                src={currentRequest.song.cover} 
-                alt="" 
-                style={{ 
-                  width: "280px", 
-                  height: "280px", 
-                  borderRadius: "20px", 
-                  objectFit: "cover",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  boxShadow: "0 20px 40px rgba(0,0,0,0.6)"
-                }} 
-              />
+            {/* 3D Vinyl Sleeve & Rotating Disc */}
+            <div className="tv-track-card-container">
+              <div className="tv-vinyl-disc">
+                <img 
+                  src={currentRequest.song.cover} 
+                  alt="" 
+                  className="tv-vinyl-label"
+                />
+              </div>
+              <div className="tv-vinyl-sleeve">
+                <img 
+                  src={currentRequest.song.cover} 
+                  alt="" 
+                />
+              </div>
             </div>
 
             {/* Song Text details */}
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "15px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-                <span className="glass-panel" style={{ 
-                  padding: "4px 12px", 
-                  fontSize: "13px", 
-                  fontWeight: "bold", 
-                  color: "var(--accent-glow)", 
-                  borderColor: "var(--accent-glow)" 
-                }}>
+                <span className="tv-table-badge">
                   TAVOLO {currentRequest.table}
                 </span>
                 
-                {/* Audio waves */}
+                {/* Audio visualizer */}
                 {playback.isPlaying && (
-                  <div className="eq-container">
-                    <div className="eq-bar" style={{ backgroundColor: colors.main }}></div>
-                    <div className="eq-bar" style={{ animationDelay: "0.2s" }}></div>
-                    <div className="eq-bar" style={{ animationDelay: "0.4s", backgroundColor: colors.main }}></div>
-                    <div className="eq-bar" style={{ animationDelay: "0.1s" }}></div>
+                  <div className="eq-container-premium">
+                    {[...Array(14)].map((_, i) => (
+                      <div key={i} className="eq-bar-premium" />
+                    ))}
                   </div>
                 )}
               </div>
 
               <div>
-                <h1 style={{ 
-                  fontFamily: "var(--font-display)", 
-                  fontSize: "56px", 
-                  fontWeight: "900", 
-                  lineHeight: "1.05",
-                  letterSpacing: "-2px",
-                  margin: "0",
-                  textShadow: "0 0 40px rgba(0,0,0,0.5)"
-                }}>
+                <h1 className="tv-now-playing-title">
                   {currentRequest.song.title}
                 </h1>
-                <p style={{ fontSize: "28px", color: "var(--text-secondary)", fontWeight: "500", marginTop: "5px" }}>
+                <p className="tv-now-playing-artist">
                   {currentRequest.song.artist}
                 </p>
               </div>
 
               {/* Dedication Bubble */}
               {currentRequest.dedication && (
-                <div className="glass-panel" style={{ 
-                  padding: "20px 25px", 
-                  borderRadius: "15px",
-                  background: "rgba(13, 17, 28, 0.4)",
-                  borderColor: colors.main,
-                  borderLeftWidth: "4px",
-                  maxWidth: "550px"
-                }}>
-                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>
+                <div className="tv-dedication-box">
+                  <p className="tv-dedication-label">
                     Dedica del tavolo
                   </p>
-                  <p style={{ fontSize: "16px", fontStyle: "italic", lineHeight: "1.5" }}>
+                  <p className="tv-dedication-text">
                     &ldquo;{currentRequest.dedication}&rdquo;
                   </p>
                 </div>
@@ -310,17 +253,18 @@ export default function LiveTvScreen() {
 
         {/* Bottom Progress details */}
         {currentRequest && (
-          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <div className="progress-bar-container" style={{ height: "8px" }}>
+          <div className="tv-progress-container">
+            <div className="tv-progress-track">
               <div 
-                className="progress-bar-fill" 
+                className="tv-progress-fill" 
                 style={{ 
-                  width: `${(playback.progress / playback.duration) * 100}%`,
-                  background: `linear-gradient(90deg, ${colors.main}, var(--accent-glow))`
+                  width: `${(playback.progress / playback.duration) * 100}%`
                 }}
-              ></div>
+              >
+                <div className="tv-progress-dot"></div>
+              </div>
             </div>
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", color: "var(--text-secondary)", fontWeight: "500" }}>
+            <div className="tv-progress-times">
               <span>{formatTime(playback.progress)}</span>
               <span>{formatTime(playback.duration)}</span>
             </div>
@@ -333,17 +277,7 @@ export default function LiveTvScreen() {
       <div className="tv-side-panel">
         
         {/* QR Code and CTA */}
-        <div className="glass-panel" style={{ 
-          padding: "20px", 
-          textAlign: "center", 
-          display: "flex", 
-          flexDirection: "column", 
-          alignItems: "center", 
-          gap: "12px",
-          marginBottom: "40px",
-          borderColor: "rgba(0, 255, 255, 0.15)",
-          background: "rgba(0, 255, 255, 0.02)"
-        }}>
+        <div className="tv-qr-card">
           
           {/* SVG Inline QR Code */}
           <svg width="100" height="100" viewBox="0 0 100 100" style={{ background: "white", padding: "8px", borderRadius: "8px" }}>
@@ -400,41 +334,28 @@ export default function LiveTvScreen() {
             approvedQueue.slice(0, 4).map((req, idx) => (
               <div 
                 key={req.id} 
-                className="glass-panel" 
-                style={{ 
-                  display: "flex", 
-                  alignItems: "center", 
-                  gap: "12px", 
-                  padding: "10px 15px",
-                  borderColor: "rgba(255,255,255,0.03)"
-                }}
+                className="tv-queue-card"
               >
-                <span style={{ fontSize: "14px", fontWeight: "bold", color: "var(--text-secondary)" }}>
+                <span className="tv-queue-num">
                   {idx + 1}
                 </span>
                 
                 <img 
                   src={req.song.cover} 
                   alt="" 
-                  style={{ width: "45px", height: "45px", borderRadius: "6px", objectFit: "cover" }} 
+                  className="tv-queue-cover"
                 />
 
-                <div style={{ flex: 1, minWidth: "0" }}>
-                  <h4 style={{ fontSize: "13px", fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div className="tv-queue-info">
+                  <h4 className="tv-queue-title">
                     {req.song.title}
                   </h4>
-                  <p style={{ fontSize: "11px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <p className="tv-queue-artist">
                     {req.song.artist}
                   </p>
                 </div>
 
-                <span className="glass-panel" style={{ 
-                  padding: "2px 8px", 
-                  fontSize: "11px", 
-                  fontWeight: "bold",
-                  color: getMoodColors(req.mood).main,
-                  borderColor: getMoodColors(req.mood).main
-                }}>
+                <span className="tv-queue-badge" style={{ borderColor: getMoodColors(req.mood).main, color: getMoodColors(req.mood).main }}>
                   Tavolo {req.table}
                 </span>
               </div>
@@ -451,49 +372,14 @@ export default function LiveTvScreen() {
       </div>
 
       {/* FOOTER MARQUEE TICKER */}
-      <div style={{
-        gridColumn: "span 2",
-        height: "45px",
-        background: "rgba(13, 17, 28, 0.95)",
-        borderTop: "1px solid var(--glass-border)",
-        display: "flex",
-        alignItems: "center",
-        overflow: "hidden",
-        position: "relative",
-        zIndex: 3
-      }}>
-        <div style={{
-          background: "var(--accent-primary)",
-          color: "white",
-          padding: "0 20px",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          fontWeight: "bold",
-          fontSize: "13px",
-          letterSpacing: "1px",
-          zIndex: 4,
-          whiteSpace: "nowrap",
-          boxShadow: "10px 0 20px rgba(0,0,0,0.5)"
-        }}>
+      <div className="tv-ticker-ribbon">
+        <div className="tv-ticker-label">
           DEDICHE DI STASERA 💬
         </div>
 
         {/* Marquee Wrapper */}
-        <div style={{
-          flex: 1,
-          overflow: "hidden",
-          position: "relative"
-        }}>
-          <div style={{
-            display: "inline-block",
-            whiteSpace: "nowrap",
-            paddingLeft: "100%",
-            animation: "marquee 45s linear infinite",
-            fontSize: "14px",
-            fontWeight: "500",
-            color: "var(--text-primary)"
-          }}>
+        <div className="tv-ticker-container">
+          <div className="tv-ticker-scroll">
             {tickerText} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {tickerText}
           </div>
         </div>
