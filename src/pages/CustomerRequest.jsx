@@ -152,13 +152,7 @@ export default function CustomerRequest() {
           </span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span className="glass-panel" style={{ 
-            padding: "5px 12px", 
-            fontSize: "13px", 
-            fontWeight: "bold",
-            borderColor: "var(--accent-glow)",
-            color: "var(--accent-glow)" 
-          }}>
+          <span className="table-badge">
             Tavolo {table}
           </span>
           <button 
@@ -166,16 +160,9 @@ export default function CustomerRequest() {
               window.history.pushState({}, "", "/entry");
               window.dispatchEvent(new PopStateEvent("popstate"));
             }} 
-            style={{ 
-              background: "none", 
-              border: "none", 
-              color: "var(--text-secondary)", 
-              fontSize: "12px", 
-              cursor: "pointer",
-              textDecoration: "underline" 
-            }}
+            className="btn-change-table"
           >
-            Cambia
+            Modifica 🔄
           </button>
         </div>
       </header>
@@ -441,18 +428,7 @@ export default function CustomerRequest() {
                       key={mood}
                       type="button"
                       onClick={() => setSelectedMood(mood)}
-                      className="glass-panel"
-                      style={{
-                        padding: "8px 14px",
-                        fontSize: "13px",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        borderRadius: "20px",
-                        background: selectedMood === mood ? getMoodColor(mood) : "rgba(255, 255, 255, 0.02)",
-                        borderColor: selectedMood === mood ? getMoodColor(mood) : "var(--glass-border)",
-                        color: selectedMood === mood ? "black" : "var(--text-primary)",
-                        boxShadow: selectedMood === mood ? `0 0 10px ${getMoodColor(mood)}50` : "none"
-                      }}
+                      className={`mood-chip ${selectedMood === mood ? `selected-${mood}` : ""}`}
                     >
                       {MOOD_EMOJIS[mood]} {mood.charAt(0).toUpperCase() + mood.slice(1)}
                     </button>
@@ -486,9 +462,8 @@ export default function CustomerRequest() {
                 className="btn-primary" 
                 style={{ 
                   background: getMoodColor(selectedMood),
-                  boxShadow: `0 4px 15px ${getMoodColor(selectedMood)}40`,
-                  color: "black",
-                  fontWeight: "bold"
+                  boxShadow: `0 8px 20px ${getMoodColor(selectedMood)}45`,
+                  color: selectedMood === "chill" || selectedMood === "romantic" ? "white" : "#05070e"
                 }}
                 disabled={isSubmitting}
               >

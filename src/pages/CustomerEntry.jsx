@@ -81,8 +81,7 @@ export default function CustomerEntry() {
                 setTable(e.target.value);
                 if (error) setError("");
               }}
-              className="text-input"
-              style={{ fontSize: "20px", textAlign: "center", letterSpacing: "2px", fontWeight: "bold" }}
+              className="text-input text-input-table"
             />
             {error && (
               <span style={{ color: "var(--accent-primary)", fontSize: "13px", marginTop: "5px", fontWeight: "500" }}>
@@ -91,8 +90,8 @@ export default function CustomerEntry() {
             )}
           </div>
 
-          <button type="submit" className="btn-primary" style={{ padding: "16px", fontSize: "16px" }}>
-            Entra nel Jukebox
+          <button type="submit" className="btn-primary">
+            Entra nel Jukebox ⚡
           </button>
         </form>
 
