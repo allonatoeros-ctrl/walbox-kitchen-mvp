@@ -232,7 +232,7 @@ export default function LiveTvScreenWalrus() {
               </p>
             </div>
 
-            <div className="tv-takeover-badge walrus-tv-takeover-badge">
+            <div className="walrus-tv-table-badge">
               <span className="walrus-tv-badge-text">Richiesto dal Tavolo {takeoverRequest.table}</span>
             </div>
 
@@ -249,7 +249,7 @@ export default function LiveTvScreenWalrus() {
         {/* Top Header info */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <svg className="walrus-mascot-svg" width="44" height="44" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "var(--walrus-white-warm, #F7F5F0)" }}>
+            <svg className="walrus-mascot-svg" width="64" height="64" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "var(--walrus-white-warm, #F7F5F0)" }}>
               <circle cx="50" cy="50" r="46" stroke="currentColor" strokeWidth="6" />
               {/* Tusks (zanne) */}
               <path d="M40 52 L40 78 L46 72 Z" fill="currentColor" />

@@ -2131,8 +2131,8 @@ input, textarea, select {
   background-color: var(--walrus-charcoal) !important;
   /* SVG Brick grid pattern layered over deep red/black radial glow */
   background-image: 
-    url("data:image/svg+xml,%3Csvg width='80' height='40' viewBox='0 0 80 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20h80M40 0v20M0 20v20M80 20v20' stroke='%239E3F2B' stroke-width='1.5' stroke-opacity='0.09' fill='none'/%3E%3C/svg%3E"),
-    radial-gradient(circle at center, rgba(158, 63, 43, 0.22) 0%, rgba(18, 18, 18, 0.98) 100%) !important;
+    url("data:image/svg+xml,%3Csvg width='80' height='40' viewBox='0 0 80 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20h80M40 0v20M0 20v20M80 20v20' stroke='%239E3F2B' stroke-width='1.5' stroke-opacity='0.25' fill='none'/%3E%3C/svg%3E"),
+    radial-gradient(circle at center, rgba(158, 63, 43, 0.28) 0%, rgba(18, 18, 18, 0.98) 100%) !important;
   background-size: 80px 40px, 100% 100% !important;
   font-family: var(--font-walrus-body);
 }
@@ -2367,15 +2367,15 @@ input, textarea, select {
   width: 140px;
   height: 140px;
   border-radius: 50% !important;
-  background: #121212 !important;
-  border: 6px double var(--walrus-neon-fuchsia) !important; /* physical coaster print */
+  background: var(--walrus-white-warm) !important;
+  border: 5px dashed var(--walrus-copper) !important; /* traditional paper/cardboard coaster stitch */
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   box-shadow: 
     0 12px 30px rgba(0, 0, 0, 0.8),
-    0 0 25px rgba(255, 20, 147, 0.45),
-    inset 0 0 15px rgba(0, 0, 0, 0.9) !important;
+    0 0 20px rgba(212, 137, 82, 0.25),
+    inset 0 0 12px rgba(0, 0, 0, 0.1) !important;
   animation: coasterPulse 3s infinite ease-in-out;
 }
 
@@ -2383,26 +2383,25 @@ input, textarea, select {
   0%, 100% {
     box-shadow: 
       0 12px 30px rgba(0, 0, 0, 0.8),
-      0 0 20px rgba(255, 20, 147, 0.4),
-      inset 0 0 15px rgba(0, 0, 0, 0.9);
+      0 0 15px rgba(212, 137, 82, 0.2),
+      inset 0 0 12px rgba(0, 0, 0, 0.1) !important;
     transform: scale(1);
   }
   50% {
     box-shadow: 
       0 12px 30px rgba(0, 0, 0, 0.8),
-      0 0 35px rgba(255, 20, 147, 0.75),
-      inset 0 0 15px rgba(0, 0, 0, 0.9);
+      0 0 25px rgba(212, 137, 82, 0.4),
+      inset 0 0 12px rgba(0, 0, 0, 0.1) !important;
     transform: scale(1.02);
   }
 }
 
 .tv-walrus-variant .walrus-tv-coaster-qr-svg {
-  background: var(--walrus-white-warm) !important;
-  padding: 8px !important;
-  border-radius: 50% !important; /* fits inside coaster */
+  background: transparent !important;
+  padding: 4px !important;
+  border-radius: 0% !important; /* REMOVED clippping to make it fully scansionable */
   width: 80px !important;
   height: 80px !important;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3) !important;
 }
 
 .tv-walrus-variant .walrus-tv-coaster-cta {
@@ -2422,7 +2421,7 @@ input, textarea, select {
 .tv-walrus-variant .walrus-tv-coaster-cta p {
   font-family: var(--font-walrus-body) !important;
   font-size: 10px !important;
-  color: var(--walrus-neon-fuchsia) !important;
+  color: var(--walrus-copper) !important;
   font-weight: bold !important;
   text-transform: uppercase !important;
   margin-top: 3px !important;
@@ -2537,17 +2536,19 @@ input, textarea, select {
 }
 
 .tv-walrus-variant .tv-takeover-screen {
-  background: radial-gradient(circle at center, #1b120f 0%, #0d0d0d 100%) !important;
+  background: radial-gradient(circle at center, rgba(27, 18, 15, 0.85) 0%, rgba(13, 13, 13, 0.96) 100%) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
 }
 
 .tv-walrus-variant .tv-takeover-glow {
-  background: radial-gradient(circle, rgba(255, 20, 147, 0.18) 0%, transparent 70%) !important;
+  background: radial-gradient(circle, rgba(212, 137, 82, 0.25) 0%, transparent 70%) !important;
 }
 
 .tv-walrus-variant .tv-takeover-subtitle {
   font-family: var(--font-walrus-title) !important;
-  color: var(--walrus-neon-fuchsia) !important;
-  text-shadow: 0 0 10px rgba(255, 20, 147, 0.6) !important;
+  color: var(--walrus-copper) !important;
+  text-shadow: 0 0 10px rgba(212, 137, 82, 0.6) !important;
   animation: neonFlicker 0.2s 3 alternate ease-in-out !important;
 }
 
@@ -2572,7 +2573,7 @@ input, textarea, select {
 }
 
 .tv-walrus-variant .tv-takeover-social {
-  color: var(--walrus-neon-fuchsia) !important;
+  color: var(--walrus-amber-beer) !important;
   font-weight: 700 !important;
 }
 
