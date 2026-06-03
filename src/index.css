@@ -2119,7 +2119,8 @@ input, textarea, select {
   --walrus-trunk-brown: #5C4033;
   --walrus-neon-fuchsia: #FF1493;
 
-  --font-walrus-title: 'Syne', Georgia, serif;
+  /* Classic/vintage display stack instead of web fonts */
+  --font-walrus-title: Georgia, 'Times New Roman', serif;
   --font-walrus-body: 'Outfit', sans-serif;
 
   /* Overrides for local variables */
@@ -2128,7 +2129,11 @@ input, textarea, select {
   --tv-glow: var(--walrus-copper);
 
   background-color: var(--walrus-charcoal) !important;
-  background-image: radial-gradient(circle at center, rgba(158, 63, 43, 0.22) 0%, rgba(18, 18, 18, 0.98) 100%) !important;
+  /* SVG Brick grid pattern layered over deep red/black radial glow */
+  background-image: 
+    url("data:image/svg+xml,%3Csvg width='80' height='40' viewBox='0 0 80 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 20h80M40 0v20M0 20v20M80 20v20' stroke='%239E3F2B' stroke-width='1.5' stroke-opacity='0.09' fill='none'/%3E%3C/svg%3E"),
+    radial-gradient(circle at center, rgba(158, 63, 43, 0.22) 0%, rgba(18, 18, 18, 0.98) 100%) !important;
+  background-size: 80px 40px, 100% 100% !important;
   font-family: var(--font-walrus-body);
 }
 
@@ -2138,7 +2143,7 @@ input, textarea, select {
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0.055;
+  opacity: 0.08; /* slightly increased for visual texture */
   pointer-events: none;
   z-index: 10;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
@@ -2179,7 +2184,7 @@ input, textarea, select {
 .tv-walrus-variant.walrus-tv-sparks .tv-particle,
 .tv-walrus-variant .walrus-tv-sparks .tv-particle {
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(212, 137, 82, 0.4) 0%, rgba(255, 191, 0, 0.15) 50%, transparent 70%) !important;
+  background: radial-gradient(circle, rgba(212, 137, 82, 0.45) 0%, rgba(255, 191, 0, 0.15) 50%, transparent 70%) !important;
   opacity: 0.65;
   animation: walrusSparkRise 25s infinite linear !important;
 }
@@ -2211,16 +2216,18 @@ input, textarea, select {
   }
 }
 
-/* Arched Now Playing card */
+/* Arched Now Playing card (Signboard Frame look) */
 .tv-walrus-variant .walrus-tv-now-playing-panel {
-  background: radial-gradient(ellipse at top, rgba(92, 64, 51, 0.45) 0%, rgba(18, 18, 18, 0.95) 100%) !important;
-  border: 1px solid rgba(212, 137, 82, 0.25) !important;
-  border-top: 4px solid var(--walrus-copper) !important;
-  border-radius: 40px 40px 16px 16px !important;
+  background: radial-gradient(ellipse at top, rgba(92, 64, 51, 0.45) 0%, rgba(18, 18, 18, 0.96) 100%) !important;
+  border: 6px solid #2e1910 !important; /* thick wooden framing */
+  outline: 2px solid var(--walrus-copper) !important; /* metallic outline */
+  outline-offset: -4px !important;
+  border-radius: 120px 120px 24px 24px !important; /* true arched pub sign look */
   box-shadow: 
-    0 30px 60px rgba(0, 0, 0, 0.8),
-    0 0 40px rgba(212, 137, 82, 0.15),
-    inset 0 1px 2px rgba(255, 255, 255, 0.05) !important;
+    0 30px 60px rgba(0, 0, 0, 0.9),
+    0 0 45px rgba(212, 137, 82, 0.2),
+    inset 0 0 30px rgba(0, 0, 0, 0.9),
+    inset 0 1px 3px rgba(255, 255, 255, 0.1) !important;
   position: relative;
   overflow: hidden;
   backdrop-filter: blur(15px);
@@ -2242,125 +2249,184 @@ input, textarea, select {
     0 0 20px rgba(255, 191, 0, 0.15) !important;
 }
 
-/* Suitcase Badges */
+/* Vintage Leather Suitcase Badges */
 .tv-walrus-variant .walrus-tv-table-badge,
-.tv-walrus-variant .walrus-tv-queue-badge {
+.tv-walrus-variant .walrus-tv-queue-badge,
+.tv-walrus-variant .walrus-tv-takeover-badge {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px !important;
+  justify-content: center;
+  padding: 6px 20px !important;
   border-radius: 6px !important;
-  font-family: var(--font-walrus-title);
+  font-family: var(--font-walrus-title) !important;
   font-weight: bold;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  background: var(--walrus-trunk-green) !important;
-  border: 2px solid #8B5A2B !important;
+  background-color: var(--walrus-trunk-green) !important;
+  border: 2px solid #7c5c43 !important; /* leather edge trim */
   color: var(--walrus-white-warm) !important;
   box-shadow: 
-    0 4px 10px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-  position: relative;
+    0 6px 12px rgba(0, 0, 0, 0.6),
+    inset 0 0 8px rgba(0, 0, 0, 0.85) !important; /* leather trunk depth */
   text-shadow: none !important;
+  z-index: 1;
+}
+
+/* Trunk straps */
+.tv-walrus-variant .walrus-tv-table-badge::before,
+.tv-walrus-variant .walrus-tv-table-badge::after,
+.tv-walrus-variant .walrus-tv-queue-badge::before,
+.tv-walrus-variant .walrus-tv-queue-badge::after,
+.tv-walrus-variant .walrus-tv-takeover-badge::before,
+.tv-walrus-variant .walrus-tv-takeover-badge::after {
+  content: "" !important;
+  position: absolute !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 4px !important;
+  background: #1c110a !important; /* dark leather strap */
+  border-left: 1px solid #d48952 !important; /* gold hardware accents */
+  border-right: 1px solid #d48952 !important;
+  z-index: 0 !important;
+}
+
+.tv-walrus-variant .walrus-tv-table-badge::before,
+.tv-walrus-variant .walrus-tv-queue-badge::before,
+.tv-walrus-variant .walrus-tv-takeover-badge::before {
+  left: 20% !important;
+}
+
+.tv-walrus-variant .walrus-tv-table-badge::after,
+.tv-walrus-variant .walrus-tv-queue-badge::after,
+.tv-walrus-variant .walrus-tv-takeover-badge::after {
+  right: 20% !important;
+}
+
+.tv-walrus-variant .walrus-tv-badge-text {
+  position: relative !important;
+  z-index: 2 !important;
 }
 
 .tv-walrus-variant .walrus-tv-queue-badge {
   font-size: 11px;
-  padding: 4px 10px !important;
+  padding: 4px 14px !important;
 }
 
 .tv-walrus-variant .tv-queue-card:nth-child(even) .walrus-tv-queue-badge {
-  background: var(--walrus-trunk-brown) !important;
+  background-color: var(--walrus-trunk-brown) !important;
+  border-color: #8c6a53 !important;
 }
 
 .tv-walrus-variant .tv-queue-card:nth-child(3n) .walrus-tv-queue-badge {
-  background: var(--walrus-brick-red) !important;
+  background-color: var(--walrus-brick-red) !important;
+  border-color: #aa4c38 !important;
 }
 
-/* Copper progress pipeline */
+/* 3D Copper progress pipeline */
 .tv-walrus-variant .tv-progress-track {
-  height: 12px !important;
-  background: rgba(18, 18, 18, 0.8) !important;
-  border: 2px solid #8B4513 !important;
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8) !important;
-  border-radius: 6px !important;
+  height: 16px !important;
+  background: linear-gradient(180deg, #3d2214 0%, #703e20 40%, #a05a2e 50%, #703e20 70%, #3d2214 100%) !important; /* metallic cylinder pipe */
+  border: 2px solid #1f110a !important;
+  box-shadow: 
+    0 4px 10px rgba(0, 0, 0, 0.5),
+    inset 0 1px 3px rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+  position: relative;
 }
 
 .tv-walrus-variant .tv-progress-fill {
-  background: linear-gradient(90deg, #D48952 0%, #FFBF00 50%, #FFD700 100%) !important;
-  box-shadow: 0 0 15px rgba(255, 191, 0, 0.8) !important;
-  border-radius: 4px !important;
+  background: linear-gradient(180deg, #ff8c00 0%, #ffbf00 50%, #ffd700 100%) !important; /* glowing beer liquid */
+  box-shadow: 
+    0 0 12px rgba(255, 191, 0, 0.9),
+    0 0 25px rgba(255, 140, 0, 0.6) !important;
+  border-radius: 6px !important;
+  height: 100% !important;
 }
 
 .tv-walrus-variant .tv-progress-dot {
-  width: 18px !important;
-  height: 18px !important;
-  background: #FFD700 !important;
-  border: 3px solid #8B4513 !important;
+  width: 20px !important;
+  height: 20px !important;
+  background: #ffd700 !important;
+  border: 3px solid #3d2214 !important; /* copper lock dot */
   box-shadow: 
-    0 0 10px #FFD700, 
-    0 0 20px #FFBF00 !important;
+    0 0 10px #ffd700, 
+    0 0 20px #ffbf00,
+    0 4px 8px rgba(0, 0, 0, 0.6) !important;
 }
 
-/* Circular QR coaster styling */
+/* Coaster Widget structure (QR Coaster) */
+.tv-walrus-variant .walrus-tv-coaster-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 35px;
+}
+
 .tv-walrus-variant .walrus-tv-qr-coaster {
-  width: 180px;
-  height: 180px;
-  margin: 0 auto 35px auto !important;
+  width: 140px;
+  height: 140px;
   border-radius: 50% !important;
   background: #121212 !important;
-  border: 5px solid var(--walrus-neon-fuchsia) !important;
+  border: 6px double var(--walrus-neon-fuchsia) !important; /* physical coaster print */
   display: flex !important;
-  flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  padding: 15px !important;
   box-shadow: 
-    0 10px 25px rgba(0, 0, 0, 0.8),
+    0 12px 30px rgba(0, 0, 0, 0.8),
     0 0 25px rgba(255, 20, 147, 0.45),
     inset 0 0 15px rgba(0, 0, 0, 0.9) !important;
-  transition: transform 0.3s ease, box-shadow 0.3s ease !important;
   animation: coasterPulse 3s infinite ease-in-out;
 }
 
 @keyframes coasterPulse {
   0%, 100% {
     box-shadow: 
-      0 10px 25px rgba(0, 0, 0, 0.8),
+      0 12px 30px rgba(0, 0, 0, 0.8),
       0 0 20px rgba(255, 20, 147, 0.4),
       inset 0 0 15px rgba(0, 0, 0, 0.9);
     transform: scale(1);
   }
   50% {
     box-shadow: 
-      0 10px 25px rgba(0, 0, 0, 0.8),
+      0 12px 30px rgba(0, 0, 0, 0.8),
       0 0 35px rgba(255, 20, 147, 0.75),
       inset 0 0 15px rgba(0, 0, 0, 0.9);
     transform: scale(1.02);
   }
 }
 
-.tv-walrus-variant .walrus-tv-qr-coaster svg {
-  border-radius: 50% !important;
-  padding: 10px !important;
-  width: 75px !important;
-  height: 75px !important;
+.tv-walrus-variant .walrus-tv-coaster-qr-svg {
+  background: var(--walrus-white-warm) !important;
+  padding: 8px !important;
+  border-radius: 50% !important; /* fits inside coaster */
+  width: 80px !important;
+  height: 80px !important;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.3) !important;
 }
 
-.tv-walrus-variant .walrus-tv-qr-coaster h4 {
-  display: block !important;
-  font-size: 11px !important;
-  margin-top: 4px !important;
-  color: var(--walrus-white-warm) !important;
+.tv-walrus-variant .walrus-tv-coaster-cta {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.tv-walrus-variant .walrus-tv-coaster-cta h4 {
   font-family: var(--font-walrus-title) !important;
+  font-size: 13px !important;
+  color: var(--walrus-white-warm) !important;
+  letter-spacing: 1.5px !important;
+  margin: 0 !important;
+  text-transform: uppercase;
 }
 
-.tv-walrus-variant .walrus-tv-qr-coaster p {
-  display: block !important;
-  font-size: 9px !important;
-  margin-top: 1px !important;
+.tv-walrus-variant .walrus-tv-coaster-cta p {
+  font-family: var(--font-walrus-body) !important;
+  font-size: 10px !important;
   color: var(--walrus-neon-fuchsia) !important;
+  font-weight: bold !important;
   text-transform: uppercase !important;
+  margin-top: 3px !important;
+  letter-spacing: 0.5px !important;
 }
 
 /* EQ premium slow animation */
@@ -2372,7 +2438,7 @@ input, textarea, select {
 /* Typography display stacks */
 .tv-walrus-variant .tv-now-playing-title {
   font-family: var(--font-walrus-title) !important;
-  font-size: 56px !important;
+  font-size: 54px !important;
   font-weight: 800 !important;
   letter-spacing: -1px !important;
   background: linear-gradient(135deg, var(--walrus-white-warm) 40%, rgba(247, 245, 240, 0.75) 100%) !important;
@@ -2383,13 +2449,25 @@ input, textarea, select {
 
 .tv-walrus-variant .tv-now-playing-artist {
   color: var(--walrus-copper) !important;
-  font-size: 28px !important;
+  font-size: 26px !important;
   font-weight: 600 !important;
 }
 
+/* Sidebar with 3D Copper tube divider */
 .tv-walrus-variant .tv-side-panel {
-  background: rgba(18, 18, 18, 0.82) !important;
-  border-left: 2px solid rgba(212, 137, 82, 0.2) !important;
+  background: rgba(18, 18, 18, 0.88) !important;
+  border-left: 14px solid transparent !important;
+  border-image: linear-gradient(
+    90deg,
+    #5c3a21 0%,
+    #8b5533 20%,
+    #d48952 45%,
+    #ffd2b0 55%,
+    #d48952 65%,
+    #8b5533 80%,
+    #5c3a21 100%
+  ) 1 100% !important; /* vertical copper pipe */
+  box-shadow: -6px 0 20px rgba(0, 0, 0, 0.8) !important;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
@@ -2413,16 +2491,28 @@ input, textarea, select {
   font-family: var(--font-walrus-body) !important;
 }
 
+/* Queue Card styled as Mahogany Wood Shelves */
 .tv-walrus-variant .tv-queue-card {
-  background: rgba(26, 20, 18, 0.45) !important;
-  border: 1px solid rgba(212, 137, 82, 0.15) !important;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.4) !important;
+  background: linear-gradient(180deg, #2b1810 0%, #150b07 100%) !important;
+  border-top: 3px solid #5a3825 !important; /* wood top lip */
+  border-bottom: 5px solid #090403 !important; /* bottom edge shadow */
+  border-left: 1px solid #1a0f0a !important;
+  border-right: 1px solid #1a0f0a !important;
+  border-radius: 4px !important;
+  margin-bottom: 12px !important;
+  box-shadow: 
+    0 8px 16px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease !important;
 }
 
 .tv-walrus-variant .tv-queue-card:hover {
-  background: rgba(36, 28, 25, 0.65) !important;
-  border-color: rgba(212, 137, 82, 0.3) !important;
-  transform: translateX(-4px) !important;
+  background: linear-gradient(180deg, #382015 0%, #1e100a 100%) !important;
+  border-top-color: #724730 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 
+    0 12px 24px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
 .tv-walrus-variant .tv-queue-num {
@@ -2476,12 +2566,9 @@ input, textarea, select {
 }
 
 .tv-walrus-variant .walrus-tv-takeover-badge {
-  background: var(--walrus-trunk-brown) !important;
-  border: 2px solid var(--walrus-copper) !important;
-  color: var(--walrus-white-warm) !important;
-  padding: 8px 20px !important;
-  border-radius: 6px !important;
-  font-family: var(--font-walrus-title) !important;
+  background-color: var(--walrus-trunk-brown) !important;
+  border-color: #8c6a53 !important;
+  padding: 8px 24px !important;
 }
 
 .tv-walrus-variant .tv-takeover-social {
@@ -2559,6 +2646,11 @@ input, textarea, select {
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
 }
+
+.tv-walrus-variant .walrus-mascot-svg {
+  filter: drop-shadow(0 0 8px rgba(255, 191, 0, 0.45)) !important;
+}
+
 
 
 

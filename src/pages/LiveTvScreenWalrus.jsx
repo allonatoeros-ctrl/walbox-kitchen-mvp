@@ -233,11 +233,11 @@ export default function LiveTvScreenWalrus() {
             </div>
 
             <div className="tv-takeover-badge walrus-tv-takeover-badge">
-              💼 Richiesto dal Tavolo {takeoverRequest.table}
+              <span className="walrus-tv-badge-text">Richiesto dal Tavolo {takeoverRequest.table}</span>
             </div>
 
             <div className="tv-takeover-social">
-              📸 Condividi il tuo momento. Tagga @TheWalrusPub
+              Condividi il tuo momento. Tagga @TheWalrusPub
             </div>
           </div>
         </div>
@@ -247,14 +247,27 @@ export default function LiveTvScreenWalrus() {
       <div className="tv-main-panel">
         
         {/* Top Header info */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div>
-            <span className="walrus-tv-header-sup" style={{ fontSize: "12px", color: "var(--walrus-copper, #D48952)", letterSpacing: "3px", fontWeight: "bold" }}>
-              WALBOX × THE WALRUS PUB
-            </span>
-            <h2 className="walrus-tv-header-title" style={{ fontSize: "24px", fontWeight: "800", fontFamily: "var(--font-walrus-title, Georgia, serif)", color: "var(--walrus-white-warm, #F7F5F0)" }}>
-              Live Venue Shuffle 🍻
-            </h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <svg className="walrus-mascot-svg" width="44" height="44" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "var(--walrus-white-warm, #F7F5F0)" }}>
+              <circle cx="50" cy="50" r="46" stroke="currentColor" strokeWidth="6" />
+              {/* Tusks (zanne) */}
+              <path d="M40 52 L40 78 L46 72 Z" fill="currentColor" />
+              <path d="M60 52 L60 78 L54 72 Z" fill="currentColor" />
+              {/* Mustache (baffi) */}
+              <path d="M50 48 C25 40 20 62 15 62 C15 62 25 50 50 52 C75 50 85 62 85 62 C80 62 75 40 50 48 Z" fill="currentColor" />
+              {/* Eyes */}
+              <circle cx="40" cy="38" r="4.5" fill="currentColor" />
+              <circle cx="60" cy="38" r="4.5" fill="currentColor" />
+            </svg>
+            <div>
+              <span className="walrus-tv-header-sup" style={{ fontSize: "12px", color: "var(--walrus-copper, #D48952)", letterSpacing: "3px", fontWeight: "bold", display: "block" }}>
+                WALBOX × THE WALRUS PUB
+              </span>
+              <h2 className="walrus-tv-header-title" style={{ fontSize: "24px", fontWeight: "800", fontFamily: "var(--font-walrus-title, Georgia, serif)", color: "var(--walrus-white-warm, #F7F5F0)", margin: 0 }}>
+                WALRUS LIVE SHUFFLE
+              </h2>
+            </div>
           </div>
           {currentRequest && (
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -290,7 +303,7 @@ export default function LiveTvScreenWalrus() {
             <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "15px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                 <span className="tv-table-badge walrus-tv-table-badge">
-                  🧳 TAVOLO {currentRequest.table}
+                  <span className="walrus-tv-badge-text">TAVOLO {currentRequest.table}</span>
                 </span>
                 
                 {/* Audio visualizer */}
@@ -316,7 +329,7 @@ export default function LiveTvScreenWalrus() {
               {currentRequest.dedication && (
                 <div className="tv-dedication-box">
                   <p className="tv-dedication-label">
-                    Al tavolo dicono che... 💬
+                    Al tavolo dicono che...
                   </p>
                   <p className="tv-dedication-text">
                     &ldquo;{currentRequest.dedication}&rdquo;
@@ -327,8 +340,15 @@ export default function LiveTvScreenWalrus() {
 
           </div>
         ) : (
-          <div className="walrus-tv-waiting-state" style={{ textAlign: "center", padding: "100px 0" }}>
-            <span style={{ fontSize: "60px", opacity: 0.85 }}>🍻</span>
+          <div className="walrus-tv-waiting-state" style={{ textAlign: "center", padding: "80px 0" }}>
+            <svg className="walrus-mascot-svg" width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ color: "var(--walrus-copper)", margin: "0 auto 20px auto", display: "block" }}>
+              <circle cx="50" cy="50" r="46" stroke="currentColor" strokeWidth="6" />
+              <path d="M40 52 L40 78 L46 72 Z" fill="currentColor" />
+              <path d="M60 52 L60 78 L54 72 Z" fill="currentColor" />
+              <path d="M50 48 C25 40 20 62 15 62 C15 62 25 50 50 52 C75 50 85 62 85 62 C80 62 75 40 50 48 Z" fill="currentColor" />
+              <circle cx="40" cy="38" r="4.5" fill="currentColor" />
+              <circle cx="60" cy="38" r="4.5" fill="currentColor" />
+            </svg>
             <h1 style={{ fontSize: "36px", fontWeight: "800", marginTop: "20px", fontFamily: "var(--font-walrus-title, Georgia, serif)", color: "var(--walrus-white-warm, #F7F5F0)" }}>
               Banco in attesa di richieste...
             </h1>
@@ -363,41 +383,39 @@ export default function LiveTvScreenWalrus() {
       {/* RIGHT: UPCOMING QUEUE PANEL */}
       <div className="tv-side-panel">
         
-        {/* QR Code and CTA */}
-        <div className="tv-qr-card walrus-tv-qr-coaster">
-          
-          {/* SVG Inline QR Code */}
-          <svg width="100" height="100" viewBox="0 0 100 100" style={{ background: "white", padding: "8px", borderRadius: "50%" }}>
-            {/* Corners */}
-            <rect x="0" y="0" width="30" height="30" fill="black" />
-            <rect x="5" y="5" width="20" height="20" fill="white" />
-            <rect x="10" y="10" width="10" height="10" fill="black" />
-            
-            <rect x="70" y="0" width="30" height="30" fill="black" />
-            <rect x="75" y="5" width="20" height="20" fill="white" />
-            <rect x="80" y="10" width="10" height="10" fill="black" />
-            
-            <rect x="0" y="70" width="30" height="30" fill="black" />
-            <rect x="5" y="75" width="20" height="20" fill="white" />
-            <rect x="10" y="80" width="10" height="10" fill="black" />
+        {/* QR Coaster Widget */}
+        <div className="walrus-tv-coaster-wrapper">
+          <div className="walrus-tv-qr-coaster">
+            {/* SVG Inline QR Code */}
+            <svg width="85" height="85" viewBox="0 0 100 100" className="walrus-tv-coaster-qr-svg">
+              {/* Corners */}
+              <rect x="0" y="0" width="30" height="30" fill="black" />
+              <rect x="5" y="5" width="20" height="20" fill="white" />
+              <rect x="10" y="10" width="10" height="10" fill="black" />
+              
+              <rect x="70" y="0" width="30" height="30" fill="black" />
+              <rect x="75" y="5" width="20" height="20" fill="white" />
+              <rect x="80" y="10" width="10" height="10" fill="black" />
+              
+              <rect x="0" y="70" width="30" height="30" fill="black" />
+              <rect x="5" y="75" width="20" height="20" fill="white" />
+              <rect x="10" y="80" width="10" height="10" fill="black" />
 
-            {/* Random blocks representing data */}
-            <rect x="35" y="5" width="10" height="10" fill="black" />
-            <rect x="50" y="15" width="10" height="10" fill="black" />
-            <rect x="35" y="25" width="15" height="5" fill="black" />
-            <rect x="15" y="35" width="10" height="15" fill="black" />
-            <rect x="40" y="40" width="20" height="20" fill="black" />
-            <rect x="70" y="45" width="15" height="10" fill="black" />
-            <rect x="80" y="60" width="10" height="15" fill="black" />
-            <rect x="45" y="75" width="15" height="15" fill="black" />
-            <rect x="75" y="80" width="10" height="10" fill="black" />
-          </svg>
-
-          <div>
-            <h4 style={{ fontSize: "14px", fontWeight: "800", fontFamily: "var(--font-walrus-title, Georgia, serif)" }}>Scegli tu la musica!</h4>
-            <p style={{ fontSize: "11px", color: "var(--walrus-neon-fuchsia, #FF1493)", fontWeight: "700", marginTop: "3px" }}>
-              Inquadra il sottobicchiere 🍻
-            </p>
+              {/* Random blocks representing data */}
+              <rect x="35" y="5" width="10" height="10" fill="black" />
+              <rect x="50" y="15" width="10" height="10" fill="black" />
+              <rect x="35" y="25" width="15" height="5" fill="black" />
+              <rect x="15" y="35" width="10" height="15" fill="black" />
+              <rect x="40" y="40" width="20" height="20" fill="black" />
+              <rect x="70" y="45" width="15" height="10" fill="black" />
+              <rect x="80" y="60" width="10" height="15" fill="black" />
+              <rect x="45" y="75" width="15" height="15" fill="black" />
+              <rect x="75" y="80" width="10" height="10" fill="black" />
+            </svg>
+          </div>
+          <div className="walrus-tv-coaster-cta">
+            <h4>SCEGLI LA MUSICA</h4>
+            <p>Inquadra il sottobicchiere al tavolo</p>
           </div>
         </div>
 
@@ -409,7 +427,7 @@ export default function LiveTvScreenWalrus() {
           marginBottom: "20px",
           color: "var(--walrus-white-warm, #F7F5F0)"
         }}>
-          PROSSIMI AL BANCONE 🍻
+          PROSSIMI AL BANCONE
         </h3>
 
         {/* Approved Queue list */}
@@ -443,8 +461,8 @@ export default function LiveTvScreenWalrus() {
                   </p>
                 </div>
 
-                <span className="tv-queue-badge walrus-tv-queue-badge" style={{ borderColor: getMoodColors(req.mood).main, color: getMoodColors(req.mood).main }}>
-                  🧳 Tavolo {req.table}
+                <span className="tv-queue-badge walrus-tv-queue-badge">
+                  <span className="walrus-tv-badge-text">Tavolo {req.table}</span>
                 </span>
               </div>
             ))
@@ -462,7 +480,7 @@ export default function LiveTvScreenWalrus() {
       {/* FOOTER MARQUEE TICKER */}
       <div className="tv-ticker-ribbon">
         <div className="tv-ticker-label">
-          VOCI DAL BANCONE 💬
+          VOCI DAL BANCONE
         </div>
 
         {/* Marquee Wrapper */}
