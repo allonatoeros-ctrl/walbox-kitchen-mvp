@@ -125,7 +125,7 @@ export default function StaffDashboard() {
     <div className="dashboard-container">
       {/* 1. COLUMN: PENDING APPROVALS */}
       <div className="dashboard-col">
-        <div className="dashboard-col-header">
+        <div className="dashboard-col-header pending">
           <h2>Richieste Pendenti</h2>
           <span className="glass-panel" style={{ padding: "2px 8px", fontSize: "12px", background: "rgba(255,255,255,0.05)" }}>
             {pendingRequests.length} in attesa
@@ -141,70 +141,46 @@ export default function StaffDashboard() {
             pendingRequests.map((req) => (
               <div 
                 key={req.id} 
-                className="glass-panel" 
-                style={{ 
-                  padding: "15px", 
-                  display: "flex", 
-                  flexDirection: "column", 
-                  gap: "10px",
-                  borderColor: "rgba(255,255,255,0.06)" 
-                }}
+                className="staff-card" 
+                style={{ borderLeft: `3px solid ${getMoodColor(req.mood)}` }}
               >
-                <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                <div className="staff-card-header">
+                  <span className="table-badge" style={{ padding: "3px 8px", fontSize: "10px" }}>
+                    Tavolo {req.table}
+                  </span>
+                  <span style={{ color: getMoodColor(req.mood), fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                    {MOOD_EMOJIS[req.mood]} {req.mood}
+                  </span>
+                </div>
+
+                <div className="staff-card-body">
                   <img 
                     src={req.song.cover} 
                     alt="" 
-                    style={{ width: "50px", height: "50px", borderRadius: "6px", objectFit: "cover" }} 
+                    className="staff-card-cover" 
                   />
                   <div style={{ flex: 1, minWidth: "0" }}>
-                    <h4 style={{ fontSize: "14px", fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {req.song.title}
-                    </h4>
-                    <p style={{ fontSize: "12px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {req.song.artist}
-                    </p>
-                    <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "5px" }}>
-                      <span className="glass-panel" style={{ padding: "1px 6px", fontSize: "10px", fontWeight: "bold", color: "var(--accent-glow)", borderColor: "var(--accent-glow)" }}>
-                        Tavolo {req.table}
-                      </span>
-                      <span className="glass-panel" style={{ padding: "1px 6px", fontSize: "10px", fontWeight: "bold", color: getMoodColor(req.mood), borderColor: getMoodColor(req.mood) }}>
-                        {MOOD_EMOJIS[req.mood]} {req.mood}
-                      </span>
-                    </div>
+                    <h4 className="staff-card-title">{req.song.title}</h4>
+                    <p className="staff-card-artist">{req.song.artist}</p>
                   </div>
                 </div>
 
                 {req.dedication && (
-                  <p style={{ 
-                    fontSize: "12px", 
-                    color: "var(--text-secondary)", 
-                    fontStyle: "italic", 
-                    background: "rgba(255,255,255,0.02)", 
-                    padding: "6px 10px", 
-                    borderRadius: "4px",
-                    borderLeft: `2px solid ${getMoodColor(req.mood)}`
-                  }}>
+                  <p className="staff-card-dedication" style={{ borderLeftColor: getMoodColor(req.mood) }}>
                     &ldquo;{req.dedication}&rdquo;
                   </p>
                 )}
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "5px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "4px" }}>
                   <button 
                     onClick={() => approveRequest(req.id)}
-                    className="btn-primary" 
-                    style={{ 
-                      padding: "8px", 
-                      fontSize: "13px", 
-                      background: "linear-gradient(135deg, #28a745, #218838)",
-                      boxShadow: "none"
-                    }}
+                    className="btn-approve"
                   >
                     Approva 👍
                   </button>
                   <button 
                     onClick={() => rejectRequest(req.id)}
-                    className="btn-secondary" 
-                    style={{ padding: "8px", fontSize: "13px" }}
+                    className="btn-reject"
                   >
                     Rifiuta 👎
                   </button>
@@ -217,7 +193,7 @@ export default function StaffDashboard() {
 
       {/* 2. COLUMN: ACTIVE UPCOMING QUEUE */}
       <div className="dashboard-col">
-        <div className="dashboard-col-header">
+        <div className="dashboard-col-header queue">
           <h2>Coda di Riproduzione</h2>
           <span className="glass-panel" style={{ padding: "2px 8px", fontSize: "12px", background: "rgba(255,255,255,0.05)" }}>
             {approvedQueue.length} brani successivi
@@ -233,61 +209,57 @@ export default function StaffDashboard() {
             approvedQueue.map((req, idx) => (
               <div 
                 key={req.id} 
-                className="glass-panel" 
+                className="staff-card" 
                 style={{ 
-                  padding: "12px", 
-                  display: "flex", 
+                  flexDirection: "row", 
                   alignItems: "center", 
-                  gap: "12px",
-                  borderColor: "rgba(255,255,255,0.05)" 
+                  gap: "12px", 
+                  padding: "10px 14px",
+                  borderLeft: `3px solid ${getMoodColor(req.mood)}`
                 }}
               >
-                <span style={{ fontSize: "13px", fontWeight: "bold", color: "var(--text-secondary)", width: "20px", textAlign: "center" }}>
+                <span style={{ fontSize: "13px", fontWeight: "800", color: "var(--text-secondary)", width: "16px", textAlign: "center" }}>
                   {idx + 1}
                 </span>
                 
                 <img 
                   src={req.song.cover} 
                   alt="" 
-                  style={{ width: "40px", height: "40px", borderRadius: "4px", objectFit: "cover" }} 
+                  className="staff-card-cover" 
+                  style={{ width: "36px", height: "36px", borderRadius: "4px" }}
                 />
                 
                 <div style={{ flex: 1, minWidth: "0" }}>
-                  <h4 style={{ fontSize: "13px", fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {req.song.title}
-                  </h4>
-                  <p style={{ fontSize: "11px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <h4 className="staff-card-title" style={{ fontSize: "13px" }}>{req.song.title}</h4>
+                  <p className="staff-card-artist" style={{ fontSize: "11px" }}>
                     Tavolo {req.table} • {req.song.artist}
                   </p>
                 </div>
 
                 {/* Queue Control Buttons */}
-                <div style={{ display: "flex", gap: "4px" }}>
+                <div style={{ display: "flex", gap: "6px" }}>
                   <button 
                     onClick={() => prioritizeRequest(req.id, -1)}
                     disabled={idx === 0}
-                    className="btn-secondary" 
-                    style={{ padding: "5px 8px", fontSize: "12px", opacity: idx === 0 ? 0.3 : 1 }}
+                    className="icon-btn-queue"
                     title="Sposta Su"
                   >
-                    ⬆️
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
                   </button>
                   <button 
                     onClick={() => prioritizeRequest(req.id, 1)}
                     disabled={idx === approvedQueue.length - 1}
-                    className="btn-secondary" 
-                    style={{ padding: "5px 8px", fontSize: "12px", opacity: idx === approvedQueue.length - 1 ? 0.3 : 1 }}
+                    className="icon-btn-queue"
                     title="Sposta Giù"
                   >
-                    ⬇️
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </button>
                   <button 
                     onClick={() => rejectRequest(req.id)}
-                    className="btn-secondary" 
-                    style={{ padding: "5px 8px", fontSize: "12px", color: "var(--accent-primary)" }}
+                    className="icon-btn-queue remove"
                     title="Rimuovi"
                   >
-                    ❌
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
                 </div>
               </div>
@@ -298,61 +270,68 @@ export default function StaffDashboard() {
 
       {/* 3. COLUMN: NOW PLAYING & SETTINGS */}
       <div className="dashboard-col">
-        <div className="dashboard-col-header">
+        <div className="dashboard-col-header player">
           <h2>Player Centrale</h2>
         </div>
 
         <div className="dashboard-col-content" style={{ overflowY: "auto", gap: "20px" }}>
           
-          {/* NOW PLAYING CONTAINER */}
-          <div className="glass-panel" style={{ 
-            padding: "25px", 
-            textAlign: "center",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: "15px",
+          {/* DJ DECK CONTAINER */}
+          <div className="dj-deck" style={{ 
             borderColor: currentRequest ? getMoodColor(currentRequest.mood) : "var(--glass-border)",
-            boxShadow: currentRequest ? `0 8px 32px 0 rgba(0,0,0,0.4), 0 0 20px ${getMoodColor(currentRequest.mood)}20` : "none"
+            boxShadow: currentRequest ? `0 15px 40px rgba(0,0,0,0.6), 0 0 25px ${getMoodColor(currentRequest.mood)}15` : "none"
           }}>
             {currentRequest ? (
               <>
-                <span style={{ fontSize: "11px", color: "var(--accent-glow)", fontWeight: "bold", letterSpacing: "2px", textTransform: "uppercase" }}>
-                  In Riproduzione 📻
+                <span style={{ fontSize: "10px", color: "var(--accent-glow)", fontWeight: "800", letterSpacing: "3px", textTransform: "uppercase" }}>
+                  LIVE STREAM FEED 📻
                 </span>
                 
-                <img 
-                  src={currentRequest.song.cover} 
-                  alt={currentRequest.song.title} 
-                  style={{ 
-                    width: "180px", 
-                    height: "180px", 
-                    borderRadius: "12px", 
-                    objectFit: "cover",
-                    boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
-                    border: `1px solid rgba(255,255,255,0.1)` 
-                  }} 
-                />
-
-                <div>
-                  <h3 style={{ fontSize: "18px", fontWeight: "800" }}>{currentRequest.song.title}</h3>
-                  <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>{currentRequest.song.artist}</p>
+                {/* Vinyl Spinner */}
+                <div className={`dj-deck-vinyl ${playback.isPlaying ? "vinyl-spin" : ""}`}>
+                  <img 
+                    src={currentRequest.song.cover} 
+                    alt={currentRequest.song.title} 
+                    className="dj-deck-cover"
+                  />
+                  {/* Vinyl center pin */}
+                  <div style={{
+                    position: "absolute",
+                    width: "14px",
+                    height: "14px",
+                    borderRadius: "50%",
+                    background: "#08090f",
+                    border: "2px solid rgba(255,255,255,0.2)",
+                    zIndex: 3
+                  }}></div>
                 </div>
 
-                <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
-                  <span className="glass-panel" style={{ padding: "2px 8px", fontSize: "11px", color: getMoodColor(currentRequest.mood), borderColor: getMoodColor(currentRequest.mood) }}>
+                <div style={{ width: "100%", textAlign: "center" }}>
+                  <h3 style={{ fontSize: "16px", fontWeight: "800", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0" }}>
+                    {currentRequest.song.title}
+                  </h3>
+                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px", marginBottom: "0" }}>
+                    {currentRequest.song.artist}
+                  </p>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px", justifyContent: "center", width: "100%" }}>
+                  <span className="table-badge" style={{ padding: "4px 10px", fontSize: "11px" }}>
                     Tavolo {currentRequest.table}
                   </span>
-                  {currentRequest.dedication && (
-                    <span className="glass-panel" style={{ padding: "2px 8px", fontSize: "11px", color: "var(--text-secondary)" }} title={currentRequest.dedication}>
-                      💬 Con dedica
-                    </span>
-                  )}
+                  <span className="table-badge" style={{ 
+                    padding: "4px 10px", 
+                    fontSize: "11px",
+                    color: getMoodColor(currentRequest.mood),
+                    borderColor: getMoodColor(currentRequest.mood)
+                  }}>
+                    {MOOD_EMOJIS[currentRequest.mood]} {currentRequest.mood.toUpperCase()}
+                  </span>
                 </div>
 
                 {/* Progress Bar */}
-                <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "5px" }}>
-                  <div className="progress-bar-container">
+                <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px", marginTop: "5px" }}>
+                  <div className="progress-bar-container" style={{ height: "5px" }}>
                     <div 
                       className="progress-bar-fill" 
                       style={{ 
@@ -368,37 +347,43 @@ export default function StaffDashboard() {
                 </div>
 
                 {/* Control Panel buttons */}
-                <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "5px" }}>
+                <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "5px", width: "100%", justifyContent: "center" }}>
                   <button 
                     onClick={togglePlay}
-                    className="btn-primary" 
-                    style={{ 
-                      padding: "10px 20px", 
-                      fontSize: "14px",
-                      background: playback.isPlaying ? "var(--btn-sec)" : getMoodColor(currentRequest.mood),
-                      color: "black",
-                      fontWeight: "bold",
-                      boxShadow: "none"
+                    className="btn-play-pause"
+                    style={{
+                      background: getMoodColor(currentRequest.mood),
+                      boxShadow: `0 0 15px ${getMoodColor(currentRequest.mood)}50`,
+                      color: currentRequest.mood === "chill" || currentRequest.mood === "romantic" ? "white" : "#05070e"
                     }}
                   >
-                    {playback.isPlaying ? "PAUSA ⏸️" : "PLAY ▶️"}
+                    {playback.isPlaying ? (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                        PAUSA
+                      </>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        PLAY
+                      </>
+                    )}
                   </button>
                   
                   <button 
                     onClick={skipToNext}
-                    className="btn-secondary" 
-                    style={{ padding: "10px 15px", fontSize: "14px" }}
-                    title="Salta alla prossima"
+                    className="btn-skip-next"
                   >
-                    SALTA ⏭️
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                    SALTA
                   </button>
                 </div>
               </>
             ) : (
-              <div style={{ padding: "40px 10px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              <div style={{ padding: "40px 10px", display: "flex", flexDirection: "column", gap: "12px", textAlign: "center", alignItems: "center" }}>
                 <span style={{ fontSize: "40px" }}>🎵</span>
-                <h3>Nessun brano attivo</h3>
-                <p style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+                <h3 style={{ margin: "0" }}>Nessun brano attivo</h3>
+                <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: "0" }}>
                   Approva un brano nella colonna a sinistra, oppure clicca sul bottone sotto per caricare la coda dimostrativa.
                 </p>
                 {approvedQueue.length > 0 && (

@@ -471,8 +471,24 @@ body {
 
 .dashboard-col-header h2 {
   font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-primary);
+  border-left: 3px solid var(--accent-secondary);
+  padding-left: 10px;
+  margin: 0;
+}
+
+.dashboard-col-header.pending h2 {
+  border-left-color: var(--accent-primary);
+}
+.dashboard-col-header.queue h2 {
+  border-left-color: var(--accent-glow);
+}
+.dashboard-col-header.player h2 {
+  border-left-color: var(--accent-secondary);
 }
 
 .dashboard-col-content {
@@ -482,6 +498,278 @@ body {
   flex-direction: column;
   gap: 12px;
   padding-right: 4px;
+}
+
+/* --- STAFF PREMIUM CARDS & DJ DECK --- */
+.staff-card {
+  background: rgba(13, 17, 28, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: var(--transition-smooth);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.staff-card:hover {
+  background: rgba(18, 24, 40, 0.7);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+}
+
+.staff-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.staff-card-body {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.staff-card-cover {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.staff-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.staff-card-artist {
+  font-size: 12px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+  margin-bottom: 0;
+}
+
+.staff-card-dedication {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 2px solid var(--accent-secondary);
+  margin: 0;
+}
+
+.btn-approve {
+  background: rgba(40, 167, 69, 0.08);
+  border: 1px solid rgba(40, 167, 69, 0.25);
+  color: #28a745;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-approve:hover {
+  background: #28a745;
+  color: #05070e;
+  box-shadow: 0 0 15px rgba(40, 167, 69, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-approve:active {
+  transform: scale(0.97);
+}
+
+.btn-reject {
+  background: rgba(220, 53, 69, 0.08);
+  border: 1px solid rgba(220, 53, 69, 0.25);
+  color: #dc3545;
+  padding: 8px 16px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-reject:hover {
+  background: #dc3545;
+  color: white;
+  box-shadow: 0 0 15px rgba(220, 53, 69, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-reject:active {
+  transform: scale(0.97);
+}
+
+.icon-btn-queue {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.icon-btn-queue:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+}
+
+.icon-btn-queue:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.icon-btn-queue.remove:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: rgba(255, 0, 127, 0.05);
+  box-shadow: 0 0 10px rgba(255, 0, 127, 0.15);
+}
+
+.dj-deck {
+  background: radial-gradient(circle at top, rgba(20, 25, 45, 0.65), rgba(8, 10, 18, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: 30px 25px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  position: relative;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  transition: var(--transition-smooth);
+}
+
+.dj-deck-vinyl {
+  position: relative;
+  width: 170px;
+  height: 170px;
+  border-radius: 50%;
+  background: #08090f;
+  border: 8px solid #141622;
+  box-shadow: 
+    0 0 0 4px #0c0e17, 
+    0 8px 30px rgba(0, 0, 0, 0.8),
+    inset 0 0 12px rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition-smooth);
+}
+
+.dj-deck-vinyl::before {
+  content: '';
+  position: absolute;
+  width: 90%; height: 90%;
+  border-radius: 50%;
+  border: 1px dashed rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+.dj-deck-cover {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  object-fit: cover;
+  z-index: 2;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.vinyl-spin {
+  animation: spin 12s linear infinite;
+}
+
+.btn-play-pause {
+  background: var(--accent-glow);
+  color: #05070e;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  box-shadow: var(--shadow-neon-cyan);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-play-pause:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.btn-play-pause:active {
+  transform: scale(0.96);
+}
+
+.btn-skip-next {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: 0.5px;
+}
+
+.btn-skip-next:hover {
+  border-color: var(--accent-primary);
+  color: var(--text-primary);
+  box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);
+}
+
+.btn-skip-next:active {
+  transform: scale(0.96);
 }
 
 /* --- LIVE TV VIEWPORT --- */
