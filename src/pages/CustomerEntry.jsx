@@ -91,8 +91,8 @@ export default function CustomerEntry() {
                 position: "absolute",
                 bottom: "-6px",
                 right: "-30px",
-                background: "#ff6600",
-                color: "#000000",
+                background: "#000000",
+                color: "#ff6600",
                 fontFamily: "var(--font-display)",
                 fontSize: "9px",
                 fontWeight: "900",
@@ -105,7 +105,7 @@ export default function CustomerEntry() {
                 letterSpacing: "0.5px"
               }}
             >
-              Always the Fucking Walrus
+              ALWAYS THE FUCKING WALRUS
             </div>
           </div>
 
@@ -114,29 +114,29 @@ export default function CustomerEntry() {
               style={{ 
                 fontFamily: "var(--font-display)", 
                 fontSize: "clamp(36px, 10vw, 44px)", 
-                fontWeight: "700",
+                fontWeight: "900",
                 textTransform: "uppercase",
                 letterSpacing: "1px",
                 lineHeight: "1.0",
                 margin: "0",
                 color: "#fffdd0", // Retro Cream
-                textShadow: "3px 3px 0 #000"
+                textShadow: "4px 4px 0 #000"
               }}
             >
               THE WALBOX
             </h1>
             <p 
               style={{ 
-                fontFamily: "var(--font-base)",
+                fontFamily: "var(--font-display)",
                 fontSize: "12px", 
                 color: "#ff6600", 
-                fontWeight: "700", 
-                letterSpacing: "3px",
+                fontWeight: "900", 
+                letterSpacing: "4px",
                 textTransform: "uppercase",
                 margin: "0"
               }}
             >
-              Social Jukebox v2
+              TRICHECO MUSIC EXPERIENCE
             </p>
           </div>
         </div>
@@ -153,6 +153,9 @@ export default function CustomerEntry() {
         >
           Scegli la musica del locale direttamente dal tuo tavolo.<br />
           <span style={{ color: "#fffdd0", fontWeight: "600" }}>Senza app, senza registrazione.</span>
+          <span style={{ display: "block", fontSize: "12px", color: "#a0a0a0", fontStyle: "italic", marginTop: "6px" }}>
+            Problemi fuori, birre grandi dentro. 🍺
+          </span>
         </p>
 
         {/* Entry Form */}
