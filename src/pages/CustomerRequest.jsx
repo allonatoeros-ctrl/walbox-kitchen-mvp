@@ -147,8 +147,67 @@ export default function CustomerRequest() {
     }
   };
 
+  // Playlist label helper for song cards
+  const getPlaylistLabel = (mood) => {
+    switch (mood) {
+      case "party": return "HIT DA RESSA 🎉";
+      case "retro": return "CLASSICO DA PUB 🎸";
+      case "chill": return "ZEN E BIRRETTA 🌊";
+      case "romantic": return "LENTO E DEDICA 💖";
+      case "energetic": return "STA SALENDO MALE ⚡";
+      default: return "SELEZIONE WALBOX 🦭";
+    }
+  };
+
   return (
     <div className="mobile-wrapper" style={{ background: "linear-gradient(180deg, #331100 0%, #1a0800 100%)", minHeight: "100vh" }}>
+      <style>{`
+        .walbox-search-input {
+          width: 100%;
+          background: #0c0400 !important;
+          border: 2px solid #ff6600 !important;
+          border-radius: 6px !important;
+          padding: 14px 18px !important;
+          color: #fffdd0 !important;
+          font-size: 16px !important;
+          outline: none !important;
+          box-shadow: 4px 4px 0 #000000 !important;
+          transition: all 0.1s ease !important;
+        }
+        .walbox-search-input:focus {
+          border-color: #ff6600 !important;
+          box-shadow: 6px 6px 0 #000000 !important;
+          background: #120600 !important;
+        }
+        .walbox-search-input::placeholder {
+          color: #a0a0a0 !important;
+          opacity: 0.7;
+        }
+        .walbox-song-card {
+          transition: transform 0.1s, box-shadow 0.1s !important;
+        }
+        .walbox-song-card:hover {
+          transform: translate(-2px, -2px) !important;
+          box-shadow: 6px 6px 0 #000000 !important;
+          border-color: #ff8800 !important;
+        }
+        .walbox-song-card:active {
+          transform: translate(1px, 1px) !important;
+          box-shadow: 2px 2px 0 #000000 !important;
+        }
+        .walbox-song-card-suggestion {
+          transition: transform 0.1s, box-shadow 0.1s !important;
+        }
+        .walbox-song-card-suggestion:hover:not([disabled]) {
+          transform: translate(-1px, -1px) !important;
+          box-shadow: 4px 4px 0 #000000 !important;
+          border-color: #ff8800 !important;
+        }
+        .walbox-song-card-suggestion:active:not([disabled]) {
+          transform: translate(1px, 1px) !important;
+          box-shadow: 1px 1px 0 #000000 !important;
+        }
+      `}</style>
       <div className="mobile-bg-glow" style={{ background: "radial-gradient(circle, rgba(255, 102, 0, 0.25) 0%, transparent 70%)" }}></div>
 
       {/* Header bar */}
@@ -320,17 +379,28 @@ export default function CustomerRequest() {
             </div>
           ) : !selectedSong ? (
             /* Song Search View */
-            <div className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "15px" }}>
-              <h3 style={{ fontSize: "16px", fontWeight: "600" }}>Cerca una canzone</h3>
+            <div className="glass-panel" style={{ 
+              padding: "20px", 
+              display: "flex", 
+              flexDirection: "column", 
+              gap: "15px",
+              background: "#1c0a00",
+              border: "2px solid #ff6600",
+              borderTop: "6px solid #ff6600",
+              borderRadius: "8px",
+              boxShadow: "8px 8px 0 #000000"
+            }}>
+              <h3 style={{ fontSize: "16px", fontWeight: "800", fontFamily: "var(--font-display)", color: "#fffdd0", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Cerca una canzone
+              </h3>
               
               <div className="form-group" style={{ margin: "0" }}>
                 <input
                   type="text"
-                  placeholder="Titolo o artista..."
+                  placeholder="Digita titolo o artista... 🔎"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="text-input"
-                  style={{ width: "100%" }}
+                  className="walbox-search-input"
                   disabled={venueSettings.queuePaused}
                 />
               </div>
@@ -340,46 +410,108 @@ export default function CustomerRequest() {
                 <div style={{ 
                   display: "flex", 
                   flexDirection: "column", 
-                  gap: "10px", 
+                  gap: "12px", 
                   maxHeight: "300px", 
                   overflowY: "auto",
-                  paddingTop: "5px" 
+                  padding: "5px 4px 5px 0" 
                 }}>
                   {filteredSongs.length > 0 ? (
                     filteredSongs.map((song) => (
                       <div 
                         key={song.id} 
                         onClick={() => handleSelectSong(song)}
-                        className="glass-panel"
+                        className="walbox-song-card"
                         style={{ 
                           display: "flex", 
-                          alignItems: "center", 
-                          gap: "12px", 
-                          padding: "10px", 
+                          flexDirection: "column",
+                          gap: "8px", 
+                          padding: "12px", 
                           cursor: "pointer",
-                          borderColor: "rgba(255,255,255,0.05)" 
+                          background: "#1a0a00",
+                          border: "2px solid #ff6600",
+                          borderRadius: "6px",
+                          boxShadow: "4px 4px 0 #000000",
+                          position: "relative",
+                          overflow: "hidden"
                         }}
                       >
-                        <img 
-                          src={song.cover} 
-                          alt={song.title} 
-                          style={{ width: "45px", height: "45px", borderRadius: "var(--radius-sm)", objectFit: "cover" }} 
-                        />
-                        <div style={{ flex: 1, minWidth: "0" }}>
-                          <h4 style={{ fontSize: "14px", fontWeight: "600", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {song.title}
-                          </h4>
-                          <p style={{ fontSize: "12px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {song.artist}
-                          </p>
+                        {/* Playlist label */}
+                        <div style={{
+                          alignSelf: "flex-start",
+                          background: "#ff6600",
+                          color: "#000",
+                          fontSize: "9px",
+                          fontWeight: "900",
+                          padding: "2px 6px",
+                          borderRadius: "2px",
+                          fontFamily: "var(--font-display)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px"
+                        }}>
+                          {getPlaylistLabel(song.mood)}
                         </div>
-                        <span style={{ fontSize: "11px", color: "var(--text-secondary)", paddingRight: "5px" }}>
-                          {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, "0")}
-                        </span>
+
+                        {/* Song Details */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                          <div style={{ position: "relative" }}>
+                            <img 
+                              src={song.cover} 
+                              alt={song.title} 
+                              style={{ width: "48px", height: "48px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000" }} 
+                            />
+                            <div style={{
+                              position: "absolute",
+                              top: "-6px",
+                              right: "-6px",
+                              background: "#fffdd0",
+                              color: "#000",
+                              border: "1.5px solid #000",
+                              borderRadius: "50%",
+                              width: "16px",
+                              height: "16px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "10px",
+                              fontWeight: "900",
+                              boxShadow: "1px 1px 0 #000"
+                            }}>
+                              +
+                            </div>
+                          </div>
+                          <div style={{ flex: 1, minWidth: "0" }}>
+                            <h4 style={{ 
+                              fontSize: "15px", 
+                              fontWeight: "800", 
+                              fontFamily: "var(--font-display)",
+                              color: "#fffdd0",
+                              overflow: "hidden", 
+                              textOverflow: "ellipsis", 
+                              whiteSpace: "nowrap",
+                              margin: "0"
+                            }}>
+                              {song.title.toUpperCase()}
+                            </h4>
+                            <p style={{ 
+                              fontSize: "12px", 
+                              color: "#ff6600",
+                              fontWeight: "600",
+                              overflow: "hidden", 
+                              textOverflow: "ellipsis", 
+                              whiteSpace: "nowrap",
+                              margin: "2px 0 0 0"
+                            }}>
+                              {song.artist}
+                            </p>
+                          </div>
+                          <span style={{ fontSize: "11px", color: "#a0a0a0", fontFamily: "monospace", paddingRight: "5px" }}>
+                            {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, "0")}
+                          </span>
+                        </div>
                       </div>
                     ))
                   ) : (
-                    <div style={{ textAlign: "center", padding: "20px", color: "var(--text-secondary)", fontSize: "14px" }}>
+                    <div style={{ textAlign: "center", padding: "20px", color: "#a0a0a0", fontSize: "14px", fontFamily: "var(--font-display)", fontWeight: "600", textTransform: "uppercase" }}>
                       Nessun brano trovato 😢
                     </div>
                   )}
@@ -388,33 +520,41 @@ export default function CustomerRequest() {
 
               {searchQuery.trim() === "" && (
                 <div>
-                  <p style={{ fontSize: "13px", color: "var(--text-secondary)", textAlign: "center", padding: "10px 0" }}>
+                  <p style={{ fontSize: "13px", color: "#a0a0a0", textAlign: "center", padding: "10px 0", fontStyle: "italic" }}>
                     Digita qualcosa per esplorare il catalogo locale.
                   </p>
                   
                   {/* Quick Suggestions */}
                   <div style={{ marginTop: "10px" }}>
-                    <p style={{ fontSize: "12px", fontWeight: "600", color: "var(--text-secondary)", marginBottom: "8px" }}>Consigliati stasera:</p>
+                    <p style={{ fontSize: "12px", fontWeight: "900", color: "#ff6600", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "8px" }}>
+                      Consigliati stasera:
+                    </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {MOCK_SONGS.slice(0, 3).map((song) => (
                         <div 
                           key={song.id}
                           onClick={() => !venueSettings.queuePaused && handleSelectSong(song)}
+                          className="walbox-song-card-suggestion"
                           style={{ 
                             display: "flex", 
                             alignItems: "center", 
                             gap: "10px", 
-                            padding: "8px", 
-                            borderRadius: "var(--radius-sm)",
-                            background: "rgba(255,255,255,0.02)",
+                            padding: "8px 12px", 
+                            borderRadius: "6px",
+                            background: "#1a0a00",
+                            border: "1.5px solid #ff6600",
+                            boxShadow: "3px 3px 0 #000000",
                             cursor: venueSettings.queuePaused ? "not-allowed" : "pointer",
                             fontSize: "13px"
                           }}
                         >
-                          <img src={song.cover} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px" }} />
+                          <img src={song.cover} alt="" style={{ width: "30px", height: "30px", borderRadius: "4px", border: "1px solid #000" }} />
                           <div style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            <strong>{song.title}</strong> • <span style={{ color: "var(--text-secondary)" }}>{song.artist}</span>
+                            <strong style={{ color: "#fffdd0", fontFamily: "var(--font-display)", fontWeight: "700" }}>{song.title.toUpperCase()}</strong> • <span style={{ color: "#ff6600", fontWeight: "600" }}>{song.artist}</span>
                           </div>
+                          <span style={{ fontSize: "10px", color: "#a0a0a0", fontFamily: "monospace" }}>
+                            {getPlaylistLabel(song.mood).split(" ")[0]}
+                          </span>
                         </div>
                       ))}
                     </div>
