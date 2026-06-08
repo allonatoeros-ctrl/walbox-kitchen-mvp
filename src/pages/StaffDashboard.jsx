@@ -481,21 +481,21 @@ export default function StaffDashboard() {
                   disabled={cooldown > 0}
                   className={`btn-reaction btn-reaction-hype ${cooldown > 0 ? "disabled" : ""}`}
                 >
-                  Hype Moment 🔥
+                  Sta Salendo Male ⚡
                 </button>
                 <button
                   onClick={() => handleTriggerReaction("party")}
                   disabled={cooldown > 0}
                   className={`btn-reaction btn-reaction-party ${cooldown > 0 ? "disabled" : ""}`}
                 >
-                  Party Vibe 🎉
+                  Mi Dissocio 🔴
                 </button>
                 <button
                   onClick={() => handleTriggerReaction("cheers")}
                   disabled={cooldown > 0}
                   className={`btn-reaction btn-reaction-cheers ${cooldown > 0 ? "disabled" : ""}`}
                 >
-                  Cheers! 🥂
+                  Brindisi dei Trichechi 🦭
                 </button>
               </div>
               

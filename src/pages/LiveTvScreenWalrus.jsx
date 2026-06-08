@@ -165,20 +165,20 @@ export default function LiveTvScreenWalrus() {
           <div className="reaction-content">
             {tvReaction.type === "hype" && (
               <>
-                <h1 className="reaction-title">TURN UP THE HYPE!</h1>
-                <p className="reaction-subtitle">FATE RUMORE IN SALA 🔥</p>
+                <h1 className="reaction-title">SALA OUT OF CONTROL</h1>
+                <p className="reaction-subtitle">STA SALENDO MALISSIMO! ⚡</p>
               </>
             )}
             {tvReaction.type === "party" && (
               <>
-                <h1 className="reaction-title">LET'S PARTY!</h1>
-                <p className="reaction-subtitle">FESTEGGIAMO INSIEME 🎉</p>
+                <h1 className="reaction-title">IL WALRUS SI DISSOCIA</h1>
+                <p className="reaction-subtitle">LO STAFF DECLINA OGNI RESPONSABILITÀ 🔴</p>
               </>
             )}
             {tvReaction.type === "cheers" && (
               <>
-                <h1 className="reaction-title">ALZATE I CALICI!</h1>
-                <p className="reaction-subtitle">UN BRINDISI COLLETTIVO 🥂</p>
+                <h1 className="reaction-title">BRINDISI DEI TRICHECHI</h1>
+                <p className="reaction-subtitle">ALZATE QUEI BOCCALI AL CIELO! 🍻</p>
               </>
             )}
           </div>
