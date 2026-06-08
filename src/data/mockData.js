@@ -125,10 +125,18 @@ export const MOCK_SONGS = [
 // Emojis mapping for moods
 export const MOOD_EMOJIS = {
   energetic: "⚡",
-  chill: "🌊",
-  romantic: "💖",
+  chill: "🍺",
+  romantic: "💔",
   retro: "🎸",
-  party: "🎉"
+  party: "🐴"
+};
+
+export const MOOD_LABELS = {
+  party: "CAVALLOOOO 🐴",
+  retro: "VECCHIA SCUOLA DA BANCONE 🎸",
+  chill: "ZEN, BIRRA E MUTISMO 🍺",
+  romantic: "DEDICA TOSSICA 💔",
+  energetic: "STA SALENDO MALE ⚡"
 };
 
 // Initial Demo State

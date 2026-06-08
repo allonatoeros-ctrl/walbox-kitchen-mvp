@@ -5,7 +5,8 @@ import {
   addRequest, 
   getRequests, 
   subscribeState, 
-  getVenueSettings 
+  getVenueSettings,
+  MOOD_LABELS
 } from "../data/mockData";
 
 export default function CustomerRequest() {
@@ -150,10 +151,10 @@ export default function CustomerRequest() {
   // Playlist label helper for song cards
   const getPlaylistLabel = (mood) => {
     switch (mood) {
-      case "party": return "HIT DA RESSA 🎉";
-      case "retro": return "CLASSICO DA PUB 🎸";
-      case "chill": return "ZEN E BIRRETTA 🌊";
-      case "romantic": return "LENTO E DEDICA 💖";
+      case "party": return "CAVALLOOOO 🐴";
+      case "retro": return "VECCHIA SCUOLA DA BANCONE 🎸";
+      case "chill": return "ZEN, BIRRA E MUTISMO 🍺";
+      case "romantic": return "DEDICA TOSSICA 💔";
       case "energetic": return "STA SALENDO MALE ⚡";
       default: return "SELEZIONE WALBOX 🦭";
     }
@@ -690,7 +691,7 @@ export default function CustomerRequest() {
                     borderColor: getMoodColor(selectedMood),
                     color: getMoodColor(selectedMood)
                   }}>
-                    {MOOD_EMOJIS[selectedMood]} {selectedMood}
+                    {MOOD_LABELS[selectedMood]}
                   </span>
                 </div>
                 <button 
@@ -737,7 +738,7 @@ export default function CustomerRequest() {
                       }}
                     >
                       <span style={{ fontSize: "18px", marginRight: "6px" }}>{MOOD_EMOJIS[mood]}</span>
-                      {mood.toUpperCase()}
+                      {MOOD_LABELS[mood] ? MOOD_LABELS[mood].replace(MOOD_EMOJIS[mood], "").trim() : mood.toUpperCase()}
                     </button>
                   ))}
                 </div>
@@ -873,9 +874,9 @@ export default function CustomerRequest() {
           
           <div className="look-up-content" onClick={(e) => e.stopPropagation()}>
             <div className="look-up-header-text">
-              <h2>LOOK UP! 📺</h2>
-              <h3>La tua traccia è ora in onda.</h3>
-              <p>Alza lo sguardo al maxischermo. Abbiamo preparato una cartolina della tua serata da condividere.</p>
+              <h2>ALZA LO SGUARDO! 📺</h2>
+              <h3>Hai fatto casino. Ora guarda la TV.</h3>
+              <p>La tua cartolina è live. Screenshot, stories, tagga @TheWalrusPub. Chi è rimasto sul divano deve soffrire.</p>
             </div>
 
             {/* Story Canvas Card */}
@@ -899,12 +900,12 @@ export default function CustomerRequest() {
                 <p className="story-canvas-artist">{currentAlertSong.song.artist}</p>
                 
                 <span className="story-canvas-mood" style={{ borderColor: getMoodColor(currentAlertSong.mood), color: getMoodColor(currentAlertSong.mood) }}>
-                  {MOOD_EMOJIS[currentAlertSong.mood]} {currentAlertSong.mood.toUpperCase()}
+                  {MOOD_LABELS[currentAlertSong.mood]}
                 </span>
               </div>
 
               <div className="story-canvas-dedication" style={{ borderLeftColor: getMoodColor(currentAlertSong.mood) }}>
-                {currentAlertSong.dedication ? `“${currentAlertSong.dedication}”` : "“Soundtrack of the night.”"}
+                {currentAlertSong.dedication ? `“${currentAlertSong.dedication}”` : `“Nessuna dedica. Solo responsabilità morale del Tavolo ${currentAlertSong.table}. 🍺”`}
               </div>
 
               <div className="story-canvas-footer">
