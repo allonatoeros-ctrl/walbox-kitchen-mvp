@@ -207,6 +207,94 @@ export default function CustomerRequest() {
           transform: translate(1px, 1px) !important;
           box-shadow: 1px 1px 0 #000000 !important;
         }
+        .walbox-mood-chip {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 10px 14px !important;
+          font-family: var(--font-display) !important;
+          font-size: 13px !important;
+          font-weight: 800 !important;
+          letter-spacing: 0.5px !important;
+          color: #fffdd0 !important;
+          background: #120600 !important;
+          border: 2px solid #ff6600 !important;
+          border-radius: 6px !important;
+          box-shadow: 3px 3px 0 #000000 !important;
+          cursor: pointer !important;
+          transition: transform 0.1s, box-shadow 0.1s, background-color 0.1s !important;
+        }
+        .walbox-mood-chip:hover {
+          background: #1c0a00 !important;
+          border-color: #ff8800 !important;
+        }
+        .walbox-mood-chip.selected {
+          background: #ff6600 !important;
+          color: #000000 !important;
+          border-color: #fffdd0 !important;
+          box-shadow: 3px 3px 0 #ff007f !important;
+          transform: translate(1px, 1px) !important;
+        }
+        .walbox-mood-chip:active {
+          transform: translate(2px, 2px) !important;
+          box-shadow: 1px 1px 0 #000000 !important;
+        }
+        .walbox-textarea {
+          width: 100%;
+          background: #0c0400 !important;
+          border: 2px solid #ff6600 !important;
+          border-radius: 6px !important;
+          padding: 12px 16px !important;
+          color: #fffdd0 !important;
+          font-family: monospace !important;
+          font-size: 15px !important;
+          outline: none !important;
+          box-shadow: 4px 4px 0 #000000 !important;
+          resize: none !important;
+          transition: all 0.1s ease !important;
+        }
+        .walbox-textarea:focus {
+          border-color: #ff8800 !important;
+          box-shadow: 6px 6px 0 #000000 !important;
+          background: #120600 !important;
+        }
+        .walbox-textarea::placeholder {
+          color: #a0a0a0 !important;
+          opacity: 0.6;
+        }
+        .walbox-submit-btn {
+          width: 100%;
+          background: #ff6600 !important;
+          color: #000000 !important;
+          border: 2px solid #000000 !important;
+          border-radius: 6px !important;
+          padding: 14px 24px !important;
+          font-family: var(--font-display) !important;
+          font-size: 16px !important;
+          font-weight: 900 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 1px !important;
+          cursor: pointer !important;
+          box-shadow: 0 8px 0 #000000 !important;
+          transform: translateY(0) !important;
+          transition: transform 0.1s, box-shadow 0.1s, background-color 0.1s !important;
+          text-align: center !important;
+        }
+        .walbox-submit-btn:hover:not(:disabled) {
+          background: #ff8800 !important;
+        }
+        .walbox-submit-btn:active:not(:disabled) {
+          transform: translateY(6px) !important;
+          box-shadow: 0 2px 0 #000000 !important;
+        }
+        .walbox-submit-btn:disabled {
+          background: #331c10 !important;
+          border-color: #55331c !important;
+          color: #664433 !important;
+          box-shadow: 0 4px 0 #000000 !important;
+          transform: translateY(4px) !important;
+          cursor: not-allowed !important;
+        }
       `}</style>
       <div className="mobile-bg-glow" style={{ background: "radial-gradient(circle, rgba(255, 102, 0, 0.25) 0%, transparent 70%)" }}></div>
 
@@ -569,8 +657,11 @@ export default function CustomerRequest() {
               display: "flex", 
               flexDirection: "column", 
               gap: "20px",
-              borderColor: getMoodColor(selectedMood),
-              boxShadow: `0 8px 32px 0 rgba(0, 0, 0, 0.4), 0 0 15px ${getMoodColor(selectedMood)}15`
+              background: "#1c0a00",
+              border: "2px solid #ff6600",
+              borderTop: "6px solid #ff6600",
+              borderRadius: "8px",
+              boxShadow: "8px 8px 0 #000000"
             }}>
               
               {/* Selected Track Info Card */}
@@ -581,14 +672,14 @@ export default function CustomerRequest() {
                   style={{ 
                     width: "70px", 
                     height: "70px", 
-                    borderRadius: "var(--radius-md)", 
+                    borderRadius: "6px", 
                     objectFit: "cover",
-                    boxShadow: `0 0 15px ${getMoodColor(selectedMood)}40` 
+                    border: "2px solid #000"
                   }} 
                 />
                 <div style={{ flex: 1, minWidth: "0" }}>
-                  <h4 style={{ fontSize: "16px", fontWeight: "700" }}>{selectedSong.title}</h4>
-                  <p style={{ fontSize: "14px", color: "var(--text-secondary)" }}>{selectedSong.artist}</p>
+                  <h4 style={{ fontSize: "16px", fontWeight: "800", fontFamily: "var(--font-display)", color: "#fffdd0" }}>{selectedSong.title.toUpperCase()}</h4>
+                  <p style={{ fontSize: "14px", color: "#ff6600", fontWeight: "600" }}>{selectedSong.artist}</p>
                   <span className="glass-panel" style={{ 
                     display: "inline-block", 
                     padding: "2px 8px", 
@@ -605,8 +696,20 @@ export default function CustomerRequest() {
                 <button 
                   type="button" 
                   onClick={() => setSelectedSong(null)}
-                  className="btn-secondary" 
-                  style={{ padding: "6px 12px", fontSize: "12px" }}
+                  className="btn-change-table"
+                  style={{
+                    background: "#1c0a00",
+                    border: "1.5px solid #ff6600",
+                    color: "#fffdd0",
+                    fontSize: "10px",
+                    fontFamily: "var(--font-display)",
+                    textTransform: "uppercase",
+                    fontWeight: "700",
+                    padding: "6px 10px",
+                    borderRadius: "4px",
+                    cursor: "pointer",
+                    boxShadow: "2px 2px 0 #000"
+                  }}
                 >
                   Cambia
                 </button>
@@ -614,25 +717,27 @@ export default function CustomerRequest() {
 
               {/* Mood Selector Chips */}
               <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                <label style={{ fontSize: "13px", fontWeight: "600", color: "var(--text-secondary)" }}>
+                <label style={{ fontSize: "13px", fontWeight: "900", color: "#ff6600", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "1px" }}>
                   Come ti senti? (Seleziona un mood)
                 </label>
                 <div style={{ 
-                  display: "flex", 
-                  gap: "8px", 
-                  overflowX: "auto", 
-                  paddingBottom: "5px",
-                  whiteSpace: "nowrap",
-                  WebkitOverflowScrolling: "touch"
+                  display: "grid", 
+                  gridTemplateColumns: "1fr 1fr", 
+                  gap: "10px", 
+                  paddingBottom: "5px"
                 }}>
-                  {Object.keys(MOOD_EMOJIS).map((mood) => (
+                  {Object.keys(MOOD_EMOJIS).map((mood, idx) => (
                     <button
                       key={mood}
                       type="button"
                       onClick={() => setSelectedMood(mood)}
-                      className={`mood-chip ${selectedMood === mood ? `selected-${mood}` : ""}`}
+                      className={`walbox-mood-chip ${selectedMood === mood ? "selected" : ""}`}
+                      style={{
+                        gridColumn: idx === 4 ? "span 2" : "auto"
+                      }}
                     >
-                      {MOOD_EMOJIS[mood]} {mood.charAt(0).toUpperCase() + mood.slice(1)}
+                      <span style={{ fontSize: "18px", marginRight: "6px" }}>{MOOD_EMOJIS[mood]}</span>
+                      {mood.toUpperCase()}
                     </button>
                   ))}
                 </div>
@@ -640,8 +745,8 @@ export default function CustomerRequest() {
 
               {/* Dedication Textarea */}
               <div className="form-group" style={{ margin: "0" }}>
-                <label htmlFor="dedication-input" style={{ fontSize: "13px", fontWeight: "600" }}>
-                  Aggiungi una dedica o un messaggio (opzionale)
+                <label htmlFor="dedication-input" style={{ fontSize: "13px", fontWeight: "900", color: "#ff6600", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "1px" }}>
+                  Aggiungi una dedica (opzionale)
                 </label>
                 <textarea
                   id="dedication-input"
@@ -650,26 +755,20 @@ export default function CustomerRequest() {
                   placeholder="Es. Dedicata a tutti quelli del tavolo 3! 🍹 o Auguri Marco!"
                   value={dedication}
                   onChange={(e) => setDedication(e.target.value)}
-                  className="text-input"
-                  style={{ resize: "none", width: "100%", fontSize: "16px" }}
+                  className="walbox-textarea"
                 ></textarea>
-                <span style={{ fontSize: "11px", color: "var(--text-secondary)", textAlign: "right" }}>
-                  {dedication.length}/100 caratteri
+                <span style={{ fontSize: "11px", color: "#a0a0a0", textAlign: "right", fontFamily: "monospace", marginTop: "4px" }}>
+                  {dedication.length}/100 CARATTERI
                 </span>
               </div>
 
               {/* Submit Button */}
               <button 
                 type="submit" 
-                className="btn-primary" 
-                style={{ 
-                  background: getMoodColor(selectedMood),
-                  boxShadow: `0 8px 20px ${getMoodColor(selectedMood)}45`,
-                  color: selectedMood === "chill" || selectedMood === "romantic" ? "white" : "#05070e"
-                }}
+                className="walbox-submit-btn" 
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Invio in corso..." : "Invia al Jukebox 🚀"}
+                {isSubmitting ? "INVIO IN CORSO..." : "INVIA AL JUKEBOX 🚀"}
               </button>
             </form>
           )}
