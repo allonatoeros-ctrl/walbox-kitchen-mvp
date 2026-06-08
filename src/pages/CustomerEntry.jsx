@@ -66,8 +66,8 @@ export default function CustomerEntry() {
           background: "#1c0a00", // Dark chocolate coaster/counter surface
           border: "2px solid #ff6600",
           borderTop: "8px solid #ff6600", // Thick counter top bar
-          borderRadius: "12px",
-          boxShadow: "8px 8px 0 #000000" // Hard black flat shadow
+          borderRadius: "8px",
+          boxShadow: "12px 12px 0 #000000" // Hard black flat shadow
         }}
       >
         {/* Brand Logo and Header */}
@@ -80,8 +80,8 @@ export default function CustomerEntry() {
                 width: "90px",
                 height: "90px",
                 borderRadius: "50%",
-                border: "3px solid #ff6600",
-                boxShadow: "0 0 20px rgba(255, 102, 0, 0.4)",
+                border: "4px solid #ff6600",
+                boxShadow: "0 0 35px rgba(255, 102, 0, 0.55)",
                 display: "block"
               }}
             />
