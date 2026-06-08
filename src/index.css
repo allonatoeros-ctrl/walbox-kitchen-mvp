@@ -1,17 +1,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&family=Syne:wght@700;800&display=swap');
 
 :root {
-  --bg-dark: hsl(224, 71%, 4%);
-  --surface-glass: rgba(13, 17, 28, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --accent-primary: hsl(322, 100%, 50%); /* Neon Hot Pink */
-  --accent-secondary: hsl(263, 90%, 55%); /* Electric Violet */
-  --accent-glow: hsl(180, 100%, 50%); /* Cyber Cyan */
-  --text-primary: hsl(210, 40%, 98%);
-  --text-secondary: hsl(215, 20%, 65%);
+  /* Walbox Brand Colors (Walrus Identity) */
+  --walrus-charcoal: #121212;
+  --walrus-white-warm: #F7F5F0;
+  --walrus-brick-red: #9E3F2B;
+  --walrus-copper: #D48952;
+  --walrus-amber-beer: #FFBF00;
+  --walrus-trunk-green: #37533D;
+  --walrus-trunk-brown: #5C4033;
+  --walrus-neon-fuchsia: #FF1493;
+
+  /* Global tokens mapped to Walrus Brand */
+  --bg-dark: var(--walrus-charcoal);
+  --surface-glass: rgba(30, 24, 20, 0.75); /* Warmer brown/dark surface */
+  --glass-border: rgba(212, 137, 82, 0.15); /* Warm copper border glow */
   
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-display: 'Syne', 'Outfit', sans-serif;
+  --accent-primary: var(--walrus-amber-beer); /* Warm Yellow/Orange accent */
+  --accent-secondary: var(--walrus-copper); /* Copper secondary accent */
+  --accent-glow: var(--walrus-neon-fuchsia); /* Neon Fuchsia only for social highlights/triggers */
+  
+  --text-primary: var(--walrus-white-warm);
+  --text-secondary: rgba(247, 245, 240, 0.65); /* Faded warm white */
+  
+  --font-sans: 'Montserrat', 'Inter', system-ui, -apple-system, sans-serif;
+  --font-display: 'Oswald', 'Outfit', sans-serif;
   
   --radius-lg: 16px;
   --radius-md: 10px;
@@ -20,16 +33,16 @@
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-bounce: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   
-  --shadow-neon-pink: 0 0 20px rgba(255, 0, 127, 0.3), 0 0 40px rgba(255, 0, 127, 0.1);
-  --shadow-neon-violet: 0 0 20px rgba(138, 43, 226, 0.3), 0 0 40px rgba(138, 43, 226, 0.1);
-  --shadow-neon-cyan: 0 0 20px rgba(0, 255, 255, 0.3), 0 0 40px rgba(0, 255, 255, 0.1);
+  --shadow-neon-pink: 0 0 20px rgba(255, 20, 147, 0.25), 0 0 40px rgba(255, 20, 147, 0.1);
+  --shadow-neon-violet: 0 0 20px rgba(212, 137, 82, 0.25), 0 0 40px rgba(212, 137, 82, 0.1);
+  --shadow-neon-cyan: 0 0 20px rgba(255, 191, 0, 0.25), 0 0 40px rgba(255, 191, 0, 0.1);
 
   /* Mood Gradients */
-  --mood-party: linear-gradient(135deg, hsl(322, 100%, 50%), hsl(263, 90%, 55%));
-  --mood-chill: linear-gradient(135deg, hsl(200, 80%, 40%), hsl(263, 90%, 55%));
-  --mood-energetic: linear-gradient(135deg, hsl(180, 100%, 50%), hsl(220, 80%, 40%));
-  --mood-romantic: linear-gradient(135deg, hsl(340, 90%, 50%), hsl(322, 100%, 50%));
-  --mood-retro: linear-gradient(135deg, hsl(35, 90%, 55%), hsl(322, 100%, 50%));
+  --mood-party: linear-gradient(135deg, var(--walrus-neon-fuchsia), var(--walrus-amber-beer));
+  --mood-chill: linear-gradient(135deg, var(--walrus-trunk-green), var(--walrus-copper));
+  --mood-energetic: linear-gradient(135deg, var(--walrus-amber-beer), var(--walrus-copper));
+  --mood-romantic: linear-gradient(135deg, var(--walrus-brick-red), var(--walrus-neon-fuchsia));
+  --mood-retro: linear-gradient(135deg, var(--walrus-trunk-brown), var(--walrus-amber-beer));
 }
 
 * {
