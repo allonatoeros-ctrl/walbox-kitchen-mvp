@@ -43,6 +43,21 @@ export default function CustomerEntry() {
         alignItems: "center"
       }}
     >
+      <style>{`
+        @keyframes stickerPulse {
+          0%, 100% { transform: rotate(-4deg) scale(1); }
+          50% { transform: rotate(-2deg) scale(1.04); }
+        }
+        .sticker-animate {
+          animation: stickerPulse 3s ease-in-out infinite;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .sticker-animate {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
       {/* Background glow tailored to Walrus Beer theme */}
       <div 
         className="mobile-bg-glow" 
@@ -72,7 +87,8 @@ export default function CustomerEntry() {
       >
         {/* Brand Logo and Header */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "15px" }}>
-          <div style={{ position: "relative", display: "inline-block" }}>
+          {/* Logo and Sticker Wrapper */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
             <img 
               src={walrusLogo} 
               alt="The Walrus Pub Logo" 
@@ -87,18 +103,16 @@ export default function CustomerEntry() {
             />
             {/* Retro sticker badge */}
             <div 
+              className="sticker-animate"
               style={{
-                position: "absolute",
-                bottom: "-6px",
-                right: "-30px",
                 background: "#000000",
                 color: "#ff6600",
                 fontFamily: "var(--font-display)",
                 fontSize: "9px",
                 fontWeight: "900",
-                padding: "3px 8px",
+                padding: "4px 10px",
                 borderRadius: "3px",
-                transform: "rotate(-8deg)",
+                transform: "rotate(-4deg)",
                 boxShadow: "2px 2px 0 #fffdd0", // Cream shadow
                 whiteSpace: "nowrap",
                 textTransform: "uppercase",
