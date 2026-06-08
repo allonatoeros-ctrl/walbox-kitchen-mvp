@@ -191,8 +191,8 @@ export default function CustomerEntry() {
               style={{
                 width: "100%",
                 background: "#0c0400", // Darkest chocolate background
-                border: isFocused ? "2px solid #ff6600" : "2px solid rgba(255, 102, 0, 0.4)",
-                borderRadius: "8px",
+                border: "2px solid #ff6600",
+                borderRadius: "6px",
                 padding: "12px",
                 color: "#fffdd0", // Retro cream text color
                 fontSize: "24px",
@@ -200,8 +200,8 @@ export default function CustomerEntry() {
                 fontWeight: "800",
                 letterSpacing: "2px",
                 outline: "none",
-                boxShadow: isFocused ? "0 0 15px rgba(255, 102, 0, 0.3)" : "none",
-                transition: "all 0.2s ease"
+                boxShadow: isFocused ? "4px 4px 0 #000000" : "none",
+                transition: "all 0.1s ease"
               }}
             />
             {error && (
@@ -226,7 +226,7 @@ export default function CustomerEntry() {
               backgroundColor: "#ff6600",
               color: "#000000",
               border: "2px solid #000000",
-              borderRadius: "8px",
+              borderRadius: "6px",
               padding: "14px 24px",
               fontFamily: "var(--font-display)",
               fontSize: "16px",
@@ -234,8 +234,8 @@ export default function CustomerEntry() {
               textTransform: "uppercase",
               letterSpacing: "1px",
               cursor: "pointer",
-              boxShadow: btnPressed ? "0 2px 0 #cc5200" : "0 6px 0 #cc5200",
-              transform: btnPressed ? "translateY(4px)" : "translateY(0)",
+              boxShadow: btnPressed ? "0 2px 0 #000000" : "0 8px 0 #000000",
+              transform: btnPressed ? "translateY(6px)" : "translateY(0)",
               transition: "transform 0.1s, box-shadow 0.1s",
               width: "100%",
               textAlign: "center"
@@ -246,7 +246,7 @@ export default function CustomerEntry() {
             onTouchStart={() => setBtnPressed(true)}
             onTouchEnd={() => setBtnPressed(false)}
           >
-            Entra nella Walbox 🍺
+            ENTRA NEL WALBOX 🍺
           </button>
         </form>
 
