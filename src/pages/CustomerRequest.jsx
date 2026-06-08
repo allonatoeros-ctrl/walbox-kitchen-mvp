@@ -148,29 +148,59 @@ export default function CustomerRequest() {
   };
 
   return (
-    <div className="mobile-wrapper">
-      <div className="mobile-bg-glow" style={{ background: `radial-gradient(circle, ${getMoodColor(selectedMood)} 0%, transparent 70%)` }}></div>
+    <div className="mobile-wrapper" style={{ background: "linear-gradient(180deg, #331100 0%, #1a0800 100%)", minHeight: "100vh" }}>
+      <div className="mobile-bg-glow" style={{ background: "radial-gradient(circle, rgba(255, 102, 0, 0.25) 0%, transparent 70%)" }}></div>
 
       {/* Header bar */}
       <header style={{ 
         display: "flex", 
         justifyContent: "space-between", 
         alignItems: "center", 
-        paddingBottom: "15px", 
-        borderBottom: "1px solid var(--glass-border)",
-        marginBottom: "20px"
+        padding: "12px 16px",
+        background: "#0c0400",
+        borderBottom: "4px solid #ff6600",
+        marginBottom: "20px",
+        borderRadius: "0 0 8px 8px",
+        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)"
       }}>
         <div>
-          <h2 style={{ fontSize: "18px", fontWeight: "700", fontFamily: "var(--font-display)", margin: "0" }}>
-            Walbox Music
+          <h2 style={{ 
+            fontSize: "20px", 
+            fontWeight: "900", 
+            fontFamily: "var(--font-display)", 
+            margin: "0",
+            color: "#fffdd0",
+            textTransform: "uppercase",
+            letterSpacing: "1px",
+            textShadow: "2px 2px 0 #000"
+          }}>
+            THE WALBOX
           </h2>
-          <span style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
-            Live Queue Player
+          <span style={{ 
+            fontSize: "11px", 
+            color: "#ff6600",
+            fontWeight: "700",
+            textTransform: "uppercase",
+            letterSpacing: "1px"
+          }}>
+            SALA VAR LISSONE ⚽
           </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span className="table-badge">
-            Tavolo {table}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{
+            background: "#ff6600",
+            border: "2px solid #000",
+            borderRadius: "4px",
+            padding: "5px 10px",
+            fontSize: "12px",
+            fontWeight: "900",
+            color: "#000",
+            fontFamily: "var(--font-display)",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px",
+            boxShadow: "2px 2px 0 #fffdd0"
+          }}>
+            TAVOLO {table}
           </span>
           <button 
             onClick={() => {
@@ -178,6 +208,20 @@ export default function CustomerRequest() {
               window.dispatchEvent(new PopStateEvent("popstate"));
             }} 
             className="btn-change-table"
+            style={{
+              background: "#1c0a00",
+              border: "1.5px solid #ff6600",
+              color: "#fffdd0",
+              fontSize: "10px",
+              fontFamily: "var(--font-display)",
+              textTransform: "uppercase",
+              fontWeight: "700",
+              padding: "6px 10px",
+              borderRadius: "4px",
+              cursor: "pointer",
+              transition: "all 0.1s ease",
+              boxShadow: "2px 2px 0 #000"
+            }}
           >
             Modifica 🔄
           </button>
