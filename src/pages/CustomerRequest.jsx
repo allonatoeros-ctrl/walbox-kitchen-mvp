@@ -872,51 +872,89 @@ export default function CustomerRequest() {
         <div className="look-up-overlay" onClick={() => setShowLookUpAlert(false)}>
           <div className="look-up-bg-glow" style={{ background: `radial-gradient(circle, ${getMoodColor(currentAlertSong.mood)} 0%, transparent 70%)` }}></div>
           
-          <div className="look-up-content" onClick={(e) => e.stopPropagation()}>
-            <div className="look-up-header-text">
-              <h2>ALZA LO SGUARDO! 📺</h2>
-              <h3>Hai fatto casino. Ora guarda la TV.</h3>
-              <p>La tua cartolina è live. Screenshot, stories, tagga @TheWalrusPub. Chi è rimasto sul divano deve soffrire.</p>
+          <div className="look-up-content" style={{ maxWidth: "320px", gap: "10px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="look-up-header-text" style={{ gap: "2px", marginBottom: "2px" }}>
+              <h2 style={{ fontSize: "22px" }}>ALZA LO SGUARDO! 📺</h2>
+              <h3 style={{ fontSize: "14px" }}>Hai fatto casino. Ora guarda la TV.</h3>
+              <p style={{ fontSize: "11px", padding: "0" }}>La tua dedica è live in TV. Screenshot, stories, tagga @TheWalrusPub. Chi è rimasto sul divano deve soffrire.</p>
             </div>
 
             {/* Story Canvas Card */}
-            <div className="story-canvas" style={{ borderColor: getMoodColor(currentAlertSong.mood) }}>
-              <div className="story-canvas-header">
-                <span>WALBOX LIVE SESSION</span>
-                <span className="story-canvas-table">TAVOLO {currentAlertSong.table}</span>
+            <div className="story-canvas" style={{ 
+              borderColor: getMoodColor(currentAlertSong.mood), 
+              aspectRatio: "unset", 
+              height: "auto", 
+              minHeight: "unset", 
+              maxHeight: "unset", 
+              padding: "14px", 
+              gap: "8px" 
+            }}>
+              <div className="story-canvas-header" style={{ justifyContent: "center", fontSize: "11px", fontWeight: "900", color: "#ff6600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                <span>🚨 TAVOLO {currentAlertSong.table} HA FATTO CASINO</span>
               </div>
 
-              <div className="story-canvas-body">
-                <div className="story-canvas-cover-container">
+              <div className="story-canvas-body" style={{ flex: "none", gap: "6px", padding: "4px 0" }}>
+                <div className="story-canvas-cover-container" style={{ width: "90px", height: "90px", margin: "0 auto", marginBottom: "2px" }}>
                   <img 
                     src={currentAlertSong.song.cover} 
                     alt="" 
                     className="story-canvas-cover"
-                    style={{ boxShadow: `0 0 20px ${getMoodColor(currentAlertSong.mood)}40` }}
+                    style={{ boxShadow: `0 0 15px ${getMoodColor(currentAlertSong.mood)}30` }}
                   />
                 </div>
                 
-                <h4 className="story-canvas-title">{currentAlertSong.song.title}</h4>
-                <p className="story-canvas-artist">{currentAlertSong.song.artist}</p>
+                <h4 className="story-canvas-title" style={{ fontSize: "15px", fontWeight: "900" }}>{currentAlertSong.song.title}</h4>
+                <p className="story-canvas-artist" style={{ fontSize: "12px", color: "var(--text-secondary)", margin: "0 0 2px 0" }}>{currentAlertSong.song.artist}</p>
                 
-                <span className="story-canvas-mood" style={{ borderColor: getMoodColor(currentAlertSong.mood), color: getMoodColor(currentAlertSong.mood) }}>
-                  {MOOD_LABELS[currentAlertSong.mood]}
+                <span className="story-canvas-mood" style={{ 
+                  borderColor: getMoodColor(currentAlertSong.mood), 
+                  color: getMoodColor(currentAlertSong.mood),
+                  fontSize: "10px",
+                  fontWeight: "900",
+                  padding: "3px 8px",
+                  borderRadius: "4px",
+                  background: "rgba(0,0,0,0.2)",
+                  display: "inline-block",
+                  marginTop: "2px",
+                  transform: "rotate(-3deg)"
+                }}>
+                  {MOOD_EMOJIS[currentAlertSong.mood]} {MOOD_LABELS[currentAlertSong.mood] ? MOOD_LABELS[currentAlertSong.mood].replace(MOOD_EMOJIS[currentAlertSong.mood], "").trim().toUpperCase() : currentAlertSong.mood.toUpperCase()} MOMENT
                 </span>
               </div>
 
-              <div className="story-canvas-dedication" style={{ borderLeftColor: getMoodColor(currentAlertSong.mood) }}>
+              <div className="story-canvas-dedication" style={{ 
+                borderLeftColor: getMoodColor(currentAlertSong.mood),
+                padding: "6px 10px",
+                fontSize: "11px",
+                margin: "4px 0",
+                borderRadius: "6px",
+                lineHeight: "1.3"
+              }}>
                 {currentAlertSong.dedication ? `“${currentAlertSong.dedication}”` : `“Nessuna dedica. Solo responsabilità morale del Tavolo ${currentAlertSong.table}. 🍺”`}
               </div>
 
-              <div className="story-canvas-footer">
-                <span className="story-canvas-location">📍 @WalboxVenue</span>
-                <span className="story-canvas-watermark">📸 Screenshot & share your vibe</span>
+              <p style={{
+                fontSize: "10px",
+                fontWeight: "900",
+                color: "#fffdd0",
+                margin: "2px 0 0 0",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px"
+              }}>
+                STA PASSANDO IN TV. NON FARE IL VAGO.
+              </p>
+
+              <div className="story-canvas-footer" style={{ paddingTop: "8px", justifyContent: "center" }}>
+                <span style={{ fontSize: "10px", fontWeight: "900", color: "#a0a0a0", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  📸 SCREENSHOT O SEI UN DIVANISTA
+                </span>
               </div>
             </div>
 
             <button 
               onClick={() => setShowLookUpAlert(false)} 
               className="btn-secondary look-up-close-btn"
+              style={{ marginTop: "2px" }}
             >
               Torna al Jukebox ✕
             </button>

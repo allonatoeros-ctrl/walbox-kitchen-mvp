@@ -1538,7 +1538,7 @@ input, textarea, select {
   filter: blur(90px);
   z-index: 1;
   pointer-events: none;
-  opacity: 0.4;
+  opacity: 0.15;
   animation: lookUpGlowPulse 4s infinite ease-in-out;
 }
 
@@ -1570,7 +1570,7 @@ input, textarea, select {
   background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 30px rgba(255, 0, 127, 0.25);
+  text-shadow: none;
 }
 
 .look-up-header-text h3 {
@@ -1593,18 +1593,17 @@ input, textarea, select {
   max-width: 320px;
   max-height: 68vh;
   aspect-ratio: 9 / 16;
-  background: var(--surface-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
+  background: #121212;
+  border: 3px solid #FF1493;
   border-radius: var(--radius-lg);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 8px 8px 0 #000000;
   padding: 20px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   text-align: center;
+  transform: rotate(0.5deg);
   animation: lookUpSlideUpBounce 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
 }
 
@@ -1677,23 +1676,26 @@ input, textarea, select {
 
 .story-canvas-mood {
   display: inline-block;
-  border: 1px solid;
-  padding: 2px 8px;
-  border-radius: 12px;
+  border: 2px solid;
+  padding: 4px 10px;
+  border-radius: 4px;
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 900;
   letter-spacing: 0.5px;
   margin-top: 4px;
+  background: #000000;
+  box-shadow: 3px 3px 0 #000000;
 }
 
 .story-canvas-dedication {
   font-size: 12px;
   font-style: italic;
-  color: var(--text-secondary);
-  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  background: #090909;
   padding: 10px 14px;
-  border-radius: 8px;
-  border-left: 3px solid var(--accent-secondary);
+  border-radius: 6px;
+  border: 1px solid #1a1a1a;
+  border-left: 3px solid #D48952;
   margin: 5px 0 10px 0;
   max-width: 100%;
   word-break: break-word;
@@ -1739,13 +1741,13 @@ input, textarea, select {
 }
 
 @keyframes lookUpGlowPulse {
-  0%, 100% { opacity: 0.35; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.15); }
+  0%, 100% { opacity: 0.15; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.15); }
 }
 
 @keyframes lookUpSlideUpBounce {
-  from { opacity: 0; transform: translateY(40px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(40px) scale(0.95) rotate(0deg); }
+  to { opacity: 1; transform: translateY(0) scale(1) rotate(0.5deg); }
 }
 
 /* --- STAFF REACTION / HYPE TRIGGER --- */
