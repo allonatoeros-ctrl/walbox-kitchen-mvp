@@ -94,7 +94,7 @@ export default function LiveTvScreenWalrusPoster() {
     { id: 'fallback-1', song: { title: 'Do I Wanna Know?', artist: 'Arctic Monkeys', cover: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=200&h=200&fit=crop&q=80' }, table: 'WALRUS' },
     { id: 'fallback-2', song: { title: 'Seven Nation Army', artist: 'The White Stripes', cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&h=200&fit=crop&q=80' }, table: 'WALRUS' }
   ];
-  
+
   const displayQueue = approvedQueue.length > 0 ? approvedQueue : fallbackQueue;
 
   // Track changes to trigger takeover screen
@@ -862,7 +862,7 @@ export default function LiveTvScreenWalrusPoster() {
       )}
 
       <div className="poster-main-layout">
-        
+
         {/* LEFT PANEL */}
         <div className="poster-left-panel">
           <div className="poster-header">
@@ -881,7 +881,7 @@ export default function LiveTvScreenWalrusPoster() {
           {currentRequest ? (
             <div className="poster-now-playing">
               <div className="poster-cover-hero-container">
-                
+
                 {/* Vinyl / Cover Component */}
                 <div className="poster-vinyl-hero">
                   <div className={`poster-vinyl-disc ${playback.isPlaying ? 'is-playing' : ''}`}>
@@ -891,11 +891,11 @@ export default function LiveTvScreenWalrusPoster() {
                     <img src={currentRequest.song.cover} alt="" className="poster-sleeve-img" />
                   </div>
                 </div>
-                
+
                 <div className="poster-song-info-block">
                   <h1 className="poster-song-title">{currentRequest.song.title}</h1>
                   <h2 className="poster-song-artist">{currentRequest.song.artist}</h2>
-                  
+
                   <div style={{ alignSelf: 'flex-start' }}>
                     <div className="poster-requester-badge">
                       REQUESTED BY TAVOLO {currentRequest.table}
@@ -911,8 +911,8 @@ export default function LiveTvScreenWalrusPoster() {
               </div>
 
               <div className="poster-progress-container">
-                <div 
-                  className="poster-progress-fill" 
+                <div
+                  className="poster-progress-fill"
                   style={{ width: `${(playback.progress / playback.duration) * 100}%` }}
                 ></div>
               </div>
@@ -931,7 +931,7 @@ export default function LiveTvScreenWalrusPoster() {
 
         {/* RIGHT PANEL */}
         <div className="poster-right-panel">
-          
+
           <div className="poster-qr-box">
             <svg className="poster-qr-svg" viewBox="0 0 100 100">
               {/* Fake QR blocks */}
@@ -955,7 +955,7 @@ export default function LiveTvScreenWalrusPoster() {
               <rect x="75" y="80" width="10" height="10" fill="black" />
             </svg>
             <div className="poster-qr-text">
-              <h4>YOUR MUSIC<br/>HERE</h4>
+              <h4>YOUR MUSIC<br />HERE</h4>
               <p>SCAN QR AT TABLE</p>
             </div>
           </div>
@@ -968,7 +968,7 @@ export default function LiveTvScreenWalrusPoster() {
           </div>
 
           <div className="poster-queue-title">UPCOMING TRACKS</div>
-          
+
           <div className="poster-queue-list">
             {displayQueue.map((req, idx) => (
               <div key={req.id} className="poster-queue-item">
