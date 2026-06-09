@@ -22,8 +22,18 @@ export default function CustomerRequest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const notifiedSongIds = useRef(new Set());
+  const submissionTimeoutRef = useRef(null);
   const [showLookUpAlert, setShowLookUpAlert] = useState(false);
   const [currentAlertSong, setCurrentAlertSong] = useState(null);
+
+  // Clean up auto-close timer on unmount
+  useEffect(() => {
+    return () => {
+      if (submissionTimeoutRef.current) {
+        clearTimeout(submissionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Monitor for playing songs from this table to trigger LookUp alert
   useEffect(() => {
@@ -104,12 +114,22 @@ export default function CustomerRequest() {
       setSubmissionSuccess(true);
       setIsSubmitting(false);
 
-      // Flash success and switch tabs
-      setTimeout(() => {
+      // Flash success and switch tabs after 5 seconds
+      if (submissionTimeoutRef.current) clearTimeout(submissionTimeoutRef.current);
+      submissionTimeoutRef.current = setTimeout(() => {
         setSubmissionSuccess(false);
         setActiveTab("my-songs");
-      }, 1500);
+      }, 5000);
     }, 800); // simulated network delay
+  };
+
+  const handleDismissSubmission = () => {
+    if (submissionTimeoutRef.current) {
+      clearTimeout(submissionTimeoutRef.current);
+      submissionTimeoutRef.current = null;
+    }
+    setSubmissionSuccess(false);
+    setActiveTab("my-songs");
   };
 
   // Filter songs by search query
@@ -136,15 +156,45 @@ export default function CustomerRequest() {
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
-        return { text: "In attesa 🟡", bg: "rgba(255, 193, 7, 0.15)", border: "rgba(255, 193, 7, 0.4)", color: "#ffc107" };
+        return { 
+          text: "IN SALA VAR 🟡", 
+          bg: "#fffdd0", 
+          border: "#ff6600", 
+          color: "#ff6600", 
+          boxShadow: "2px 2px 0 #000" 
+        };
       case "approved":
-        return { text: "Approvata 🟢", bg: "rgba(40, 167, 69, 0.15)", border: "rgba(40, 167, 69, 0.4)", color: "#28a745" };
+        return { 
+          text: "APPROVATA DAL BANCONE 🟢", 
+          bg: "#ff6600", 
+          border: "#000000", 
+          color: "#000000", 
+          boxShadow: "2px 2px 0 #fffdd0" 
+        };
       case "playing":
-        return { text: "Ora in onda 🔵", bg: "rgba(0, 255, 255, 0.15)", border: "rgba(0, 255, 255, 0.4)", color: "#00ffff" };
+        return { 
+          text: "ALZA LO SGUARDO 📺", 
+          bg: "#ff007f", 
+          border: "#fffdd0", 
+          color: "#fffdd0", 
+          boxShadow: "2px 2px 0 #000" 
+        };
       case "rejected":
-        return { text: "Rifiutata 🔴", bg: "rgba(220, 53, 69, 0.15)", border: "rgba(220, 53, 69, 0.4)", color: "#dc3545" };
+        return { 
+          text: "BOCCIATA SENZA APPELLO 🔴", 
+          bg: "#121212", 
+          border: "#3a1212", 
+          color: "#b33a3a", 
+          boxShadow: "2px 2px 0 #000" 
+        };
       default:
-        return { text: "Completata", bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.1)", color: "#aaa" };
+        return { 
+          text: "COMPLETATA", 
+          bg: "#0c0400", 
+          border: "#2c2c2c", 
+          color: "#888", 
+          boxShadow: "none" 
+        };
     }
   };
 
@@ -163,6 +213,20 @@ export default function CustomerRequest() {
   return (
     <div className="mobile-wrapper" style={{ background: "linear-gradient(180deg, #331100 0%, #1a0800 100%)", minHeight: "100vh" }}>
       <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .walbox-popup-btn {
+          transition: transform 0.1s, box-shadow 0.1s, background-color 0.1s !important;
+        }
+        .walbox-popup-btn:hover {
+          background: #ff8800 !important;
+        }
+        .walbox-popup-btn:active {
+          transform: translate(2px, 2px) !important;
+          box-shadow: 2px 2px 0 #fffdd0 !important;
+        }
         .walbox-search-input {
           width: 100%;
           background: #0c0400 !important;
@@ -183,6 +247,7 @@ export default function CustomerRequest() {
         .walbox-search-input::placeholder {
           color: #a0a0a0 !important;
           opacity: 0.7;
+          font-style: italic;
         }
         .walbox-song-card {
           transition: transform 0.1s, box-shadow 0.1s !important;
@@ -309,7 +374,7 @@ export default function CustomerRequest() {
         borderBottom: "4px solid #ff6600",
         marginBottom: "20px",
         borderRadius: "0 0 8px 8px",
-        boxShadow: "0 4px 20px rgba(0, 0, 0, 0.4)"
+        boxShadow: "0 4px 0 #000"
       }}>
         <div>
           <h2 style={{ 
@@ -385,31 +450,39 @@ export default function CustomerRequest() {
       }}>
         <button 
           onClick={() => setActiveTab("request")}
-          className="glass-panel"
           style={{
             padding: "12px",
             fontSize: "14px",
-            fontWeight: "600",
+            fontFamily: "var(--font-display)",
+            fontWeight: "900",
+            textTransform: "uppercase",
             cursor: "pointer",
-            background: activeTab === "request" ? "rgba(255, 255, 255, 0.08)" : "transparent",
-            borderColor: activeTab === "request" ? "var(--accent-primary)" : "var(--glass-border)",
-            color: activeTab === "request" ? "var(--text-primary)" : "var(--text-secondary)"
+            borderRadius: "6px",
+            background: activeTab === "request" ? "#1c0a00" : "transparent",
+            border: activeTab === "request" ? "2px solid #ff6600" : "2px solid rgba(255, 102, 0, 0.3)",
+            color: activeTab === "request" ? "#ff6600" : "rgba(255, 102, 0, 0.6)",
+            boxShadow: activeTab === "request" ? "4px 4px 0 #000" : "none",
+            transition: "all 0.1s ease"
           }}
         >
           🎵 Richiedi Brano
         </button>
         <button 
           onClick={() => setActiveTab("my-songs")}
-          className="glass-panel"
           style={{
             padding: "12px",
             fontSize: "14px",
-            fontWeight: "600",
+            fontFamily: "var(--font-display)",
+            fontWeight: "900",
+            textTransform: "uppercase",
             cursor: "pointer",
             position: "relative",
-            background: activeTab === "my-songs" ? "rgba(255, 255, 255, 0.08)" : "transparent",
-            borderColor: activeTab === "my-songs" ? "var(--accent-primary)" : "var(--glass-border)",
-            color: activeTab === "my-songs" ? "var(--text-primary)" : "var(--text-secondary)"
+            borderRadius: "6px",
+            background: activeTab === "my-songs" ? "#1c0a00" : "transparent",
+            border: activeTab === "my-songs" ? "2px solid #ff6600" : "2px solid rgba(255, 102, 0, 0.3)",
+            color: activeTab === "my-songs" ? "#ff6600" : "rgba(255, 102, 0, 0.6)",
+            boxShadow: activeTab === "my-songs" ? "4px 4px 0 #000" : "none",
+            transition: "all 0.1s ease"
           }}
         >
           📋 Le Mie Richieste
@@ -440,44 +513,26 @@ export default function CustomerRequest() {
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
           
           {venueSettings.queuePaused && (
-            <div className="glass-panel" style={{ 
+            <div style={{ 
               padding: "15px", 
-              backgroundColor: "rgba(255, 0, 127, 0.05)", 
-              borderColor: "var(--accent-primary)",
+              background: "#1c0a00", 
+              border: "2px solid #ff007f",
+              borderRadius: "6px",
+              boxShadow: "4px 4px 0 #000",
               textAlign: "center"
             }}>
-              <span style={{ fontSize: "14px", color: "var(--text-primary)", fontWeight: "600" }}>
+              <span style={{ fontSize: "14px", color: "#ff007f", fontWeight: "900", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 ⏸️ Invio richieste temporaneamente sospeso dallo staff.
               </span>
             </div>
           )}
 
-          {submissionSuccess ? (
-            <div className="glass-panel" style={{ 
-              padding: "40px 20px", 
-              textAlign: "center", 
-              borderColor: "var(--accent-glow)",
-              animation: "pulseBorder 1s infinite" 
-            }}>
-              <h2 style={{ color: "var(--accent-glow)", fontSize: "24px", marginBottom: "10px" }}>
-                Richiesta Inviata! 🚀
-              </h2>
-              <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>
-                La tua richiesta è in attesa di approvazione da parte dello staff.
-              </p>
-            </div>
-          ) : !selectedSong ? (
+          {!selectedSong ? (
             /* Song Search View */
-            <div className="glass-panel" style={{ 
-              padding: "20px", 
+            <div style={{ 
               display: "flex", 
               flexDirection: "column", 
-              gap: "15px",
-              background: "#1c0a00",
-              border: "2px solid #ff6600",
-              borderTop: "6px solid #ff6600",
-              borderRadius: "8px",
-              boxShadow: "8px 8px 0 #000000"
+              gap: "15px"
             }}>
               <h3 style={{ fontSize: "16px", fontWeight: "800", fontFamily: "var(--font-display)", color: "#fffdd0", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 Cerca una canzone
@@ -653,43 +708,50 @@ export default function CustomerRequest() {
             </div>
           ) : (
             /* Selected Song Form Flow */
-            <form onSubmit={handleSubmitRequest} className="glass-panel" style={{ 
-              padding: "20px", 
+            <form onSubmit={handleSubmitRequest} style={{ 
               display: "flex", 
               flexDirection: "column", 
-              gap: "20px",
-              background: "#1c0a00",
-              border: "2px solid #ff6600",
-              borderTop: "6px solid #ff6600",
-              borderRadius: "8px",
-              boxShadow: "8px 8px 0 #000000"
+              gap: "20px"
             }}>
               
               {/* Selected Track Info Card */}
-              <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: "15px",
+                background: "#1a0a00",
+                border: "2px solid #ff6600",
+                padding: "12px",
+                borderRadius: "6px",
+                boxShadow: "4px 4px 0 #000000"
+              }}>
                 <img 
                   src={selectedSong.cover} 
                   alt={selectedSong.title} 
                   style={{ 
-                    width: "70px", 
-                    height: "70px", 
-                    borderRadius: "6px", 
+                    width: "60px", 
+                    height: "60px", 
+                    borderRadius: "4px", 
                     objectFit: "cover",
                     border: "2px solid #000"
                   }} 
                 />
                 <div style={{ flex: 1, minWidth: "0" }}>
                   <h4 style={{ fontSize: "16px", fontWeight: "800", fontFamily: "var(--font-display)", color: "#fffdd0" }}>{selectedSong.title.toUpperCase()}</h4>
-                  <p style={{ fontSize: "14px", color: "#ff6600", fontWeight: "600" }}>{selectedSong.artist}</p>
-                  <span className="glass-panel" style={{ 
+                  <p style={{ fontSize: "13px", color: "#ff6600", fontWeight: "600" }}>{selectedSong.artist}</p>
+                  <span style={{ 
                     display: "inline-block", 
-                    padding: "2px 8px", 
-                    fontSize: "11px", 
-                    marginTop: "6px",
-                    fontWeight: "bold",
+                    padding: "4px 8px", 
+                    fontSize: "10px", 
+                    marginTop: "4px",
+                    fontWeight: "900",
+                    fontFamily: "var(--font-display)",
                     textTransform: "uppercase",
-                    borderColor: getMoodColor(selectedMood),
-                    color: getMoodColor(selectedMood)
+                    background: "#0c0400",
+                    border: `1.5px solid ${getMoodColor(selectedMood)}`,
+                    color: getMoodColor(selectedMood),
+                    borderRadius: "4px",
+                    boxShadow: "2px 2px 0 #000"
                   }}>
                     {MOOD_LABELS[selectedMood]}
                   </span>
@@ -778,10 +840,10 @@ export default function CustomerRequest() {
         /* My Songs List View */
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {submittedRequests.length === 0 ? (
-            <div className="glass-panel" style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-secondary)" }}>
+            <div style={{ padding: "40px 20px", textAlign: "center", color: "#a0a0a0" }}>
               <span style={{ fontSize: "36px" }}>📻</span>
-              <h3 style={{ fontSize: "16px", marginTop: "10px", color: "var(--text-primary)" }}>Nessuna richiesta effettuata</h3>
-              <p style={{ fontSize: "13px", marginTop: "5px" }}>
+              <h3 style={{ fontSize: "16px", marginTop: "10px", color: "#fffdd0", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "1px" }}>Nessuna richiesta effettuata</h3>
+              <p style={{ fontSize: "13px", marginTop: "5px", fontStyle: "italic" }}>
                 Le canzoni che prenoti appariranno qui insieme al loro stato di riproduzione in tempo reale.
               </p>
             </div>
@@ -791,44 +853,71 @@ export default function CustomerRequest() {
               return (
                 <div 
                   key={req.id} 
-                  className="glass-panel" 
                   style={{ 
                     padding: "15px", 
                     display: "flex", 
                     flexDirection: "column", 
                     gap: "10px",
-                    borderColor: req.status === "playing" ? "var(--accent-glow)" : "var(--glass-border)",
-                    boxShadow: req.status === "playing" ? "var(--shadow-neon-cyan)" : "none"
+                    background: "#1a0a00",
+                    border: req.status === "playing" ? "3px solid #ff007f" : "2px solid #ff6600",
+                    borderRadius: "8px",
+                    boxShadow: req.status === "playing" ? "6px 6px 0 #ff6600" : "4px 4px 0 #000000",
+                    position: "relative",
+                    overflow: "hidden"
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                     <img 
                       src={req.song.cover} 
                       alt="" 
-                      style={{ width: "50px", height: "50px", borderRadius: "var(--radius-sm)", objectFit: "cover" }} 
+                      style={{ width: "50px", height: "50px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000" }} 
                     />
                     
                     <div style={{ flex: 1, minWidth: "0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                        <h4 style={{ fontSize: "14px", fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0" }}>
+                        <h4 style={{ 
+                          fontSize: "14px", 
+                          fontWeight: "800", 
+                          fontFamily: "var(--font-display)",
+                          color: "#fffdd0",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                          overflow: "hidden", 
+                          textOverflow: "ellipsis", 
+                          whiteSpace: "nowrap", 
+                          margin: "0" 
+                        }}>
                           {req.song.title}
                         </h4>
                         
                         {/* Status Badge */}
                         <span style={{ 
-                          padding: "2px 8px", 
+                          padding: "4px 8px", 
                           borderRadius: "4px", 
-                          fontSize: "11px", 
-                          fontWeight: "bold",
+                          fontSize: "10px", 
+                          fontWeight: "900",
+                          fontFamily: "var(--font-display)",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
                           backgroundColor: badge.bg,
-                          border: `1px solid ${badge.border}`,
+                          border: `2px solid ${badge.border}`,
                           color: badge.color,
+                          boxShadow: badge.boxShadow || "none",
                           whiteSpace: "nowrap"
                         }}>
                           {badge.text}
                         </span>
                       </div>
-                      <p style={{ fontSize: "12px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px" }}>
+                      <p style={{ 
+                        fontSize: "12px", 
+                        color: "#ff6600",
+                        fontWeight: "600",
+                        overflow: "hidden", 
+                        textOverflow: "ellipsis", 
+                        whiteSpace: "nowrap", 
+                        marginTop: "2px",
+                        marginBottom: "0"
+                      }}>
                         {req.song.artist}
                       </p>
                     </div>
@@ -838,11 +927,15 @@ export default function CustomerRequest() {
                     <div style={{ 
                       fontSize: "12px", 
                       fontStyle: "italic", 
-                      color: "var(--text-secondary)", 
-                      background: "rgba(255,255,255,0.02)",
+                      color: "#fffdd0", 
+                      background: "#0c0400",
                       padding: "8px 12px",
                       borderRadius: "6px",
-                      borderLeft: `2px solid ${getMoodColor(req.mood)}`
+                      borderLeft: `4px solid ${req.status === "playing" ? "#ff007f" : "#ff6600"}`,
+                      borderTop: "1px solid #1a0a00",
+                      borderRight: "1px solid #1a0a00",
+                      borderBottom: "1px solid #1a0a00",
+                      boxShadow: "2px 2px 0 #000"
                     }}>
                       &ldquo;{req.dedication}&rdquo;
                     </div>
@@ -850,14 +943,14 @@ export default function CustomerRequest() {
 
                   {req.status === "playing" && (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: "5px", padding: "0 5px" }}>
-                      <span style={{ fontSize: "11px", color: "var(--accent-glow)", fontWeight: "600", letterSpacing: "1px", textTransform: "uppercase" }}>
-                        In riproduzione nel locale!
+                      <span style={{ fontSize: "11px", color: "#ff007f", fontWeight: "900", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "var(--font-display)" }}>
+                        IN RIPRODUZIONE NEL LOCALE! 🔊
                       </span>
                       <div className="eq-container" style={{ height: "15px" }}>
-                        <div className="eq-bar" style={{ width: "2px", animationDuration: "0.8s" }}></div>
-                        <div className="eq-bar" style={{ width: "2px", animationDuration: "1.2s" }}></div>
-                        <div className="eq-bar" style={{ width: "2px", animationDuration: "0.9s" }}></div>
-                        <div className="eq-bar" style={{ width: "2px", animationDuration: "1.4s" }}></div>
+                        <div className="eq-bar" style={{ width: "2px", backgroundColor: "#ff007f", animationDuration: "0.8s" }}></div>
+                        <div className="eq-bar" style={{ width: "2px", backgroundColor: "#ff007f", animationDuration: "1.2s" }}></div>
+                        <div className="eq-bar" style={{ width: "2px", backgroundColor: "#ff007f", animationDuration: "0.9s" }}></div>
+                        <div className="eq-bar" style={{ width: "2px", backgroundColor: "#ff007f", animationDuration: "1.4s" }}></div>
                       </div>
                     </div>
                   )}
@@ -957,6 +1050,89 @@ export default function CustomerRequest() {
               style={{ marginTop: "2px" }}
             >
               Torna al Jukebox ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {submissionSuccess && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.95)",
+          backdropFilter: "blur(8px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          padding: "20px",
+          animation: "fadeIn 0.3s ease-out"
+        }}>
+          <div style={{
+            background: "#121212",
+            border: "5px solid #ff6600",
+            borderRadius: "12px",
+            padding: "30px 20px",
+            width: "100%",
+            maxWidth: "360px",
+            textAlign: "center",
+            boxShadow: "8px 8px 0 #000000",
+            position: "relative"
+          }}>
+            <h2 style={{
+              color: "#ff6600",
+              fontFamily: "var(--font-display)",
+              fontSize: "26px",
+              fontWeight: "950",
+              margin: "0 0 15px 0",
+              textTransform: "uppercase",
+              textShadow: "2px 2px 0 #000",
+              lineHeight: "1.2"
+            }}>
+              PORCHERIA PRESA IN CARICO 🐴
+            </h2>
+            <h3 style={{
+              color: "#fffdd0",
+              fontSize: "16px",
+              fontWeight: "700",
+              margin: "0 0 10px 0",
+              lineHeight: "1.4"
+            }}>
+              La Sala VAR del Walrus sta controllando.
+            </h3>
+            <p style={{
+              color: "#ff007f",
+              fontSize: "13px",
+              fontWeight: "600",
+              margin: "0 0 25px 0"
+            }}>
+              Se passa il check, finisce dritta in TV.
+            </p>
+            <button
+              onClick={handleDismissSubmission}
+              style={{
+                width: "100%",
+                background: "#ff6600",
+                color: "#000000",
+                border: "3px solid #000000",
+                borderRadius: "8px",
+                padding: "14px 20px",
+                fontFamily: "var(--font-display)",
+                fontSize: "16px",
+                fontWeight: "900",
+                textTransform: "uppercase",
+                letterSpacing: "1px",
+                cursor: "pointer",
+                boxShadow: "4px 4px 0 #fffdd0",
+                transition: "all 0.1s ease",
+                transform: "translateY(0)"
+              }}
+              className="walbox-popup-btn"
+            >
+              OK, MI DISSOCIO
             </button>
           </div>
         </div>
