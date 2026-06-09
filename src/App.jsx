@@ -4,6 +4,7 @@ import CustomerRequest from "./pages/CustomerRequest";
 import StaffDashboard from "./pages/StaffDashboard";
 import LiveTvScreen from "./pages/LiveTvScreen";
 import LiveTvScreenWalrus from "./pages/LiveTvScreenWalrus";
+import LiveTvScreenWalrusPoster from "./pages/LiveTvScreenWalrusPoster";
 import { initializeStorage } from "./data/mockData";
 
 // Custom Link helper component for internal navigation without full-page reloads
@@ -60,6 +61,8 @@ export default function App() {
         }
         return <LiveTvScreen />;
       }
+      case "/tv-poster":
+        return <LiveTvScreenWalrusPoster />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;
