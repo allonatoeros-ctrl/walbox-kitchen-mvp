@@ -905,7 +905,7 @@ export default function CustomerRequest() {
                 className="walbox-submit-btn"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "INVIO IN CORSO..." : "RICONTROLLA PRIMA DELLA SALA VAR 🔎"}
+                {isSubmitting ? "INVIO IN CORSO..." : "RICONTROLLA 🔎"}
               </button>
             </form>
           )}

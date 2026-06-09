@@ -135,7 +135,6 @@ export default function LiveTvScreen() {
     }
   };
 
-  const colors = getMoodColors(currentRequest?.mood);
 
   // Collect all active dedications for the ticker
   const tickerDedications = requests
@@ -184,24 +183,14 @@ export default function LiveTvScreen() {
         </div>
       )}
 
-      {/* Animated gradient background mesh */}
-      <div className="tv-background-mesh">
-        <div className="tv-bg-blob tv-bg-blob-1" style={{ backgroundColor: colors.blob1 }}></div>
-        <div className="tv-bg-blob tv-bg-blob-2" style={{ backgroundColor: colors.blob2 }}></div>
-        <div className="tv-bg-blob tv-bg-blob-3" style={{ backgroundColor: colors.blob3 }}></div>
-      </div>
+      {/* Cinematic Ambient Glow Background */}
+      <div 
+        className="tv-cinematic-bg" 
+        style={currentRequest?.song?.cover ? { backgroundImage: `url(${currentRequest.song.cover})` } : {}}
+      />
 
-      {/* Floating particles */}
-      <div className="tv-particles-container">
-        <div className="tv-particle tv-particle-1"></div>
-        <div className="tv-particle tv-particle-2"></div>
-        <div className="tv-particle tv-particle-3"></div>
-        <div className="tv-particle tv-particle-4"></div>
-        <div className="tv-particle tv-particle-5"></div>
-        <div className="tv-particle tv-particle-6"></div>
-        <div className="tv-particle tv-particle-7"></div>
-        <div className="tv-particle tv-particle-8"></div>
-      </div>
+      {/* CRT Scanline Overlay */}
+      <div className="tv-crt-overlay" />
 
       {/* NEW SONG TAKEOVER SCREEN */}
       {showTakeover && takeoverRequest && (

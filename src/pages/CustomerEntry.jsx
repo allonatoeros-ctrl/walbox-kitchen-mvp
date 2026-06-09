@@ -4,7 +4,7 @@ import walrusLogo from "../../references/original_rebrand_pack/assets/walrus-log
 export default function CustomerEntry() {
   const [table, setTable] = useState("");
   const [error, setError] = useState("");
-  
+
   // Custom states for premium micro-interactions
   const [isFocused, setIsFocused] = useState(false);
   const [btnPressed, setBtnPressed] = useState(false);
@@ -25,16 +25,16 @@ export default function CustomerEntry() {
       return;
     }
     setError("");
-    
+
     // Custom Router navigation
     window.history.pushState({}, "", `/request?table=${encodeURIComponent(table.trim())}`);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
   return (
-    <div 
-      className="mobile-wrapper" 
-      style={{ 
+    <div
+      className="mobile-wrapper"
+      style={{
         justifyContent: "center",
         background: "linear-gradient(180deg, #331100 0%, #1a0800 100%)",
         minHeight: "100vh",
@@ -59,23 +59,23 @@ export default function CustomerEntry() {
       `}</style>
 
       {/* Background glow tailored to Walrus Beer theme */}
-      <div 
-        className="mobile-bg-glow" 
-        style={{ 
-          background: "radial-gradient(circle, rgba(255, 102, 0, 0.25) 0%, transparent 70%)" 
+      <div
+        className="mobile-bg-glow"
+        style={{
+          background: "radial-gradient(circle, rgba(255, 102, 0, 0.25) 0%, transparent 70%)"
         }}
       ></div>
-      
-      <div 
-        className="glass-panel" 
-        style={{ 
+
+      <div
+        className="glass-panel"
+        style={{
           width: "100%",
           maxWidth: "400px",
           margin: "0 auto",
-          padding: "20px min(16px, 4vw) 10px min(16px, 4vw)", 
-          textAlign: "center", 
-          display: "flex", 
-          flexDirection: "column", 
+          padding: "20px min(16px, 4vw) 10px min(16px, 4vw)",
+          textAlign: "center",
+          display: "flex",
+          flexDirection: "column",
           gap: "40px", // More breathing room for logo, title, and form
           boxSizing: "border-box",
           background: "transparent", // Remove dark chocolate card background
@@ -87,9 +87,9 @@ export default function CustomerEntry() {
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "15px" }}>
           {/* Logo and Sticker Wrapper */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px" }}>
-            <img 
-              src={walrusLogo} 
-              alt="The Walrus Pub Logo" 
+            <img
+              src={walrusLogo}
+              alt="The Walrus Pub Logo"
               style={{
                 width: "90px",
                 height: "90px",
@@ -100,7 +100,7 @@ export default function CustomerEntry() {
               }}
             />
             {/* Retro sticker badge */}
-            <div 
+            <div
               className="sticker-animate"
               style={{
                 background: "#000000",
@@ -122,10 +122,10 @@ export default function CustomerEntry() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "4px", marginTop: "5px" }}>
-            <h1 
-              style={{ 
-                fontFamily: "var(--font-display)", 
-                fontSize: "clamp(36px, 10vw, 44px)", 
+            <h1
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "clamp(36px, 10vw, 44px)",
                 fontWeight: "900",
                 textTransform: "uppercase",
                 letterSpacing: "1px",
@@ -137,12 +137,12 @@ export default function CustomerEntry() {
             >
               THE WALBOX
             </h1>
-            <p 
-              style={{ 
+            <p
+              style={{
                 fontFamily: "var(--font-display)",
-                fontSize: "12px", 
-                color: "#ff6600", 
-                fontWeight: "900", 
+                fontSize: "12px",
+                color: "#ff6600",
+                fontWeight: "900",
                 letterSpacing: "4px",
                 textTransform: "uppercase",
                 margin: "0"
@@ -154,13 +154,13 @@ export default function CustomerEntry() {
         </div>
 
         {/* Intro copy */}
-        <p 
-          style={{ 
+        <p
+          style={{
             fontFamily: "var(--font-base)",
-            fontSize: "14px", 
-            color: "#a0a0a0", 
+            fontSize: "14px",
+            color: "#a0a0a0",
             lineHeight: "1.6",
-            margin: "0" 
+            margin: "0"
           }}
         >
           Scegli la musica del locale direttamente dal tuo tavolo.<br />
@@ -173,15 +173,15 @@ export default function CustomerEntry() {
         {/* Entry Form */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
           <div className="form-group" style={{ textAlign: "left", margin: "0", display: "flex", flexDirection: "column", gap: "8px" }}>
-            <label 
-              htmlFor="table-input" 
-              style={{ 
+            <label
+              htmlFor="table-input"
+              style={{
                 fontFamily: "var(--font-display)",
-                fontSize: "12px", 
+                fontSize: "12px",
                 color: "#ff6600",
                 fontWeight: "700",
-                letterSpacing: "1px", 
-                textTransform: "uppercase" 
+                letterSpacing: "1px",
+                textTransform: "uppercase"
               }}
             >
               Numero del Tavolo
@@ -217,11 +217,11 @@ export default function CustomerEntry() {
               }}
             />
             {error && (
-              <span 
-                style={{ 
-                  color: "#ff4d4d", 
-                  fontSize: "13px", 
-                  marginTop: "6px", 
+              <span
+                style={{
+                  color: "#ff4d4d",
+                  fontSize: "13px",
+                  marginTop: "6px",
                   fontWeight: "600",
                   display: "block",
                   textAlign: "center"
@@ -232,8 +232,8 @@ export default function CustomerEntry() {
             )}
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             style={{
               backgroundColor: "#ff6600",
               color: "#000000",
@@ -263,11 +263,11 @@ export default function CustomerEntry() {
         </form>
 
         {/* Footer info */}
-        <div 
-          style={{ 
-            borderTop: "2px solid rgba(255, 102, 0, 0.15)", 
-            paddingTop: "20px", 
-            fontSize: "12px", 
+        <div
+          style={{
+            borderTop: "2px solid rgba(255, 102, 0, 0.15)",
+            paddingTop: "20px",
+            fontSize: "12px",
             fontFamily: "var(--font-base)",
             color: "#a0a0a0",
             letterSpacing: "0.5px"
