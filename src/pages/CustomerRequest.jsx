@@ -599,9 +599,29 @@ export default function CustomerRequest() {
                           borderRadius: "2px",
                           fontFamily: "var(--font-display)",
                           textTransform: "uppercase",
-                          letterSpacing: "0.5px"
+                          letterSpacing: "0.5px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "4px"
                         }}>
-                          {getPlaylistLabel(song.mood)}
+                          {song.mood === "chill" ? (
+                            <>
+                              ZEN, BIRRA E MUTISMO{" "}
+                              <img
+                                src="/walrus-beer-sticker.png"
+                                alt="Sticker Birra"
+                                style={{
+                                  width: "14px",
+                                  height: "14px",
+                                  objectFit: "contain",
+                                  transform: "rotate(-5deg)",
+                                  filter: "drop-shadow(1px 1px 0px #000)"
+                                }}
+                              />
+                            </>
+                          ) : (
+                            getPlaylistLabel(song.mood)
+                          )}
                         </div>
 
                         {/* Song Details */}
@@ -757,7 +777,9 @@ export default function CustomerRequest() {
                   <h4 style={{ fontSize: "16px", fontWeight: "800", fontFamily: "var(--font-display)", color: "#fffdd0" }}>{selectedSong.title.toUpperCase()}</h4>
                   <p style={{ fontSize: "13px", color: "#ff6600", fontWeight: "600" }}>{selectedSong.artist}</p>
                   <span style={{
-                    display: "inline-block",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
                     padding: "4px 8px",
                     fontSize: "10px",
                     marginTop: "4px",
@@ -770,7 +792,24 @@ export default function CustomerRequest() {
                     borderRadius: "4px",
                     boxShadow: "2px 2px 0 #000"
                   }}>
-                    {MOOD_LABELS[selectedMood]}
+                    {selectedMood === "chill" ? (
+                      <>
+                        ZEN, BIRRA E MUTISMO{" "}
+                        <img
+                          src="/walrus-beer-sticker.png"
+                          alt="Sticker Birra"
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            objectFit: "contain",
+                            transform: "rotate(-5deg)",
+                            filter: "drop-shadow(1px 1px 0px #000)"
+                          }}
+                        />
+                      </>
+                    ) : (
+                      MOOD_LABELS[selectedMood]
+                    )}
                   </span>
                 </div>
                 <button
@@ -819,8 +858,23 @@ export default function CustomerRequest() {
                         gridColumn: idx === 4 ? "span 2" : "auto"
                       }}
                     >
-                      <span style={{ fontSize: "18px", marginRight: "6px" }}>{MOOD_EMOJIS[mood]}</span>
-                      {MOOD_LABELS[mood] ? MOOD_LABELS[mood].replace(MOOD_EMOJIS[mood], "").trim() : mood.toUpperCase()}
+                      {mood === "chill" ? (
+                        <img
+                          src="/walrus-beer-sticker.png"
+                          alt="Sticker Birra"
+                          style={{
+                            width: "26px",
+                            height: "26px",
+                            objectFit: "contain",
+                            marginRight: "6px",
+                            transform: "rotate(-5deg)",
+                            filter: "drop-shadow(2px 2px 0px #000)"
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: "18px", marginRight: "6px" }}>{MOOD_EMOJIS[mood]}</span>
+                      )}
+                      {MOOD_LABELS[mood] ? MOOD_LABELS[mood].replace(MOOD_EMOJIS[mood], "").trim().toUpperCase() : mood.toUpperCase()}
                     </button>
                   ))}
                 </div>
@@ -1027,11 +1081,32 @@ export default function CustomerRequest() {
                   padding: "3px 8px",
                   borderRadius: "4px",
                   background: "rgba(0,0,0,0.2)",
-                  display: "inline-block",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
                   marginTop: "2px",
                   transform: "rotate(-3deg)"
                 }}>
-                  {MOOD_EMOJIS[currentAlertSong.mood]} {MOOD_LABELS[currentAlertSong.mood] ? MOOD_LABELS[currentAlertSong.mood].replace(MOOD_EMOJIS[currentAlertSong.mood], "").trim().toUpperCase() : currentAlertSong.mood.toUpperCase()} MOMENT
+                  {currentAlertSong.mood === "chill" ? (
+                    <>
+                      <img
+                        src="/walrus-beer-sticker.png"
+                        alt="Sticker Birra"
+                        style={{
+                          width: "18px",
+                          height: "18px",
+                          objectFit: "contain",
+                          transform: "rotate(-5deg)",
+                          filter: "drop-shadow(1px 1px 0px #000)"
+                        }}
+                      />
+                      ZEN, BIRRA E MUTISMO MOMENT
+                    </>
+                  ) : (
+                    <>
+                      {MOOD_EMOJIS[currentAlertSong.mood]} {MOOD_LABELS[currentAlertSong.mood] ? MOOD_LABELS[currentAlertSong.mood].replace(MOOD_EMOJIS[currentAlertSong.mood], "").trim().toUpperCase() : currentAlertSong.mood.toUpperCase()} MOMENT
+                    </>
+                  )}
                 </span>
               </div>
 
@@ -1101,6 +1176,21 @@ export default function CustomerRequest() {
             boxShadow: "8px 8px 0 #000000",
             position: "relative"
           }}>
+            <img
+              src="/walrus-beer-sticker.png"
+              alt="Sticker Birra"
+              style={{
+                position: "absolute",
+                top: "-30px",
+                right: "-20px",
+                width: "72px",
+                height: "72px",
+                objectFit: "contain",
+                transform: "rotate(12deg)",
+                filter: "drop-shadow(3px 3px 0px #000000)",
+                zIndex: 10
+              }}
+            />
             <h2 style={{
               color: "#ff6600",
               fontFamily: "var(--font-display)",
@@ -1269,7 +1359,9 @@ export default function CustomerRequest() {
                   {selectedSong.artist}
                 </p>
                 <span style={{
-                  display: "inline-block",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
                   padding: "4px 10px",
                   fontSize: "11px",
                   fontWeight: "900",
@@ -1281,7 +1373,26 @@ export default function CustomerRequest() {
                   borderRadius: "4px",
                   boxShadow: "2px 2px 0 #000"
                 }}>
-                  {MOOD_EMOJIS[selectedMood]} {MOOD_LABELS[selectedMood] ? MOOD_LABELS[selectedMood].replace(MOOD_EMOJIS[selectedMood], "").trim().toUpperCase() : selectedMood.toUpperCase()}
+                  {selectedMood === "chill" ? (
+                    <>
+                      <img
+                        src="/walrus-beer-sticker.png"
+                        alt="Sticker Birra"
+                        style={{
+                          width: "20px",
+                          height: "20px",
+                          objectFit: "contain",
+                          transform: "rotate(-5deg)",
+                          filter: "drop-shadow(1px 1px 0px #000)"
+                        }}
+                      />
+                      ZEN, BIRRA E MUTISMO
+                    </>
+                  ) : (
+                    <>
+                      {MOOD_EMOJIS[selectedMood]} {MOOD_LABELS[selectedMood] ? MOOD_LABELS[selectedMood].replace(MOOD_EMOJIS[selectedMood], "").trim().toUpperCase() : selectedMood.toUpperCase()}
+                    </>
+                  )}
                 </span>
               </div>
             </div>
