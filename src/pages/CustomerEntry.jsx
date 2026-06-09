@@ -72,17 +72,15 @@ export default function CustomerEntry() {
           width: "100%",
           maxWidth: "400px",
           margin: "0 auto",
-          padding: "45px min(24px, 6vw) 35px min(24px, 6vw)", 
+          padding: "20px min(16px, 4vw) 10px min(16px, 4vw)", 
           textAlign: "center", 
           display: "flex", 
           flexDirection: "column", 
-          gap: "28px",
+          gap: "40px", // More breathing room for logo, title, and form
           boxSizing: "border-box",
-          background: "#1c0a00", // Dark chocolate coaster/counter surface
-          border: "2px solid #ff6600",
-          borderTop: "8px solid #ff6600", // Thick counter top bar
-          borderRadius: "8px",
-          boxShadow: "12px 12px 0 #000000" // Hard black flat shadow
+          background: "transparent", // Remove dark chocolate card background
+          border: "none", // Remove border
+          boxShadow: "none" // Remove hard flat shadow to de-card the entry
         }}
       >
         {/* Brand Logo and Header */}
