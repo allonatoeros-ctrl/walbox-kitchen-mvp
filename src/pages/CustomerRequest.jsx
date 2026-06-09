@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import walrusLogo from "../../references/original_rebrand_pack/assets/walrus-logo2.png";
-import { 
-  MOCK_SONGS, 
-  MOOD_EMOJIS, 
-  addRequest, 
-  getRequests, 
-  subscribeState, 
+import {
+  MOCK_SONGS,
+  MOOD_EMOJIS,
+  addRequest,
+  getRequests,
+  subscribeState,
   getVenueSettings,
   MOOD_LABELS
 } from "../data/mockData";
@@ -21,6 +21,7 @@ export default function CustomerRequest() {
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
   const [venueSettings, setVenueSettings] = useState({ queuePaused: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   const notifiedSongIds = useRef(new Set());
   const submissionTimeoutRef = useRef(null);
@@ -73,7 +74,7 @@ export default function CustomerRequest() {
 
     syncState();
     const unsubscribe = subscribeState(syncState);
-    
+
     // Cross-tab storage listener
     const handleStorage = (e) => {
       if (e.key && e.key.startsWith("walbox_")) {
@@ -97,7 +98,7 @@ export default function CustomerRequest() {
 
   // Submit request
   const handleSubmitRequest = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!selectedSong) return;
     if (venueSettings.queuePaused) {
       alert("La coda delle richieste è attualmente messa in pausa dallo staff.");
@@ -105,13 +106,14 @@ export default function CustomerRequest() {
     }
 
     setIsSubmitting(true);
-    
+
     setTimeout(() => {
       addRequest(table, selectedSong.id, selectedMood, dedication);
-      
+
       // Reset form
       setSelectedSong(null);
       setDedication("");
+      setShowPreview(false);
       setSubmissionSuccess(true);
       setIsSubmitting(false);
 
@@ -134,13 +136,13 @@ export default function CustomerRequest() {
   };
 
   // Filter songs by search query
-  const filteredSongs = searchQuery.trim() === "" 
-    ? [] 
+  const filteredSongs = searchQuery.trim() === ""
+    ? []
     : MOCK_SONGS.filter(
-        (song) =>
-          song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          song.artist.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      (song) =>
+        song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        song.artist.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
   // Mood color helper for dynamic glow
   const getMoodColor = (mood) => {
@@ -157,44 +159,44 @@ export default function CustomerRequest() {
   const getStatusBadge = (status) => {
     switch (status) {
       case "pending":
-        return { 
-          text: "IN SALA VAR 🟡", 
-          bg: "#fffdd0", 
-          border: "#ff6600", 
-          color: "#ff6600", 
-          boxShadow: "2px 2px 0 #000" 
+        return {
+          text: "IN SALA VAR 🟡",
+          bg: "#fffdd0",
+          border: "#ff6600",
+          color: "#ff6600",
+          boxShadow: "2px 2px 0 #000"
         };
       case "approved":
-        return { 
-          text: "APPROVATA DAL BANCONE 🟢", 
-          bg: "#ff6600", 
-          border: "#000000", 
-          color: "#000000", 
-          boxShadow: "2px 2px 0 #fffdd0" 
+        return {
+          text: "APPROVATA DAL BANCONE 🟢",
+          bg: "#ff6600",
+          border: "#000000",
+          color: "#000000",
+          boxShadow: "2px 2px 0 #fffdd0"
         };
       case "playing":
-        return { 
-          text: "ALZA LO SGUARDO 📺", 
-          bg: "#ff007f", 
-          border: "#fffdd0", 
-          color: "#fffdd0", 
-          boxShadow: "2px 2px 0 #000" 
+        return {
+          text: "ALZA LO SGUARDO 📺",
+          bg: "#ff007f",
+          border: "#fffdd0",
+          color: "#fffdd0",
+          boxShadow: "2px 2px 0 #000"
         };
       case "rejected":
-        return { 
-          text: "BOCCIATA SENZA APPELLO 🔴", 
-          bg: "#121212", 
-          border: "#3a1212", 
-          color: "#b33a3a", 
-          boxShadow: "2px 2px 0 #000" 
+        return {
+          text: "BOCCIATA SENZA APPELLO 🔴",
+          bg: "#121212",
+          border: "#3a1212",
+          color: "#b33a3a",
+          boxShadow: "2px 2px 0 #000"
         };
       default:
-        return { 
-          text: "COMPLETATA", 
-          bg: "#0c0400", 
-          border: "#2c2c2c", 
-          color: "#888", 
-          boxShadow: "none" 
+        return {
+          text: "COMPLETATA",
+          bg: "#0c0400",
+          border: "#2c2c2c",
+          color: "#888",
+          boxShadow: "none"
         };
     }
   };
@@ -362,14 +364,29 @@ export default function CustomerRequest() {
           transform: translateY(4px) !important;
           cursor: not-allowed !important;
         }
+        .walbox-preview-secondary-btn {
+          background: #0c0400 !important;
+          color: #ff6600 !important;
+          border: 2px solid #ff6600 !important;
+          transition: transform 0.1s, box-shadow 0.1s, color 0.1s, border-color 0.1s !important;
+        }
+        .walbox-preview-secondary-btn:hover:not(:disabled) {
+          color: #fffdd0 !important;
+          border-color: #fffdd0 !important;
+          background: #120600 !important;
+        }
+        .walbox-preview-secondary-btn:active:not(:disabled) {
+          transform: translate(2px, 2px) !important;
+          box-shadow: 2px 2px 0 #000000 !important;
+        }
       `}</style>
       <div className="mobile-bg-glow" style={{ background: "radial-gradient(circle, rgba(255, 102, 0, 0.25) 0%, transparent 70%)" }}></div>
 
       {/* Header bar */}
-      <header style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center", 
+      <header style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
         padding: "12px 16px",
         background: "#0c0400",
         borderBottom: "4px solid #ff6600",
@@ -378,9 +395,9 @@ export default function CustomerRequest() {
         boxShadow: "0 4px 0 #000"
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <img 
-            src={walrusLogo} 
-            alt="The Walrus Pub Logo" 
+          <img
+            src={walrusLogo}
+            alt="The Walrus Pub Logo"
             style={{
               width: "40px",
               height: "40px",
@@ -391,10 +408,10 @@ export default function CustomerRequest() {
             }}
           />
           <div>
-            <h2 style={{ 
-              fontSize: "18px", 
-              fontWeight: "900", 
-              fontFamily: "var(--font-display)", 
+            <h2 style={{
+              fontSize: "18px",
+              fontWeight: "900",
+              fontFamily: "var(--font-display)",
               margin: "0",
               color: "#fffdd0",
               textTransform: "uppercase",
@@ -403,8 +420,8 @@ export default function CustomerRequest() {
             }}>
               THE WALBOX
             </h2>
-            <span style={{ 
-              fontSize: "10px", 
+            <span style={{
+              fontSize: "10px",
               color: "#ff6600",
               fontWeight: "700",
               textTransform: "uppercase",
@@ -434,13 +451,13 @@ export default function CustomerRequest() {
       </header>
 
       {/* Tabs */}
-      <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "1fr 1fr", 
-        gap: "10px", 
-        marginBottom: "20px" 
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "10px",
+        marginBottom: "20px"
       }}>
-        <button 
+        <button
           onClick={() => setActiveTab("request")}
           style={{
             padding: "12px",
@@ -459,7 +476,7 @@ export default function CustomerRequest() {
         >
           🎵 Richiedi Brano
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab("my-songs")}
           style={{
             padding: "12px",
@@ -503,11 +520,11 @@ export default function CustomerRequest() {
       {/* Tab Contents */}
       {activeTab === "request" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          
+
           {venueSettings.queuePaused && (
-            <div style={{ 
-              padding: "15px", 
-              background: "#1c0a00", 
+            <div style={{
+              padding: "15px",
+              background: "#1c0a00",
               border: "2px solid #ff007f",
               borderRadius: "6px",
               boxShadow: "4px 4px 0 #000",
@@ -521,15 +538,15 @@ export default function CustomerRequest() {
 
           {!selectedSong ? (
             /* Song Search View */
-            <div style={{ 
-              display: "flex", 
-              flexDirection: "column", 
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
               gap: "15px"
             }}>
               <h3 style={{ fontSize: "16px", fontWeight: "800", fontFamily: "var(--font-display)", color: "#fffdd0", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 Cerca una canzone
               </h3>
-              
+
               <div className="form-group" style={{ margin: "0" }}>
                 <input
                   type="text"
@@ -543,25 +560,25 @@ export default function CustomerRequest() {
 
               {/* Search Results */}
               {searchQuery.trim() !== "" && (
-                <div style={{ 
-                  display: "flex", 
-                  flexDirection: "column", 
-                  gap: "12px", 
-                  maxHeight: "300px", 
+                <div style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                  maxHeight: "300px",
                   overflowY: "auto",
-                  padding: "5px 4px 5px 0" 
+                  padding: "5px 4px 5px 0"
                 }}>
                   {filteredSongs.length > 0 ? (
                     filteredSongs.map((song) => (
-                      <div 
-                        key={song.id} 
+                      <div
+                        key={song.id}
                         onClick={() => handleSelectSong(song)}
                         className="walbox-song-card"
-                        style={{ 
-                          display: "flex", 
+                        style={{
+                          display: "flex",
                           flexDirection: "column",
-                          gap: "8px", 
-                          padding: "12px", 
+                          gap: "8px",
+                          padding: "12px",
                           cursor: "pointer",
                           background: "#1a0a00",
                           border: "2px solid #ff6600",
@@ -590,10 +607,10 @@ export default function CustomerRequest() {
                         {/* Song Details */}
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           <div style={{ position: "relative" }}>
-                            <img 
-                              src={song.cover} 
-                              alt={song.title} 
-                              style={{ width: "48px", height: "48px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000" }} 
+                            <img
+                              src={song.cover}
+                              alt={song.title}
+                              style={{ width: "48px", height: "48px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000" }}
                             />
                             <div style={{
                               position: "absolute",
@@ -616,24 +633,24 @@ export default function CustomerRequest() {
                             </div>
                           </div>
                           <div style={{ flex: 1, minWidth: "0" }}>
-                            <h4 style={{ 
-                              fontSize: "15px", 
-                              fontWeight: "800", 
+                            <h4 style={{
+                              fontSize: "15px",
+                              fontWeight: "800",
                               fontFamily: "var(--font-display)",
                               color: "#fffdd0",
-                              overflow: "hidden", 
-                              textOverflow: "ellipsis", 
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
                               margin: "0"
                             }}>
                               {song.title.toUpperCase()}
                             </h4>
-                            <p style={{ 
-                              fontSize: "12px", 
+                            <p style={{
+                              fontSize: "12px",
                               color: "#ff6600",
                               fontWeight: "600",
-                              overflow: "hidden", 
-                              textOverflow: "ellipsis", 
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
                               whiteSpace: "nowrap",
                               margin: "2px 0 0 0"
                             }}>
@@ -659,7 +676,7 @@ export default function CustomerRequest() {
                   <p style={{ fontSize: "13px", color: "#a0a0a0", textAlign: "center", padding: "10px 0", fontStyle: "italic" }}>
                     Digita qualcosa per esplorare il catalogo locale.
                   </p>
-                  
+
                   {/* Quick Suggestions */}
                   <div style={{ marginTop: "10px" }}>
                     <p style={{ fontSize: "12px", fontWeight: "900", color: "#ff6600", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "8px" }}>
@@ -667,15 +684,15 @@ export default function CustomerRequest() {
                     </p>
                     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
                       {MOCK_SONGS.slice(0, 3).map((song) => (
-                        <div 
+                        <div
                           key={song.id}
                           onClick={() => !venueSettings.queuePaused && handleSelectSong(song)}
                           className="walbox-song-card-suggestion"
-                          style={{ 
-                            display: "flex", 
-                            alignItems: "center", 
-                            gap: "10px", 
-                            padding: "8px 12px", 
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            padding: "8px 12px",
                             borderRadius: "6px",
                             background: "#1a0a00",
                             border: "1.5px solid #ff6600",
@@ -700,16 +717,24 @@ export default function CustomerRequest() {
             </div>
           ) : (
             /* Selected Song Form Flow */
-            <form onSubmit={handleSubmitRequest} style={{ 
-              display: "flex", 
-              flexDirection: "column", 
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!selectedSong) return;
+              if (venueSettings.queuePaused) {
+                alert("La coda delle richieste è attualmente messa in pausa dallo staff.");
+                return;
+              }
+              setShowPreview(true);
+            }} style={{
+              display: "flex",
+              flexDirection: "column",
               gap: "20px"
             }}>
-              
+
               {/* Selected Track Info Card */}
-              <div style={{ 
-                display: "flex", 
-                alignItems: "center", 
+              <div style={{
+                display: "flex",
+                alignItems: "center",
                 gap: "15px",
                 background: "#1a0a00",
                 border: "2px solid #ff6600",
@@ -717,24 +742,24 @@ export default function CustomerRequest() {
                 borderRadius: "6px",
                 boxShadow: "4px 4px 0 #000000"
               }}>
-                <img 
-                  src={selectedSong.cover} 
-                  alt={selectedSong.title} 
-                  style={{ 
-                    width: "60px", 
-                    height: "60px", 
-                    borderRadius: "4px", 
+                <img
+                  src={selectedSong.cover}
+                  alt={selectedSong.title}
+                  style={{
+                    width: "60px",
+                    height: "60px",
+                    borderRadius: "4px",
                     objectFit: "cover",
                     border: "2px solid #000"
-                  }} 
+                  }}
                 />
                 <div style={{ flex: 1, minWidth: "0" }}>
                   <h4 style={{ fontSize: "16px", fontWeight: "800", fontFamily: "var(--font-display)", color: "#fffdd0" }}>{selectedSong.title.toUpperCase()}</h4>
                   <p style={{ fontSize: "13px", color: "#ff6600", fontWeight: "600" }}>{selectedSong.artist}</p>
-                  <span style={{ 
-                    display: "inline-block", 
-                    padding: "4px 8px", 
-                    fontSize: "10px", 
+                  <span style={{
+                    display: "inline-block",
+                    padding: "4px 8px",
+                    fontSize: "10px",
                     marginTop: "4px",
                     fontWeight: "900",
                     fontFamily: "var(--font-display)",
@@ -748,9 +773,12 @@ export default function CustomerRequest() {
                     {MOOD_LABELS[selectedMood]}
                   </span>
                 </div>
-                <button 
-                  type="button" 
-                  onClick={() => setSelectedSong(null)}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedSong(null);
+                    setShowPreview(false);
+                  }}
                   className="btn-change-table"
                   style={{
                     background: "#1c0a00",
@@ -775,10 +803,10 @@ export default function CustomerRequest() {
                 <label style={{ fontSize: "13px", fontWeight: "900", color: "#ff6600", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "1px" }}>
                   Come ti senti? (Seleziona un mood)
                 </label>
-                <div style={{ 
-                  display: "grid", 
-                  gridTemplateColumns: "1fr 1fr", 
-                  gap: "10px", 
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "10px",
                   paddingBottom: "5px"
                 }}>
                   {Object.keys(MOOD_EMOJIS).map((mood, idx) => (
@@ -818,9 +846,9 @@ export default function CustomerRequest() {
               </div>
 
               {/* Submit Button */}
-              <button 
-                type="submit" 
-                className="walbox-submit-btn" 
+              <button
+                type="submit"
+                className="walbox-submit-btn"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? "INVIO IN CORSO..." : "MANDA AL WALBOX 🚀"}
@@ -843,12 +871,12 @@ export default function CustomerRequest() {
             submittedRequests.map((req) => {
               const badge = getStatusBadge(req.status);
               return (
-                <div 
-                  key={req.id} 
-                  style={{ 
-                    padding: "15px", 
-                    display: "flex", 
-                    flexDirection: "column", 
+                <div
+                  key={req.id}
+                  style={{
+                    padding: "15px",
+                    display: "flex",
+                    flexDirection: "column",
                     gap: "10px",
                     background: "#1a0a00",
                     border: req.status === "playing" ? "3px solid #ff007f" : "2px solid #ff6600",
@@ -859,34 +887,34 @@ export default function CustomerRequest() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <img 
-                      src={req.song.cover} 
-                      alt="" 
-                      style={{ width: "50px", height: "50px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000" }} 
+                    <img
+                      src={req.song.cover}
+                      alt=""
+                      style={{ width: "50px", height: "50px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000" }}
                     />
-                    
+
                     <div style={{ flex: 1, minWidth: "0" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "10px" }}>
-                        <h4 style={{ 
-                          fontSize: "14px", 
-                          fontWeight: "800", 
+                        <h4 style={{
+                          fontSize: "14px",
+                          fontWeight: "800",
                           fontFamily: "var(--font-display)",
                           color: "#fffdd0",
                           textTransform: "uppercase",
                           letterSpacing: "0.5px",
-                          overflow: "hidden", 
-                          textOverflow: "ellipsis", 
-                          whiteSpace: "nowrap", 
-                          margin: "0" 
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          margin: "0"
                         }}>
                           {req.song.title}
                         </h4>
-                        
+
                         {/* Status Badge */}
-                        <span style={{ 
-                          padding: "4px 8px", 
-                          borderRadius: "4px", 
-                          fontSize: "10px", 
+                        <span style={{
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          fontSize: "10px",
                           fontWeight: "900",
                           fontFamily: "var(--font-display)",
                           textTransform: "uppercase",
@@ -900,13 +928,13 @@ export default function CustomerRequest() {
                           {badge.text}
                         </span>
                       </div>
-                      <p style={{ 
-                        fontSize: "12px", 
+                      <p style={{
+                        fontSize: "12px",
                         color: "#ff6600",
                         fontWeight: "600",
-                        overflow: "hidden", 
-                        textOverflow: "ellipsis", 
-                        whiteSpace: "nowrap", 
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                         marginTop: "2px",
                         marginBottom: "0"
                       }}>
@@ -916,10 +944,10 @@ export default function CustomerRequest() {
                   </div>
 
                   {req.dedication && (
-                    <div style={{ 
-                      fontSize: "12px", 
-                      fontStyle: "italic", 
-                      color: "#fffdd0", 
+                    <div style={{
+                      fontSize: "12px",
+                      fontStyle: "italic",
+                      color: "#fffdd0",
                       background: "#0c0400",
                       padding: "8px 12px",
                       borderRadius: "6px",
@@ -956,7 +984,7 @@ export default function CustomerRequest() {
       {showLookUpAlert && currentAlertSong && (
         <div className="look-up-overlay" onClick={() => setShowLookUpAlert(false)}>
           <div className="look-up-bg-glow" style={{ background: `radial-gradient(circle, ${getMoodColor(currentAlertSong.mood)} 0%, transparent 70%)` }}></div>
-          
+
           <div className="look-up-content" style={{ maxWidth: "320px", gap: "10px" }} onClick={(e) => e.stopPropagation()}>
             <div className="look-up-header-text" style={{ gap: "2px", marginBottom: "2px" }}>
               <h2 style={{ fontSize: "22px" }}>ALZA LO SGUARDO! 📺</h2>
@@ -965,14 +993,14 @@ export default function CustomerRequest() {
             </div>
 
             {/* Story Canvas Card */}
-            <div className="story-canvas" style={{ 
-              borderColor: getMoodColor(currentAlertSong.mood), 
-              aspectRatio: "unset", 
-              height: "auto", 
-              minHeight: "unset", 
-              maxHeight: "unset", 
-              padding: "14px", 
-              gap: "8px" 
+            <div className="story-canvas" style={{
+              borderColor: getMoodColor(currentAlertSong.mood),
+              aspectRatio: "unset",
+              height: "auto",
+              minHeight: "unset",
+              maxHeight: "unset",
+              padding: "14px",
+              gap: "8px"
             }}>
               <div className="story-canvas-header" style={{ justifyContent: "center", fontSize: "11px", fontWeight: "900", color: "#ff6600", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                 <span>🚨 TAVOLO {currentAlertSong.table} HA FATTO CASINO</span>
@@ -980,19 +1008,19 @@ export default function CustomerRequest() {
 
               <div className="story-canvas-body" style={{ flex: "none", gap: "6px", padding: "4px 0" }}>
                 <div className="story-canvas-cover-container" style={{ width: "90px", height: "90px", margin: "0 auto", marginBottom: "2px" }}>
-                  <img 
-                    src={currentAlertSong.song.cover} 
-                    alt="" 
+                  <img
+                    src={currentAlertSong.song.cover}
+                    alt=""
                     className="story-canvas-cover"
                     style={{ boxShadow: `0 0 15px ${getMoodColor(currentAlertSong.mood)}30` }}
                   />
                 </div>
-                
+
                 <h4 className="story-canvas-title" style={{ fontSize: "15px", fontWeight: "900" }}>{currentAlertSong.song.title}</h4>
                 <p className="story-canvas-artist" style={{ fontSize: "12px", color: "var(--text-secondary)", margin: "0 0 2px 0" }}>{currentAlertSong.song.artist}</p>
-                
-                <span className="story-canvas-mood" style={{ 
-                  borderColor: getMoodColor(currentAlertSong.mood), 
+
+                <span className="story-canvas-mood" style={{
+                  borderColor: getMoodColor(currentAlertSong.mood),
                   color: getMoodColor(currentAlertSong.mood),
                   fontSize: "10px",
                   fontWeight: "900",
@@ -1007,7 +1035,7 @@ export default function CustomerRequest() {
                 </span>
               </div>
 
-              <div className="story-canvas-dedication" style={{ 
+              <div className="story-canvas-dedication" style={{
                 borderLeftColor: getMoodColor(currentAlertSong.mood),
                 padding: "6px 10px",
                 fontSize: "11px",
@@ -1036,8 +1064,8 @@ export default function CustomerRequest() {
               </div>
             </div>
 
-            <button 
-              onClick={() => setShowLookUpAlert(false)} 
+            <button
+              onClick={() => setShowLookUpAlert(false)}
               className="btn-secondary look-up-close-btn"
               style={{ marginTop: "2px" }}
             >
@@ -1126,6 +1154,191 @@ export default function CustomerRequest() {
             >
               OK, MI DISSOCIO
             </button>
+          </div>
+        </div>
+      )}
+
+      {showPreview && selectedSong && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0, 0, 0, 0.95)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9990,
+          padding: "20px",
+          animation: "fadeIn 0.2s ease-out"
+        }}>
+          <div style={{
+            background: "#0c0400",
+            border: "4px solid #ff6600",
+            borderRadius: "8px",
+            padding: "24px 20px",
+            width: "100%",
+            maxWidth: "360px",
+            boxShadow: "8px 8px 0 #000000",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            color: "#fffdd0"
+          }}>
+            <h2 style={{
+              fontSize: "22px",
+              fontWeight: "950",
+              color: "#ff6600",
+              fontFamily: "var(--font-display)",
+              textAlign: "center",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              textShadow: "2px 2px 0 #000000",
+              margin: "0"
+            }}>
+              PREVIEW RICHIESTA
+            </h2>
+
+            <div style={{
+              alignSelf: "center",
+              background: "#ff6600",
+              border: "2px solid #000",
+              borderRadius: "4px",
+              padding: "4px 12px",
+              fontSize: "13px",
+              fontWeight: "900",
+              color: "#000",
+              fontFamily: "var(--font-display)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              boxShadow: "2px 2px 0 #000000",
+              marginBottom: "4px"
+            }}>
+              TAVOLO {table}
+            </div>
+
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "8px",
+              textAlign: "center",
+              background: "#1a0a00",
+              border: "2px solid #ff6600",
+              borderRadius: "6px",
+              padding: "16px 12px",
+              boxShadow: "4px 4px 0 #000000"
+            }}>
+              <img
+                src={selectedSong.cover}
+                alt={selectedSong.title}
+                style={{
+                  width: "100px",
+                  height: "100px",
+                  borderRadius: "4px",
+                  objectFit: "cover",
+                  border: "3px solid #000",
+                  boxShadow: "4px 4px 0 #000000"
+                }}
+              />
+              <div style={{ width: "100%" }}>
+                <h4 style={{
+                  fontSize: "18px",
+                  fontWeight: "900",
+                  fontFamily: "var(--font-display)",
+                  color: "#fffdd0",
+                  margin: "4px 0 2px 0",
+                  textTransform: "uppercase",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  display: "-webkit-box",
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: "vertical"
+                }}>
+                  {selectedSong.title}
+                </h4>
+                <p style={{
+                  fontSize: "14px",
+                  color: "#ff6600",
+                  fontWeight: "700",
+                  margin: "0 0 8px 0"
+                }}>
+                  {selectedSong.artist}
+                </p>
+                <span style={{
+                  display: "inline-block",
+                  padding: "4px 10px",
+                  fontSize: "11px",
+                  fontWeight: "900",
+                  fontFamily: "var(--font-display)",
+                  textTransform: "uppercase",
+                  background: "#0c0400",
+                  border: `2px solid ${getMoodColor(selectedMood)}`,
+                  color: getMoodColor(selectedMood),
+                  borderRadius: "4px",
+                  boxShadow: "2px 2px 0 #000"
+                }}>
+                  {MOOD_EMOJIS[selectedMood]} {MOOD_LABELS[selectedMood] ? MOOD_LABELS[selectedMood].replace(MOOD_EMOJIS[selectedMood], "").trim().toUpperCase() : selectedMood.toUpperCase()}
+                </span>
+              </div>
+            </div>
+
+            {dedication && (
+              <div style={{
+                fontSize: "13px",
+                fontStyle: "italic",
+                color: "#fffdd0",
+                background: "#0c0400",
+                padding: "10px 14px",
+                borderRadius: "6px",
+                borderLeft: "4px solid #ff6600",
+                borderTop: "1px solid #1a0a00",
+                borderRight: "1px solid #1a0a00",
+                borderBottom: "1px solid #1a0a00",
+                boxShadow: "3px 3px 0 #000000",
+                lineHeight: "1.4",
+                wordBreak: "break-word",
+                textAlign: "left"
+              }}>
+                &ldquo;{dedication}&rdquo;
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "8px" }}>
+              <button
+                type="button"
+                onClick={() => handleSubmitRequest()}
+                disabled={isSubmitting}
+                className="walbox-submit-btn"
+              >
+                {isSubmitting ? "INVIO IN CORSO..." : "🚀 MANDA IN SALA VAR"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPreview(false)}
+                disabled={isSubmitting}
+                className="walbox-preview-secondary-btn"
+                style={{
+                  width: "100%",
+                  borderRadius: "6px",
+                  padding: "12px 20px",
+                  fontFamily: "var(--font-display)",
+                  fontSize: "14px",
+                  fontWeight: "900",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  cursor: "pointer",
+                  boxShadow: "4px 4px 0 #000000",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                ← TORNA A SPACCARE TUTTO
+              </button>
+            </div>
           </div>
         </div>
       )}
