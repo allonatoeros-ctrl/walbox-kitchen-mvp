@@ -117,12 +117,12 @@ export default function CustomerRequest() {
       setSubmissionSuccess(true);
       setIsSubmitting(false);
 
-      // Flash success and switch tabs after 5 seconds
+      // Flash success and switch tabs after 4 seconds
       if (submissionTimeoutRef.current) clearTimeout(submissionTimeoutRef.current);
       submissionTimeoutRef.current = setTimeout(() => {
         setSubmissionSuccess(false);
         setActiveTab("my-songs");
-      }, 5000);
+      }, 4000);
     }, 800); // simulated network delay
   };
 
@@ -1083,7 +1083,6 @@ export default function CustomerRequest() {
           right: 0,
           bottom: 0,
           backgroundColor: "rgba(0, 0, 0, 0.95)",
-          backdropFilter: "blur(8px)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -1092,9 +1091,9 @@ export default function CustomerRequest() {
           animation: "fadeIn 0.3s ease-out"
         }}>
           <div style={{
-            background: "#121212",
+            background: "#0c0400",
             border: "5px solid #ff6600",
-            borderRadius: "12px",
+            borderRadius: "8px",
             padding: "30px 20px",
             width: "100%",
             maxWidth: "360px",
@@ -1105,31 +1104,34 @@ export default function CustomerRequest() {
             <h2 style={{
               color: "#ff6600",
               fontFamily: "var(--font-display)",
-              fontSize: "26px",
+              fontSize: "28px",
               fontWeight: "950",
               margin: "0 0 15px 0",
               textTransform: "uppercase",
-              textShadow: "2px 2px 0 #000",
+              textShadow: "2px 2px 0 #000000",
               lineHeight: "1.2"
             }}>
-              PORCHERIA PRESA IN CARICO 🐴
+              CHE CAVALLOOOO 🐴
             </h2>
             <h3 style={{
               color: "#fffdd0",
+              fontFamily: "var(--font-display)",
               fontSize: "16px",
-              fontWeight: "700",
-              margin: "0 0 10px 0",
+              fontWeight: "900",
+              textTransform: "uppercase",
+              textShadow: "2px 2px 0 #000000",
+              margin: "0 0 12px 0",
               lineHeight: "1.4"
             }}>
-              La Sala VAR del Walrus sta controllando.
+              LA SALA VAR HA PRESO IN CARICO LA PORCHERIA
             </h3>
             <p style={{
-              color: "#ff007f",
+              color: "#a0a0a0",
               fontSize: "13px",
               fontWeight: "600",
               margin: "0 0 25px 0"
             }}>
-              Se passa il check, finisce dritta in TV.
+              Se Rocchi approva, finisce dritta in TV.
             </p>
             <button
               onClick={handleDismissSubmission}
@@ -1138,7 +1140,7 @@ export default function CustomerRequest() {
                 background: "#ff6600",
                 color: "#000000",
                 border: "3px solid #000000",
-                borderRadius: "8px",
+                borderRadius: "6px",
                 padding: "14px 20px",
                 fontFamily: "var(--font-display)",
                 fontSize: "16px",
@@ -1146,7 +1148,7 @@ export default function CustomerRequest() {
                 textTransform: "uppercase",
                 letterSpacing: "1px",
                 cursor: "pointer",
-                boxShadow: "4px 4px 0 #fffdd0",
+                boxShadow: "4px 4px 0 #000000",
                 transition: "all 0.1s ease",
                 transform: "translateY(0)"
               }}
