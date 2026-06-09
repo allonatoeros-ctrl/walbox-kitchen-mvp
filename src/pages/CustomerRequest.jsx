@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import walrusLogo from "../../references/original_rebrand_pack/assets/walrus-logo2.png";
 import { 
   MOCK_SONGS, 
   MOOD_EMOJIS, 
@@ -376,28 +377,42 @@ export default function CustomerRequest() {
         borderRadius: "0 0 8px 8px",
         boxShadow: "0 4px 0 #000"
       }}>
-        <div>
-          <h2 style={{ 
-            fontSize: "20px", 
-            fontWeight: "900", 
-            fontFamily: "var(--font-display)", 
-            margin: "0",
-            color: "#fffdd0",
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            textShadow: "2px 2px 0 #000"
-          }}>
-            THE WALBOX
-          </h2>
-          <span style={{ 
-            fontSize: "11px", 
-            color: "#ff6600",
-            fontWeight: "700",
-            textTransform: "uppercase",
-            letterSpacing: "1px"
-          }}>
-            SALA VAR LISSONE ⚽
-          </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <img 
+            src={walrusLogo} 
+            alt="The Walrus Pub Logo" 
+            style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              border: "2px solid #ff6600",
+              boxShadow: "0 0 15px rgba(255, 102, 0, 0.45)",
+              display: "block"
+            }}
+          />
+          <div>
+            <h2 style={{ 
+              fontSize: "18px", 
+              fontWeight: "900", 
+              fontFamily: "var(--font-display)", 
+              margin: "0",
+              color: "#fffdd0",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              textShadow: "2px 2px 0 #000"
+            }}>
+              THE WALBOX
+            </h2>
+            <span style={{ 
+              fontSize: "10px", 
+              color: "#ff6600",
+              fontWeight: "700",
+              textTransform: "uppercase",
+              letterSpacing: "1px"
+            }}>
+              SCEGLI LA PORCHERIA
+            </span>
+          </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span style={{
@@ -415,29 +430,6 @@ export default function CustomerRequest() {
           }}>
             TAVOLO {table}
           </span>
-          <button 
-            onClick={() => {
-              window.history.pushState({}, "", "/entry");
-              window.dispatchEvent(new PopStateEvent("popstate"));
-            }} 
-            className="btn-change-table"
-            style={{
-              background: "#1c0a00",
-              border: "1.5px solid #ff6600",
-              color: "#fffdd0",
-              fontSize: "10px",
-              fontFamily: "var(--font-display)",
-              textTransform: "uppercase",
-              fontWeight: "700",
-              padding: "6px 10px",
-              borderRadius: "4px",
-              cursor: "pointer",
-              transition: "all 0.1s ease",
-              boxShadow: "2px 2px 0 #000"
-            }}
-          >
-            Modifica 🔄
-          </button>
         </div>
       </header>
 
@@ -831,7 +823,7 @@ export default function CustomerRequest() {
                 className="walbox-submit-btn" 
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "INVIO IN CORSO..." : "INVIA AL JUKEBOX 🚀"}
+                {isSubmitting ? "INVIO IN CORSO..." : "MANDA AL WALBOX 🚀"}
               </button>
             </form>
           )}
