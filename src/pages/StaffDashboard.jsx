@@ -148,7 +148,7 @@ export default function StaffDashboard() {
       {/* 1. COLUMN: PENDING APPROVALS */}
       <div className="dashboard-col">
         <div className="dashboard-col-header pending">
-          <h2>Richieste Pendenti</h2>
+          <h2>Al bancone chiedono</h2>
           <span className="glass-panel" style={{ padding: "2px 8px", fontSize: "12px", background: "rgba(255,255,255,0.05)" }}>
             {pendingRequests.length} in attesa
           </span>
@@ -198,13 +198,13 @@ export default function StaffDashboard() {
                     onClick={() => approveRequest(req.id)}
                     className="btn-approve"
                   >
-                    Approva 👍
+                    Metti in scaletta
                   </button>
                   <button 
                     onClick={() => rejectRequest(req.id)}
                     className="btn-reject"
                   >
-                    Rifiuta 👎
+                    Scarta
                   </button>
                 </div>
               </div>
@@ -216,7 +216,7 @@ export default function StaffDashboard() {
       {/* 2. COLUMN: ACTIVE UPCOMING QUEUE */}
       <div className="dashboard-col">
         <div className="dashboard-col-header queue">
-          <h2>Coda di Riproduzione</h2>
+          <h2>In scaletta</h2>
           <span className="glass-panel" style={{ padding: "2px 8px", fontSize: "12px", background: "rgba(255,255,255,0.05)" }}>
             {approvedQueue.length} brani successivi
           </span>
@@ -293,7 +293,7 @@ export default function StaffDashboard() {
       {/* 3. COLUMN: NOW PLAYING & SETTINGS */}
       <div className="dashboard-col">
         <div className="dashboard-col-header player">
-          <h2>Player Centrale</h2>
+          <h2>Sul piatto ora</h2>
         </div>
 
         <div className="dashboard-col-content" style={{ overflowY: "auto", gap: "20px" }}>
@@ -423,7 +423,7 @@ export default function StaffDashboard() {
 
           {/* VENUE CONTROL SETTINGS */}
           <div className="glass-panel" style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "15px" }}>
-            <h3 style={{ fontSize: "16px", fontWeight: "700" }}>Pannello di Controllo Locale</h3>
+            <h3 style={{ fontSize: "16px", fontWeight: "700" }}>Control Room Walrus</h3>
             
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div>
@@ -451,14 +451,14 @@ export default function StaffDashboard() {
                 className="btn-secondary" 
                 style={{ padding: "8px", fontSize: "12px", color: "var(--accent-primary)" }}
               >
-                Svuota Sessione 🗑️
+                Chiudi serata 🗑️
               </button>
               <button 
                 onClick={handleResetDemo}
                 className="btn-secondary" 
                 style={{ padding: "8px", fontSize: "12px", color: "var(--accent-glow)" }}
               >
-                Carica Demo 🔄
+                Carica serata demo 🔄
               </button>
             </div>
           </div>
