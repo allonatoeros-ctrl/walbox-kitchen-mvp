@@ -221,47 +221,26 @@ export default function LiveTvScreenWalrusPoster() {
           padding-bottom: 15px;
         }
 
-        .poster-header-titles {
+        .poster-header-logo-container {
+          height: 140px;
           display: flex;
-          flex-direction: column;
+          align-items: center;
         }
 
-        .poster-brand-title-1 {
-          font-size: 80px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: -3px;
-          color: #fff;
-          text-shadow: 5px 5px 0 #cc0000, -2px -2px 0 #000;
-          margin: 0;
-          line-height: 0.9;
-          font-family: 'Impact', 'Arial Black', sans-serif;
+        .poster-logo-img {
+          height: 100%;
+          max-width: 100%;
+          object-fit: contain;
+          background: transparent;
         }
 
-        .poster-brand-title-2 {
-          font-size: 90px;
-          font-weight: 900;
-          text-transform: uppercase;
-          letter-spacing: -4px;
+        .poster-logo-text {
+          font-family: 'Impact', sans-serif;
+          font-size: 54px;
           color: #cc0000;
-          text-shadow: 4px 4px 0 #fff, -2px -2px 0 #000;
-          margin: -10px 0 0 0;
-          line-height: 0.9;
-          font-family: 'Impact', 'Arial Black', sans-serif;
-        }
-        
-        .poster-brand-subtitle {
-          font-size: 20px;
-          font-weight: bold;
-          letter-spacing: 8px;
-          color: #000;
-          background: #fff;
-          display: inline-block;
-          padding: 5px 15px;
+          letter-spacing: 2px;
           text-transform: uppercase;
-          margin-top: 15px;
-          align-self: flex-start;
-          transform: rotate(-1deg);
+          text-shadow: 3px 3px 0 #000;
         }
 
         .poster-now-playing {
@@ -503,123 +482,68 @@ export default function LiveTvScreenWalrusPoster() {
         /* RIGHT PANEL STYLES */
         
         /* QR Box Flyer */
-        .poster-qr-box {
-          background: #eee;
-          padding: 20px;
-          border: 5px solid #000;
-          color: #000;
-          display: flex;
-          align-items: center;
-          gap: 20px;
-          transform: rotate(2deg);
-          box-shadow: 8px 8px 0 #cc0000;
-          position: relative;
-        }
-        
-        .poster-qr-box::before {
-          content: '';
+        /* Decorative Orange Walrus Background Layer */
+        .poster-walrus-orange-hero {
           position: absolute;
-          top: -15px; left: -15px; transform: rotate(-45deg);
-          width: 90px; height: 30px;
-          background: rgba(255, 255, 255, 0.6);
-          box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          z-index: 2;
+          right: 28%;
+          top: 50%;
+          transform: translateY(-50%) rotate(4deg);
+          height: 85%;
+          max-height: 850px;
+          z-index: 1;
+          pointer-events: none;
+          opacity: 0.12; /* Subtle background watermark */
         }
 
-        .poster-qr-svg {
-          background: #fff;
-          padding: 8px;
-          border: 3px solid #000;
-          width: 100px;
-          height: 100px;
+        /* Song Waveform Accent */
+        .poster-waveform-container {
+          height: 60px;
+          margin-bottom: 20px;
+          align-self: flex-start;
+          width: 100%;
+          max-width: 480px;
         }
 
-        .poster-qr-text {
-          display: flex;
-          flex-direction: column;
+        .poster-waveform-img {
+          height: 100%;
+          width: 100%;
+          object-fit: contain;
+          background: transparent;
         }
 
-        .poster-qr-text h4 {
-          font-family: 'Impact', sans-serif;
-          font-size: 32px;
-          margin: 0 0 5px 0;
-          text-transform: uppercase;
-          line-height: 0.9;
-          color: #cc0000;
-          text-shadow: 2px 2px 0 #000;
-        }
-        .poster-qr-text p {
-          margin: 0;
-          font-weight: 900;
-          font-size: 16px;
-          font-family: 'Courier New', monospace;
+        /* QR Card Sidebar Frame */
+        .poster-qr-card-wrapper {
+          width: 100%;
+          transform: rotate(1.5deg);
+          box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.65);
+          border: 4px solid #000;
+          background: transparent;
         }
 
-        /* Krombacher Mini-Poster (Dark/Grunge) */
-        .krombacher-poster {
-          background: #1c1c1c; 
-          background-image: radial-gradient(circle at center, #2e2e2e 0%, #111 100%);
-          border: 4px solid #444;
-          padding: 20px 15px;
-          text-align: center;
-          transform: rotate(-3deg);
-          box-shadow: 10px 10px 0 rgba(0,0,0,0.9), inset 0 0 30px rgba(0,0,0,0.8);
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
+        .poster-qr-card-img {
+          width: 100%;
+          height: auto;
+          display: block;
+          object-fit: contain;
+          background: transparent;
+        }
+
+        /* Krombacher Card Sidebar */
+        .poster-krombacher-card-wrapper {
+          width: 100%;
+          transform: rotate(-1.5deg);
+          box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.65);
+          border: 4px solid #000;
+          background: transparent;
           margin: 10px 0;
-          color: #eee;
         }
 
-        .krombacher-poster::after {
-          content: '';
-          position: absolute;
-          top: -12px; left: 50%;
-          transform: translateX(-50%) rotate(-4deg);
-          width: 90px; height: 30px;
-          background: rgba(255,255,255,0.2);
-          border: 1px solid rgba(0,0,0,0.6);
-          box-shadow: 0 2px 5px rgba(0,0,0,0.6);
-        }
-
-        .krombacher-text-top {
-          font-family: 'Impact', sans-serif;
-          font-size: 36px;
-          color: #fff;
-          line-height: 1;
-          margin-bottom: 10px;
-          text-transform: uppercase;
-          letter-spacing: 1px;
-          text-shadow: 2px 2px 0 #000;
-        }
-
-        .krombacher-sticker {
-          max-height: 120px;
-          margin: 10px 0;
-          transform: rotate(5deg);
-          filter: drop-shadow(5px 5px 0 rgba(0,0,0,0.9)) brightness(0.9) contrast(1.2);
-        }
-
-        .krombacher-text-bottom {
-          font-family: 'Impact', sans-serif;
-          font-size: 42px;
-          color: #cc0000;
-          line-height: 1;
-          text-shadow: 3px 3px 0 #000;
-          margin-bottom: 10px;
-          text-transform: uppercase;
-        }
-
-        .krombacher-brand {
-          font-family: 'Courier New', Courier, monospace;
-          font-size: 18px;
-          font-weight: 900;
-          background: #cc0000;
-          color: #fff;
-          padding: 4px 12px;
-          transform: rotate(-1deg);
-          border: 2px solid #000;
+        .poster-krombacher-card-img {
+          width: 100%;
+          height: auto;
+          display: block;
+          object-fit: contain;
+          background: transparent;
         }
 
         /* Queue List */
@@ -861,15 +785,24 @@ export default function LiveTvScreenWalrusPoster() {
         </div>
       )}
 
+      {/* Decorative Orange Walrus Background Layer */}
+      <img
+        src="/assets/tv-poster/02-hero/walrus-orange-hero.png"
+        className="poster-walrus-orange-hero"
+        alt=""
+      />
+
       <div className="poster-main-layout">
 
         {/* LEFT PANEL */}
         <div className="poster-left-panel">
           <div className="poster-header">
-            <div className="poster-header-titles">
-              <h2 className="poster-brand-title-1">WALBOX LIVE</h2>
-              <h2 className="poster-brand-title-2">WALRUS STAGE</h2>
-              <div className="poster-brand-subtitle">LIVE VENUE AUDIO SYSTEM</div>
+            <div className="poster-header-logo-container">
+              <img
+                src="/assets/tv-poster/generated/walbox-logo-full.png"
+                alt="Walbox Logo"
+                className="poster-logo-img"
+              />
             </div>
             {currentRequest && (
               <div className="poster-requester-badge" style={{ alignSelf: 'flex-start', background: '#000', color: '#fff', borderColor: '#cc0000' }}>
@@ -893,6 +826,14 @@ export default function LiveTvScreenWalrusPoster() {
                 </div>
 
                 <div className="poster-song-info-block">
+                  {/* Red Waveform Accent above title */}
+                  <div className="poster-waveform-container">
+                    <img
+                      src="/assets/tv-poster/02-hero/red-waveform.png"
+                      alt="Waveform"
+                      className="poster-waveform-img"
+                    />
+                  </div>
                   <h1 className="poster-song-title">{currentRequest.song.title}</h1>
                   <h2 className="poster-song-artist">{currentRequest.song.artist}</h2>
 
@@ -932,39 +873,20 @@ export default function LiveTvScreenWalrusPoster() {
         {/* RIGHT PANEL */}
         <div className="poster-right-panel">
 
-          <div className="poster-qr-box">
-            <svg className="poster-qr-svg" viewBox="0 0 100 100">
-              {/* Fake QR blocks */}
-              <rect x="0" y="0" width="30" height="30" fill="black" />
-              <rect x="5" y="5" width="20" height="20" fill="white" />
-              <rect x="10" y="10" width="10" height="10" fill="black" />
-              <rect x="70" y="0" width="30" height="30" fill="black" />
-              <rect x="75" y="5" width="20" height="20" fill="white" />
-              <rect x="80" y="10" width="10" height="10" fill="black" />
-              <rect x="0" y="70" width="30" height="30" fill="black" />
-              <rect x="5" y="75" width="20" height="20" fill="white" />
-              <rect x="10" y="80" width="10" height="10" fill="black" />
-              <rect x="35" y="5" width="10" height="10" fill="black" />
-              <rect x="50" y="15" width="10" height="10" fill="black" />
-              <rect x="35" y="25" width="15" height="5" fill="black" />
-              <rect x="15" y="35" width="10" height="15" fill="black" />
-              <rect x="40" y="40" width="20" height="20" fill="black" />
-              <rect x="70" y="45" width="15" height="10" fill="black" />
-              <rect x="80" y="60" width="10" height="15" fill="black" />
-              <rect x="45" y="75" width="15" height="15" fill="black" />
-              <rect x="75" y="80" width="10" height="10" fill="black" />
-            </svg>
-            <div className="poster-qr-text">
-              <h4>YOUR MUSIC<br />HERE</h4>
-              <p>SCAN QR AT TABLE</p>
-            </div>
+          <div className="poster-qr-card-wrapper">
+            <img
+              src="/assets/tv-poster/03-sidebar/qr-card-frame.png"
+              alt="Scan QR"
+              className="poster-qr-card-img"
+            />
           </div>
 
-          <div className="krombacher-poster">
-            <div className="krombacher-text-top">PROBLEMI FUORI</div>
-            <img src="/walrus-beer-sticker.png" alt="Walrus Beer Sticker" className="krombacher-sticker" />
-            <div className="krombacher-text-bottom">BIRRE DENTRO</div>
-            <div className="krombacher-brand">KROMBACHER</div>
+          <div className="poster-krombacher-card-wrapper">
+            <img
+              src="/assets/tv-poster/03-sidebar/krombacher-card.png"
+              alt="Krombacher Card"
+              className="poster-krombacher-card-img"
+            />
           </div>
 
           <div className="poster-queue-title">UPCOMING TRACKS</div>
