@@ -201,9 +201,9 @@ export default function LiveTvScreenWalrusPoster() {
           .poster-main-layout {
             display: flex;
             flex: 1;
-            padding: clamp(15px, 2.5vh, 50px);
-            gap: clamp(15px, 2.5vw, 50px);
-            height: calc(100% - clamp(50px, 5vh, 70px));
+            padding: clamp(15px, 2.5vh, 40px) clamp(15px, 2.5vw, 40px) clamp(5px, 1vh, 15px) clamp(15px, 2.5vw, 40px);
+            gap: clamp(15px, 2.5vw, 40px);
+            height: calc(100% - clamp(50px, 5vh, 70px) - clamp(35px, 5vh, 65px) - clamp(2px, 0.4vh, 8px));
             box-sizing: border-box;
             z-index: 10;
             overflow: hidden;
@@ -234,14 +234,13 @@ export default function LiveTvScreenWalrusPoster() {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: clamp(10px, 1.5vh, 20px);
-            border-bottom: clamp(4px, 0.6vh, 8px) solid #cc0000;
-            padding-bottom: clamp(8px, 1vh, 15px);
+            margin-bottom: clamp(5px, 1vh, 15px);
+            padding-bottom: 0;
             flex-shrink: 0;
           }
 
           .poster-header-logo-container {
-            height: clamp(60px, 9vh, 140px);
+            height: clamp(140px, 21vh, 280px);
             display: flex;
             align-items: center;
           }
@@ -274,10 +273,10 @@ export default function LiveTvScreenWalrusPoster() {
 
           .poster-cover-hero-container {
             display: flex;
-            gap: clamp(20px, 3.5vw, 70px);
+            gap: clamp(25px, 4vw, 80px);
             align-items: center;
             width: 100%;
-            margin-bottom: clamp(10px, 2vh, 30px);
+            margin-bottom: clamp(10px, 1.8vh, 25px);
             flex: 1;
             min-height: 0;
           }
@@ -285,8 +284,8 @@ export default function LiveTvScreenWalrusPoster() {
           /* NEW VINYL EFFECT */
           .poster-vinyl-hero {
             position: relative;
-            width: clamp(180px, 24vh, 350px);
-            height: clamp(180px, 24vh, 350px);
+            width: clamp(220px, 31vh, 380px);
+            height: clamp(220px, 31vh, 380px);
             display: flex;
             align-items: center;
             transform: rotate(-2deg);
@@ -298,8 +297,8 @@ export default function LiveTvScreenWalrusPoster() {
             width: 100%;
             height: 100%;
             z-index: 10;
-            border: clamp(8px, 1vh, 15px) solid #fff;
-            box-shadow: clamp(10px, 1.2vw, 20px) clamp(10px, 1.2vw, 20px) 0 #cc0000, inset 0 0 20px rgba(0,0,0,0.8);
+            border: clamp(8px, 1.1vh, 16px) solid #111;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
             background: #000;
           }
 
@@ -314,7 +313,7 @@ export default function LiveTvScreenWalrusPoster() {
             position: absolute;
             width: 94%;
             height: 94%;
-            right: -28.5%; /* slides out relative to sleeve width */
+            right: -32%; /* slides out relative to sleeve width */
             border-radius: 50%;
             background: #111;
             box-shadow: 10px 10px 0 rgba(0,0,0,0.7), inset 0 0 20px #000;
@@ -359,32 +358,19 @@ export default function LiveTvScreenWalrusPoster() {
           }
 
           .poster-vinyl-hero::before {
-            content: 'ON AIR';
-            position: absolute;
-            top: -15px;
-            left: -15px;
-            background: #000;
-            color: #fff;
-            padding: 3px clamp(10px, 1.5vw, 20px);
-            font-weight: 900;
-            font-family: 'Impact', sans-serif;
-            font-size: clamp(16px, 2vh, 32px);
-            transform: rotate(-5deg);
-            box-shadow: 5px 5px 0 #cc0000;
-            z-index: 20;
-            letter-spacing: 2px;
+            display: none;
           }
 
-          /* Fake tape on cover */
+          /* Red backdrop shadow behind vinyl record disk */
           .poster-vinyl-hero::after {
             content: '';
             position: absolute;
-            bottom: -10px; left: 30%;
-            width: 25%; height: 8%;
-            background: rgba(255,255,255,0.7);
-            transform: rotate(-15deg);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.4);
-            z-index: 20;
+            top: clamp(10px, 1.2vw, 20px);
+            left: clamp(10px, 1.2vw, 20px);
+            width: 100%;
+            height: 100%;
+            background: #cc0000;
+            z-index: 2;
           }
 
           .poster-song-info-block {
@@ -395,30 +381,43 @@ export default function LiveTvScreenWalrusPoster() {
           }
 
           .poster-song-title {
-            font-size: clamp(36px, 5.5vh, 80px);
+            font-size: clamp(44px, 7vh, 100px);
             font-weight: 900;
-            color: #fff;
+            color: #fcfaf2; /* Off-white/cream */
             text-transform: uppercase;
-            line-height: 0.95;
-            margin: 0 0 clamp(8px, 1vh, 15px) 0;
+            line-height: 0.9;
+            margin: 0 0 clamp(4px, 0.8vh, 12px) 0;
             font-family: 'Impact', 'Arial Black', sans-serif;
-            text-shadow: clamp(2px, 0.4vw, 5px) clamp(2px, 0.4vw, 5px) 0 #cc0000, -2px -2px 0 #000;
-            letter-spacing: -2px;
+            text-shadow: 4px 4px 0 rgba(0,0,0,0.85);
+            letter-spacing: -1.5px;
             word-break: break-word;
           }
 
           .poster-song-artist {
-            font-size: clamp(18px, 2.5vh, 35px);
+            font-size: clamp(22px, 3.2vh, 45px);
             font-weight: bold;
-            color: #111;
-            background: #fff;
-            text-transform: uppercase;
-            margin: 0 0 clamp(10px, 1.5vh, 25px) 0;
+            font-family: 'Brush Script MT', 'Georgia', cursive, serif;
+            font-style: italic;
+            color: #f7d070; /* Yellow/cream accent */
+            margin: 0 0 clamp(8px, 1.2vh, 20px) 0;
             display: inline-block;
-            padding: 5px 15px;
             align-self: flex-start;
-            transform: rotate(1deg);
-            box-shadow: clamp(3px, 0.4vw, 5px) clamp(3px, 0.4vw, 5px) 0 #cc0000;
+            transform: rotate(-1deg);
+            text-shadow: 2px 2px 0 #000;
+            position: relative;
+            padding-bottom: clamp(10px, 1.5vh, 20px);
+          }
+
+          .poster-song-artist::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -5%;
+            width: 110%;
+            height: clamp(8px, 1.2vh, 18px);
+            background: url('/assets/tv-poster/generated/walbox-live-brush.png') no-repeat center;
+            background-size: 100% 100%;
+            z-index: -1;
           }
 
           .poster-requester-badge {
@@ -434,29 +433,44 @@ export default function LiveTvScreenWalrusPoster() {
             font-family: 'Courier New', Courier, monospace;
           }
 
-          .poster-dedication-bubble {
-            margin-top: clamp(10px, 1.5vh, 25px);
-            background: #111;
-            border: clamp(2px, 0.3vw, 4px) dashed #555;
-            padding: clamp(8px, 1.2vh, 15px) clamp(15px, 2vw, 25px);
-            font-style: italic;
-            color: #fff;
+          .poster-dedication-wrapper {
+            margin-top: clamp(12px, 2vh, 28px);
+            margin-left: clamp(35px, 5vw, 85px);
+            width: calc(100% - clamp(35px, 5vw, 85px));
+            max-width: 650px;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(4px, 0.8vh, 10px);
+            align-self: flex-start;
+          }
+
+          .poster-dedication-label {
+            font-family: 'Courier New', Courier, monospace;
             font-size: clamp(14px, 1.8vh, 22px);
-            font-weight: bold;
-            max-width: 90%;
-            box-shadow: 5px 5px 0 #000;
+            font-weight: 900;
+            color: #cc0000;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 0 #000;
+            align-self: flex-start;
+          }
+
+          .poster-dedication-bubble {
+            background: url('/assets/tv-poster/04-lower/dedication-card-frame.png') no-repeat center;
+            background-size: 100% 100%;
+            padding: clamp(12px, 1.8vh, 26px) clamp(25px, 4.2vw, 65px);
+            width: 100%;
+            aspect-ratio: 2172 / 724;
+            display: flex;
+            align-items: center;
+            gap: clamp(12px, 2vw, 25px);
             position: relative;
+            box-sizing: border-box;
+            transform: rotate(0.5deg);
           }
           
           .poster-dedication-bubble::before {
-            content: 'MESSAGE:';
-            display: block;
-            font-family: 'Impact', sans-serif;
-            color: #cc0000;
-            font-size: clamp(16px, 2vh, 24px);
-            font-style: normal;
-            margin-bottom: 5px;
-            letter-spacing: 1px;
+            display: none;
           }
 
           /* Red Progress Bar */
@@ -510,23 +524,31 @@ export default function LiveTvScreenWalrusPoster() {
           /* Decorative Orange Walrus Background Layer */
           .poster-walrus-orange-hero {
             position: absolute;
-            right: 32%;
+            right: 16%;
             top: 50%;
             transform: translateY(-50%) rotate(4deg);
             height: 85%;
             max-height: 850px;
             z-index: 1;
             pointer-events: none;
-            opacity: 0.25;
+            opacity: 0.2;
           }
 
-          /* Song Waveform Accent */
-          .poster-waveform-container {
-            height: clamp(30px, 4.5vh, 60px);
-            margin-bottom: clamp(10px, 1.5vh, 20px);
+          /* Song Waveform Accent and Meta Row */
+          .poster-meta-row {
+            display: flex;
+            align-items: center;
+            gap: clamp(10px, 1.5vw, 25px);
+            margin-bottom: clamp(6px, 1vh, 16px);
             align-self: flex-start;
-            width: 100%;
-            max-width: 480px;
+          }
+
+          .poster-waveform-container {
+            height: clamp(25px, 3.5vh, 45px);
+            width: clamp(120px, 18vw, 250px);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
           }
 
           .poster-waveform-img {
@@ -534,6 +556,20 @@ export default function LiveTvScreenWalrusPoster() {
             width: 100%;
             object-fit: contain;
             background: transparent;
+          }
+
+          .poster-table-pill {
+            background: #000;
+            color: #fff;
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            font-size: clamp(14px, 2vh, 26px);
+            padding: 4px 16px;
+            text-transform: uppercase;
+            border: 2px solid #cc0000;
+            border-radius: 9999px;
+            box-shadow: none;
+            transform: none;
+            white-space: nowrap;
           }
 
           /* QR Card Sidebar Frame */
@@ -704,17 +740,15 @@ export default function LiveTvScreenWalrusPoster() {
 
           .poster-ticker-label {
             background: #000;
-            color: #fff;
-            padding: 0 clamp(15px, 2vw, 30px);
+            padding: 0 clamp(10px, 1.5vw, 20px);
             height: 100%;
             display: flex;
             align-items: center;
-            font-family: 'Impact', sans-serif;
-            font-size: clamp(20px, 2.6vh, 38px);
-            letter-spacing: 2px;
+            justify-content: center;
             z-index: 2;
             box-shadow: 10px 0 15px rgba(0,0,0,0.8);
             border-right: 5px solid #cc0000;
+            flex-shrink: 0;
           }
 
           .poster-ticker-scroll {
@@ -804,6 +838,85 @@ export default function LiveTvScreenWalrusPoster() {
             0% { transform: rotate(-10deg) scale(1); }
             100% { transform: rotate(-5deg) scale(1.1); }
           }
+
+          /* Step 2 styles */
+          .poster-dedication-mascot {
+            height: 95%;
+            max-height: clamp(50px, 8vh, 95px);
+            object-fit: contain;
+            flex-shrink: 0;
+          }
+          .poster-dedication-text-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            min-width: 0;
+          }
+          .poster-dedication-text {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: clamp(14px, 1.8vh, 24px);
+            font-weight: 900;
+            color: #fff;
+            line-height: 1.2;
+            word-break: break-word;
+            text-shadow: 2px 2px 0 #000;
+          }
+          .poster-ticker-label-img {
+            height: 70%;
+            object-fit: contain;
+            display: block;
+          }
+          .poster-footer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 clamp(15px, 2.5vw, 50px);
+            height: clamp(35px, 5vh, 65px);
+            background: transparent;
+            z-index: 15;
+            position: relative;
+            flex-shrink: 0;
+            box-sizing: border-box;
+            margin-bottom: clamp(2px, 0.4vh, 8px);
+          }
+          .poster-footer-left {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            flex: 1;
+          }
+          .poster-footer-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            flex: 2;
+          }
+          .poster-footer-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100%;
+            flex: 1;
+            position: relative;
+          }
+          .poster-footer-mini-krombacher {
+            height: 90%;
+            max-height: 100%;
+            object-fit: contain;
+          }
+          .poster-footer-brand-strip {
+            height: 85%;
+            max-height: 100%;
+            object-fit: contain;
+          }
+          .poster-footer-stamp {
+            height: 160%;
+            object-fit: contain;
+            transform: rotate(-8deg) translateY(-20%);
+            filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.6));
+            z-index: 30;
+          }
         `}</style>
 
       {/* REACTION OVERLAY */}
@@ -870,26 +983,40 @@ export default function LiveTvScreenWalrusPoster() {
                 </div>
 
                 <div className="poster-song-info-block">
-                  {/* Red Waveform Accent above title */}
-                  <div className="poster-waveform-container">
-                    <img
-                      src="/assets/tv-poster/02-hero/red-waveform.png"
-                      alt="Waveform"
-                      className="poster-waveform-img"
-                    />
-                  </div>
-                  <h1 className="poster-song-title">{currentRequest.song.title}</h1>
-                  <h2 className="poster-song-artist">{currentRequest.song.artist}</h2>
-
-                  <div style={{ alignSelf: 'flex-start' }}>
-                    <div className="poster-requester-badge">
-                      REQUESTED BY TAVOLO {currentRequest.table}
+                  {/* Meta row containing waveform and table badge */}
+                  <div className="poster-meta-row">
+                    <div className="poster-waveform-container">
+                      <img
+                        src="/assets/tv-poster/02-hero/red-waveform.png"
+                        alt="Waveform"
+                        className="poster-waveform-img"
+                      />
+                    </div>
+                    <div className="poster-table-pill">
+                      TAVOLO {currentRequest.table}
                     </div>
                   </div>
 
+                  <h1 className="poster-song-title">{currentRequest.song.title}</h1>
+                  <h2 className="poster-song-artist">{currentRequest.song.artist}</h2>
+
                   {currentRequest.dedication && (
-                    <div className="poster-dedication-bubble">
-                      "{currentRequest.dedication}"
+                    <div className="poster-dedication-wrapper">
+                      <div className="poster-dedication-label">
+                        DEDICA DA TAVOLO {currentRequest.table}:
+                      </div>
+                      <div className="poster-dedication-bubble">
+                        <img
+                          src="/assets/tv-poster/04-lower/dedication-mascot-small.png"
+                          alt=""
+                          className="poster-dedication-mascot"
+                        />
+                        <div className="poster-dedication-text-container">
+                          <span className="poster-dedication-text">
+                            "{currentRequest.dedication}"
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -959,9 +1086,40 @@ export default function LiveTvScreenWalrusPoster() {
 
       </div>
 
+      {/* FOOTER STRIP / STAMPS ROW */}
+      <div className="poster-footer-row">
+        <div className="poster-footer-left">
+          <img
+            src="/assets/tv-poster/04-lower/krombacher-mini-left.png"
+            alt="Krombacher"
+            className="poster-footer-mini-krombacher"
+          />
+        </div>
+        <div className="poster-footer-center">
+          <img
+            src="/assets/tv-poster/04-lower/footer-brand-strip.png"
+            alt="Brand Strip"
+            className="poster-footer-brand-strip"
+          />
+        </div>
+        <div className="poster-footer-right">
+          <img
+            src="/assets/tv-poster/04-lower/walrus-approved-stamp.png"
+            alt="Walrus Approved"
+            className="poster-footer-stamp"
+          />
+        </div>
+      </div>
+
       {/* TICKER */}
       <div className="poster-ticker">
-        <div className="poster-ticker-label">SHOUTOUTS</div>
+        <div className="poster-ticker-label">
+          <img
+            src="/assets/tv-poster/04-lower/ticker-label-dediche.png"
+            alt="DEDICHE"
+            className="poster-ticker-label-img"
+          />
+        </div>
         <div className="poster-ticker-scroll">
           {tickerText} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {tickerText}
         </div>
