@@ -485,14 +485,14 @@ export default function LiveTvScreenWalrusPoster() {
         /* Decorative Orange Walrus Background Layer */
         .poster-walrus-orange-hero {
           position: absolute;
-          right: 28%;
+          right: 32%;
           top: 50%;
           transform: translateY(-50%) rotate(4deg);
           height: 85%;
           max-height: 850px;
           z-index: 1;
           pointer-events: none;
-          opacity: 0.12; /* Subtle background watermark */
+          opacity: 0.25; /* Subtle background watermark */
         }
 
         /* Song Waveform Accent */
