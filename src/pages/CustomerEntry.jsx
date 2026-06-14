@@ -3,6 +3,7 @@ import walrusLogo from "../../references/original_rebrand_pack/assets/walrus-log
 
 export default function CustomerEntry() {
   const [table, setTable] = useState("");
+  const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
 
   // Custom states for premium micro-interactions
@@ -27,7 +28,9 @@ export default function CustomerEntry() {
     setError("");
 
     // Custom Router navigation
-    window.history.pushState({}, "", `/request?table=${encodeURIComponent(table.trim())}`);
+    const qs = new URLSearchParams({ table: table.trim() });
+    if (nickname.trim()) qs.set("nickname", nickname.trim());
+    window.history.pushState({}, "", `/request?${qs.toString()}`);
     window.dispatchEvent(new PopStateEvent("popstate"));
   };
 
@@ -230,6 +233,45 @@ export default function CustomerEntry() {
                 ⚠️ {error}
               </span>
             )}
+          </div>
+
+          <div className="form-group" style={{ textAlign: "left", margin: "0", display: "flex", flexDirection: "column", gap: "8px" }}>
+            <label
+              htmlFor="nickname-input"
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: "12px",
+                color: "#ff6600",
+                fontWeight: "700",
+                letterSpacing: "1px",
+                textTransform: "uppercase"
+              }}
+            >
+              Il tuo nome (opzionale)
+            </label>
+            <input
+              id="nickname-input"
+              type="text"
+              placeholder="Es. Marco"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              maxLength={20}
+              className="text-input"
+              style={{
+                width: "100%",
+                background: "#0c0400",
+                border: "2px solid #ff6600",
+                borderRadius: "6px",
+                padding: "12px",
+                color: "#fffdd0",
+                fontSize: "18px",
+                textAlign: "center",
+                fontWeight: "700",
+                letterSpacing: "1px",
+                outline: "none",
+                transition: "all 0.1s ease"
+              }}
+            />
           </div>
 
           <button

@@ -168,7 +168,7 @@ export default function StaffDashboard() {
               >
                 <div className="staff-card-header">
                   <span className="table-badge" style={{ padding: "3px 8px", fontSize: "10px" }}>
-                    Tavolo {req.table}
+                    Tavolo {req.table}{req.nickname ? ` • ${req.nickname}` : ""}
                   </span>
                   <span style={{ color: getMoodColor(req.mood), fontWeight: "bold", display: "inline-flex", alignItems: "center", gap: "4px" }}>
                     {MOOD_EMOJIS[req.mood]} {req.mood}
@@ -254,7 +254,7 @@ export default function StaffDashboard() {
                 <div style={{ flex: 1, minWidth: "0" }}>
                   <h4 className="staff-card-title" style={{ fontSize: "13px" }}>{req.song.title}</h4>
                   <p className="staff-card-artist" style={{ fontSize: "11px" }}>
-                    Tavolo {req.table} • {req.song.artist}
+                    {req.nickname ? `${req.nickname} • T.${req.table}` : `Tavolo ${req.table}`} • {req.song.artist}
                   </p>
                 </div>
 

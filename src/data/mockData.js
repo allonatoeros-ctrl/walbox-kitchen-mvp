@@ -145,6 +145,7 @@ const INITIAL_REQUESTS = [
     id: "req_demo_1",
     song: MOCK_SONGS[0], // Blinding Lights
     table: "4",
+    nickname: "Giulia",
     mood: "party",
     dedication: "Per festeggiare il compleanno di Giulia! 🎉 Offrite da bere!",
     status: "playing",
@@ -154,6 +155,7 @@ const INITIAL_REQUESTS = [
     id: "req_demo_2",
     song: MOCK_SONGS[10], // Intro
     table: "12",
+    nickname: "Marco",
     mood: "chill",
     dedication: "Sottofondo chill per le nostre chiacchiere.",
     status: "approved",
@@ -163,6 +165,7 @@ const INITIAL_REQUESTS = [
     id: "req_demo_3",
     song: MOCK_SONGS[11], // Electric Feel
     table: "8",
+    nickname: "Fede",
     mood: "energetic",
     dedication: "Dai che stasera carichi! ⚡⚡",
     status: "approved",
@@ -172,6 +175,7 @@ const INITIAL_REQUESTS = [
     id: "req_demo_4",
     song: MOCK_SONGS[3], // Careless Whisper
     table: "2",
+    nickname: "Ale",
     mood: "romantic",
     dedication: "Per la ragazza bionda al tavolo 5... 👀",
     status: "pending",
@@ -181,6 +185,7 @@ const INITIAL_REQUESTS = [
     id: "req_demo_5",
     song: MOCK_SONGS[5], // Bohemian Rhapsody
     table: "9",
+    nickname: "Rocchi",
     mood: "retro",
     dedication: "Cantiamola tutti insieme! 🎤",
     status: "pending",
@@ -275,7 +280,7 @@ export const saveVenueSettings = (settings) => {
 };
 
 // Business Logic helpers
-export const addRequest = (table, songId, mood, dedication) => {
+export const addRequest = (table, nickname, songId, mood, dedication) => {
   const song = MOCK_SONGS.find((s) => s.id === songId);
   if (!song) return null;
 
@@ -283,6 +288,7 @@ export const addRequest = (table, songId, mood, dedication) => {
     id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
     song,
     table: table || "Anonimo",
+    nickname: nickname || "",
     mood: mood || "chill",
     dedication: dedication || "",
     status: "pending",

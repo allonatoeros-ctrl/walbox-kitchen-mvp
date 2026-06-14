@@ -12,6 +12,7 @@ import {
 
 export default function CustomerRequest() {
   const [table, setTable] = useState("");
+  const [nickname, setNickname] = useState("");
   const [activeTab, setActiveTab] = useState("request"); // 'request' | 'my-songs'
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSong, setSelectedSong] = useState(null);
@@ -61,6 +62,7 @@ export default function CustomerRequest() {
       return;
     }
     setTable(tableParam);
+    setNickname(params.get("nickname") || "");
 
     // Sync initial state and register listener for real-time updates
     const syncState = () => {
@@ -108,7 +110,7 @@ export default function CustomerRequest() {
     setIsSubmitting(true);
 
     setTimeout(() => {
-      addRequest(table, selectedSong.id, selectedMood, dedication);
+      addRequest(table, nickname, selectedSong.id, selectedMood, dedication);
 
       // Reset form
       setSelectedSong(null);
@@ -445,7 +447,7 @@ export default function CustomerRequest() {
             letterSpacing: "0.5px",
             boxShadow: "2px 2px 0 #fffdd0"
           }}>
-            TAVOLO {table}
+            {nickname ? `${nickname} • T.${table}` : `TAVOLO ${table}`}
           </span>
         </div>
       </header>
