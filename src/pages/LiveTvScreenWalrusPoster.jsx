@@ -216,7 +216,7 @@ export default function LiveTvScreenWalrusPoster() {
           .wlp-cover-row {
             display: flex;
             gap: clamp(16px, 2.8vw, 44px);
-            align-items: center;
+            align-items: flex-start;
             flex: 1;
             min-height: 0;
             margin-bottom: clamp(8px, 1.2vh, 18px);
