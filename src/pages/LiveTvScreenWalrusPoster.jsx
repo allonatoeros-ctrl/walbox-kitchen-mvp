@@ -431,8 +431,9 @@ export default function LiveTvScreenWalrusPoster() {
 
           .wlp-progress-wrap {
             flex-shrink: 0;
-            margin-top: auto;
-            padding-top: clamp(6px, 0.8vh, 12px);
+            padding: 0 clamp(14px, 2.2vw, 30px) clamp(10px, 1.4vh, 18px);
+            position: relative;
+            z-index: 15;
           }
 
           .wlp-progress-track {
@@ -529,7 +530,7 @@ export default function LiveTvScreenWalrusPoster() {
             align-items: center;
             background: rgba(0,0,0,0.72);
             border: 2px solid #222;
-            padding: clamp(5px, 0.7vh, 9px);
+            padding: clamp(8px, 1vh, 14px);
             gap: clamp(6px, 0.8vw, 12px);
             position: relative;
             flex-shrink: 0;
@@ -804,19 +805,6 @@ export default function LiveTvScreenWalrusPoster() {
                     )}
                   </div>
                 </div>
-
-                <div className="wlp-progress-wrap">
-                  <div className="wlp-progress-track">
-                    <div
-                      className="wlp-progress-fill"
-                      style={{ width: `${(playback.progress / playback.duration) * 100}%` }}
-                    />
-                  </div>
-                  <div className="wlp-time-row">
-                    <span>{formatTime(playback.progress)}</span>
-                    <span>{formatTime(playback.duration)}</span>
-                  </div>
-                </div>
               </div>
             ) : (
               <div className="wlp-idle">
@@ -859,17 +847,20 @@ export default function LiveTvScreenWalrusPoster() {
 
         </div>
 
-        <div className="wlp-footer">
-          <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
-            <img src="/assets/tv-poster/04-lower/krombacher-mini-left.png" alt="" className="wlp-footer-krom" />
+        {currentRequest && (
+          <div className="wlp-progress-wrap">
+            <div className="wlp-progress-track">
+              <div
+                className="wlp-progress-fill"
+                style={{ width: `${(playback.progress / playback.duration) * 100}%` }}
+              />
+            </div>
+            <div className="wlp-time-row">
+              <span>{formatTime(playback.progress)}</span>
+              <span>{formatTime(playback.duration)}</span>
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
-            <img src="/assets/tv-poster/04-lower/footer-brand-strip.png" alt="" className="wlp-footer-brand" />
-          </div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
-            <img src="/assets/tv-poster/04-lower/walrus-approved-stamp.png" alt="" className="wlp-footer-stamp" />
-          </div>
-        </div>
+        )}
 
         <div className="wlp-ticker">
           <div className="wlp-ticker-label">
@@ -881,6 +872,18 @@ export default function LiveTvScreenWalrusPoster() {
           </div>
           <div className="wlp-ticker-scroll">
             {tickerText} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {tickerText}
+          </div>
+        </div>
+
+        <div className="wlp-footer">
+          <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
+            <img src="/assets/tv-poster/04-lower/krombacher-mini-left.png" alt="" className="wlp-footer-krom" />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+            <img src="/assets/tv-poster/04-lower/footer-brand-strip.png" alt="" className="wlp-footer-brand" />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+            <img src="/assets/tv-poster/04-lower/walrus-approved-stamp.png" alt="" className="wlp-footer-stamp" />
           </div>
         </div>
 
