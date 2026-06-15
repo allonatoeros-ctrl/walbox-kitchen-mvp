@@ -230,33 +230,27 @@ export default function LiveTvScreenWalrusPoster() {
             transform: rotate(-2deg);
           }
 
-          .wlp-vinyl::after {
-            content: '';
-            position: absolute;
-            top: 8px; left: 8px;
-            width: 100%; height: 100%;
-            background: #cc0000;
-            z-index: 2;
-          }
-
           .wlp-vinyl-sleeve {
             position: absolute;
             inset: 0;
             border: none;
             overflow: hidden;
             z-index: 10;
-            background: #000;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            background: #1c120c;
+            box-shadow: 4px 4px 20px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.8);
+            border-radius: 8px 5px 7px 6px / 6px 8px 5px 7px;
           }
 
           .wlp-cover-frame {
             position: absolute;
-            inset: -10%;
-            width: 120%;
-            height: 120%;
+            inset: 0;
+            width: 100%;
+            height: 100%;
             object-fit: fill;
-            z-index: 12;
+            z-index: 2;
             pointer-events: none;
+            filter: sepia(0.85) contrast(1.15) brightness(0.65) saturate(1.1);
+            opacity: 0.85;
           }
 
           .wlp-sleeve-img {
@@ -264,15 +258,16 @@ export default function LiveTvScreenWalrusPoster() {
             object-fit: cover;
             filter: contrast(1.1) saturate(1.15);
             display: block;
+            z-index: 1;
           }
 
           .wlp-vinyl-disc {
             position: absolute;
-            top: 3%; right: -48%;
+            top: 3%; right: -35%;
             width: 94%; height: 94%;
             border-radius: 50%;
             background: #0f0f0f;
-            box-shadow: 8px 8px 0 rgba(0,0,0,0.7);
+            box-shadow: 6px 6px 18px rgba(0,0,0,0.7);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -292,6 +287,26 @@ export default function LiveTvScreenWalrusPoster() {
               inset 0 0 0 52px #111,
               inset 0 0 0 54px #252525,
               inset 0 0 0 76px #111;
+            z-index: 5;
+          }
+
+          .wlp-vinyl-disc::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(
+              from 0deg,
+              rgba(255, 255, 255, 0) 0deg,
+              rgba(255, 255, 255, 0.12) 30deg,
+              rgba(255, 255, 255, 0) 60deg,
+              rgba(255, 255, 255, 0) 180deg,
+              rgba(255, 255, 255, 0.12) 210deg,
+              rgba(255, 255, 255, 0) 240deg,
+              rgba(255, 255, 255, 0) 360deg
+            );
+            z-index: 6;
+            pointer-events: none;
           }
 
           .wlp-vinyl-disc.spinning {
@@ -783,13 +798,13 @@ export default function LiveTvScreenWalrusPoster() {
                     </div>
                     <div className="wlp-vinyl-sleeve">
                       <img src={currentRequest.song.cover} alt="" className="wlp-sleeve-img" />
+                      <img
+                        src="/assets/tv-poster/cover-frame-worn.png"
+                        className="wlp-cover-frame"
+                        alt=""
+                        aria-hidden="true"
+                      />
                     </div>
-                    <img
-                      src="/assets/tv-poster/cover-frame-worn.png"
-                      className="wlp-cover-frame"
-                      alt=""
-                      aria-hidden="true"
-                    />
                   </div>
 
                   <div className="wlp-song-info">
