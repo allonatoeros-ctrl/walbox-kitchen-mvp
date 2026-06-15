@@ -50,6 +50,18 @@ function sortByTime(orders) {
   return [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
 
+function buildProductionSummary(orders) {
+  const totals = {};
+  orders
+    .filter((o) => o.status === 'received' || o.status === 'preparing')
+    .forEach((o) => {
+      o.items.forEach((item) => {
+        totals[item.name] = (totals[item.name] || 0) + item.quantity;
+      });
+    });
+  return Object.entries(totals).map(([name, qty]) => `${qty}× ${name}`);
+}
+
 export default function KitchenStaffDashboard() {
   const [orders, setOrders] = useState(initOrders);
 
@@ -63,6 +75,7 @@ export default function KitchenStaffDashboard() {
     (o) => o.status !== 'delivered' && o.status !== 'cancelled'
   ).length;
   const readyCount = orders.filter((o) => o.status === 'ready').length;
+  const productionItems = buildProductionSummary(orders);
 
   return (
     <div style={styles.page}>
@@ -78,6 +91,18 @@ export default function KitchenStaffDashboard() {
             <span style={styles.badgeReady}>{readyCount} pronti 🟢</span>
           )}
         </div>
+      </div>
+
+      {/* Production Summary */}
+      <div style={styles.productionBox}>
+        <span style={styles.productionLabel}>ORA IN CUCINA</span>
+        {productionItems.length > 0 ? (
+          <span style={styles.productionItems}>
+            {productionItems.join('  ·  ')}
+          </span>
+        ) : (
+          <span style={styles.productionEmpty}>Nessun item da preparare.</span>
+        )}
       </div>
 
       {/* Global ready alert */}
@@ -320,5 +345,30 @@ const styles = {
     fontSize: 14,
     textAlign: 'center',
     padding: '48px 16px',
+  },
+  productionBox: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    padding: '10px 16px',
+    background: '#111',
+    borderBottom: '1px solid #1e1e1e',
+  },
+  productionLabel: {
+    fontSize: 10,
+    fontWeight: 900,
+    letterSpacing: 2,
+    color: '#444',
+    textTransform: 'uppercase',
+  },
+  productionItems: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#f5f0e8',
+    lineHeight: 1.5,
+  },
+  productionEmpty: {
+    fontSize: 13,
+    color: '#333',
   },
 };
