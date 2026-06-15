@@ -132,7 +132,7 @@ export default function LiveTvScreenWalrusPoster() {
 
           .wlp-walrus {
             position: absolute;
-            left: 30%;
+            left: 38%;
             top: 50%;
             transform: translateY(-50%) rotate(4deg);
             height: 90%;
