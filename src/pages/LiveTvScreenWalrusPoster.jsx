@@ -517,7 +517,7 @@ export default function LiveTvScreenWalrusPoster() {
           .wlp-queue-label {
             font-family: 'Impact', sans-serif;
             font-size: clamp(13px, 1.8vh, 24px);
-            color: #fff;
+            color: #FFD700;
             border-bottom: 3px solid #cc0000;
             padding-bottom: clamp(4px, 0.5vh, 8px);
             text-transform: uppercase;
@@ -538,26 +538,19 @@ export default function LiveTvScreenWalrusPoster() {
           .wlp-queue-item {
             display: flex;
             align-items: center;
-            background: rgba(0,0,0,0.72);
-            border: 2px solid #222;
-            padding: clamp(8px, 1vh, 14px);
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding: clamp(6px, 0.8vh, 12px) 0;
             gap: clamp(6px, 0.8vw, 12px);
             position: relative;
             flex-shrink: 0;
           }
 
-          .wlp-queue-item::before {
-            content: '';
-            position: absolute;
-            left: -4px; top: -4px;
-            width: 8px; height: 8px;
-            background: #cc0000;
-          }
-
           .wlp-queue-num {
             font-family: 'Impact', sans-serif;
             font-size: clamp(20px, 2.8vh, 34px);
-            color: #cc0000;
+            color: #cc2200;
             width: clamp(18px, 2.2vw, 30px);
             text-align: center;
             flex-shrink: 0;
@@ -568,7 +561,7 @@ export default function LiveTvScreenWalrusPoster() {
             width: clamp(26px, 4vh, 50px);
             height: clamp(26px, 4vh, 50px);
             object-fit: cover;
-            border: 2px solid #333;
+            border: 1px solid rgba(255, 255, 255, 0.15);
             flex-shrink: 0;
           }
 
@@ -577,8 +570,9 @@ export default function LiveTvScreenWalrusPoster() {
           }
 
           .wlp-queue-song {
-            font-weight: 900;
-            font-size: clamp(9px, 1.3vh, 15px);
+            font-family: 'Impact', sans-serif;
+            font-weight: bold;
+            font-size: clamp(11px, 1.6vh, 20px);
             color: #fff;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             text-transform: uppercase;
@@ -586,20 +580,22 @@ export default function LiveTvScreenWalrusPoster() {
           }
 
           .wlp-queue-artist {
-            font-size: clamp(8px, 1vh, 12px);
-            color: #666;
+            font-size: clamp(9px, 1.2vh, 14px);
+            color: #aaa;
+            font-weight: normal;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             margin: 0;
-            font-family: 'Courier New', monospace; font-weight: bold;
+            font-family: 'Courier New', monospace;
           }
 
           .wlp-queue-table {
-            background: #cc0000; color: #fff;
-            font-weight: 900;
-            padding: 3px 5px;
-            font-size: clamp(7px, 0.9vh, 11px);
+            background: #7a0000;
+            color: #fff;
+            font-weight: bold;
+            padding: 2px 6px;
+            font-size: clamp(8px, 1vh, 11px);
             font-family: 'Courier New', monospace;
-            border: 1px solid #000;
+            border: 1px solid #cc0000;
             flex-shrink: 0;
             white-space: nowrap;
           }
@@ -846,7 +842,7 @@ export default function LiveTvScreenWalrusPoster() {
               alt="Krombacher"
               className="wlp-krom-card"
             />
-            <div className="wlp-queue-label">★ PROSSIMI IN CODA</div>
+            <div className="wlp-queue-label">★ PROSSIMI IN CODA ★</div>
             <div className="wlp-queue">
               {displayQueue.slice(0, 3).map((req, idx) => (
                 <div key={req.id} className="wlp-queue-item">
