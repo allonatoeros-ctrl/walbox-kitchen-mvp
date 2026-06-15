@@ -268,7 +268,7 @@ export default function LiveTvScreenWalrusPoster() {
 
           .wlp-vinyl-disc {
             position: absolute;
-            top: 3%; right: -32%;
+            top: 3%; right: -48%;
             width: 94%; height: 94%;
             border-radius: 50%;
             background: #0f0f0f;
@@ -392,41 +392,46 @@ export default function LiveTvScreenWalrusPoster() {
           }
 
           .wlp-dedic-label {
-            font-family: 'Courier New', monospace;
+            font-family: 'Impact', 'Arial Black', sans-serif;
             font-size: clamp(10px, 1.4vh, 17px);
             font-weight: 900;
-            color: #cc0000;
+            color: #c8a84b;
             text-transform: uppercase;
             letter-spacing: 1px;
-            margin-bottom: clamp(3px, 0.5vh, 7px);
+            margin-bottom: 0;
+            padding: clamp(4px, 0.6vh, 8px) clamp(14px, 2vw, 28px) clamp(3px, 0.4vh, 6px);
+            background: rgba(0,0,0,0.55);
+            display: inline-block;
           }
 
           .wlp-dedic-bubble {
-            background: url('/assets/tv-poster/04-lower/dedication-card-frame.png') no-repeat center;
-            background-size: 100% 100%;
-            aspect-ratio: 2172 / 724;
+            background: rgba(10, 4, 1, 0.8);
+            border: 1.5px solid #c8a84b;
+            border-radius: 4px;
             display: flex;
             align-items: center;
             gap: clamp(8px, 1.2vw, 18px);
-            padding: clamp(8px, 1.1vh, 16px) clamp(16px, 2.8vw, 44px);
-            max-width: 560px;
+            padding: clamp(6px, 0.9vh, 14px) clamp(12px, 1.8vw, 24px);
+            max-width: 520px;
+            width: fit-content;
             box-sizing: border-box;
           }
 
           .wlp-dedic-mascot {
-            height: clamp(30px, 4.8vh, 62px);
+            height: clamp(24px, 3.8vh, 48px);
             object-fit: contain;
             flex-shrink: 0;
             background: transparent;
           }
 
           .wlp-dedic-text {
-            font-family: 'Courier New', monospace;
-            font-size: clamp(11px, 1.5vh, 19px);
-            font-weight: 900;
-            color: #fff;
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: clamp(12px, 1.7vh, 22px);
+            font-style: italic;
+            font-weight: 600;
+            color: #f5f0e8;
             text-shadow: 1px 1px 0 #000;
-            line-height: 1.2;
+            line-height: 1.25;
           }
 
           .wlp-progress-wrap {
@@ -604,11 +609,13 @@ export default function LiveTvScreenWalrusPoster() {
             justify-content: space-between;
             align-items: center;
             padding: 0 clamp(14px, 2.2vw, 30px);
-            height: clamp(28px, 4.2vh, 52px);
+            height: clamp(32px, 5vh, 60px);
             flex-shrink: 0;
-            position: relative; z-index: 15;
+            position: relative; z-index: 25;
             box-sizing: border-box;
-            margin-bottom: clamp(2px, 0.3vh, 5px);
+            background: #000;
+            border-top: 2px solid #1a1a1a;
+            margin-bottom: 0;
           }
 
           .wlp-footer-krom {
@@ -625,27 +632,31 @@ export default function LiveTvScreenWalrusPoster() {
 
           .wlp-ticker {
             height: clamp(38px, 4.8vh, 60px);
-            background: #cc0000; color: #000;
+            background: #0a0a0a; color: #FFD700;
             display: flex; align-items: center;
             font-family: 'Courier New', Courier, monospace;
             font-weight: 900;
             font-size: clamp(13px, 1.9vh, 27px);
             text-transform: uppercase;
             overflow: hidden;
-            border-top: clamp(3px, 0.4vh, 6px) solid #000;
-            box-shadow: 0 -6px 16px rgba(0,0,0,0.8);
+            border-top: 2px solid #cc2200;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.6);
             position: relative; z-index: 20;
             flex-shrink: 0;
+            margin-bottom: 0;
           }
 
           .wlp-ticker-label {
-            background: #000;
+            background: #cc0000;
+            color: #fff;
             padding: 0 clamp(8px, 1.2vw, 16px);
             height: 100%;
             display: flex; align-items: center;
             flex-shrink: 0;
             border-right: 4px solid #cc0000;
             box-shadow: 8px 0 12px rgba(0,0,0,0.8);
+            position: relative;
+            z-index: 2;
           }
 
           .wlp-ticker-label-img {
@@ -870,11 +881,7 @@ export default function LiveTvScreenWalrusPoster() {
 
         <div className="wlp-ticker">
           <div className="wlp-ticker-label">
-            <img
-              src="/assets/tv-poster/04-lower/ticker-label-dediche.png"
-              alt="DEDICHE"
-              className="wlp-ticker-label-img"
-            />
+            DEDICHE DI STASERA ⚡
           </div>
           <div className="wlp-ticker-scroll">
             {tickerText} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {tickerText}
