@@ -108,7 +108,7 @@ export default function LiveTvScreenWalrusPoster() {
             height: min(100vh, calc(100vw * 9 / 16));
             background-color: #1c0a02;
             background-image:
-              linear-gradient(rgba(18, 7, 2, 0.56), rgba(18, 7, 2, 0.56)),
+              linear-gradient(rgba(10, 4, 1, 0.70), rgba(10, 4, 1, 0.70)),
               url('/assets/tv-poster/bg-grunge-wall.webp');
             background-size: cover;
             background-position: center;
