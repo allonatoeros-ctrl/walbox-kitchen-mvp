@@ -6,6 +6,7 @@ import LiveTvScreen from "./pages/LiveTvScreen";
 import LiveTvScreenWalrus from "./pages/LiveTvScreenWalrus";
 import LiveTvScreenWalrusPoster from "./pages/LiveTvScreenWalrusPoster";
 import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
+import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import { initializeStorage } from "./data/mockData";
 
 // Custom Link helper component for internal navigation without full-page reloads
@@ -66,6 +67,8 @@ export default function App() {
         return <LiveTvScreenWalrusPoster />;
       case "/kitchen":
         return <CustomerKitchenMenu />;
+      case "/kitchen/status":
+        return <CustomerOrderStatus />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;
