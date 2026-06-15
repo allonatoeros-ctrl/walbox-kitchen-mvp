@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { demoKitchenOrders, kitchenOrderStatuses } from '../data/kitchenMockData';
 
 const STATUS_FLOW = {
-  received:  { next: 'preparing', nextLabel: 'Inizia preparazione' },
-  preparing: { next: 'ready',     nextLabel: 'Segna pronto' },
-  ready:     { next: 'delivered', nextLabel: 'Consegnato' },
+  received:  { next: 'preparing', nextLabel: 'INIZIA PREPARAZIONE' },
+  preparing: { next: 'ready',     nextLabel: 'SEGNA PRONTO ✓' },
+  ready:     { next: 'delivered', nextLabel: 'CONSEGNATO ✓' },
   delivered: { next: null,        nextLabel: null },
   cancelled: { next: null,        nextLabel: null },
 };
 
+const STATUS_SORT_ORDER = { received: 0, preparing: 1, ready: 2, delivered: 3, cancelled: 4 };
+
 const FILTERS = [
-  { key: 'all',       label: 'Tutti' },
-  { key: 'active',    label: 'Attivi' },
-  { key: 'ready',     label: '🟢 Pronti' },
+  { key: 'active', label: 'Attivi' },
+  { key: 'ready',  label: '🟢 Pronti' },
+  { key: 'all',    label: 'Tutti' },
 ];
 
 function initOrders() {
@@ -23,11 +25,30 @@ function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
+function elapsedMinutes(isoString) {
+  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
+  if (diff < 1) return 'adesso';
+  if (diff === 1) return '1 min fa';
+  return `${diff} min fa`;
+}
+
+function sortOrders(orders) {
+  return [...orders].sort((a, b) => {
+    const statusDiff = STATUS_SORT_ORDER[a.status] - STATUS_SORT_ORDER[b.status];
+    if (statusDiff !== 0) return statusDiff;
+    return new Date(a.createdAt) - new Date(b.createdAt);
+  });
+}
+
 export default function KitchenStaffDashboard() {
   const [orders, setOrders] = useState(initOrders);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('active');
 
   const changeStatus = (id, newStatus) => {
+    if (newStatus === 'cancelled') {
+      const ok = window.confirm('Annullare questo ordine? Questa azione non si può recuperare.');
+      if (!ok) return;
+    }
     setOrders((prev) =>
       prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o))
     );
@@ -39,11 +60,13 @@ export default function KitchenStaffDashboard() {
 
   const readyCount = orders.filter((o) => o.status === 'ready').length;
 
-  const visibleOrders = orders.filter((o) => {
+  const filteredOrders = orders.filter((o) => {
     if (filter === 'active') return o.status !== 'delivered' && o.status !== 'cancelled';
     if (filter === 'ready') return o.status === 'ready';
     return true;
   });
+
+  const visibleOrders = sortOrders(filteredOrders);
 
   return (
     <div style={styles.page}>
@@ -60,6 +83,13 @@ export default function KitchenStaffDashboard() {
           )}
         </div>
       </div>
+
+      {/* Global ready alert */}
+      {readyCount > 0 && (
+        <div style={styles.globalReadyAlert}>
+          🟢 {readyCount} {readyCount === 1 ? 'ordine pronto' : 'ordini pronti'} — chiama il cliente al banco
+        </div>
+      )}
 
       {/* Filters */}
       <div style={styles.filterRow}>
@@ -92,10 +122,10 @@ export default function KitchenStaffDashboard() {
               style={{
                 ...styles.card,
                 borderColor: isReady ? '#10b981' : '#2a2a2a',
-                boxShadow: isReady ? '0 0 12px #10b98133' : 'none',
+                boxShadow: isReady ? '0 0 14px #10b98140' : 'none',
               }}
             >
-              {/* Ready alert */}
+              {/* Ready alert inside card */}
               {isReady && (
                 <div style={styles.readyAlert}>
                   🟢 PRONTO — CHIAMA IL CLIENTE
@@ -107,7 +137,6 @@ export default function KitchenStaffDashboard() {
                 <div style={styles.cardMeta}>
                   <span style={styles.cardTable}>{order.table}</span>
                   <span style={styles.cardNickname}>{order.nickname}</span>
-                  <span style={styles.cardTime}>{formatTime(order.createdAt)}</span>
                 </div>
                 <span
                   style={{
@@ -121,35 +150,32 @@ export default function KitchenStaffDashboard() {
                 </span>
               </div>
 
-              {/* Items */}
+              {/* Time + elapsed */}
+              <div style={styles.cardTime}>
+                {formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}
+              </div>
+
+              {/* Note cucina — SOPRA gli item, massima evidenza */}
+              {order.note ? (
+                <div style={styles.noteBox}>
+                  <span style={styles.noteLabel}>⚠️ NOTA: </span>
+                  <span style={styles.noteText}>{order.note}</span>
+                </div>
+              ) : null}
+
+              {/* Items — solo quantità e nome */}
               <div style={styles.itemList}>
                 {order.items.map((item, i) => (
                   <div key={i} style={styles.itemRow}>
                     <span style={styles.itemQty}>{item.quantity}×</span>
                     <span style={styles.itemName}>{item.name}</span>
-                    <span style={styles.itemPrice}>€{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
 
-              {/* Total */}
-              <div style={styles.totalRow}>
-                <span style={styles.totalLabel}>Totale</span>
-                <span style={styles.totalValue}>€{order.total.toFixed(2)}</span>
-              </div>
-
-              {/* Note */}
-              {order.note ? (
-                <div style={styles.noteBox}>
-                  <span style={styles.noteLabel}>Nota: </span>
-                  <span style={styles.noteText}>{order.note}</span>
-                </div>
-              ) : null}
-
               {/* Actions */}
               {!isTerminal && (
                 <div style={styles.actions}>
-                  {/* Primary next action */}
                   {flow.next && (
                     <button
                       style={styles.btnPrimary}
@@ -159,14 +185,13 @@ export default function KitchenStaffDashboard() {
                     </button>
                   )}
 
-                  {/* Secondary actions */}
                   <div style={styles.actionsSecondary}>
                     {order.status !== 'received' && (
                       <button
                         style={styles.btnSecondary}
                         onClick={() => changeStatus(order.id, 'received')}
                       >
-                        ← Ricevuto
+                        ← Torna a ricevuto
                       </button>
                     )}
                     <button
@@ -179,7 +204,7 @@ export default function KitchenStaffDashboard() {
                 </div>
               )}
 
-              {/* Terminal state label */}
+              {/* Terminal state */}
               {isTerminal && (
                 <div style={styles.terminalLabel}>
                   {order.status === 'delivered' ? '✓ Consegnato' : '✕ Annullato'}
@@ -228,6 +253,16 @@ const styles = {
     borderRadius: 20,
     padding: '4px 12px',
     border: '1px solid #10b98155',
+  },
+  globalReadyAlert: {
+    background: '#0a2a0a',
+    color: '#10b981',
+    fontSize: 14,
+    fontWeight: 800,
+    letterSpacing: 0.5,
+    padding: '12px 16px',
+    textAlign: 'center',
+    borderBottom: '1px solid #10b98133',
   },
   filterRow: {
     display: 'flex',
@@ -284,20 +319,24 @@ const styles = {
   cardHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 4,
   },
   cardMeta: { display: 'flex', alignItems: 'center', gap: 10 },
   cardTable: {
     background: '#f5c842',
     color: '#111',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 900,
     borderRadius: 6,
     padding: '3px 10px',
   },
-  cardNickname: { fontSize: 14, fontWeight: 700, color: '#f5f0e8' },
-  cardTime: { fontSize: 12, color: '#555' },
+  cardNickname: { fontSize: 15, fontWeight: 700, color: '#f5f0e8' },
+  cardTime: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 12,
+  },
   statusChip: {
     fontSize: 12,
     fontWeight: 700,
@@ -305,56 +344,71 @@ const styles = {
     padding: '4px 12px',
     flexShrink: 0,
   },
+  noteBox: {
+    background: '#1e1000',
+    border: '1px solid #f5c84255',
+    borderRadius: 8,
+    padding: '10px 12px',
+    marginBottom: 12,
+  },
+  noteLabel: {
+    fontSize: 12,
+    color: '#f5c842',
+    fontWeight: 800,
+    letterSpacing: 0.5,
+    marginRight: 4,
+  },
+  noteText: {
+    fontSize: 14,
+    color: '#f5c842',
+    fontWeight: 700,
+  },
   itemList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 5,
-    marginBottom: 10,
+    gap: 6,
+    marginBottom: 14,
   },
-  itemRow: { display: 'flex', alignItems: 'baseline', gap: 8 },
-  itemQty: { fontSize: 13, color: '#f5c842', fontWeight: 700, minWidth: 22 },
-  itemName: { fontSize: 14, color: '#ccc', flex: 1 },
-  itemPrice: { fontSize: 13, color: '#888' },
-  totalRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTop: '1px solid #2a2a2a',
-    paddingTop: 8,
-    marginBottom: 10,
+  itemRow: { display: 'flex', alignItems: 'baseline', gap: 10 },
+  itemQty: {
+    fontSize: 22,
+    color: '#fff',
+    fontWeight: 900,
+    minWidth: 32,
+    lineHeight: 1,
   },
-  totalLabel: { fontSize: 12, color: '#555', fontWeight: 600 },
-  totalValue: { fontSize: 16, fontWeight: 800, color: '#f5c842' },
-  noteBox: {
-    background: '#111',
-    border: '1px solid #222',
-    borderRadius: 6,
-    padding: '7px 10px',
-    marginBottom: 12,
+  itemName: {
+    fontSize: 18,
+    color: '#f5f0e8',
+    fontWeight: 700,
+    flex: 1,
+    lineHeight: 1.3,
   },
-  noteLabel: { fontSize: 11, color: '#555' },
-  noteText: { fontSize: 13, color: '#aaa' },
-  actions: { display: 'flex', flexDirection: 'column', gap: 8 },
+  actions: { display: 'flex', flexDirection: 'column', gap: 10 },
   btnPrimary: {
     background: '#f5c842',
     color: '#111',
     border: 'none',
     borderRadius: 8,
-    padding: '11px',
-    fontSize: 14,
-    fontWeight: 800,
+    padding: '16px',
+    fontSize: 15,
+    fontWeight: 900,
     cursor: 'pointer',
     width: '100%',
     letterSpacing: 0.5,
   },
-  actionsSecondary: { display: 'flex', gap: 8 },
+  actionsSecondary: {
+    display: 'flex',
+    gap: 8,
+    paddingTop: 2,
+  },
   btnSecondary: {
     flex: 1,
     background: '#222',
     border: '1px solid #333',
     borderRadius: 8,
-    color: '#aaa',
-    padding: '8px',
+    color: '#777',
+    padding: '9px',
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',
@@ -365,7 +419,7 @@ const styles = {
     border: '1px solid #ef444433',
     borderRadius: 8,
     color: '#ef4444',
-    padding: '8px',
+    padding: '9px',
     fontSize: 12,
     fontWeight: 600,
     cursor: 'pointer',
