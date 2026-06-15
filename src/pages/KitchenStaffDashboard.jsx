@@ -31,7 +31,13 @@ const SECTIONS = [
   },
 ];
 
+const LS_KEY = 'walbox_kitchen_orders_demo';
+
 function initOrders() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
   return demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
 }
 
@@ -66,9 +72,17 @@ export default function KitchenStaffDashboard() {
   const [orders, setOrders] = useState(initOrders);
 
   const changeStatus = (id, newStatus) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o))
-    );
+    setOrders((prev) => {
+      const next = prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o));
+      try { localStorage.setItem(LS_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const resetDemo = () => {
+    const fresh = demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
+    try { localStorage.setItem(LS_KEY, JSON.stringify(fresh)); } catch {}
+    setOrders(fresh);
   };
 
   const activeCount = orders.filter(
@@ -90,6 +104,7 @@ export default function KitchenStaffDashboard() {
           {readyCount > 0 && (
             <span style={styles.badgeReady}>{readyCount} pronti 🟢</span>
           )}
+          <button style={styles.btnReset} onClick={resetDemo}>RESET DEMO</button>
         </div>
       </div>
 
@@ -370,5 +385,16 @@ const styles = {
   productionEmpty: {
     fontSize: 13,
     color: '#333',
+  },
+  btnReset: {
+    background: 'transparent',
+    border: '1px solid #333',
+    borderRadius: 8,
+    color: '#555',
+    fontSize: 11,
+    fontWeight: 700,
+    padding: '4px 10px',
+    cursor: 'pointer',
+    letterSpacing: 0.5,
   },
 };

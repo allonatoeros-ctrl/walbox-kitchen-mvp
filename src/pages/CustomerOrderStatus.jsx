@@ -1,5 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { demoKitchenOrders, kitchenOrderStatuses } from '../data/kitchenMockData';
+
+const LS_KEY = 'walbox_kitchen_orders_demo';
+
+function readOrders() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return demoKitchenOrders;
+}
 
 const TIMELINE_STEPS = ['received', 'preparing', 'ready'];
 
@@ -16,29 +26,33 @@ function formatTime(isoString) {
 }
 
 export default function CustomerOrderStatus() {
+  const [orders, setOrders] = useState(readOrders);
   const [selectedIndex, setSelectedIndex] = useState(1); // default: order-002, status ready
 
-  const order = demoKitchenOrders[selectedIndex];
+  useEffect(() => {
+    const handleStorage = (e) => {
+      if (e.key === LS_KEY && e.newValue) {
+        try { setOrders(JSON.parse(e.newValue)); } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  const order = orders[selectedIndex] ?? orders[0];
   const statusInfo = kitchenOrderStatuses[order.status];
   const isReady = order.status === 'ready';
+  const isPreparing = order.status === 'preparing';
   const isCancelled = order.status === 'cancelled';
+
+  useEffect(() => {
+    if (isReady && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+  }, [isReady]);
 
   return (
     <div style={styles.page}>
-      {/* Demo selector */}
-      <div style={styles.demoBar}>
-        <span style={styles.demoLabel}>Demo ordine:</span>
-        {demoKitchenOrders.map((o, i) => (
-          <button
-            key={o.id}
-            style={{ ...styles.demoBtn, ...(i === selectedIndex ? styles.demoBtnActive : {}) }}
-            onClick={() => setSelectedIndex(i)}
-          >
-            {o.nickname} · {kitchenOrderStatuses[o.status]?.label}
-          </button>
-        ))}
-      </div>
-
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerLogo}>🦭</div>
@@ -67,6 +81,17 @@ export default function CustomerOrderStatus() {
           <span style={styles.metaVal}>{formatTime(order.createdAt)}</span>
         </div>
       </div>
+
+      {/* Preparing banner */}
+      {isPreparing && (
+        <div style={styles.preparingBanner}>
+          <div style={styles.preparingEmoji}>🍳</div>
+          <div style={styles.preparingTitle}>IN PREPARAZIONE</div>
+          <div style={styles.preparingMsg}>
+            Stanno preparando il tuo ordine. Tieniti pronto — ti avvisiamo qui.
+          </div>
+        </div>
+      )}
 
       {/* CAVALLOOOO banner */}
       {isReady && (
@@ -164,6 +189,20 @@ export default function CustomerOrderStatus() {
           {statusInfo?.label}
         </span>
       </div>
+
+      {/* Dev selector — solo per demo */}
+      <div style={styles.demoBar}>
+        <span style={styles.demoLabel}>[DEV] simula ordine:</span>
+        {orders.map((o, i) => (
+          <button
+            key={o.id}
+            style={{ ...styles.demoBtn, ...(i === selectedIndex ? styles.demoBtnActive : {}) }}
+            onClick={() => setSelectedIndex(i)}
+          >
+            {o.nickname} · {kitchenOrderStatuses[o.status]?.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -180,28 +219,28 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    padding: '10px 12px',
-    background: '#0a0a0a',
-    borderBottom: '1px solid #1e1e1e',
+    padding: '16px 16px 24px',
+    marginTop: 24,
+    borderTop: '1px solid #1a1a1a',
     overflowX: 'auto',
     flexWrap: 'nowrap',
+    opacity: 0.5,
   },
-  demoLabel: { fontSize: 11, color: '#555', flexShrink: 0 },
+  demoLabel: { fontSize: 10, color: '#444', flexShrink: 0, letterSpacing: 0.5 },
   demoBtn: {
-    background: '#1a1a1a',
-    border: '1px solid #333',
-    borderRadius: 16,
-    color: '#777',
-    padding: '5px 12px',
-    fontSize: 11,
+    background: 'transparent',
+    border: '1px solid #222',
+    borderRadius: 12,
+    color: '#444',
+    padding: '4px 10px',
+    fontSize: 10,
     cursor: 'pointer',
     whiteSpace: 'nowrap',
     flexShrink: 0,
   },
   demoBtnActive: {
-    background: '#2a2000',
-    border: '1px solid #f5c842',
-    color: '#f5c842',
+    border: '1px solid #555',
+    color: '#888',
   },
   header: {
     display: 'flex',
@@ -226,6 +265,17 @@ const styles = {
   metaRow: { display: 'flex', justifyContent: 'space-between' },
   metaKey: { fontSize: 12, color: '#555' },
   metaVal: { fontSize: 13, fontWeight: 700, color: '#f5f0e8' },
+  preparingBanner: {
+    margin: '16px',
+    background: 'linear-gradient(135deg, #0a0e1a, #0a1428)',
+    border: '2px solid #3b82f6',
+    borderRadius: 12,
+    padding: '18px 16px',
+    textAlign: 'center',
+  },
+  preparingEmoji: { fontSize: 32, marginBottom: 8 },
+  preparingTitle: { fontSize: 18, fontWeight: 900, color: '#3b82f6', letterSpacing: 2, marginBottom: 8 },
+  preparingMsg: { fontSize: 14, color: '#93c5fd', lineHeight: 1.5 },
   readyBanner: {
     margin: '16px',
     background: 'linear-gradient(135deg, #0a1a0a, #0a2a0a)',

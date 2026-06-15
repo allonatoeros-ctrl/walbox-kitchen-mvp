@@ -95,6 +95,11 @@ export default function CustomerKitchenMenu() {
         </div>
       </div>
 
+      {/* How it works strip */}
+      <div style={styles.infoStrip}>
+        📱 Ordina dal telefono · La cucina prepara · Ti avvisiamo quando è pronto
+      </div>
+
       {/* Promo banner */}
       {promoItem && (
         <div style={styles.promoBanner} onClick={() => { setActiveCategory('combo'); addItem(promoItem); }}>
@@ -160,7 +165,12 @@ export default function CustomerKitchenMenu() {
       {/* Order summary */}
       {orderItems.length > 0 && (
         <div style={styles.orderBox}>
-          <div style={styles.orderTitle}>Il tuo ordine</div>
+          <div style={styles.orderTitle}>
+            Il tuo ordine
+            <span style={styles.orderCount}>
+              {orderItems.reduce((s, o) => s + o.qty, 0)} item
+            </span>
+          </div>
           {orderItems.map((o) => (
             <div key={o.id} style={styles.orderRow}>
               <span style={styles.orderItemName}>{o.qty}× {o.name}</span>
@@ -182,6 +192,7 @@ export default function CustomerKitchenMenu() {
           <button style={styles.btnSubmit} onClick={handleSubmit}>
             🐴 Invia ordine
           </button>
+          <div style={styles.submitHint}>Ti avvisiamo qui quando è pronto al banco.</div>
         </div>
       )}
     </div>
@@ -364,4 +375,28 @@ const styles = {
   confirmTitle: { fontSize: 36, fontWeight: 900, color: '#f5c842', letterSpacing: 3, marginBottom: 12 },
   confirmMsg: { fontSize: 18, color: '#f5f0e8', marginBottom: 8, lineHeight: 1.5 },
   confirmSub: { fontSize: 14, color: '#666', marginBottom: 32 },
+  infoStrip: {
+    padding: '9px 16px',
+    background: '#161610',
+    borderBottom: '1px solid #2a2a1a',
+    fontSize: 12,
+    color: '#888',
+    textAlign: 'center',
+    letterSpacing: 0.3,
+  },
+  orderCount: {
+    marginLeft: 8,
+    fontSize: 11,
+    fontWeight: 600,
+    color: '#888',
+    background: '#2a2a2a',
+    borderRadius: 10,
+    padding: '2px 8px',
+  },
+  submitHint: {
+    textAlign: 'center',
+    fontSize: 11,
+    color: '#888',
+    marginTop: 8,
+  },
 };
