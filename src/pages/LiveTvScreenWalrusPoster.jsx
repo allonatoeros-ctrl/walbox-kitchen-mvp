@@ -158,10 +158,10 @@ export default function LiveTvScreenWalrusPoster() {
             flex: 2.2;
             display: flex;
             flex-direction: column;
-            border-right: 3px dashed #282828;
+            border-right: none;
             padding-right: clamp(14px, 2.2vw, 30px);
             min-width: 0;
-            overflow: hidden;
+            overflow: visible;
           }
 
           .wlp-right {
@@ -210,7 +210,7 @@ export default function LiveTvScreenWalrusPoster() {
             display: flex;
             flex-direction: column;
             min-height: 0;
-            overflow: hidden;
+            overflow: visible;
           }
 
           .wlp-cover-row {
@@ -455,11 +455,16 @@ export default function LiveTvScreenWalrusPoster() {
 
           .wlp-progress-fill::after {
             content: '';
-            position: absolute; inset: 0;
-            background: repeating-linear-gradient(
-              45deg, transparent, transparent 10px,
-              rgba(0,0,0,0.22) 10px, rgba(0,0,0,0.22) 20px
-            );
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%) translateX(50%);
+            width: clamp(12px, 2vh, 24px);
+            height: clamp(12px, 2vh, 24px);
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 12px rgba(255,255,255,0.8), 0 0 4px #fff;
+            z-index: 5;
           }
 
           .wlp-time-row {
@@ -546,11 +551,12 @@ export default function LiveTvScreenWalrusPoster() {
 
           .wlp-queue-num {
             font-family: 'Impact', sans-serif;
-            font-size: clamp(15px, 2vh, 26px);
-            color: #3a3a3a;
+            font-size: clamp(20px, 2.8vh, 34px);
+            color: #cc0000;
             width: clamp(18px, 2.2vw, 30px);
             text-align: center;
             flex-shrink: 0;
+            text-shadow: 2px 2px 0 #000;
           }
 
           .wlp-queue-cover {
