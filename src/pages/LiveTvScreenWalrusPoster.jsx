@@ -12,25 +12,19 @@ export default function LiveTvScreenWalrusPoster() {
   const [showTakeover, setShowTakeover] = useState(false);
   const [takeoverRequest, setTakeoverRequest] = useState(null);
 
-  // Reaction state
   const [tvReaction, setTvReaction] = useState(() => {
     try {
       const saved = localStorage.getItem("walbox_tv_reaction");
       if (saved) {
         const data = JSON.parse(saved);
-        if (data && data.timestamp && (Date.now() - data.timestamp < 6000)) {
-          return data;
-        }
+        if (data && data.timestamp && (Date.now() - data.timestamp < 6000)) return data;
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) { console.error(e); }
     return null;
   });
 
   const prevSongIdRef = useRef(null);
 
-  // Sync state helper
   const syncState = () => {
     setRequests(getRequests());
     setPlayback(getPlaybackState());
@@ -38,1093 +32,857 @@ export default function LiveTvScreenWalrusPoster() {
 
   useEffect(() => {
     syncState();
-
-    // Subscribe to state changes (local/same tab)
     const unsubscribe = subscribeState(syncState);
-
-    // Subscribe to cross-tab updates (other tabs)
     const handleStorage = (e) => {
       if (e.key && e.key.startsWith("walbox_")) {
         syncState();
         if (e.key === "walbox_tv_reaction" && e.newValue) {
           try {
             const data = JSON.parse(e.newValue);
-            if (data && data.type && data.timestamp) {
-              setTvReaction(data);
-            }
-          } catch (error) {
-            console.error(error);
-          }
+            if (data && data.type && data.timestamp) setTvReaction(data);
+          } catch (error) { console.error(error); }
         }
       }
     };
     window.addEventListener("storage", handleStorage);
-
-    return () => {
-      unsubscribe();
-      window.removeEventListener("storage", handleStorage);
-    };
+    return () => { unsubscribe(); window.removeEventListener("storage", handleStorage); };
   }, []);
 
-  // Clear reaction after 6 seconds
   useEffect(() => {
     if (!tvReaction) return;
-
     const elapsed = Date.now() - tvReaction.timestamp;
     const remaining = Math.max(0, 6000 - elapsed);
-
-    if (remaining <= 0) {
-      setTvReaction(null);
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setTvReaction(null);
-    }, remaining);
-
+    if (remaining <= 0) { setTvReaction(null); return; }
+    const timer = setTimeout(() => setTvReaction(null), remaining);
     return () => clearTimeout(timer);
   }, [tvReaction]);
 
-  // Derived calculations
-  const currentRequest = requests.find((r) => r.id === playback.currentRequestId && r.status === "playing");
-  const approvedQueue = requests.filter((r) => r.status === "approved");
-
-  // Visual Fallback tracks if queue is empty
-  const fallbackQueue = [
-    { id: 'fallback-1', song: { title: 'Do I Wanna Know?', artist: 'Arctic Monkeys', cover: 'https://images.unsplash.com/photo-1619983081563-430f63602796?w=200&h=200&fit=crop&q=80' }, table: 'WALRUS' },
-    { id: 'fallback-2', song: { title: 'Seven Nation Army', artist: 'The White Stripes', cover: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&h=200&fit=crop&q=80' }, table: 'WALRUS' }
-  ];
-
-  const displayQueue = approvedQueue.length > 0 ? approvedQueue : fallbackQueue;
-
-  // Track changes to trigger takeover screen
   useEffect(() => {
     if (currentRequest) {
       if (prevSongIdRef.current !== currentRequest.id) {
-        // Song changed! Trigger takeover
         setTakeoverRequest(currentRequest);
         setShowTakeover(true);
         prevSongIdRef.current = currentRequest.id;
-
-        const timer = setTimeout(() => {
-          setShowTakeover(false);
-        }, 4000); // 4 seconds takeover
-
+        const timer = setTimeout(() => setShowTakeover(false), 4000);
         return () => clearTimeout(timer);
       }
     } else {
       prevSongIdRef.current = null;
       setShowTakeover(false);
     }
-  }, [currentRequest]);
+  }, [requests, playback]);
 
-  // Format seconds to mm:ss
+  const currentRequest = requests.find((r) => r.id === playback.currentRequestId && r.status === "playing");
+  const approvedQueue = requests.filter((r) => r.status === "approved");
+
+  const fallbackQueue = [
+    { id: "fallback-1", song: { title: "Do I Wanna Know?", artist: "Arctic Monkeys", cover: "https://images.unsplash.com/photo-1619983081563-430f63602796?w=200&h=200&fit=crop&q=80" }, table: "WALRUS" },
+    { id: "fallback-2", song: { title: "Seven Nation Army", artist: "The White Stripes", cover: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&h=200&fit=crop&q=80" }, table: "WALRUS" }
+  ];
+
+  const displayQueue = approvedQueue.length > 0 ? approvedQueue : fallbackQueue;
+
   const formatTime = (secs) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Collect all active dedications for the ticker
   const tickerDedications = requests
     .filter((r) => r.dedication && (r.status === "playing" || r.status === "approved" || r.status === "played"))
-    .slice(0, 10); // last 10 messages
+    .slice(0, 10);
 
   const tickerText = tickerDedications.length > 0
-    ? tickerDedications.map((r) => `Tavolo ${r.table} dedica "${r.song.title}" : "${r.dedication}"`).join("  •  ")
+    ? tickerDedications.map((r) => `TAVOLO ${r.table} dedica "${r.song.title}" : "${r.dedication}"`).join("  •  ")
     : "Scegli la musica! Scansiona il QR code al tavolo e richiedi la tua traccia preferita.  •  Benvenuto al Walrus.";
 
-  return (
-    <div className="tv-safe-outer-wrapper">
-      <div className="walrus-poster-container">
-        {/* Inline styles for the specific poster look to avoid touching other files */}
-        <style>{`
-          .tv-safe-outer-wrapper {
-            width: 100vw;
-            height: 100vh;
-            background-color: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-          }
+  const tableLabel = (t) => isNaN(t) ? String(t) : `TAVOLO ${t}`;
 
-          .walrus-poster-container {
+  return (
+    <div style={{ width: "100vw", height: "100vh", background: "#000", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+      <div className="wlp">
+        <style>{`
+          .wlp {
             aspect-ratio: 16 / 9;
             width: min(100vw, calc(100vh * 16 / 9));
             height: min(100vh, calc(100vw * 9 / 16));
-            margin: auto;
-            background-color: #0a0a0a;
-            background-image: 
-              linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)),
+            background-color: #1c0a02;
+            background-image:
+              linear-gradient(rgba(18, 7, 2, 0.56), rgba(18, 7, 2, 0.56)),
               url('/assets/tv-poster/bg-grunge-wall.webp');
             background-size: cover;
             background-position: center;
-            background-repeat: no-repeat;
             color: #eee;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             overflow: hidden;
             position: relative;
+            box-shadow: inset 0 0 120px rgba(0,0,0,0.85);
           }
 
-          /* Grunge Background Typography Watermark */
-          .walrus-poster-container::before {
-            content: 'LIVE STAGE';
-            position: absolute;
-            top: 10%;
-            left: -5%;
-            font-family: 'Impact', sans-serif;
-            font-size: clamp(150px, 25vh, 350px);
-            color: rgba(255, 255, 255, 0.02);
-            transform: rotate(-10deg);
-            pointer-events: none;
-            z-index: 0;
-            line-height: 0.8;
-            white-space: nowrap;
-          }
-
-          /* Grunge Border Overlay */
-          .walrus-poster-container::after {
+          .wlp::after {
             content: '';
             position: absolute;
             inset: 0;
-            border: clamp(8px, 1.2vh, 15px) solid #000;
-            border-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="0" width="100" height="100" fill="none" stroke="black" stroke-width="15" stroke-dasharray="20 10 5 15" /></svg>') 15 stretch;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.55);
             pointer-events: none;
             z-index: 50;
-            opacity: 0.9;
-            box-shadow: inset 0 0 80px rgba(0,0,0,0.95);
           }
 
-          .poster-main-layout {
-            display: flex;
-            flex: 1;
-            padding: clamp(15px, 2.5vh, 40px) clamp(15px, 2.5vw, 40px) clamp(5px, 1vh, 15px) clamp(15px, 2.5vw, 40px);
-            gap: clamp(15px, 2.5vw, 40px);
-            height: calc(100% - clamp(50px, 5vh, 70px) - clamp(35px, 5vh, 65px) - clamp(2px, 0.4vh, 8px));
-            box-sizing: border-box;
-            z-index: 10;
-            overflow: hidden;
-          }
-
-          .poster-left-panel {
-            flex: 2.2;
-            display: flex;
-            flex-direction: column;
-            border-right: clamp(3px, 0.4vw, 6px) dashed #333;
-            padding-right: clamp(15px, 2.5vw, 50px);
-            position: relative;
-            min-width: 0;
-          }
-
-          .poster-right-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: clamp(10px, 1.8vh, 35px);
-            min-width: 0;
-            max-height: 100%;
-            overflow: hidden;
-          }
-
-          /* LEFT PANEL STYLES */
-          .poster-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: clamp(5px, 1vh, 15px);
-            padding-bottom: 0;
-            flex-shrink: 0;
-          }
-
-          .poster-header-logo-container {
-            height: clamp(140px, 21vh, 280px);
-            display: flex;
-            align-items: center;
-          }
-
-          .poster-logo-img {
-            height: 100%;
-            max-width: 100%;
-            object-fit: contain;
+          .wlp-walrus {
+            position: absolute;
+            left: 30%;
+            top: 50%;
+            transform: translateY(-50%) rotate(4deg);
+            height: 90%;
+            z-index: 2;
+            pointer-events: none;
+            opacity: 0.42;
             background: transparent;
           }
 
-          .poster-logo-text {
-            font-family: 'Impact', sans-serif;
-            font-size: clamp(28px, 4vh, 54px);
-            color: #cc0000;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            text-shadow: 3px 3px 0 #000;
+          .wlp-main {
+            display: flex;
+            flex: 1;
+            padding: clamp(14px, 2.2vh, 30px) clamp(14px, 2.2vw, 30px) clamp(6px, 1vh, 14px);
+            gap: clamp(14px, 2.2vw, 30px);
+            overflow: hidden;
+            position: relative;
+            z-index: 10;
+            min-height: 0;
+            box-sizing: border-box;
           }
 
-          .poster-now-playing {
+          .wlp-left {
+            flex: 2.2;
+            display: flex;
+            flex-direction: column;
+            border-right: 3px dashed #282828;
+            padding-right: clamp(14px, 2.2vw, 30px);
+            min-width: 0;
+            overflow: hidden;
+          }
+
+          .wlp-right {
             flex: 1;
             display: flex;
             flex-direction: column;
+            gap: clamp(8px, 1.2vh, 16px);
+            min-width: 0;
+            overflow: hidden;
+            position: relative;
+            z-index: 5;
+          }
+
+          .wlp-header {
+            display: flex;
             justify-content: space-between;
-            width: 100%;
+            align-items: flex-start;
+            flex-shrink: 0;
+            margin-bottom: clamp(6px, 1vh, 14px);
+          }
+
+          .wlp-logo {
+            height: clamp(160px, 24vh, 320px);
+            object-fit: contain;
+            background: transparent;
+            display: block;
+          }
+
+          .wlp-mood-badge {
+            background: #c85c08;
+            color: #fff;
+            font-family: 'Impact', sans-serif;
+            font-size: clamp(11px, 1.6vh, 19px);
+            padding: clamp(4px, 0.6vh, 8px) clamp(10px, 1.4vw, 18px);
+            letter-spacing: 1px;
+            border: 2px solid #000;
+            box-shadow: 3px 3px 0 #000;
+            text-transform: uppercase;
+            align-self: flex-start;
+            margin-top: clamp(10px, 1.4vh, 18px);
+            transform: rotate(-0.5deg);
+          }
+
+          .wlp-now-playing {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             min-height: 0;
             overflow: hidden;
           }
 
-          .poster-cover-hero-container {
+          .wlp-cover-row {
             display: flex;
-            gap: clamp(25px, 4vw, 80px);
+            gap: clamp(16px, 2.8vw, 44px);
             align-items: center;
-            width: 100%;
-            margin-bottom: clamp(10px, 1.8vh, 25px);
             flex: 1;
             min-height: 0;
+            margin-bottom: clamp(8px, 1.2vh, 18px);
           }
 
-          /* NEW VINYL EFFECT */
-          .poster-vinyl-hero {
+          .wlp-vinyl {
             position: relative;
-            width: clamp(220px, 31vh, 380px);
             height: clamp(220px, 31vh, 380px);
-            display: flex;
-            align-items: center;
-            transform: rotate(-2deg);
+            width: clamp(220px, 31vh, 380px);
             flex-shrink: 0;
+            transform: rotate(-2deg);
           }
 
-          .poster-vinyl-sleeve {
-            position: relative;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            border: clamp(8px, 1.1vh, 16px) solid #111;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
-            background: #000;
-          }
-
-          .poster-sleeve-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: contrast(1.1) saturate(1.2);
-          }
-
-          .poster-vinyl-disc {
+          .wlp-vinyl::after {
+            content: '';
             position: absolute;
-            width: 94%;
-            height: 94%;
-            right: -32%; /* slides out relative to sleeve width */
+            top: 8px; left: 8px;
+            width: 100%; height: 100%;
+            background: #cc0000;
+            z-index: 2;
+          }
+
+          .wlp-vinyl-sleeve {
+            position: absolute;
+            inset: 0;
+            border: none;
+            overflow: hidden;
+            z-index: 10;
+            background: #000;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+          }
+
+          .wlp-cover-frame {
+            position: absolute;
+            inset: -10%;
+            width: 120%;
+            height: 120%;
+            object-fit: fill;
+            z-index: 12;
+            pointer-events: none;
+          }
+
+          .wlp-sleeve-img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: contrast(1.1) saturate(1.15);
+            display: block;
+          }
+
+          .wlp-vinyl-disc {
+            position: absolute;
+            top: 3%; right: -32%;
+            width: 94%; height: 94%;
             border-radius: 50%;
-            background: #111;
-            box-shadow: 10px 10px 0 rgba(0,0,0,0.7), inset 0 0 20px #000;
+            background: #0f0f0f;
+            box-shadow: 8px 8px 0 rgba(0,0,0,0.7);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 5;
           }
 
-          .poster-vinyl-disc.is-playing {
-            animation: spinRecord 4s linear infinite;
-          }
-
-          .poster-vinyl-disc::before {
+          .wlp-vinyl-disc::before {
             content: '';
             position: absolute;
-            inset: 5px;
+            inset: 4px;
             border-radius: 50%;
-            border: 1px solid #222;
-            box-shadow: 
-              inset 0 0 0 10px #111, 
-              inset 0 0 0 12px #333, 
-              inset 0 0 0 30px #111, 
-              inset 0 0 0 32px #222, 
-              inset 0 0 0 60px #111, 
-              inset 0 0 0 62px #333,
-              inset 0 0 0 90px #111,
-              inset 0 0 0 92px #222;
+            box-shadow:
+              inset 0 0 0 8px #111,
+              inset 0 0 0 10px #252525,
+              inset 0 0 0 26px #111,
+              inset 0 0 0 28px #1e1e1e,
+              inset 0 0 0 52px #111,
+              inset 0 0 0 54px #252525,
+              inset 0 0 0 76px #111;
           }
 
-          .poster-vinyl-label {
-            width: 32%;
-            height: 32%;
+          .wlp-vinyl-disc.spinning {
+            animation: wlpSpin 4s linear infinite;
+          }
+
+          @keyframes wlpSpin {
+            100% { transform: rotate(360deg); }
+          }
+
+          .wlp-vinyl-label {
+            width: 30%; height: 30%;
             border-radius: 50%;
             object-fit: cover;
             z-index: 10;
             border: 2px solid #000;
           }
 
-          @keyframes spinRecord {
-            100% { transform: rotate(360deg); }
-          }
-
-          .poster-vinyl-hero::before {
-            display: none;
-          }
-
-          /* Red backdrop shadow behind vinyl record disk */
-          .poster-vinyl-hero::after {
-            content: '';
-            position: absolute;
-            top: clamp(10px, 1.2vw, 20px);
-            left: clamp(10px, 1.2vw, 20px);
-            width: 100%;
-            height: 100%;
-            background: #cc0000;
-            z-index: 2;
-          }
-
-          .poster-song-info-block {
+          .wlp-song-info {
             flex: 1;
             display: flex;
             flex-direction: column;
             min-width: 0;
+            overflow: hidden;
           }
 
-          .poster-song-title {
-            font-size: clamp(44px, 7vh, 100px);
+          .wlp-meta-row {
+            display: flex;
+            align-items: center;
+            gap: clamp(8px, 1.2vw, 20px);
+            margin-bottom: clamp(4px, 0.7vh, 10px);
+            flex-shrink: 0;
+          }
+
+          .wlp-waveform {
+            height: clamp(16px, 2.5vh, 34px);
+            width: clamp(70px, 11vw, 155px);
+            object-fit: contain;
+            background: transparent;
+            flex-shrink: 0;
+          }
+
+          .wlp-table-pill {
+            background: #000;
+            color: #fff;
+            font-family: 'Impact', sans-serif;
+            font-size: clamp(11px, 1.6vh, 19px);
+            padding: 3px 14px;
+            border: 2px solid #cc0000;
+            border-radius: 9999px;
+            white-space: nowrap;
+            text-transform: uppercase;
+          }
+
+          .wlp-title {
+            font-family: 'Impact', 'Arial Black', sans-serif;
+            font-size: clamp(56px, 10vh, 136px);
             font-weight: 900;
-            color: #fcfaf2; /* Off-white/cream */
+            color: #fcfaf2;
             text-transform: uppercase;
             line-height: 0.9;
-            margin: 0 0 clamp(4px, 0.8vh, 12px) 0;
-            font-family: 'Impact', 'Arial Black', sans-serif;
+            margin: 0 0 clamp(2px, 0.5vh, 8px) 0;
             text-shadow: 4px 4px 0 rgba(0,0,0,0.85);
-            letter-spacing: -1.5px;
+            letter-spacing: -1px;
             word-break: break-word;
           }
 
-          .poster-song-artist {
-            font-size: clamp(22px, 3.2vh, 45px);
-            font-weight: bold;
+          .wlp-artist {
             font-family: 'Brush Script MT', 'Georgia', cursive, serif;
+            font-size: clamp(24px, 4vh, 52px);
+            font-weight: bold;
             font-style: italic;
-            color: #f7d070; /* Yellow/cream accent */
-            margin: 0 0 clamp(8px, 1.2vh, 20px) 0;
-            display: inline-block;
-            align-self: flex-start;
+            color: #f7d070;
+            margin: 0 0 clamp(4px, 0.8vh, 14px) 0;
             transform: rotate(-1deg);
+            display: inline-block;
             text-shadow: 2px 2px 0 #000;
+            align-self: flex-start;
             position: relative;
-            padding-bottom: clamp(10px, 1.5vh, 20px);
+            padding-bottom: clamp(8px, 1.2vh, 16px);
           }
 
-          .poster-song-artist::after {
+          .wlp-artist::after {
             content: '';
             position: absolute;
-            bottom: 0;
-            left: -5%;
+            bottom: 0; left: -5%;
             width: 110%;
-            height: clamp(8px, 1.2vh, 18px);
+            height: clamp(6px, 1vh, 14px);
             background: url('/assets/tv-poster/generated/walbox-live-brush.png') no-repeat center;
             background-size: 100% 100%;
-            z-index: -1;
           }
 
-          .poster-requester-badge {
-            background: #cc0000;
-            color: #fff;
-            font-weight: 900;
-            font-size: clamp(14px, 2vh, 26px);
-            padding: clamp(5px, 0.8vh, 10px) clamp(12px, 1.5vw, 25px);
-            display: inline-block;
-            transform: rotate(-1deg);
-            border: clamp(2px, 0.3vw, 4px) solid #000;
-            box-shadow: clamp(3px, 0.4vw, 6px) clamp(3px, 0.4vw, 6px) 0 #000;
-            font-family: 'Courier New', Courier, monospace;
+          .wlp-dedication {
+            margin-top: auto;
+            padding-top: clamp(4px, 0.6vh, 10px);
           }
 
-          .poster-dedication-wrapper {
-            margin-top: clamp(12px, 2vh, 28px);
-            margin-left: clamp(35px, 5vw, 85px);
-            width: calc(100% - clamp(35px, 5vw, 85px));
-            max-width: 650px;
-            display: flex;
-            flex-direction: column;
-            gap: clamp(4px, 0.8vh, 10px);
-            align-self: flex-start;
-          }
-
-          .poster-dedication-label {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: clamp(14px, 1.8vh, 22px);
+          .wlp-dedic-label {
+            font-family: 'Courier New', monospace;
+            font-size: clamp(10px, 1.4vh, 17px);
             font-weight: 900;
             color: #cc0000;
             text-transform: uppercase;
             letter-spacing: 1px;
-            text-shadow: 1px 1px 0 #000;
-            align-self: flex-start;
+            margin-bottom: clamp(3px, 0.5vh, 7px);
           }
 
-          .poster-dedication-bubble {
+          .wlp-dedic-bubble {
             background: url('/assets/tv-poster/04-lower/dedication-card-frame.png') no-repeat center;
             background-size: 100% 100%;
-            padding: clamp(12px, 1.8vh, 26px) clamp(25px, 4.2vw, 65px);
-            width: 100%;
             aspect-ratio: 2172 / 724;
             display: flex;
             align-items: center;
-            gap: clamp(12px, 2vw, 25px);
-            position: relative;
+            gap: clamp(8px, 1.2vw, 18px);
+            padding: clamp(8px, 1.1vh, 16px) clamp(16px, 2.8vw, 44px);
+            max-width: 560px;
             box-sizing: border-box;
-            transform: rotate(0.5deg);
-          }
-          
-          .poster-dedication-bubble::before {
-            display: none;
           }
 
-          /* Red Progress Bar */
-          .poster-progress-container {
-            margin-top: auto;
-            width: 100%;
-            background: #111;
-            height: clamp(15px, 2vh, 30px);
-            border: clamp(2px, 0.3vw, 4px) solid #444;
-            position: relative;
-            box-shadow: inset 0 5px 10px rgba(0,0,0,0.8);
+          .wlp-dedic-mascot {
+            height: clamp(30px, 4.8vh, 62px);
+            object-fit: contain;
             flex-shrink: 0;
+            background: transparent;
           }
 
-          .poster-progress-fill {
+          .wlp-dedic-text {
+            font-family: 'Courier New', monospace;
+            font-size: clamp(11px, 1.5vh, 19px);
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 1px 1px 0 #000;
+            line-height: 1.2;
+          }
+
+          .wlp-progress-wrap {
+            flex-shrink: 0;
+            margin-top: auto;
+            padding-top: clamp(6px, 0.8vh, 12px);
+          }
+
+          .wlp-progress-track {
+            height: clamp(10px, 1.6vh, 22px);
+            background: #111;
+            border: 2px solid #333;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 3px 8px rgba(0,0,0,0.8);
+          }
+
+          .wlp-progress-fill {
             height: 100%;
             background: #cc0000;
-            width: 0%;
             transition: width 1s linear;
             position: relative;
-            box-shadow: 0 0 15px rgba(204,0,0,0.5);
+            box-shadow: 0 0 10px rgba(204,0,0,0.5);
           }
-          
-          .poster-progress-fill::after {
+
+          .wlp-progress-fill::after {
             content: '';
-            position: absolute;
-            top: 0; right: 0; bottom: 0; left: 0;
-            background-image: repeating-linear-gradient(
-              45deg,
-              transparent,
-              transparent 15px,
-              rgba(0,0,0,0.3) 15px,
-              rgba(0,0,0,0.3) 30px
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(
+              45deg, transparent, transparent 10px,
+              rgba(0,0,0,0.22) 10px, rgba(0,0,0,0.22) 20px
             );
           }
 
-          .poster-time-labels {
+          .wlp-time-row {
             display: flex;
             justify-content: space-between;
-            font-weight: bold;
-            margin-top: 5px;
-            font-size: clamp(14px, 1.8vh, 24px);
-            color: #aaa;
+            font-size: clamp(10px, 1.5vh, 19px);
+            color: #888;
             font-family: 'Courier New', monospace;
-            flex-shrink: 0;
+            font-weight: bold;
+            margin-top: 3px;
           }
 
-          /* RIGHT PANEL STYLES */
-          
-          /* QR Box Flyer */
-          /* Decorative Orange Walrus Background Layer */
-          .poster-walrus-orange-hero {
-            position: absolute;
-            right: 16%;
-            top: 50%;
-            transform: translateY(-50%) rotate(4deg);
-            height: 85%;
-            max-height: 850px;
-            z-index: 1;
-            pointer-events: none;
-            opacity: 0.2;
-          }
-
-          /* Song Waveform Accent and Meta Row */
-          .poster-meta-row {
-            display: flex;
-            align-items: center;
-            gap: clamp(10px, 1.5vw, 25px);
-            margin-bottom: clamp(6px, 1vh, 16px);
-            align-self: flex-start;
-          }
-
-          .poster-waveform-container {
-            height: clamp(25px, 3.5vh, 45px);
-            width: clamp(120px, 18vw, 250px);
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-          }
-
-          .poster-waveform-img {
-            height: 100%;
-            width: 100%;
-            object-fit: contain;
-            background: transparent;
-          }
-
-          .poster-table-pill {
-            background: #000;
-            color: #fff;
-            font-family: 'Impact', 'Arial Black', sans-serif;
-            font-size: clamp(14px, 2vh, 26px);
-            padding: 4px 16px;
-            text-transform: uppercase;
-            border: 2px solid #cc0000;
-            border-radius: 9999px;
-            box-shadow: none;
-            transform: none;
-            white-space: nowrap;
-          }
-
-          /* QR Card Sidebar Frame */
-          .poster-qr-card-wrapper {
-            width: 100%;
-            max-height: clamp(80px, 22vh, 180px);
-            transform: rotate(1.5deg);
-            box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.65);
-            border: clamp(2px, 0.3vw, 4px) solid #000;
-            background: transparent;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            flex-shrink: 1;
-          }
-
-          .poster-qr-card-img {
-            width: 100%;
-            height: 100%;
-            display: block;
-            object-fit: contain;
-            background: transparent;
-          }
-
-          /* Krombacher Card Sidebar */
-          .poster-krombacher-card-wrapper {
-            width: 100%;
-            max-height: clamp(80px, 20vh, 160px);
-            transform: rotate(-1.5deg);
-            box-shadow: 10px 10px 0 rgba(0, 0, 0, 0.65);
-            border: clamp(2px, 0.3vw, 4px) solid #000;
-            background: transparent;
-            margin: 5px 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            flex-shrink: 1;
-          }
-
-          .poster-krombacher-card-img {
-            width: 100%;
-            height: 100%;
-            display: block;
-            object-fit: contain;
-            background: transparent;
-          }
-
-          /* Queue List */
-          .poster-queue-title {
-            font-family: 'Impact', sans-serif;
-            font-size: clamp(24px, 2.5vh, 36px);
-            color: #fff;
-            border-bottom: clamp(3px, 0.4vh, 5px) solid #cc0000;
-            padding-bottom: clamp(5px, 0.8vh, 10px);
-            margin: clamp(5px, 0.8vh, 10px) 0 clamp(8px, 1vh, 15px) 0;
-            text-transform: uppercase;
-            text-shadow: 3px 3px 0 #000;
-            flex-shrink: 0;
-          }
-
-          .poster-queue-list {
+          .wlp-idle {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: clamp(6px, 0.8vh, 12px);
+            justify-content: center;
+            align-items: center;
+            opacity: 0.55;
+            gap: clamp(8px, 1.5vh, 22px);
+          }
+
+          .wlp-qr-card {
+            width: 100%;
+            object-fit: contain;
+            background: transparent;
+            display: block;
+            flex-shrink: 0;
+            max-height: clamp(85px, 21vh, 175px);
+            transform: rotate(1deg);
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.55);
+          }
+
+          .wlp-krom-card {
+            width: 100%;
+            object-fit: contain;
+            background: transparent;
+            display: block;
+            flex-shrink: 0;
+            max-height: clamp(80px, 19vh, 160px);
+            transform: rotate(-1deg);
+            box-shadow: 5px 5px 0 rgba(0,0,0,0.55);
+          }
+
+          .wlp-queue-label {
+            font-family: 'Impact', sans-serif;
+            font-size: clamp(13px, 1.8vh, 24px);
+            color: #fff;
+            border-bottom: 3px solid #cc0000;
+            padding-bottom: clamp(4px, 0.5vh, 8px);
+            text-transform: uppercase;
+            text-shadow: 2px 2px 0 #000;
+            flex-shrink: 0;
+            letter-spacing: 0.5px;
+          }
+
+          .wlp-queue {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(5px, 0.7vh, 10px);
             overflow: hidden;
             flex: 1;
             min-height: 0;
           }
 
-          .poster-queue-item {
+          .wlp-queue-item {
             display: flex;
             align-items: center;
-            background: #000;
-            border: clamp(2px, 0.2vw, 3px) solid #333;
-            padding: clamp(6px, 0.8vh, 10px);
-            gap: clamp(8px, 1vw, 15px);
+            background: rgba(0,0,0,0.72);
+            border: 2px solid #222;
+            padding: clamp(5px, 0.7vh, 9px);
+            gap: clamp(6px, 0.8vw, 12px);
             position: relative;
-            flex-shrink: 1;
-            min-height: 0;
+            flex-shrink: 0;
           }
-          
-          .poster-queue-item::before {
+
+          .wlp-queue-item::before {
             content: '';
             position: absolute;
-            left: -6px; top: -6px;
-            width: 12px; height: 12px;
+            left: -4px; top: -4px;
+            width: 8px; height: 8px;
             background: #cc0000;
           }
 
-          .poster-queue-num {
+          .wlp-queue-num {
             font-family: 'Impact', sans-serif;
-            font-size: clamp(20px, 2.5vh, 35px);
-            color: #555;
-            width: clamp(25px, 3vw, 40px);
+            font-size: clamp(15px, 2vh, 26px);
+            color: #3a3a3a;
+            width: clamp(18px, 2.2vw, 30px);
             text-align: center;
-            line-height: 1;
+            flex-shrink: 0;
           }
 
-          .poster-queue-cover {
-            width: clamp(35px, 4.5vh, 60px);
-            height: clamp(35px, 4.5vh, 60px);
+          .wlp-queue-cover {
+            width: clamp(26px, 4vh, 50px);
+            height: clamp(26px, 4vh, 50px);
             object-fit: cover;
             border: 2px solid #333;
-            filter: grayscale(0.2);
             flex-shrink: 0;
           }
 
-          .poster-queue-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
+          .wlp-queue-info {
+            flex: 1; min-width: 0; overflow: hidden;
           }
 
-          .poster-queue-song {
+          .wlp-queue-song {
             font-weight: 900;
-            font-size: clamp(13px, 1.6vh, 18px);
+            font-size: clamp(9px, 1.3vh, 15px);
             color: #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             text-transform: uppercase;
-            margin: 0 0 3px 0;
+            margin: 0 0 2px 0;
           }
 
-          .poster-queue-artist {
-            font-size: clamp(10px, 1.2vh, 14px);
-            color: #888;
+          .wlp-queue-artist {
+            font-size: clamp(8px, 1vh, 12px);
+            color: #666;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             margin: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-family: 'Courier New', monospace; font-weight: bold;
+          }
+
+          .wlp-queue-table {
+            background: #cc0000; color: #fff;
+            font-weight: 900;
+            padding: 3px 5px;
+            font-size: clamp(7px, 0.9vh, 11px);
             font-family: 'Courier New', monospace;
-            font-weight: bold;
-          }
-
-          .poster-queue-table {
-            background: #cc0000;
-            color: #fff;
-            font-weight: 900;
-            padding: 4px 8px;
-            font-size: clamp(10px, 1.2vh, 14px);
-            font-family: 'Courier New', Courier, monospace;
-            border: 2px solid #000;
+            border: 1px solid #000;
             flex-shrink: 0;
+            white-space: nowrap;
           }
 
-          /* Ticker */
-          .poster-ticker {
-            height: clamp(50px, 5vh, 70px);
-            background: #cc0000;
-            color: #000;
+          .wlp-footer {
             display: flex;
+            justify-content: space-between;
             align-items: center;
+            padding: 0 clamp(14px, 2.2vw, 30px);
+            height: clamp(28px, 4.2vh, 52px);
+            flex-shrink: 0;
+            position: relative; z-index: 15;
+            box-sizing: border-box;
+            margin-bottom: clamp(2px, 0.3vh, 5px);
+          }
+
+          .wlp-footer-krom {
+            height: 88%; object-fit: contain; background: transparent; display: block;
+          }
+          .wlp-footer-brand {
+            height: 82%; object-fit: contain; background: transparent; display: block;
+          }
+          .wlp-footer-stamp {
+            height: 155%; object-fit: contain; background: transparent; display: block;
+            transform: rotate(-8deg) translateY(-22%);
+            filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.55));
+          }
+
+          .wlp-ticker {
+            height: clamp(38px, 4.8vh, 60px);
+            background: #cc0000; color: #000;
+            display: flex; align-items: center;
             font-family: 'Courier New', Courier, monospace;
             font-weight: 900;
-            font-size: clamp(18px, 2.2vh, 32px);
+            font-size: clamp(13px, 1.9vh, 27px);
             text-transform: uppercase;
             overflow: hidden;
-            border-top: clamp(4px, 0.5vh, 8px) solid #000;
-            box-shadow: 0 -10px 20px rgba(0,0,0,0.8);
-            position: relative;
-            z-index: 20;
+            border-top: clamp(3px, 0.4vh, 6px) solid #000;
+            box-shadow: 0 -6px 16px rgba(0,0,0,0.8);
+            position: relative; z-index: 20;
             flex-shrink: 0;
           }
 
-          .poster-ticker-label {
+          .wlp-ticker-label {
             background: #000;
-            padding: 0 clamp(10px, 1.5vw, 20px);
+            padding: 0 clamp(8px, 1.2vw, 16px);
             height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2;
-            box-shadow: 10px 0 15px rgba(0,0,0,0.8);
-            border-right: 5px solid #cc0000;
+            display: flex; align-items: center;
             flex-shrink: 0;
+            border-right: 4px solid #cc0000;
+            box-shadow: 8px 0 12px rgba(0,0,0,0.8);
           }
 
-          .poster-ticker-scroll {
+          .wlp-ticker-label-img {
+            height: 62%; object-fit: contain; background: transparent; display: block;
+          }
+
+          .wlp-ticker-scroll {
             white-space: nowrap;
-            animation: posterScroll 25s linear infinite;
-            padding-left: 30px;
-            text-shadow: 1px 1px 0 #fff;
+            animation: wlpScroll 28s linear infinite;
+            padding-left: 22px;
           }
 
-          @keyframes posterScroll {
+          @keyframes wlpScroll {
             0% { transform: translateX(0); }
             100% { transform: translateX(-50%); }
           }
 
-          /* Takeover & Reactions */
-          .poster-takeover {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.95);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            animation: stampIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            background-image: radial-gradient(circle at center, #330000 0%, #000 100%);
+          .wlp-takeover {
+            position: absolute; inset: 0; z-index: 100;
+            background: radial-gradient(circle at center, #330000 0%, #000 100%);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center;
+            animation: wlpStamp 0.4s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
           }
 
-          @keyframes stampIn {
+          @keyframes wlpStamp {
             0% { transform: scale(2) rotate(10deg); opacity: 0; }
             100% { transform: scale(1) rotate(0deg); opacity: 1; }
           }
 
-          .poster-takeover-title {
+          .wlp-takeover-cover {
+            width: clamp(150px, 32vh, 380px); height: clamp(150px, 32vh, 380px);
+            border: clamp(6px, 1.2vh, 16px) solid #fff;
+            box-shadow: clamp(8px, 1.5vw, 20px) clamp(8px, 1.5vw, 20px) 0 #cc0000;
+            transform: rotate(3deg); object-fit: cover;
+          }
+
+          .wlp-takeover-title {
             font-family: 'Impact', sans-serif;
-            font-size: clamp(50px, 8vh, 130px);
-            color: #fff;
-            text-transform: uppercase;
-            line-height: 0.9;
-            margin: clamp(15px, 2vh, 30px) 0 10px 0;
-            text-shadow: 8px 8px 0 #cc0000, -3px -3px 0 #000;
-            transform: rotate(-2deg);
+            font-size: clamp(38px, 6.5vh, 100px);
+            color: #fff; text-transform: uppercase;
+            line-height: 0.9; margin: clamp(10px, 1.6vh, 20px) 0 6px 0;
+            text-shadow: 5px 5px 0 #cc0000; transform: rotate(-2deg);
           }
 
-          .poster-takeover-artist {
-            font-size: clamp(24px, 4vh, 50px);
-            font-weight: 900;
-            color: #000;
-            background: #fff;
-            padding: 5px 20px;
-            margin: 10px 0;
-            transform: rotate(1deg);
+          .wlp-takeover-artist {
+            font-size: clamp(16px, 2.8vh, 38px);
+            font-weight: 900; color: #000;
+            background: #fff; padding: 4px 16px;
+            margin: 6px 0; transform: rotate(1deg);
           }
 
-          .poster-takeover-cover {
-            width: clamp(200px, 40vh, 500px);
-            height: clamp(200px, 40vh, 500px);
-            border: clamp(8px, 1.5vh, 20px) solid #fff;
-            box-shadow: clamp(10px, 2vw, 25px) clamp(10px, 2vw, 25px) 0 #cc0000;
-            transform: rotate(3deg);
+          .wlp-takeover-table {
+            background: #cc0000; color: #fff;
+            font-weight: 900; font-family: 'Courier New', monospace;
+            font-size: clamp(14px, 2.2vh, 30px);
+            padding: clamp(4px, 0.7vh, 9px) clamp(10px, 1.6vw, 22px);
+            border: 3px solid #000; margin-top: 18px;
+            box-shadow: 4px 4px 0 #000;
           }
 
-          .poster-reaction-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 90;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+          .wlp-reaction {
+            position: absolute; inset: 0; z-index: 90;
+            display: flex; justify-content: center; align-items: center;
             pointer-events: none;
-            background: rgba(204, 0, 0, 0.4);
-            mix-blend-mode: color-dodge;
+            background: rgba(204,0,0,0.32);
           }
 
-          .poster-reaction-text {
+          .wlp-reaction-text {
             font-family: 'Impact', sans-serif;
-            font-size: clamp(80px, 12vh, 200px);
-            color: #fff;
-            text-transform: uppercase;
-            text-shadow: 15px 15px 0 #cc0000, -3px -3px 0 #000;
-            transform: rotate(-10deg) scale(1.5);
-            animation: pulseHype 0.4s infinite alternate;
+            font-size: clamp(60px, 10vh, 170px);
+            color: #fff; text-transform: uppercase;
+            text-shadow: 10px 10px 0 #cc0000, -3px -3px 0 #000;
+            animation: wlpPulse 0.4s infinite alternate;
           }
 
-          @keyframes pulseHype {
+          @keyframes wlpPulse {
             0% { transform: rotate(-10deg) scale(1); }
             100% { transform: rotate(-5deg) scale(1.1); }
           }
-
-          /* Step 2 styles */
-          .poster-dedication-mascot {
-            height: 95%;
-            max-height: clamp(50px, 8vh, 95px);
-            object-fit: contain;
-            flex-shrink: 0;
-          }
-          .poster-dedication-text-container {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            min-width: 0;
-          }
-          .poster-dedication-text {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: clamp(14px, 1.8vh, 24px);
-            font-weight: 900;
-            color: #fff;
-            line-height: 1.2;
-            word-break: break-word;
-            text-shadow: 2px 2px 0 #000;
-          }
-          .poster-ticker-label-img {
-            height: 70%;
-            object-fit: contain;
-            display: block;
-          }
-          .poster-footer-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 clamp(15px, 2.5vw, 50px);
-            height: clamp(35px, 5vh, 65px);
-            background: transparent;
-            z-index: 15;
-            position: relative;
-            flex-shrink: 0;
-            box-sizing: border-box;
-            margin-bottom: clamp(2px, 0.4vh, 8px);
-          }
-          .poster-footer-left {
-            display: flex;
-            align-items: center;
-            height: 100%;
-            flex: 1;
-          }
-          .poster-footer-center {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-            flex: 2;
-          }
-          .poster-footer-right {
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            height: 100%;
-            flex: 1;
-            position: relative;
-          }
-          .poster-footer-mini-krombacher {
-            height: 90%;
-            max-height: 100%;
-            object-fit: contain;
-          }
-          .poster-footer-brand-strip {
-            height: 85%;
-            max-height: 100%;
-            object-fit: contain;
-          }
-          .poster-footer-stamp {
-            height: 160%;
-            object-fit: contain;
-            transform: rotate(-8deg) translateY(-20%);
-            filter: drop-shadow(3px 3px 5px rgba(0,0,0,0.6));
-            z-index: 30;
-          }
         `}</style>
 
-      {/* REACTION OVERLAY */}
-      {tvReaction && (
-        <div className="poster-reaction-overlay">
-          <div className="poster-reaction-text">
-            {tvReaction.type === "hype" && "HYPE!"}
-            {tvReaction.type === "party" && "PARTY!"}
-            {tvReaction.type === "cheers" && "CHEERS!"}
+        {tvReaction && (
+          <div className="wlp-reaction">
+            <div className="wlp-reaction-text">
+              {tvReaction.type === "hype" && "HYPE!"}
+              {tvReaction.type === "party" && "PARTY!"}
+              {tvReaction.type === "cheers" && "CHEERS!"}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* TAKEOVER OVERLAY */}
-      {showTakeover && takeoverRequest && (
-        <div className="poster-takeover">
-          <img src={takeoverRequest.song.cover} className="poster-takeover-cover" alt="" />
-          <h1 className="poster-takeover-title">{takeoverRequest.song.title}</h1>
-          <p className="poster-takeover-artist">{takeoverRequest.song.artist}</p>
-          <div className="poster-requester-badge" style={{ marginTop: '30px', fontSize: '40px' }}>
-            TAVOLO {takeoverRequest.table}
+        {showTakeover && takeoverRequest && (
+          <div className="wlp-takeover">
+            <img src={takeoverRequest.song.cover} className="wlp-takeover-cover" alt="" />
+            <h1 className="wlp-takeover-title">{takeoverRequest.song.title}</h1>
+            <p className="wlp-takeover-artist">{takeoverRequest.song.artist}</p>
+            <div className="wlp-takeover-table">TAVOLO {takeoverRequest.table}</div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Decorative Orange Walrus Background Layer */}
-      <img
-        src="/assets/tv-poster/02-hero/walrus-orange-hero.png"
-        className="poster-walrus-orange-hero"
-        alt=""
-      />
+        <img
+          src="/assets/tv-poster/02-hero/walrus-orange-hero.png"
+          className="wlp-walrus"
+          alt=""
+        />
 
-      <div className="poster-main-layout">
+        <div className="wlp-main">
 
-        {/* LEFT PANEL */}
-        <div className="poster-left-panel">
-          <div className="poster-header">
-            <div className="poster-header-logo-container">
+          <div className="wlp-left">
+            <div className="wlp-header">
               <img
                 src="/assets/tv-poster/generated/walbox-logo-full.png"
-                alt="Walbox Logo"
-                className="poster-logo-img"
+                alt="Walbox"
+                className="wlp-logo"
               />
+              {currentRequest && (
+                <div className="wlp-mood-badge">⚡ {currentRequest.mood.toUpperCase()}</div>
+              )}
             </div>
-            {currentRequest && (
-              <div className="poster-requester-badge" style={{ alignSelf: 'flex-start', background: '#000', color: '#fff', borderColor: '#cc0000' }}>
-                MOOD: {currentRequest.mood.toUpperCase()}
+
+            {currentRequest ? (
+              <div className="wlp-now-playing">
+                <div className="wlp-cover-row">
+                  <div className="wlp-vinyl">
+                    <div className={`wlp-vinyl-disc ${playback.isPlaying ? "spinning" : ""}`}>
+                      <img src={currentRequest.song.cover} alt="" className="wlp-vinyl-label" />
+                    </div>
+                    <div className="wlp-vinyl-sleeve">
+                      <img src={currentRequest.song.cover} alt="" className="wlp-sleeve-img" />
+                    </div>
+                    <img
+                      src="/assets/tv-poster/cover-frame-worn.png"
+                      className="wlp-cover-frame"
+                      alt=""
+                      aria-hidden="true"
+                    />
+                  </div>
+
+                  <div className="wlp-song-info">
+                    <div className="wlp-meta-row">
+                      <img
+                        src="/assets/tv-poster/02-hero/red-waveform.png"
+                        alt=""
+                        className="wlp-waveform"
+                      />
+                      <div className="wlp-table-pill">TAVOLO {currentRequest.table}</div>
+                    </div>
+                    <h1 className="wlp-title">{currentRequest.song.title}</h1>
+                    <h2 className="wlp-artist">{currentRequest.song.artist}</h2>
+                    {currentRequest.dedication && (
+                      <div className="wlp-dedication">
+                        <div className="wlp-dedic-label">DEDICA DEL TAVOLO ★★</div>
+                        <div className="wlp-dedic-bubble">
+                          <img
+                            src="/assets/tv-poster/04-lower/dedication-mascot-small.png"
+                            alt=""
+                            className="wlp-dedic-mascot"
+                          />
+                          <span className="wlp-dedic-text">"{currentRequest.dedication}"</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="wlp-progress-wrap">
+                  <div className="wlp-progress-track">
+                    <div
+                      className="wlp-progress-fill"
+                      style={{ width: `${(playback.progress / playback.duration) * 100}%` }}
+                    />
+                  </div>
+                  <div className="wlp-time-row">
+                    <span>{formatTime(playback.progress)}</span>
+                    <span>{formatTime(playback.duration)}</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="wlp-idle">
+                <h1 className="wlp-title" style={{ fontSize: "clamp(56px,9.5vh,125px)", textAlign: "center" }}>
+                  NO SIGNAL
+                </h1>
+                <h2 className="wlp-artist" style={{ fontSize: "clamp(20px,3.2vh,42px)" }}>
+                  SCAN THE QR TO PLAY
+                </h2>
               </div>
             )}
           </div>
 
-          {currentRequest ? (
-            <div className="poster-now-playing">
-              <div className="poster-cover-hero-container">
-
-                {/* Vinyl / Cover Component */}
-                <div className="poster-vinyl-hero">
-                  <div className={`poster-vinyl-disc ${playback.isPlaying ? 'is-playing' : ''}`}>
-                    <img src={currentRequest.song.cover} alt="" className="poster-vinyl-label" />
-                  </div>
-                  <div className="poster-vinyl-sleeve">
-                    <img src={currentRequest.song.cover} alt="" className="poster-sleeve-img" />
-                  </div>
-                </div>
-
-                <div className="poster-song-info-block">
-                  {/* Meta row containing waveform and table badge */}
-                  <div className="poster-meta-row">
-                    <div className="poster-waveform-container">
-                      <img
-                        src="/assets/tv-poster/02-hero/red-waveform.png"
-                        alt="Waveform"
-                        className="poster-waveform-img"
-                      />
-                    </div>
-                    <div className="poster-table-pill">
-                      TAVOLO {currentRequest.table}
-                    </div>
-                  </div>
-
-                  <h1 className="poster-song-title">{currentRequest.song.title}</h1>
-                  <h2 className="poster-song-artist">{currentRequest.song.artist}</h2>
-
-                  {currentRequest.dedication && (
-                    <div className="poster-dedication-wrapper">
-                      <div className="poster-dedication-label">
-                        DEDICA DA TAVOLO {currentRequest.table}:
-                      </div>
-                      <div className="poster-dedication-bubble">
-                        <img
-                          src="/assets/tv-poster/04-lower/dedication-mascot-small.png"
-                          alt=""
-                          className="poster-dedication-mascot"
-                        />
-                        <div className="poster-dedication-text-container">
-                          <span className="poster-dedication-text">
-                            "{currentRequest.dedication}"
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="poster-progress-container">
-                <div
-                  className="poster-progress-fill"
-                  style={{ width: `${(playback.progress / playback.duration) * 100}%` }}
-                ></div>
-              </div>
-              <div className="poster-time-labels">
-                <span>{formatTime(playback.progress)}</span>
-                <span>{formatTime(playback.duration)}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="poster-now-playing" style={{ opacity: 0.6, alignItems: 'center' }}>
-              <h1 className="poster-song-title" style={{ fontSize: '130px', textAlign: 'center' }}>NO SIGNAL</h1>
-              <h2 className="poster-song-artist" style={{ fontSize: '50px' }}>SCAN THE QR TO PLAY</h2>
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT PANEL */}
-        <div className="poster-right-panel">
-
-          <div className="poster-qr-card-wrapper">
+          <div className="wlp-right">
             <img
               src="/assets/tv-poster/03-sidebar/qr-card-frame.png"
               alt="Scan QR"
-              className="poster-qr-card-img"
+              className="wlp-qr-card"
             />
-          </div>
-
-          <div className="poster-krombacher-card-wrapper">
             <img
               src="/assets/tv-poster/03-sidebar/krombacher-card.png"
-              alt="Krombacher Card"
-              className="poster-krombacher-card-img"
+              alt="Krombacher"
+              className="wlp-krom-card"
+            />
+            <div className="wlp-queue-label">★ PROSSIMI IN CODA</div>
+            <div className="wlp-queue">
+              {displayQueue.slice(0, 3).map((req, idx) => (
+                <div key={req.id} className="wlp-queue-item">
+                  <div className="wlp-queue-num">{idx + 1}</div>
+                  <img src={req.song.cover} alt="" className="wlp-queue-cover" />
+                  <div className="wlp-queue-info">
+                    <p className="wlp-queue-song">{req.song.title}</p>
+                    <p className="wlp-queue-artist">{req.song.artist}</p>
+                  </div>
+                  <div className="wlp-queue-table">{tableLabel(req.table)}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
+
+        <div className="wlp-footer">
+          <div style={{ display: "flex", alignItems: "center", height: "100%" }}>
+            <img src="/assets/tv-poster/04-lower/krombacher-mini-left.png" alt="" className="wlp-footer-krom" />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+            <img src="/assets/tv-poster/04-lower/footer-brand-strip.png" alt="" className="wlp-footer-brand" />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", height: "100%" }}>
+            <img src="/assets/tv-poster/04-lower/walrus-approved-stamp.png" alt="" className="wlp-footer-stamp" />
+          </div>
+        </div>
+
+        <div className="wlp-ticker">
+          <div className="wlp-ticker-label">
+            <img
+              src="/assets/tv-poster/04-lower/ticker-label-dediche.png"
+              alt="DEDICHE"
+              className="wlp-ticker-label-img"
             />
           </div>
-
-          <div className="poster-queue-title">UPCOMING TRACKS</div>
-
-          <div className="poster-queue-list">
-            {displayQueue.map((req, idx) => (
-              <div key={req.id} className="poster-queue-item">
-                <div className="poster-queue-num">{idx + 1}</div>
-                <img src={req.song.cover} className="poster-queue-cover" alt="" />
-                <div className="poster-queue-info">
-                  <p className="poster-queue-song">{req.song.title}</p>
-                  <p className="poster-queue-artist">{req.song.artist}</p>
-                </div>
-                <div className="poster-queue-table">
-                  {String(req.table).startsWith('WALRUS') ? req.table : `T${req.table}`}
-                </div>
-              </div>
-            ))}
-            {approvedQueue.length > 4 && (
-              <div style={{ textAlign: 'center', color: '#cc0000', marginTop: '5px', fontWeight: '900', fontSize: '20px', fontFamily: 'Courier New' }}>
-                + {approvedQueue.length - 4} MORE TRACKS
-              </div>
-            )}
+          <div className="wlp-ticker-scroll">
+            {tickerText} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {tickerText}
           </div>
         </div>
 
       </div>
-
-      {/* FOOTER STRIP / STAMPS ROW */}
-      <div className="poster-footer-row">
-        <div className="poster-footer-left">
-          <img
-            src="/assets/tv-poster/04-lower/krombacher-mini-left.png"
-            alt="Krombacher"
-            className="poster-footer-mini-krombacher"
-          />
-        </div>
-        <div className="poster-footer-center">
-          <img
-            src="/assets/tv-poster/04-lower/footer-brand-strip.png"
-            alt="Brand Strip"
-            className="poster-footer-brand-strip"
-          />
-        </div>
-        <div className="poster-footer-right">
-          <img
-            src="/assets/tv-poster/04-lower/walrus-approved-stamp.png"
-            alt="Walrus Approved"
-            className="poster-footer-stamp"
-          />
-        </div>
-      </div>
-
-      {/* TICKER */}
-      <div className="poster-ticker">
-        <div className="poster-ticker-label">
-          <img
-            src="/assets/tv-poster/04-lower/ticker-label-dediche.png"
-            alt="DEDICHE"
-            className="poster-ticker-label-img"
-          />
-        </div>
-        <div className="poster-ticker-scroll">
-          {tickerText} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {tickerText}
-        </div>
-      </div>
     </div>
-  </div>
-);
+  );
 }
