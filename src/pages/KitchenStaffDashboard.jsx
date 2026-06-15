@@ -1,20 +1,34 @@
 import { useState } from 'react';
 import { demoKitchenOrders, kitchenOrderStatuses } from '../data/kitchenMockData';
 
-const STATUS_FLOW = {
-  received:  { next: 'preparing', nextLabel: 'INIZIA PREPARAZIONE' },
-  preparing: { next: 'ready',     nextLabel: 'SEGNA PRONTO ✓' },
-  ready:     { next: 'delivered', nextLabel: 'CONSEGNATO ✓' },
-  delivered: { next: null,        nextLabel: null },
-  cancelled: { next: null,        nextLabel: null },
+const PRIMARY_ACTION = {
+  received:  { next: 'preparing', label: 'INIZIA' },
+  preparing: { next: 'ready',     label: 'PRONTO ✓' },
+  ready:     { next: 'delivered', label: 'CONSEGNATO ✓' },
 };
 
-const STATUS_SORT_ORDER = { received: 0, preparing: 1, ready: 2, delivered: 3, cancelled: 4 };
-
-const FILTERS = [
-  { key: 'active', label: 'Attivi' },
-  { key: 'ready',  label: '🟢 Pronti' },
-  { key: 'all',    label: 'Tutti' },
+const SECTIONS = [
+  {
+    key: 'ready',
+    label: 'PRONTI',
+    color: '#10b981',
+    bg: '#0a2a0a',
+    border: '#10b98133',
+  },
+  {
+    key: 'preparing',
+    label: 'IN PREPARAZIONE',
+    color: '#3b82f6',
+    bg: '#0a1020',
+    border: '#3b82f633',
+  },
+  {
+    key: 'received',
+    label: 'NUOVI',
+    color: '#f5c842',
+    bg: '#1a1400',
+    border: '#f5c84233',
+  },
 ];
 
 function initOrders() {
@@ -32,23 +46,14 @@ function elapsedMinutes(isoString) {
   return `${diff} min fa`;
 }
 
-function sortOrders(orders) {
-  return [...orders].sort((a, b) => {
-    const statusDiff = STATUS_SORT_ORDER[a.status] - STATUS_SORT_ORDER[b.status];
-    if (statusDiff !== 0) return statusDiff;
-    return new Date(a.createdAt) - new Date(b.createdAt);
-  });
+function sortByTime(orders) {
+  return [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
 
 export default function KitchenStaffDashboard() {
   const [orders, setOrders] = useState(initOrders);
-  const [filter, setFilter] = useState('active');
 
   const changeStatus = (id, newStatus) => {
-    if (newStatus === 'cancelled') {
-      const ok = window.confirm('Annullare questo ordine? Questa azione non si può recuperare.');
-      if (!ok) return;
-    }
     setOrders((prev) =>
       prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o))
     );
@@ -57,16 +62,7 @@ export default function KitchenStaffDashboard() {
   const activeCount = orders.filter(
     (o) => o.status !== 'delivered' && o.status !== 'cancelled'
   ).length;
-
   const readyCount = orders.filter((o) => o.status === 'ready').length;
-
-  const filteredOrders = orders.filter((o) => {
-    if (filter === 'active') return o.status !== 'delivered' && o.status !== 'cancelled';
-    if (filter === 'ready') return o.status === 'ready';
-    return true;
-  });
-
-  const visibleOrders = sortOrders(filteredOrders);
 
   return (
     <div style={styles.page}>
@@ -91,128 +87,87 @@ export default function KitchenStaffDashboard() {
         </div>
       )}
 
-      {/* Filters */}
-      <div style={styles.filterRow}>
-        {FILTERS.map((f) => (
-          <button
-            key={f.key}
-            style={{ ...styles.filterBtn, ...(filter === f.key ? styles.filterBtnActive : {}) }}
-            onClick={() => setFilter(f.key)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Orders */}
-      <div style={styles.orderList}>
-        {visibleOrders.length === 0 && (
-          <div style={styles.empty}>Nessun ordine in questa vista.</div>
-        )}
-
-        {visibleOrders.map((order) => {
-          const statusInfo = kitchenOrderStatuses[order.status];
-          const flow = STATUS_FLOW[order.status];
-          const isReady = order.status === 'ready';
-          const isTerminal = order.status === 'delivered' || order.status === 'cancelled';
+      {/* Sections */}
+      <div style={styles.sections}>
+        {SECTIONS.map((section) => {
+          const sectionOrders = sortByTime(
+            orders.filter((o) => o.status === section.key)
+          );
+          if (sectionOrders.length === 0) return null;
 
           return (
-            <div
-              key={order.id}
-              style={{
-                ...styles.card,
-                borderColor: isReady ? '#10b981' : '#2a2a2a',
-                boxShadow: isReady ? '0 0 14px #10b98140' : 'none',
-              }}
-            >
-              {/* Ready alert inside card */}
-              {isReady && (
-                <div style={styles.readyAlert}>
-                  🟢 PRONTO — CHIAMA IL CLIENTE
-                </div>
-              )}
-
-              {/* Card header */}
-              <div style={styles.cardHeader}>
-                <div style={styles.cardMeta}>
-                  <span style={styles.cardTable}>{order.table}</span>
-                  <span style={styles.cardNickname}>{order.nickname}</span>
-                </div>
-                <span
-                  style={{
-                    ...styles.statusChip,
-                    background: statusInfo.color + '22',
-                    color: statusInfo.color,
-                    border: `1px solid ${statusInfo.color}55`,
-                  }}
-                >
-                  {statusInfo.label}
+            <div key={section.key} style={styles.section}>
+              {/* Section header */}
+              <div
+                style={{
+                  ...styles.sectionHeader,
+                  background: section.bg,
+                  borderLeft: `3px solid ${section.color}`,
+                }}
+              >
+                <span style={{ ...styles.sectionLabel, color: section.color }}>
+                  {section.label}
+                </span>
+                <span style={{ ...styles.sectionCount, color: section.color }}>
+                  {sectionOrders.length}
                 </span>
               </div>
 
-              {/* Time + elapsed */}
-              <div style={styles.cardTime}>
-                {formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}
+              {/* Order rows */}
+              <div style={styles.rowList}>
+                {sectionOrders.map((order) => {
+                  const action = PRIMARY_ACTION[order.status];
+                  const itemsSummary = order.items
+                    .map((i) => `${i.quantity}× ${i.name}`)
+                    .join('  ·  ');
+
+                  return (
+                    <div key={order.id} style={styles.row}>
+                      {/* Left: table + nickname + time */}
+                      <div style={styles.rowLeft}>
+                        <span style={styles.rowTable}>{order.table}</span>
+                        <span style={styles.rowNickname}>{order.nickname}</span>
+                        <span style={styles.rowTime}>
+                          {formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Center: items + note */}
+                      <div style={styles.rowCenter}>
+                        <div style={styles.rowItems}>{itemsSummary}</div>
+                        {order.note ? (
+                          <div style={styles.rowNote}>
+                            ⚠️ {order.note}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      {/* Right: primary action */}
+                      <div style={styles.rowRight}>
+                        {action && (
+                          <button
+                            style={{
+                              ...styles.btnAction,
+                              background: section.color,
+                              color: section.key === 'received' ? '#111' : '#fff',
+                            }}
+                            onClick={() => changeStatus(order.id, action.next)}
+                          >
+                            {action.label}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-
-              {/* Note cucina — SOPRA gli item, massima evidenza */}
-              {order.note ? (
-                <div style={styles.noteBox}>
-                  <span style={styles.noteLabel}>⚠️ NOTA: </span>
-                  <span style={styles.noteText}>{order.note}</span>
-                </div>
-              ) : null}
-
-              {/* Items — solo quantità e nome */}
-              <div style={styles.itemList}>
-                {order.items.map((item, i) => (
-                  <div key={i} style={styles.itemRow}>
-                    <span style={styles.itemQty}>{item.quantity}×</span>
-                    <span style={styles.itemName}>{item.name}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Actions */}
-              {!isTerminal && (
-                <div style={styles.actions}>
-                  {flow.next && (
-                    <button
-                      style={styles.btnPrimary}
-                      onClick={() => changeStatus(order.id, flow.next)}
-                    >
-                      {flow.nextLabel}
-                    </button>
-                  )}
-
-                  <div style={styles.actionsSecondary}>
-                    {order.status !== 'received' && (
-                      <button
-                        style={styles.btnSecondary}
-                        onClick={() => changeStatus(order.id, 'received')}
-                      >
-                        ← Torna a ricevuto
-                      </button>
-                    )}
-                    <button
-                      style={styles.btnCancel}
-                      onClick={() => changeStatus(order.id, 'cancelled')}
-                    >
-                      Annulla
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Terminal state */}
-              {isTerminal && (
-                <div style={styles.terminalLabel}>
-                  {order.status === 'delivered' ? '✓ Consegnato' : '✕ Annullato'}
-                </div>
-              )}
             </div>
           );
         })}
+
+        {activeCount === 0 && (
+          <div style={styles.empty}>Nessun ordine attivo. In attesa di comande.</div>
+        )}
       </div>
     </div>
   );
@@ -230,7 +185,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '20px 16px 14px',
+    padding: '16px 16px 12px',
     borderBottom: '1px solid #1e1e1e',
   },
   headerTitle: { fontSize: 18, fontWeight: 900, letterSpacing: 2, color: '#f5c842' },
@@ -260,175 +215,110 @@ const styles = {
     fontSize: 14,
     fontWeight: 800,
     letterSpacing: 0.5,
-    padding: '12px 16px',
+    padding: '11px 16px',
     textAlign: 'center',
     borderBottom: '1px solid #10b98133',
   },
-  filterRow: {
-    display: 'flex',
-    gap: 8,
-    padding: '12px 16px',
-    borderBottom: '1px solid #1a1a1a',
-  },
-  filterBtn: {
-    background: '#1a1a1a',
-    border: '1px solid #2a2a2a',
-    borderRadius: 20,
-    color: '#666',
-    padding: '7px 16px',
-    fontSize: 13,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  filterBtnActive: {
-    background: '#2a2000',
-    border: '1px solid #f5c842',
-    color: '#f5c842',
-  },
-  orderList: {
+  sections: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 16,
-    padding: '16px',
+    gap: 0,
   },
-  empty: {
-    color: '#444',
-    fontSize: 14,
-    textAlign: 'center',
-    padding: '40px 0',
+  section: {
+    borderBottom: '1px solid #1a1a1a',
   },
-  card: {
-    background: '#1a1a1a',
-    border: '1px solid #2a2a2a',
-    borderRadius: 12,
-    padding: '14px',
-    transition: 'border-color 0.2s, box-shadow 0.2s',
-  },
-  readyAlert: {
-    background: '#0a2a0a',
-    color: '#10b981',
-    fontSize: 13,
-    fontWeight: 800,
-    letterSpacing: 1,
-    borderRadius: 8,
-    padding: '8px 12px',
-    marginBottom: 12,
-    textAlign: 'center',
-    border: '1px solid #10b98133',
-  },
-  cardHeader: {
+  sectionHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    padding: '8px 16px',
   },
-  cardMeta: { display: 'flex', alignItems: 'center', gap: 10 },
-  cardTable: {
-    background: '#f5c842',
-    color: '#111',
-    fontSize: 14,
+  sectionLabel: {
+    fontSize: 11,
     fontWeight: 900,
-    borderRadius: 6,
-    padding: '3px 10px',
+    letterSpacing: 1.5,
   },
-  cardNickname: { fontSize: 15, fontWeight: 700, color: '#f5f0e8' },
-  cardTime: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 12,
+  sectionCount: {
+    fontSize: 13,
+    fontWeight: 900,
   },
-  statusChip: {
-    fontSize: 12,
-    fontWeight: 700,
-    borderRadius: 20,
-    padding: '4px 12px',
-    flexShrink: 0,
-  },
-  noteBox: {
-    background: '#1e1000',
-    border: '1px solid #f5c84255',
-    borderRadius: 8,
-    padding: '10px 12px',
-    marginBottom: 12,
-  },
-  noteLabel: {
-    fontSize: 12,
-    color: '#f5c842',
-    fontWeight: 800,
-    letterSpacing: 0.5,
-    marginRight: 4,
-  },
-  noteText: {
-    fontSize: 14,
-    color: '#f5c842',
-    fontWeight: 700,
-  },
-  itemList: {
+  rowList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 6,
-    marginBottom: 14,
   },
-  itemRow: { display: 'flex', alignItems: 'baseline', gap: 10 },
-  itemQty: {
-    fontSize: 22,
-    color: '#fff',
-    fontWeight: 900,
-    minWidth: 32,
-    lineHeight: 1,
+  row: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '12px 16px',
+    borderTop: '1px solid #1a1a1a',
   },
-  itemName: {
-    fontSize: 18,
-    color: '#f5f0e8',
-    fontWeight: 700,
-    flex: 1,
-    lineHeight: 1.3,
+  rowLeft: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 3,
+    flexShrink: 0,
+    width: 80,
   },
-  actions: { display: 'flex', flexDirection: 'column', gap: 10 },
-  btnPrimary: {
+  rowTable: {
     background: '#f5c842',
     color: '#111',
-    border: 'none',
-    borderRadius: 8,
-    padding: '16px',
     fontSize: 15,
     fontWeight: 900,
-    cursor: 'pointer',
-    width: '100%',
-    letterSpacing: 0.5,
+    borderRadius: 5,
+    padding: '2px 8px',
+    lineHeight: 1.4,
   },
-  actionsSecondary: {
+  rowNickname: {
+    fontSize: 12,
+    color: '#ccc',
+    fontWeight: 600,
+    maxWidth: 80,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  rowTime: {
+    fontSize: 11,
+    color: '#555',
+  },
+  rowCenter: {
+    flex: 1,
     display: 'flex',
-    gap: 8,
-    paddingTop: 2,
+    flexDirection: 'column',
+    gap: 4,
+    minWidth: 0,
   },
-  btnSecondary: {
-    flex: 1,
-    background: '#222',
-    border: '1px solid #333',
-    borderRadius: 8,
-    color: '#777',
-    padding: '9px',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
+  rowItems: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#f5f0e8',
+    lineHeight: 1.4,
   },
-  btnCancel: {
-    flex: 1,
-    background: '#1a0a0a',
-    border: '1px solid #ef444433',
-    borderRadius: 8,
-    color: '#ef4444',
-    padding: '9px',
-    fontSize: 12,
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  terminalLabel: {
-    textAlign: 'center',
+  rowNote: {
     fontSize: 13,
-    color: '#444',
-    fontWeight: 600,
-    paddingTop: 4,
+    fontWeight: 700,
+    color: '#f5a623',
+    lineHeight: 1.3,
+  },
+  rowRight: {
+    flexShrink: 0,
+  },
+  btnAction: {
+    border: 'none',
+    borderRadius: 8,
+    padding: '10px 14px',
+    fontSize: 12,
+    fontWeight: 900,
+    cursor: 'pointer',
+    letterSpacing: 0.3,
+    whiteSpace: 'nowrap',
+  },
+  empty: {
+    color: '#333',
+    fontSize: 14,
+    textAlign: 'center',
+    padding: '48px 16px',
   },
 };
