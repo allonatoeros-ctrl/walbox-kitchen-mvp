@@ -100,3 +100,18 @@ test('5. Staff dashboard shows T12 and Eros', async ({ page }) => {
   await expect(page.getByText('T12')).toBeVisible();
   await expect(page.getByText('Eros')).toBeVisible();
 });
+
+test('6. Jukebox shows Segui ordine CTA when active kitchen order exists', async ({ page }) => {
+  const orders = makeSeedOrder();
+  await page.evaluate(
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    { key: LS_ORDERS, data: orders },
+  );
+
+  await page.goto('/request?table=12&nickname=Eros');
+
+  await expect(page.getByRole('button', { name: /Segui ordine/i })).toBeVisible();
+
+  await page.getByRole('button', { name: /Segui ordine/i }).click();
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+});

@@ -24,6 +24,7 @@ export default function CustomerRequest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
 
+  const [hasActiveKitchenOrder, setHasActiveKitchenOrder] = useState(false);
   const notifiedSongIds = useRef(new Set());
   const submissionTimeoutRef = useRef(null);
   const [showLookUpAlert, setShowLookUpAlert] = useState(false);
@@ -73,6 +74,16 @@ export default function CustomerRequest() {
       setSubmittedRequests(myRequests.reverse()); // latest first
       setVenueSettings(getVenueSettings());
     };
+
+    // Check for active kitchen order for this table (read-only)
+    try {
+      const kitchenOrders = JSON.parse(localStorage.getItem('walbox_kitchen_orders_demo') || '[]');
+      const active = kitchenOrders.some(
+        (o) => o.table === `T${tableParam}` &&
+               ['received', 'preparing', 'ready'].includes(o.status)
+      );
+      setHasActiveKitchenOrder(active);
+    } catch { }
 
     syncState();
     const unsubscribe = subscribeState(syncState);
@@ -439,7 +450,8 @@ export default function CustomerRequest() {
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <button
             onClick={() => {
-              window.history.pushState({}, "", "/kitchen");
+              const dest = hasActiveKitchenOrder ? "/kitchen/status" : "/kitchen";
+              window.history.pushState({}, "", dest);
               window.dispatchEvent(new PopStateEvent("popstate"));
             }}
             style={{
@@ -459,7 +471,7 @@ export default function CustomerRequest() {
               minHeight: "40px",
             }}
           >
-            🍔 Cibo
+            {hasActiveKitchenOrder ? "📦 Segui ordine" : "🍔 Cibo"}
           </button>
           <span style={{
             background: "#ff6600",
