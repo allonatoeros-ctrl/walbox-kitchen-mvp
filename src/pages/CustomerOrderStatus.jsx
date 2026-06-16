@@ -73,7 +73,7 @@ export default function CustomerOrderStatus() {
       <div style={styles.header}>
         <div style={styles.headerLogo}>🦭</div>
         <div>
-          <div style={styles.headerTitle}>WALBOX KITCHEN</div>
+          <div style={styles.headerTitle}>WALRUS KITCHEN</div>
           <div style={styles.headerSub}>Segui il tuo ordine in tempo reale</div>
         </div>
       </div>
@@ -223,28 +223,45 @@ export default function CustomerOrderStatus() {
         </span>
       </div>
 
-      {/* Dev selector — solo per demo */}
-      <div style={styles.demoToggleRow}>
-        <button style={styles.demoToggleBtn} onClick={() => setDevOpen((v) => !v)}>
-          {devOpen ? '▲ Dev tools' : '▼ Dev tools'}
+      {/* Back to menu CTA */}
+      <div style={styles.backBtnWrap}>
+        <button
+          style={styles.backBtn}
+          onClick={() => {
+            window.history.pushState({}, "", "/kitchen");
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }}
+        >
+          ← Torna al menu
         </button>
       </div>
-      {devOpen && (
-        <div style={styles.demoBar}>
-          <span style={styles.demoLabel}>simula ordine:</span>
-          {orders.map((o) => (
-            <button
-              key={o.id}
-              style={{ ...styles.demoBtn, ...(o.id === selectedId ? styles.demoBtnActive : {}) }}
-              onClick={() => setSelectedId(o.id)}
-            >
-              {o.nickname} · {kitchenOrderStatuses[o.status]?.label}
+
+      {/* Dev selector — solo per demo */}
+      {import.meta.env.DEV && (
+        <>
+          <div style={styles.demoToggleRow}>
+            <button style={styles.demoToggleBtn} onClick={() => setDevOpen((v) => !v)}>
+              {devOpen ? '▲ Dev tools' : '▼ Dev tools'}
             </button>
-          ))}
-          <div style={styles.demoNote}>
-            Demo locale · sync multi-device richiederà Supabase
           </div>
-        </div>
+          {devOpen && (
+            <div style={styles.demoBar}>
+              <span style={styles.demoLabel}>simula ordine:</span>
+              {orders.map((o) => (
+                <button
+                  key={o.id}
+                  style={{ ...styles.demoBtn, ...(o.id === selectedId ? styles.demoBtnActive : {}) }}
+                  onClick={() => setSelectedId(o.id)}
+                >
+                  {o.nickname} · {kitchenOrderStatuses[o.status]?.label}
+                </button>
+              ))}
+              <div style={styles.demoNote}>
+                Demo locale · sync multi-device richiederà Supabase
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -257,6 +274,21 @@ const styles = {
     color: '#f5f0e8',
     fontFamily: "var(--font-sans)",
     paddingBottom: 48,
+  },
+  backBtnWrap: {
+    margin: '32px 16px 0',
+    display: 'flex',
+    justifyContent: 'center',
+  },
+  backBtn: {
+    background: 'transparent',
+    border: '1px solid #444',
+    borderRadius: 20,
+    color: '#aaa',
+    fontSize: 14,
+    fontWeight: 600,
+    padding: '10px 20px',
+    cursor: 'pointer',
   },
   demoToggleRow: {
     display: 'flex',

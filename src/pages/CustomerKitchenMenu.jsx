@@ -148,14 +148,16 @@ export default function CustomerKitchenMenu() {
 
       {/* Promo banner */}
       {promoItem && (
-        <div style={styles.promoBanner} onClick={() => { setActiveCategory('combo'); addItem(promoItem); }}>
+        <div style={styles.promoBanner}>
           <div style={styles.promoTag}>💥 PROMO SERATA</div>
           <div style={styles.promoName}>{promoItem.name}</div>
           <div style={styles.promoDesc}>{promoItem.description}</div>
           <div style={styles.promoFooter}>
             <span style={styles.promoPrice}>€{promoItem.price.toFixed(2)}</span>
             <span style={styles.promoPoints}>+{promoItem.points} punti</span>
-            <span style={styles.promoAdd}>+ Aggiungi</span>
+            <button style={styles.promoAddBtn} onClick={() => { setActiveCategory('combo'); addItem(promoItem); }}>
+              + Aggiungi
+            </button>
           </div>
         </div>
       )}
@@ -210,9 +212,9 @@ export default function CustomerKitchenMenu() {
 
       {/* Full-width sticky bottom cart dock */}
       {orderItems.length > 0 && (
-        <div style={styles.cartPill} onClick={() => setCartOpen(true)}>
+        <button aria-label="🛒 carrello" style={styles.cartPill} onClick={() => setCartOpen(true)}>
           <div style={styles.cartPillLeft}>
-            <span style={styles.cartPillIcon}>🛍️</span>
+            <span style={styles.cartPillIcon}>🛒</span>
             <div style={styles.cartPillTextCol}>
               <div style={styles.cartPillCount}>
                 {orderItems.reduce((s, o) => s + o.qty, 0)} ROBE NEL SACCO
@@ -222,10 +224,10 @@ export default function CustomerKitchenMenu() {
               </div>
             </div>
           </div>
-          <button style={styles.cartPillBtn}>
+          <span style={styles.cartPillBtn}>
             VAI ALL'ORDINE
-          </button>
-        </div>
+          </span>
+        </button>
       )}
 
       {/* Bottom sheet backdrop */}
@@ -290,7 +292,7 @@ const styles = {
     background: '#20120b',
     color: '#f7dfb5',
     fontFamily: "var(--font-sans)",
-    paddingBottom: 110,
+    paddingBottom: 'calc(110px + env(safe-area-inset-bottom))',
   },
   header: {
     display: 'flex',
@@ -309,7 +311,6 @@ const styles = {
     border: '2px solid #f5c842',
     borderRadius: 12,
     padding: '14px 16px',
-    cursor: 'pointer',
   },
   promoTag: { fontSize: 11, color: '#f5c842', fontWeight: 700, letterSpacing: 1, marginBottom: 6, fontFamily: 'var(--font-display)' },
   promoName: { fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 4, fontFamily: 'var(--font-display)' },
@@ -317,7 +318,16 @@ const styles = {
   promoFooter: { display: 'flex', alignItems: 'center', gap: 10 },
   promoPrice: { fontSize: 20, fontWeight: 800, color: '#f5c842', fontFamily: 'var(--font-display)' },
   promoPoints: { fontSize: 12, color: '#888', flex: 1 },
-  promoAdd: { fontSize: 13, color: '#f5c842', fontWeight: 700 },
+  promoAddBtn: {
+    background: 'transparent',
+    border: 'none',
+    fontSize: 13,
+    color: '#f5c842',
+    fontWeight: 700,
+    cursor: 'pointer',
+    padding: 0,
+    fontFamily: 'inherit',
+  },
   tabs: {
     display: 'flex',
     gap: 8,
@@ -409,7 +419,10 @@ const styles = {
     background: '#130906',
     border: 'none',
     borderTop: '2px solid #f05a24',
-    padding: '12px 16px',
+    paddingTop: 12,
+    paddingLeft: 16,
+    paddingRight: 16,
+    paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
     cursor: 'pointer',
     zIndex: 200,
     boxShadow: '0 -4px 10px rgba(0,0,0,0.5)',
