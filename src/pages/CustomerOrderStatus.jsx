@@ -34,7 +34,15 @@ function formatTime(isoString) {
 
 export default function CustomerOrderStatus() {
   const [orders, setOrders] = useState(readOrders);
-  const [selectedId, setSelectedId] = useState(() => getMostRecentId(readOrders()));
+  const [selectedId, setSelectedId] = useState(() => {
+    const list = readOrders();
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlOrderId = urlParams.get('orderId');
+    if (urlOrderId && list.some((o) => o.id === urlOrderId)) {
+      return urlOrderId;
+    }
+    return getMostRecentId(list);
+  });
   const [devOpen, setDevOpen] = useState(false);
 
   useEffect(() => {
@@ -52,6 +60,22 @@ export default function CustomerOrderStatus() {
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  useEffect(() => {
+    const handleNav = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlOrderId = urlParams.get('orderId');
+      if (urlOrderId) {
+        const fresh = readOrders();
+        if (fresh.some((o) => o.id === urlOrderId)) {
+          setOrders(fresh);
+          setSelectedId(urlOrderId);
+        }
+      }
+    };
+    window.addEventListener('popstate', handleNav);
+    return () => window.removeEventListener('popstate', handleNav);
   }, []);
 
   const order = orders.find((o) => o.id === selectedId) ?? orders[0];

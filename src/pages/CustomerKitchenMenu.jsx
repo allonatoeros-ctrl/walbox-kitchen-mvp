@@ -29,6 +29,7 @@ export default function CustomerKitchenMenu() {
   const [orderItems, setOrderItems] = useState([]);
   const [note, setNote] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submittedOrderId, setSubmittedOrderId] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
 
   const visibleItems = kitchenMenuItems.filter((i) => i.category === activeCategory);
@@ -89,12 +90,14 @@ export default function CustomerKitchenMenu() {
       const existing = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
       localStorage.setItem(LS_KEY, JSON.stringify([...existing, newOrder]));
     } catch { }
+    setSubmittedOrderId(newOrder.id);
     setSubmitted(true);
   };
 
   const handleReset = () => {
     setOrderItems([]);
     setNote('');
+    setSubmittedOrderId(null);
     setSubmitted(false);
   };
 
@@ -115,7 +118,8 @@ export default function CustomerKitchenMenu() {
           <button
             style={styles.btnFollowOrder}
             onClick={() => {
-              window.history.pushState({}, '', '/kitchen/status');
+              const url = submittedOrderId ? `/kitchen/status?orderId=${submittedOrderId}` : '/kitchen/status';
+              window.history.pushState({}, '', url);
               window.dispatchEvent(new PopStateEvent('popstate'));
             }}
           >
