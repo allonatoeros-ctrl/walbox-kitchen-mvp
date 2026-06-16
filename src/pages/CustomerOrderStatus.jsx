@@ -206,7 +206,8 @@ export default function CustomerOrderStatus() {
           <button
             style={styles.jukeBridgeBtn}
             onClick={() => {
-              window.history.pushState({}, '', '/request');
+              const tableNumber = (order.table || '').replace(/^T/i, '') || '7';
+              window.history.pushState({}, '', `/request?table=${tableNumber}`);
               window.dispatchEvent(new PopStateEvent('popstate'));
             }}
           >
