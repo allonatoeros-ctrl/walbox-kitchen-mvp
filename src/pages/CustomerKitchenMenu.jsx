@@ -90,6 +90,9 @@ export default function CustomerKitchenMenu() {
       const existing = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
       localStorage.setItem(LS_KEY, JSON.stringify([...existing, newOrder]));
     } catch { }
+    try {
+      localStorage.setItem('walbox_kitchen_last_order_id', newOrder.id);
+    } catch { }
     setSubmittedOrderId(newOrder.id);
     setSubmitted(true);
   };

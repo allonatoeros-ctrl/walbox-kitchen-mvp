@@ -41,6 +41,12 @@ export default function CustomerOrderStatus() {
     if (urlOrderId && list.some((o) => o.id === urlOrderId)) {
       return urlOrderId;
     }
+    try {
+      const lastOrderId = localStorage.getItem('walbox_kitchen_last_order_id');
+      if (lastOrderId && list.some((o) => o.id === lastOrderId)) {
+        return lastOrderId;
+      }
+    } catch { }
     return getMostRecentId(list);
   });
   const [devOpen, setDevOpen] = useState(false);
@@ -79,17 +85,51 @@ export default function CustomerOrderStatus() {
   }, []);
 
   const order = orders.find((o) => o.id === selectedId) ?? orders[0];
-  const statusInfo = kitchenOrderStatuses[order.status];
-  const isReady = order.status === 'ready';
-  const isPreparing = order.status === 'preparing';
-  const isReceived = order.status === 'received';
-  const isCancelled = order.status === 'cancelled';
+  const statusInfo = order ? kitchenOrderStatuses[order.status] : null;
+  const isReady = order ? order.status === 'ready' : false;
+  const isPreparing = order ? order.status === 'preparing' : false;
+  const isReceived = order ? order.status === 'received' : false;
+  const isCancelled = order ? order.status === 'cancelled' : false;
 
   useEffect(() => {
     if (isReady && navigator.vibrate) {
       navigator.vibrate([200, 100, 200]);
     }
   }, [isReady]);
+
+  if (!order) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.header}>
+          <div style={styles.headerLogo}>🦭</div>
+          <div>
+            <div style={styles.headerTitle}>WALRUS KITCHEN</div>
+            <div style={styles.headerSub}>Segui il tuo ordine in tempo reale</div>
+          </div>
+        </div>
+        <div style={{ padding: '60px 16px', textAlign: 'center' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
+          <h2 style={{ color: '#f5c842', marginBottom: 12, fontSize: 20, fontWeight: 800, fontFamily: 'var(--font-display)', letterSpacing: 1 }}>
+            Nessun ordine trovato
+          </h2>
+          <p style={{ color: '#aaa', fontSize: 14, marginBottom: 24, lineHeight: 1.5 }}>
+            Non abbiamo trovato nessun ordine attivo da mostrare.
+          </p>
+          <div style={styles.backBtnWrap}>
+            <button
+              style={styles.backBtn}
+              onClick={() => {
+                window.history.pushState({}, "", "/kitchen");
+                window.dispatchEvent(new PopStateEvent("popstate"));
+              }}
+            >
+              ← Torna al menu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
