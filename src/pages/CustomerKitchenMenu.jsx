@@ -102,6 +102,16 @@ export default function CustomerKitchenMenu() {
             Ordine ricevuto. Ti chiamiamo quando è pronto.
           </div>
           <div style={styles.confirmSub}>Problemi fuori, cibo dentro.</div>
+          <button
+            style={styles.btnFollowOrder}
+            onClick={() => {
+              window.history.pushState({}, '', '/kitchen/status');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+          >
+            Segui il tuo ordine →
+          </button>
+          <div style={styles.followHint}>Ti avvisiamo quando è pronto.</div>
           <button style={styles.btnSecondary} onClick={handleReset}>
             Nuovo ordine
           </button>
@@ -469,6 +479,26 @@ const styles = {
     fontWeight: 800,
     cursor: 'pointer',
     letterSpacing: 1,
+  },
+  btnFollowOrder: {
+    marginTop: 24,
+    width: '100%',
+    maxWidth: 280,
+    background: '#f5c842',
+    color: '#111',
+    border: 'none',
+    borderRadius: 10,
+    padding: '14px',
+    fontSize: 16,
+    fontWeight: 800,
+    cursor: 'pointer',
+    letterSpacing: 0.5,
+  },
+  followHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 4,
   },
   btnSecondary: {
     marginTop: 20,
