@@ -208,16 +208,24 @@ export default function CustomerKitchenMenu() {
         })}
       </div>
 
-      {/* Floating cart pill */}
+      {/* Full-width sticky bottom cart dock */}
       {orderItems.length > 0 && (
-        <button style={styles.cartPill} onClick={() => setCartOpen(true)}>
-          <span style={styles.cartPillIcon}>🛒</span>
-          <span style={styles.cartPillCount}>
-            {orderItems.reduce((s, o) => s + o.qty, 0)}
-          </span>
-          <span style={styles.cartPillDot}>·</span>
-          <span style={styles.cartPillTotal}>€{total.toFixed(2)}</span>
-        </button>
+        <div style={styles.cartPill} onClick={() => setCartOpen(true)}>
+          <div style={styles.cartPillLeft}>
+            <span style={styles.cartPillIcon}>🛍️</span>
+            <div style={styles.cartPillTextCol}>
+              <div style={styles.cartPillCount}>
+                {orderItems.reduce((s, o) => s + o.qty, 0)} ROBE NEL SACCO
+              </div>
+              <div style={styles.cartPillTotal}>
+                €{total.toFixed(2)}
+              </div>
+            </div>
+          </div>
+          <button style={styles.cartPillBtn}>
+            VAI ALL'ORDINE
+          </button>
+        </div>
       )}
 
       {/* Bottom sheet backdrop */}
@@ -282,7 +290,7 @@ const styles = {
     background: '#20120b',
     color: '#f7dfb5',
     fontFamily: "var(--font-sans)",
-    paddingBottom: 80,
+    paddingBottom: 110,
   },
   header: {
     display: 'flex',
@@ -392,26 +400,63 @@ const styles = {
   },
   cartPill: {
     position: 'fixed',
-    bottom: 24,
-    right: 16,
+    bottom: 0,
+    left: 0,
+    right: 0,
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
-    background: '#f5c842',
-    color: '#111',
+    justifyContent: 'space-between',
+    background: '#130906',
     border: 'none',
-    borderRadius: 28,
-    padding: '12px 20px',
-    fontSize: 15,
-    fontWeight: 800,
+    borderTop: '2px solid #f05a24',
+    padding: '12px 16px',
     cursor: 'pointer',
     zIndex: 200,
-    boxShadow: '4px 4px 0 #000',
+    boxShadow: '0 -4px 10px rgba(0,0,0,0.5)',
+    boxSizing: 'border-box',
   },
-  cartPillIcon: { fontSize: 18 },
-  cartPillCount: { fontSize: 15, fontWeight: 900 },
-  cartPillDot: { fontSize: 13, opacity: 0.6 },
-  cartPillTotal: { fontSize: 15, fontWeight: 800 },
+  cartPillLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cartPillTextCol: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  cartPillIcon: {
+    fontSize: 24,
+  },
+  cartPillCount: {
+    fontSize: 14,
+    fontWeight: 900,
+    color: '#f7dfb5',
+    fontFamily: 'var(--font-display)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px',
+  },
+  cartPillTotal: {
+    fontSize: 16,
+    fontWeight: 800,
+    color: '#f5c842',
+    fontFamily: 'var(--font-display)',
+    marginTop: 2,
+  },
+  cartPillBtn: {
+    background: '#f05a24',
+    color: '#fff',
+    border: 'none',
+    borderRadius: 8,
+    padding: '10px 20px',
+    fontSize: 14,
+    fontWeight: 900,
+    cursor: 'pointer',
+    boxShadow: '3px 3px 0 #000',
+    fontFamily: 'var(--font-display)',
+    letterSpacing: '0.5px',
+    whiteSpace: 'nowrap',
+  },
   backdrop: {
     position: 'fixed',
     inset: 0,
