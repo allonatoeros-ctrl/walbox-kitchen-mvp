@@ -11,6 +11,13 @@ function readOrders() {
   return demoKitchenOrders;
 }
 
+function getMostRecentId(orders) {
+  if (!orders || orders.length === 0) return null;
+  return orders.reduce((best, o) =>
+    new Date(o.createdAt) > new Date(best.createdAt) ? o : best
+  ).id;
+}
+
 const TIMELINE_STEPS = ['received', 'preparing', 'ready'];
 
 function getStepState(step, currentStatus) {
@@ -27,22 +34,31 @@ function formatTime(isoString) {
 
 export default function CustomerOrderStatus() {
   const [orders, setOrders] = useState(readOrders);
-  const [selectedIndex, setSelectedIndex] = useState(1); // default: order-002, status ready
+  const [selectedId, setSelectedId] = useState(() => getMostRecentId(readOrders()));
+  const [devOpen, setDevOpen] = useState(false);
 
   useEffect(() => {
     const handleStorage = (e) => {
       if (e.key === LS_KEY && e.newValue) {
-        try { setOrders(JSON.parse(e.newValue)); } catch {}
+        try {
+          const updated = JSON.parse(e.newValue);
+          setOrders(updated);
+          setSelectedId((prev) => {
+            const stillExists = updated.find((o) => o.id === prev);
+            return stillExists ? prev : getMostRecentId(updated);
+          });
+        } catch {}
       }
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  const order = orders[selectedIndex] ?? orders[0];
+  const order = orders.find((o) => o.id === selectedId) ?? orders[0];
   const statusInfo = kitchenOrderStatuses[order.status];
   const isReady = order.status === 'ready';
   const isPreparing = order.status === 'preparing';
+  const isReceived = order.status === 'received';
   const isCancelled = order.status === 'cancelled';
 
   useEffect(() => {
@@ -58,7 +74,7 @@ export default function CustomerOrderStatus() {
         <div style={styles.headerLogo}>🦭</div>
         <div>
           <div style={styles.headerTitle}>WALBOX KITCHEN</div>
-          <div style={styles.headerSub}>The Walrus Pub — il tuo ordine</div>
+          <div style={styles.headerSub}>Segui il tuo ordine in tempo reale</div>
         </div>
       </div>
 
@@ -146,9 +162,9 @@ export default function CustomerOrderStatus() {
                   </div>
                   {state === 'active' && (
                     <div style={styles.timelineSubActive}>
-                      {step === 'received' && 'Ordine preso in carico dalla cucina.'}
-                      {step === 'preparing' && 'Stanno preparando il tuo ordine. Tieniti pronto.'}
-                      {step === 'ready' && 'Pronto al banco. Corri.'}
+                      {step === 'received' && 'Ordine ricevuto. La cucina è avvisata.'}
+                      {step === 'preparing' && 'Ci stanno mettendo le mani.'}
+                      {step === 'ready' && 'CAVALLOOOO. È pronto al banco.'}
                     </div>
                   )}
                 </div>
@@ -183,6 +199,22 @@ export default function CustomerOrderStatus() {
         </div>
       ) : null}
 
+      {/* Jukebox bridge */}
+      {(isReceived || isPreparing) && (
+        <div style={styles.jukeBridge}>
+          <span style={styles.jukeBridgeText}>Mentre aspetti, metti una canzone.</span>
+          <button
+            style={styles.jukeBridgeBtn}
+            onClick={() => {
+              window.history.pushState({}, '', '/request');
+              window.dispatchEvent(new PopStateEvent('popstate'));
+            }}
+          >
+            🎵 Vai al jukebox
+          </button>
+        </div>
+      )}
+
       {/* Status chip */}
       <div style={styles.statusChipWrap}>
         <span style={{ ...styles.statusChip, background: statusInfo?.color + '22', color: statusInfo?.color, border: `1px solid ${statusInfo?.color}44` }}>
@@ -191,18 +223,28 @@ export default function CustomerOrderStatus() {
       </div>
 
       {/* Dev selector — solo per demo */}
-      <div style={styles.demoBar}>
-        <span style={styles.demoLabel}>[DEV] simula ordine:</span>
-        {orders.map((o, i) => (
-          <button
-            key={o.id}
-            style={{ ...styles.demoBtn, ...(i === selectedIndex ? styles.demoBtnActive : {}) }}
-            onClick={() => setSelectedIndex(i)}
-          >
-            {o.nickname} · {kitchenOrderStatuses[o.status]?.label}
-          </button>
-        ))}
+      <div style={styles.demoToggleRow}>
+        <button style={styles.demoToggleBtn} onClick={() => setDevOpen((v) => !v)}>
+          {devOpen ? '▲ Dev tools' : '▼ Dev tools'}
+        </button>
       </div>
+      {devOpen && (
+        <div style={styles.demoBar}>
+          <span style={styles.demoLabel}>simula ordine:</span>
+          {orders.map((o) => (
+            <button
+              key={o.id}
+              style={{ ...styles.demoBtn, ...(o.id === selectedId ? styles.demoBtnActive : {}) }}
+              onClick={() => setSelectedId(o.id)}
+            >
+              {o.nickname} · {kitchenOrderStatuses[o.status]?.label}
+            </button>
+          ))}
+          <div style={styles.demoNote}>
+            Demo locale · sync multi-device richiederà Supabase
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -215,13 +257,26 @@ const styles = {
     fontFamily: "'Inter', sans-serif",
     paddingBottom: 48,
   },
+  demoToggleRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginTop: 32,
+    marginBottom: 0,
+  },
+  demoToggleBtn: {
+    background: 'transparent',
+    border: 'none',
+    color: '#2a2a2a',
+    fontSize: 10,
+    cursor: 'pointer',
+    letterSpacing: 0.5,
+    padding: '4px 8px',
+  },
   demoBar: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    padding: '16px 16px 24px',
-    marginTop: 24,
-    borderTop: '1px solid #1a1a1a',
+    padding: '12px 16px 24px',
     overflowX: 'auto',
     flexWrap: 'nowrap',
     opacity: 0.5,
@@ -398,5 +453,42 @@ const styles = {
     borderRadius: 20,
     padding: '4px 14px',
     letterSpacing: 0.5,
+  },
+  jukeBridge: {
+    margin: '20px 16px 0',
+    background: '#161616',
+    border: '1px solid #2a2a2a',
+    borderRadius: 10,
+    padding: '14px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  jukeBridgeText: {
+    fontSize: 13,
+    color: '#888',
+    flex: 1,
+    lineHeight: 1.4,
+  },
+  jukeBridgeBtn: {
+    background: 'transparent',
+    border: '1px solid #333',
+    borderRadius: 20,
+    color: '#f5c842',
+    fontSize: 13,
+    fontWeight: 700,
+    padding: '8px 14px',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    flexShrink: 0,
+  },
+  demoNote: {
+    fontSize: 9,
+    color: '#2a2a2a',
+    marginTop: 8,
+    letterSpacing: 0.3,
+    flexBasis: '100%',
+    paddingTop: 4,
   },
 };
