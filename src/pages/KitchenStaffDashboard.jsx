@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { demoKitchenOrders, kitchenOrderStatuses } from '../data/kitchenMockData';
 
 const PRIMARY_ACTION = {
@@ -68,8 +68,38 @@ function buildProductionSummary(orders) {
   return Object.entries(totals).map(([name, qty]) => `${qty}× ${name}`);
 }
 
+function loadOrdersFromStorage() {
+  try {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
+}
+
 export default function KitchenStaffDashboard() {
   const [orders, setOrders] = useState(initOrders);
+
+  useEffect(() => {
+    const refresh = () => setOrders(loadOrdersFromStorage());
+
+    const onStorage = (e) => {
+      if (e.key === LS_KEY) refresh();
+    };
+    const onFocus = () => refresh();
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
+
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
 
   const changeStatus = (id, newStatus) => {
     setOrders((prev) => {
