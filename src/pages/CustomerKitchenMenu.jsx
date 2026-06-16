@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { kitchenMenuItems } from '../data/kitchenMockData';
 
 const CATEGORIES = [
@@ -27,6 +27,7 @@ export default function CustomerKitchenMenu() {
   const [orderItems, setOrderItems] = useState([]);
   const [note, setNote] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const visibleItems = kitchenMenuItems.filter((i) => i.category === activeCategory);
 
@@ -66,6 +67,10 @@ export default function CustomerKitchenMenu() {
     setSubmitted(false);
   };
 
+  useEffect(() => {
+    if (cartOpen && orderItems.length === 0) setCartOpen(false);
+  }, [orderItems.length, cartOpen]);
+
   if (submitted) {
     return (
       <div style={styles.page}>
@@ -90,8 +95,8 @@ export default function CustomerKitchenMenu() {
       <div style={styles.header}>
         <div style={styles.headerLogo}>🦭</div>
         <div>
-          <div style={styles.headerTitle}>WALBOX KITCHEN</div>
-          <div style={styles.headerSub}>The Walrus Pub — mangia, bevi, stai.</div>
+          <div style={styles.headerTitle}>WALRUS KITCHEN</div>
+          <div style={styles.headerSub}>PANINI IGNORANTI, FAME EDUCATA.</div>
         </div>
       </div>
 
@@ -153,7 +158,7 @@ export default function CustomerKitchenMenu() {
                       <button style={styles.qtyBtn} onClick={() => addItem(item)}>+</button>
                     </>
                   ) : (
-                    <button style={styles.btnAdd} onClick={() => addItem(item)}>Aggiungi</button>
+                    <button style={styles.btnAdd} onClick={() => addItem(item)}>LO VOGLIO</button>
                   )}
                 </div>
               </div>
@@ -162,37 +167,68 @@ export default function CustomerKitchenMenu() {
         })}
       </div>
 
-      {/* Order summary */}
+      {/* Floating cart pill */}
       {orderItems.length > 0 && (
-        <div style={styles.orderBox}>
-          <div style={styles.orderTitle}>
-            Il tuo ordine
-            <span style={styles.orderCount}>
-              {orderItems.reduce((s, o) => s + o.qty, 0)} item
+        <button style={styles.cartPill} onClick={() => setCartOpen(true)}>
+          <span style={styles.cartPillIcon}>🛒</span>
+          <span style={styles.cartPillCount}>
+            {orderItems.reduce((s, o) => s + o.qty, 0)}
+          </span>
+          <span style={styles.cartPillDot}>·</span>
+          <span style={styles.cartPillTotal}>€{total.toFixed(2)}</span>
+        </button>
+      )}
+
+      {/* Bottom sheet backdrop */}
+      {cartOpen && (
+        <div style={styles.backdrop} onClick={() => setCartOpen(false)} />
+      )}
+
+      {/* Bottom sheet */}
+      {cartOpen && (
+        <div style={styles.sheet}>
+          <div style={styles.sheetHandle} />
+          <div style={styles.sheetHeader}>
+            <span style={styles.sheetTitle}>
+              Il tuo ordine
+              <span style={styles.orderCount}>
+                {orderItems.reduce((s, o) => s + o.qty, 0)} item
+              </span>
             </span>
+            <button style={styles.sheetClose} onClick={() => setCartOpen(false)}>×</button>
           </div>
-          {orderItems.map((o) => (
-            <div key={o.id} style={styles.orderRow}>
-              <span style={styles.orderItemName}>{o.qty}× {o.name}</span>
-              <span style={styles.orderItemPrice}>€{(o.price * o.qty).toFixed(2)}</span>
+          <div style={styles.sheetBody}>
+            {orderItems.map((o) => (
+              <div key={o.id} style={styles.sheetRow}>
+                <span style={styles.sheetItemName}>{o.name}</span>
+                <div style={styles.sheetRowRight}>
+                  <button style={styles.sheetQtyBtn} onClick={() => removeItem(o.id)}>−</button>
+                  <span style={styles.sheetQtyNum}>{o.qty}</span>
+                  <button style={styles.sheetQtyBtn} onClick={() => addItem(o)}>+</button>
+                  <span style={styles.sheetItemPrice}>€{(o.price * o.qty).toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
+            <div style={styles.orderDivider} />
+            <div style={styles.orderTotalsRow}>
+              <span style={styles.orderTotal}>Totale: €{total.toFixed(2)}</span>
+              <span style={styles.orderPoints}>+{totalPoints} pt</span>
             </div>
-          ))}
-          <div style={styles.orderDivider} />
-          <div style={styles.orderTotalsRow}>
-            <span style={styles.orderTotal}>Totale: €{total.toFixed(2)}</span>
-            <span style={styles.orderPoints}>+{totalPoints} pt</span>
+            <textarea
+              style={styles.noteInput}
+              placeholder="Note per la cucina (opzionale)..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              rows={2}
+            />
+            <button style={styles.btnSubmit} onClick={handleSubmit}>
+              🐴 Invia ordine
+            </button>
+            <div style={styles.submitHint}>Ti avvisiamo qui quando è pronto al banco.</div>
+            <button style={styles.btnContinue} onClick={() => setCartOpen(false)}>
+              Continua a scegliere
+            </button>
           </div>
-          <textarea
-            style={styles.noteInput}
-            placeholder="Note per la cucina (opzionale)..."
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            rows={2}
-          />
-          <button style={styles.btnSubmit} onClick={handleSubmit}>
-            🐴 Invia ordine
-          </button>
-          <div style={styles.submitHint}>Ti avvisiamo qui quando è pronto al banco.</div>
         </div>
       )}
     </div>
@@ -202,10 +238,10 @@ export default function CustomerKitchenMenu() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#111',
-    color: '#f5f0e8',
+    background: '#20120b',
+    color: '#f7dfb5',
     fontFamily: "'Inter', sans-serif",
-    paddingBottom: 120,
+    paddingBottom: 80,
   },
   header: {
     display: 'flex',
@@ -215,8 +251,8 @@ const styles = {
     borderBottom: '1px solid #2a2a2a',
   },
   headerLogo: { fontSize: 32 },
-  headerTitle: { fontSize: 20, fontWeight: 800, letterSpacing: 2, color: '#f5c842' },
-  headerSub: { fontSize: 12, color: '#888', marginTop: 2 },
+  headerTitle: { fontSize: 26, fontWeight: 900, letterSpacing: 2, color: '#f5c842' },
+  headerSub: { fontSize: 13, color: '#f7dfb5', fontWeight: 700, marginTop: 4, letterSpacing: 1 },
   promoBanner: {
     margin: '16px',
     background: 'linear-gradient(135deg, #1a1a00, #2a2000)',
@@ -251,9 +287,9 @@ const styles = {
     flexShrink: 0,
   },
   tabActive: {
-    background: '#f5c842',
-    color: '#111',
-    border: '1px solid #f5c842',
+    background: '#f05a24',
+    color: '#fff',
+    border: '1px solid #f05a24',
   },
   menuList: { padding: '0 16px', display: 'flex', flexDirection: 'column', gap: 12 },
   card: {
@@ -301,24 +337,85 @@ const styles = {
   },
   qtyNum: { fontSize: 16, fontWeight: 700, minWidth: 20, textAlign: 'center' },
   btnAdd: {
-    background: '#f5c842',
-    color: '#111',
+    background: '#f05a24',
+    color: '#fff',
     border: 'none',
     borderRadius: 20,
     padding: '7px 16px',
     fontSize: 13,
-    fontWeight: 700,
+    fontWeight: 800,
     cursor: 'pointer',
   },
-  orderBox: {
+  cartPill: {
+    position: 'fixed',
+    bottom: 24,
+    right: 16,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    background: '#f5c842',
+    color: '#111',
+    border: 'none',
+    borderRadius: 28,
+    padding: '12px 20px',
+    fontSize: 15,
+    fontWeight: 800,
+    cursor: 'pointer',
+    zIndex: 200,
+    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+  },
+  cartPillIcon: { fontSize: 18 },
+  cartPillCount: { fontSize: 15, fontWeight: 900 },
+  cartPillDot: { fontSize: 13, opacity: 0.6 },
+  cartPillTotal: { fontSize: 15, fontWeight: 800 },
+  backdrop: {
+    position: 'fixed',
+    inset: 0,
+    background: 'rgba(0,0,0,0.6)',
+    zIndex: 300,
+  },
+  sheet: {
     position: 'fixed',
     bottom: 0,
     left: 0,
     right: 0,
     background: '#1a1a1a',
     borderTop: '2px solid #f5c842',
-    padding: '16px',
-    zIndex: 100,
+    borderRadius: '16px 16px 0 0',
+    zIndex: 400,
+    maxHeight: '85vh',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    background: '#444',
+    borderRadius: 2,
+    margin: '12px auto 0',
+    flexShrink: 0,
+  },
+  sheetHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '12px 16px 8px',
+    flexShrink: 0,
+  },
+  sheetTitle: { fontSize: 14, fontWeight: 700, color: '#f5c842', letterSpacing: 1 },
+  sheetClose: {
+    background: 'transparent',
+    border: 'none',
+    color: '#888',
+    fontSize: 24,
+    cursor: 'pointer',
+    lineHeight: 1,
+    padding: '0 4px',
+  },
+  sheetBody: {
+    overflowY: 'auto',
+    padding: '4px 16px 24px',
+    flex: 1,
   },
   orderTitle: { fontSize: 14, fontWeight: 700, color: '#f5c842', marginBottom: 8, letterSpacing: 1 },
   orderRow: { display: 'flex', justifyContent: 'space-between', marginBottom: 4 },
@@ -398,5 +495,68 @@ const styles = {
     fontSize: 11,
     color: '#888',
     marginTop: 8,
+  },
+  sheetRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    paddingBottom: 10,
+    borderBottom: '1px solid #242424',
+  },
+  sheetItemName: {
+    fontSize: 14,
+    color: '#f5f0e8',
+    fontWeight: 600,
+    flex: 1,
+    marginRight: 10,
+  },
+  sheetRowRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+  },
+  sheetQtyBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: '50%',
+    border: '1px solid #444',
+    background: '#2a2a2a',
+    color: '#f5f0e8',
+    fontSize: 20,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    lineHeight: 1,
+  },
+  sheetQtyNum: {
+    fontSize: 16,
+    fontWeight: 800,
+    color: '#f5c842',
+    minWidth: 22,
+    textAlign: 'center',
+  },
+  sheetItemPrice: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: '#f5f0e8',
+    minWidth: 52,
+    textAlign: 'right',
+  },
+  btnContinue: {
+    display: 'block',
+    width: '100%',
+    marginTop: 12,
+    background: 'transparent',
+    border: '1px solid #333',
+    borderRadius: 10,
+    color: '#888',
+    fontSize: 14,
+    fontWeight: 600,
+    padding: '11px',
+    cursor: 'pointer',
+    letterSpacing: 0.3,
   },
 };
