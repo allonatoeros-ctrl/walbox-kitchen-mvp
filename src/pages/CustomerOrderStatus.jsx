@@ -138,13 +138,14 @@ export default function CustomerOrderStatus() {
     return !!(matchesTable || matchesNickname);
   });
 
-  const activeOrders = relevantOrders.filter(
-    (o) => o.status !== 'delivered' && o.status !== 'cancelled'
-  );
-  const displayOrders = activeOrders.length > 0 ? activeOrders : relevantOrders;
-  const sortedOrders = [...displayOrders].sort(
-    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-  );
+  const displayOrders = relevantOrders.filter((o) => {
+    if (o.id === order.id) return true;
+    return o.status !== 'delivered' && o.status !== 'cancelled';
+  });
+
+  const sortedOrders = [...displayOrders]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 5);
 
   const handleSelectOrder = (oId) => {
     setSelectedId(oId);
