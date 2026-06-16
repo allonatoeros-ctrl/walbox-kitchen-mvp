@@ -447,15 +447,16 @@ export default function CustomerRequest() {
               border: "2px solid #ff6600",
               borderRadius: "4px",
               color: "#ff6600",
-              fontSize: "11px",
+              fontSize: "13px",
               fontWeight: "900",
               fontFamily: "var(--font-display)",
               textTransform: "uppercase",
               letterSpacing: "0.5px",
-              padding: "5px 10px",
+              padding: "9px 16px",
               cursor: "pointer",
-              boxShadow: "2px 2px 0 #000",
+              boxShadow: "3px 3px 0 #000",
               whiteSpace: "nowrap",
+              minHeight: "40px",
             }}
           >
             🍔 Cibo
