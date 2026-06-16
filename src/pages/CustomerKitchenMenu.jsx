@@ -22,6 +22,8 @@ const TAG_LABELS = {
 
 const promoItem = kitchenMenuItems.find((i) => i.id === 'item-007');
 
+const LS_KEY = 'walbox_kitchen_orders_demo';
+
 export default function CustomerKitchenMenu() {
   const [activeCategory, setActiveCategory] = useState('combo');
   const [orderItems, setOrderItems] = useState([]);
@@ -58,6 +60,25 @@ export default function CustomerKitchenMenu() {
 
   const handleSubmit = () => {
     if (orderItems.length === 0) return;
+    const newOrder = {
+      id: `order-${Date.now()}`,
+      table: 'T7',
+      nickname: 'Ospite Walrus',
+      items: orderItems.map((o) => ({
+        itemId: o.id,
+        name: o.name,
+        quantity: o.qty,
+        price: o.price,
+      })),
+      total,
+      status: 'received',
+      createdAt: new Date().toISOString(),
+      note,
+    };
+    try {
+      const existing = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      localStorage.setItem(LS_KEY, JSON.stringify([...existing, newOrder]));
+    } catch {}
     setSubmitted(true);
   };
 
