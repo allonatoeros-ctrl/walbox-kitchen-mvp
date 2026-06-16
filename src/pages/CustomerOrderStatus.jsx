@@ -131,6 +131,27 @@ export default function CustomerOrderStatus() {
     );
   }
 
+  const relevantOrders = orders.filter((o) => {
+    if (o.id === order.id) return true;
+    const matchesTable = order.table && o.table === order.table;
+    const matchesNickname = order.nickname && o.nickname === order.nickname;
+    return !!(matchesTable || matchesNickname);
+  });
+
+  const activeOrders = relevantOrders.filter(
+    (o) => o.status !== 'delivered' && o.status !== 'cancelled'
+  );
+  const displayOrders = activeOrders.length > 0 ? activeOrders : relevantOrders;
+  const sortedOrders = [...displayOrders].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  const handleSelectOrder = (oId) => {
+    setSelectedId(oId);
+    window.history.pushState({}, "", `/kitchen/status?orderId=${oId}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  };
+
   return (
     <div style={styles.page}>
       {/* Header */}
@@ -141,6 +162,47 @@ export default function CustomerOrderStatus() {
           <div style={styles.headerSub}>Segui il tuo ordine in tempo reale</div>
         </div>
       </div>
+
+      {/* Mini Orders List */}
+      {sortedOrders.length > 1 && (
+        <div style={styles.ordersListContainer}>
+          <div style={styles.ordersListTitle}>I MIEI ORDINI</div>
+          <div style={styles.ordersGrid}>
+            {sortedOrders.map((o) => {
+              const isSel = o.id === selectedId;
+              const count = o.items ? o.items.reduce((sum, item) => sum + (item.quantity || 0), 0) : 0;
+              const statusColor = kitchenOrderStatuses[o.status]?.color || '#f5c842';
+              return (
+                <button
+                  key={o.id}
+                  onClick={() => handleSelectOrder(o.id)}
+                  style={{
+                    ...styles.orderCard,
+                    ...(isSel ? styles.orderCardSelected : {}),
+                  }}
+                >
+                  <div style={styles.orderCardHeader}>
+                    <span style={styles.orderCardId}>#{o.id.replace('order-', '')}</span>
+                    <span style={{
+                      ...styles.orderCardStatus,
+                      color: statusColor,
+                      background: statusColor + '15',
+                      border: `1px solid ${statusColor}33`,
+                    }}>
+                      {kitchenOrderStatuses[o.status]?.label || o.status}
+                    </span>
+                  </div>
+                  <div style={styles.orderCardMeta}>
+                    <span>{count} {count === 1 ? 'piatto' : 'piatti'}</span>
+                    <span>•</span>
+                    <span>{formatTime(o.createdAt)}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Order meta */}
       <div style={styles.metaBox}>
@@ -332,6 +394,77 @@ export default function CustomerOrderStatus() {
 }
 
 const styles = {
+  ordersListContainer: {
+    margin: '16px 16px 0',
+    background: '#150c07',
+    border: '1px solid #2f1c12',
+    borderRadius: 12,
+    padding: '12px 14px',
+    boxShadow: '4px 4px 0 #000',
+  },
+  ordersListTitle: {
+    fontSize: 10,
+    color: '#8b7a72',
+    fontWeight: 800,
+    letterSpacing: 1.5,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    fontFamily: 'var(--font-display)',
+  },
+  ordersGrid: {
+    display: 'flex',
+    gap: 8,
+    overflowX: 'auto',
+    paddingBottom: 4,
+    scrollbarWidth: 'none',
+    msOverflowStyle: 'none',
+  },
+  orderCard: {
+    flex: '0 0 auto',
+    width: 140,
+    background: '#1e130d',
+    border: '1px solid #362217',
+    borderRadius: 8,
+    padding: '10px',
+    textAlign: 'left',
+    cursor: 'pointer',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    transition: 'all 0.2s ease',
+    outline: 'none',
+  },
+  orderCardSelected: {
+    background: 'linear-gradient(135deg, #2a1a11, #3c2417)',
+    border: '1px solid #f5c842',
+    boxShadow: '0 0 8px rgba(245, 200, 66, 0.2)',
+  },
+  orderCardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 4,
+  },
+  orderCardId: {
+    fontSize: 12,
+    fontWeight: 800,
+    color: '#f5f0e8',
+  },
+  orderCardStatus: {
+    fontSize: 9,
+    fontWeight: 700,
+    padding: '2px 6px',
+    borderRadius: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  orderCardMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 10,
+    color: '#a3928a',
+  },
   page: {
     minHeight: '100vh',
     background: '#20120b',
