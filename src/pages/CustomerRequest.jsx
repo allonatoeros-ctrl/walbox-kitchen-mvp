@@ -103,7 +103,6 @@ export default function CustomerRequest() {
     if (e) e.preventDefault();
     if (!selectedSong) return;
     if (venueSettings.queuePaused) {
-      alert("La coda delle richieste è attualmente messa in pausa dallo staff.");
       return;
     }
 
@@ -216,7 +215,7 @@ export default function CustomerRequest() {
   };
 
   return (
-    <div className="mobile-wrapper" style={{ background: "linear-gradient(180deg, #331100 0%, #1a0800 100%)", minHeight: "100vh" }}>
+    <div className="mobile-wrapper" style={{ background: "linear-gradient(180deg, #331100 0%, #1a0800 100%)", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; }
@@ -233,26 +232,29 @@ export default function CustomerRequest() {
           box-shadow: 2px 2px 0 #fffdd0 !important;
         }
         .walbox-search-input {
-          width: 100%;
-          background: #0c0400 !important;
-          border: 2px solid #ff6600 !important;
-          border-radius: 6px !important;
-          padding: 14px 18px !important;
-          color: #fffdd0 !important;
-          font-size: 16px !important;
+          width: 100% !important;
+          background: #1a0800 !important;
+          color: #f5f0e8 !important;
+          font-family: var(--font-sans) !important;
+          border: none !important;
+          border-bottom: 3px solid #f05a24 !important;
+          border-radius: 0 !important;
+          padding: 10px 4px !important;
+          font-size: 18px !important;
           outline: none !important;
-          box-shadow: 4px 4px 0 #000000 !important;
+          box-shadow: none !important;
           transition: all 0.1s ease !important;
         }
         .walbox-search-input:focus {
-          border-color: #ff6600 !important;
-          box-shadow: 6px 6px 0 #000000 !important;
-          background: #120600 !important;
+          border-color: none !important;
+          border-bottom: 3px solid #ff6600 !important;
+          box-shadow: none !important;
+          background: #1a0800 !important;
         }
         .walbox-search-input::placeholder {
-          color: #a0a0a0 !important;
-          opacity: 0.7;
-          font-style: italic;
+          color: #f5f0e8 !important;
+          opacity: 0.5 !important;
+          font-style: italic !important;
         }
         .walbox-song-card {
           transition: transform 0.1s, box-shadow 0.1s !important;
@@ -391,6 +393,7 @@ export default function CustomerRequest() {
         alignItems: "center",
         padding: "12px 16px",
         background: "#0c0400",
+        borderTop: "5px solid #f05a24",
         borderBottom: "4px solid #ff6600",
         marginBottom: "20px",
         borderRadius: "0 0 8px 8px",
@@ -548,16 +551,19 @@ export default function CustomerRequest() {
 
           {venueSettings.queuePaused && (
             <div style={{
-              padding: "15px",
-              background: "#1c0a00",
-              border: "2px solid #ff007f",
-              borderRadius: "6px",
+              padding: "16px",
+              background: "#331100",
+              borderTop: "5px solid #f05a24",
+              borderBottom: "3px solid #f05a24",
               boxShadow: "4px 4px 0 #000",
               textAlign: "center"
             }}>
-              <span style={{ fontSize: "14px", color: "#ff007f", fontWeight: "900", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                ⏸️ Invio richieste temporaneamente sospeso dallo staff.
-              </span>
+              <div style={{ fontSize: "20px", color: "#f5c842", fontWeight: "900", fontFamily: "var(--font-display)", textTransform: "uppercase", letterSpacing: "2px" }}>
+                🍺 CODA IN PAUSA
+              </div>
+              <div style={{ fontSize: "13px", color: "#f5f0e8", fontFamily: "var(--font-sans)", marginTop: "4px", opacity: 0.8 }}>
+                Riprova tra qualche minuto
+              </div>
             </div>
           )}
 
@@ -766,7 +772,6 @@ export default function CustomerRequest() {
               e.preventDefault();
               if (!selectedSong) return;
               if (venueSettings.queuePaused) {
-                alert("La coda delle richieste è attualmente messa in pausa dallo staff.");
                 return;
               }
               setShowPreview(true);

@@ -248,7 +248,7 @@ const styles = {
     minHeight: '100vh',
     background: '#0d0d0d',
     color: '#f5f0e8',
-    fontFamily: "'Inter', sans-serif",
+    fontFamily: "var(--font-sans)",
     paddingBottom: 40,
   },
   header: {
@@ -259,16 +259,16 @@ const styles = {
     borderBottom: '1px solid #1e1e1e',
   },
   headerTitle: { fontSize: 18, fontWeight: 900, letterSpacing: 2, color: '#f5c842' },
-  headerSub: { fontSize: 12, color: '#555', marginTop: 2 },
+  headerSub: { fontSize: 12, color: 'rgba(245,240,232,0.4)', marginTop: 2 },
   headerBadges: { display: 'flex', gap: 8, alignItems: 'center' },
   badgeActive: {
-    background: '#1e1e1e',
-    color: '#888',
+    background: '#1a0800',
+    color: 'rgba(245,240,232,0.5)',
     fontSize: 12,
     fontWeight: 700,
     borderRadius: 20,
     padding: '4px 12px',
-    border: '1px solid #2a2a2a',
+    border: '1px solid #331100',
   },
   badgeReady: {
     background: '#0a2a0a',
@@ -351,7 +351,7 @@ const styles = {
   },
   rowTime: {
     fontSize: 11,
-    color: '#555',
+    color: 'rgba(245,240,232,0.4)',
   },
   rowCenter: {
     flex: 1,
@@ -418,9 +418,9 @@ const styles = {
   },
   btnReset: {
     background: 'transparent',
-    border: '1px solid #333',
+    border: '1px solid #331100',
     borderRadius: 8,
-    color: '#555',
+    color: 'rgba(245,240,232,0.45)',
     fontSize: 11,
     fontWeight: 700,
     padding: '4px 10px',

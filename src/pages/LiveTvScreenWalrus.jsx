@@ -264,7 +264,7 @@ export default function LiveTvScreenWalrus() {
               <span className="walrus-tv-header-sup" style={{ fontSize: "12px", color: "var(--walrus-copper, #D48952)", letterSpacing: "3px", fontWeight: "bold", display: "block" }}>
                 WALBOX × THE WALRUS PUB
               </span>
-              <h2 className="walrus-tv-header-title" style={{ fontSize: "24px", fontWeight: "800", fontFamily: "var(--font-walrus-title, Georgia, serif)", color: "var(--walrus-white-warm, #F7F5F0)", margin: 0 }}>
+              <h2 className="walrus-tv-header-title" style={{ fontSize: "24px", fontWeight: "800", fontFamily: "var(--font-display)", color: "var(--walrus-white-warm, #F7F5F0)", margin: 0 }}>
                 WALRUS LIVE SHUFFLE
               </h2>
             </div>
@@ -349,7 +349,7 @@ export default function LiveTvScreenWalrus() {
               <circle cx="40" cy="38" r="4.5" fill="currentColor" />
               <circle cx="60" cy="38" r="4.5" fill="currentColor" />
             </svg>
-            <h1 style={{ fontSize: "36px", fontWeight: "800", marginTop: "20px", fontFamily: "var(--font-walrus-title, Georgia, serif)", color: "var(--walrus-white-warm, #F7F5F0)" }}>
+            <h1 style={{ fontSize: "36px", fontWeight: "800", marginTop: "20px", fontFamily: "var(--font-display)", color: "var(--walrus-white-warm, #F7F5F0)" }}>
               Banco in attesa di richieste...
             </h1>
             <p style={{ fontSize: "18px", marginTop: "10px", color: "var(--walrus-copper, #D48952)" }}>
@@ -420,7 +420,7 @@ export default function LiveTvScreenWalrus() {
         </div>
 
         <h3 style={{ 
-          fontFamily: "var(--font-walrus-title, Georgia, serif)", 
+          fontFamily: "var(--font-display)", 
           fontSize: "18px", 
           fontWeight: "800", 
           letterSpacing: "1px",

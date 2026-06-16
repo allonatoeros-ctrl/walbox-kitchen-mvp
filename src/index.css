@@ -21,6 +21,10 @@
   
   --text-primary: var(--walrus-white-warm);
   --text-secondary: rgba(247, 245, 240, 0.65); /* Faded warm white */
+  --text-muted: rgba(247, 245, 240, 0.4); /* Subtle muted text */
+  --surface-dark: #1a1a1a; /* Dark card/surface */
+  --surface-darker: #111111; /* Deeper background */
+  --border-subtle: rgba(245, 240, 232, 0.12); /* Subtle dividers */
   
   --font-sans: 'Montserrat', system-ui, -apple-system, sans-serif;
   --font-display: 'Oswald', sans-serif;
@@ -234,45 +238,75 @@ input, textarea, select {
 }
 
 .text-input {
-  background: rgba(6, 8, 14, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-md);
-  padding: 14px 18px;
-  color: var(--text-primary);
-  font-size: 16px;
+  background: #1a0800;
+  border: none;
+  border-bottom: 3px solid #f05a24;
+  border-radius: 0;
+  padding: 10px 4px;
+  color: #f5f0e8;
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 700;
   outline: none;
-  transition: var(--transition-smooth);
+  transition: border-color 0.15s ease;
+  width: 100%;
 }
 
-.text-input:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(10, 13, 23, 0.9);
+.text-input::placeholder {
+  color: rgba(245, 240, 232, 0.4);
+  font-style: italic;
 }
 
 .text-input:focus {
-  border-color: var(--accent-glow);
-  background: rgba(12, 16, 28, 0.95);
-  box-shadow: 
-    0 0 0 1px var(--accent-glow), 
-    0 0 15px rgba(0, 255, 255, 0.2), 
-    0 0 30px rgba(138, 43, 226, 0.15);
+  border-bottom-color: var(--walrus-amber-beer);
 }
 
 .text-input-table {
-  font-size: 24px !important;
+  font-size: 32px !important;
   text-align: center;
-  letter-spacing: 4px;
-  font-weight: 800;
-  color: var(--accent-glow);
-  border-color: rgba(0, 255, 255, 0.15);
-  background: rgba(0, 255, 255, 0.02) !important;
+  letter-spacing: 6px;
+  font-weight: 900;
+  color: var(--walrus-amber-beer) !important;
+  background: #1a0800 !important;
+  border-bottom-color: #f05a24 !important;
 }
 
 .text-input-table:focus {
-  border-color: var(--accent-glow);
-  box-shadow: 
-    0 0 0 1px var(--accent-glow), 
-    0 0 25px rgba(0, 255, 255, 0.35);
+  border-bottom-color: var(--walrus-amber-beer) !important;
+}
+
+.text-input-table::placeholder {
+  color: rgba(255, 191, 0, 0.3);
+  letter-spacing: 2px;
+}
+
+/* Search input Walrus brand */
+.walbox-search-input {
+  background: #1a0800;
+  border: none;
+  border-bottom: 3px solid #f05a24;
+  border-radius: 0;
+  padding: 10px 4px;
+  color: #f5f0e8;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s ease;
+}
+
+.walbox-search-input::placeholder {
+  color: rgba(245, 240, 232, 0.4);
+  font-style: italic;
+}
+
+.walbox-search-input:focus {
+  border-bottom-color: var(--walrus-amber-beer);
+}
+
+.walbox-search-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Buttons */

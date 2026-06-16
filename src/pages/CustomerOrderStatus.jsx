@@ -7,7 +7,7 @@ function readOrders() {
   try {
     const saved = localStorage.getItem(LS_KEY);
     if (saved) return JSON.parse(saved);
-  } catch {}
+  } catch { }
   return demoKitchenOrders;
 }
 
@@ -47,7 +47,7 @@ export default function CustomerOrderStatus() {
             const stillExists = updated.find((o) => o.id === prev);
             return stillExists ? prev : getMostRecentId(updated);
           });
-        } catch {}
+        } catch { }
       }
     };
     window.addEventListener('storage', handleStorage);
@@ -123,7 +123,7 @@ export default function CustomerOrderStatus() {
       {/* Cancelled banner */}
       {isCancelled && (
         <div style={styles.cancelledBanner}>
-          <div style={styles.cancelledMsg}>Ordine annullato. Parla con il personale.</div>
+          <div style={styles.cancelledMsg}>Ordine annullato dalla SALA VAR. Parla con il personale.</div>
         </div>
       )}
 
@@ -253,9 +253,9 @@ export default function CustomerOrderStatus() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background: '#111',
+    background: '#20120b',
     color: '#f5f0e8',
-    fontFamily: "'Inter', sans-serif",
+    fontFamily: "var(--font-sans)",
     paddingBottom: 48,
   },
   demoToggleRow: {
@@ -303,10 +303,11 @@ const styles = {
     alignItems: 'center',
     gap: 12,
     padding: '20px 16px 12px',
+    borderTop: '5px solid #f05a24',
     borderBottom: '1px solid #1e1e1e',
   },
   headerLogo: { fontSize: 30 },
-  headerTitle: { fontSize: 18, fontWeight: 800, letterSpacing: 2, color: '#f5c842' },
+  headerTitle: { fontSize: 18, fontWeight: 800, letterSpacing: 2, color: '#f5c842', fontFamily: 'var(--font-display)' },
   headerSub: { fontSize: 12, color: '#666', marginTop: 2 },
   metaBox: {
     margin: '16px 16px 0',
@@ -317,6 +318,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: 6,
+    boxShadow: '4px 4px 0 #000',
   },
   metaRow: { display: 'flex', justifyContent: 'space-between' },
   metaKey: { fontSize: 12, color: '#555' },
@@ -328,21 +330,23 @@ const styles = {
     borderRadius: 12,
     padding: '18px 16px',
     textAlign: 'center',
+    boxShadow: '4px 4px 0 #000',
   },
   preparingEmoji: { fontSize: 32, marginBottom: 8 },
-  preparingTitle: { fontSize: 18, fontWeight: 900, color: '#3b82f6', letterSpacing: 2, marginBottom: 8 },
+  preparingTitle: { fontSize: 18, fontWeight: 900, color: '#3b82f6', letterSpacing: 2, marginBottom: 8, fontFamily: 'var(--font-display)' },
   preparingMsg: { fontSize: 14, color: '#93c5fd', lineHeight: 1.5 },
   readyBanner: {
     margin: '16px',
-    background: 'linear-gradient(135deg, #0a1a0a, #0a2a0a)',
-    border: '2px solid #10b981',
+    background: 'linear-gradient(135deg, #1f1600, #3d2c00)',
+    border: '2px solid #f5c842',
     borderRadius: 12,
     padding: '18px 16px',
     textAlign: 'center',
+    boxShadow: '4px 4px 0 #000',
   },
   readyEmoji: { fontSize: 40, marginBottom: 8 },
-  readyTitle: { fontSize: 28, fontWeight: 900, color: '#10b981', letterSpacing: 3, marginBottom: 8 },
-  readyMsg: { fontSize: 15, color: '#a7f3d0', lineHeight: 1.5 },
+  readyTitle: { fontSize: 28, fontWeight: 900, color: '#f5c842', letterSpacing: 3, marginBottom: 8, fontFamily: 'var(--font-display)' },
+  readyMsg: { fontSize: 15, color: '#f7dfb5', lineHeight: 1.5 },
   cancelledBanner: {
     margin: '16px',
     background: '#1a0a0a',
@@ -350,6 +354,7 @@ const styles = {
     borderRadius: 10,
     padding: '14px 16px',
     textAlign: 'center',
+    boxShadow: '4px 4px 0 #000',
   },
   cancelledMsg: { fontSize: 14, color: '#ef4444' },
   timelineWrap: {
@@ -412,6 +417,7 @@ const styles = {
     border: '1px solid #2a2a2a',
     borderRadius: 10,
     padding: '14px',
+    boxShadow: '4px 4px 0 #000',
   },
   sectionTitle: {
     fontSize: 12,
@@ -420,6 +426,7 @@ const styles = {
     letterSpacing: 1,
     marginBottom: 10,
     textTransform: 'uppercase',
+    fontFamily: 'var(--font-display)',
   },
   itemRow: {
     display: 'flex',
@@ -433,7 +440,7 @@ const styles = {
   divider: { borderTop: '1px solid #2a2a2a', margin: '10px 0' },
   totalRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   totalLabel: { fontSize: 13, color: '#888', fontWeight: 600 },
-  totalValue: { fontSize: 18, fontWeight: 800, color: '#f5c842' },
+  totalValue: { fontSize: 18, fontWeight: 800, color: '#f5c842', fontFamily: 'var(--font-display)' },
   noteBox: {
     margin: '12px 16px 0',
     background: '#151510',
@@ -465,6 +472,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
+    boxShadow: '4px 4px 0 #000',
   },
   jukeBridgeText: {
     fontSize: 13,

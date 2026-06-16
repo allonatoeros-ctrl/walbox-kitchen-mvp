@@ -31,7 +31,7 @@ export default function CustomerEntry() {
     const cleanNickname = nickname.trim();
     try {
       localStorage.setItem('walboxCustomerSession', JSON.stringify({ table: cleanTable, nickname: cleanNickname }));
-    } catch {}
+    } catch { }
 
     // Custom Router navigation
     const qs = new URLSearchParams({ table: table.trim() });
@@ -49,7 +49,8 @@ export default function CustomerEntry() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        alignItems: "center"
+        alignItems: "center",
+        borderTop: "5px solid #f05a24"
       }}
     >
       <style>{`
@@ -64,6 +65,10 @@ export default function CustomerEntry() {
           .sticker-animate {
             animation: none !important;
           }
+        }
+        .text-input::placeholder {
+          color: #f5f0e8 !important;
+          opacity: 0.5 !important;
         }
       `}</style>
 
@@ -165,7 +170,7 @@ export default function CustomerEntry() {
         {/* Intro copy */}
         <p
           style={{
-            fontFamily: "var(--font-base)",
+            fontFamily: "var(--font-sans)",
             fontSize: "14px",
             color: "#a0a0a0",
             lineHeight: "1.6",
@@ -211,17 +216,18 @@ export default function CustomerEntry() {
               className="text-input text-input-table"
               style={{
                 width: "100%",
-                background: "#0c0400", // Darkest chocolate background
-                border: "2px solid #ff6600",
-                borderRadius: "6px",
-                padding: "12px",
-                color: "#fffdd0", // Retro cream text color
-                fontSize: "24px",
+                background: '#1a0800',
+                color: '#f5f0e8',
+                fontFamily: 'var(--font-sans)',
+                border: 'none',
+                borderBottom: '3px solid #f05a24',
+                borderRadius: 0,
+                padding: '10px 4px',
+                fontSize: 18,
                 textAlign: "center",
                 fontWeight: "800",
                 letterSpacing: "2px",
-                outline: "none",
-                boxShadow: isFocused ? "4px 4px 0 #000000" : "none",
+                outline: 'none',
                 transition: "all 0.1s ease"
               }}
             />
@@ -265,16 +271,18 @@ export default function CustomerEntry() {
               className="text-input"
               style={{
                 width: "100%",
-                background: "#0c0400",
-                border: "2px solid #ff6600",
-                borderRadius: "6px",
-                padding: "12px",
-                color: "#fffdd0",
-                fontSize: "18px",
+                background: '#1a0800',
+                color: '#f5f0e8',
+                fontFamily: 'var(--font-sans)',
+                border: 'none',
+                borderBottom: '3px solid #f05a24',
+                borderRadius: 0,
+                padding: '10px 4px',
+                fontSize: 18,
                 textAlign: "center",
                 fontWeight: "700",
                 letterSpacing: "1px",
-                outline: "none",
+                outline: 'none',
                 transition: "all 0.1s ease"
               }}
             />
@@ -286,7 +294,7 @@ export default function CustomerEntry() {
               backgroundColor: "#ff6600",
               color: "#000000",
               border: "2px solid #000000",
-              borderRadius: "6px",
+              borderRadius: 6,
               padding: "14px 24px",
               fontFamily: "var(--font-display)",
               fontSize: "16px",
@@ -294,8 +302,8 @@ export default function CustomerEntry() {
               textTransform: "uppercase",
               letterSpacing: "1px",
               cursor: "pointer",
-              boxShadow: btnPressed ? "0 2px 0 #000000" : "0 8px 0 #000000",
-              transform: btnPressed ? "translateY(6px)" : "translateY(0)",
+              boxShadow: btnPressed ? "2px 2px 0 #000000" : "4px 4px 0 #000000",
+              transform: btnPressed ? "translate(2px, 2px)" : "translate(0)",
               transition: "transform 0.1s, box-shadow 0.1s",
               width: "100%",
               textAlign: "center"
@@ -316,7 +324,7 @@ export default function CustomerEntry() {
             borderTop: "2px solid rgba(255, 102, 0, 0.15)",
             paddingTop: "20px",
             fontSize: "12px",
-            fontFamily: "var(--font-base)",
+            fontFamily: "var(--font-sans)",
             color: "#a0a0a0",
             letterSpacing: "0.5px"
           }}

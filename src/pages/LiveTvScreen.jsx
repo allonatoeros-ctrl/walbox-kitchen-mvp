@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { 
-  getRequests, 
-  getPlaybackState, 
-  subscribeState, 
-  MOOD_EMOJIS 
+import {
+  getRequests,
+  getPlaybackState,
+  subscribeState,
+  MOOD_EMOJIS
 } from "../data/mockData";
 
 export default function LiveTvScreen() {
@@ -11,7 +11,7 @@ export default function LiveTvScreen() {
   const [playback, setPlayback] = useState({ isPlaying: false, progress: 0, duration: 0, currentRequestId: null });
   const [showTakeover, setShowTakeover] = useState(false);
   const [takeoverRequest, setTakeoverRequest] = useState(null);
-  
+
   // Reaction state
   const [tvReaction, setTvReaction] = useState(() => {
     try {
@@ -27,7 +27,7 @@ export default function LiveTvScreen() {
     }
     return null;
   });
-  
+
   const prevSongIdRef = useRef(null);
 
   // Sync state helper
@@ -38,10 +38,10 @@ export default function LiveTvScreen() {
 
   useEffect(() => {
     syncState();
-    
+
     // Subscribe to state changes (local/same tab)
     const unsubscribe = subscribeState(syncState);
-    
+
     // Subscribe to cross-tab updates (other tabs)
     const handleStorage = (e) => {
       if (e.key && e.key.startsWith("walbox_")) {
@@ -69,10 +69,10 @@ export default function LiveTvScreen() {
   // Clear reaction after 6 seconds
   useEffect(() => {
     if (!tvReaction) return;
-    
+
     const elapsed = Date.now() - tvReaction.timestamp;
     const remaining = Math.max(0, 6000 - elapsed);
-    
+
     if (remaining <= 0) {
       setTvReaction(null);
       return;
@@ -120,17 +120,17 @@ export default function LiveTvScreen() {
   // Get colors based on mood
   const getMoodColors = (mood) => {
     switch (mood) {
-      case "party": 
+      case "party":
         return { blob1: "hsl(322, 100%, 50%)", blob2: "hsl(263, 90%, 55%)", blob3: "hsl(35, 90%, 55%)", main: "hsl(322, 100%, 50%)" };
-      case "chill": 
+      case "chill":
         return { blob1: "hsl(200, 80%, 40%)", blob2: "hsl(263, 90%, 55%)", blob3: "hsl(180, 100%, 50%)", main: "hsl(200, 80%, 45%)" };
-      case "energetic": 
+      case "energetic":
         return { blob1: "hsl(180, 100%, 50%)", blob2: "hsl(220, 80%, 40%)", blob3: "hsl(263, 90%, 55%)", main: "hsl(180, 100%, 50%)" };
-      case "romantic": 
+      case "romantic":
         return { blob1: "hsl(340, 90%, 50%)", blob2: "hsl(322, 100%, 50%)", blob3: "hsl(263, 90%, 55%)", main: "hsl(340, 90%, 50%)" };
-      case "retro": 
+      case "retro":
         return { blob1: "hsl(35, 90%, 55%)", blob2: "hsl(340, 90%, 50%)", blob3: "hsl(263, 90%, 55%)", main: "hsl(35, 90%, 55%)" };
-      default: 
+      default:
         return { blob1: "var(--accent-primary)", blob2: "var(--accent-secondary)", blob3: "var(--accent-glow)", main: "var(--accent-secondary)" };
     }
   };
@@ -141,7 +141,7 @@ export default function LiveTvScreen() {
     .filter((r) => r.dedication && (r.status === "playing" || r.status === "approved" || r.status === "played"))
     .slice(0, 10); // last 10 messages
 
-  const tickerText = tickerDedications.length > 0 
+  const tickerText = tickerDedications.length > 0
     ? tickerDedications.map((r) => `Tavolo ${r.table} dedica "${r.song.title}" : "${r.dedication}"`).join("  •  ")
     : "Scegli la musica! Scansiona il QR code al tavolo e richiedi la tua traccia preferita.  •  Benvenuto in Walbox Social Jukebox.";
 
@@ -150,7 +150,7 @@ export default function LiveTvScreen() {
   const hasReactionClass = tvReaction ? "tv-has-reaction" : "";
 
   return (
-    <div className={`tv-viewport ${playingClass} ${moodClass} ${hasReactionClass}`}>
+    <div className={`tv-viewport ${playingClass} ${moodClass} ${hasReactionClass}`} style={{ fontFamily: 'var(--font-sans)', borderTop: '5px solid #f05a24' }}>
       {/* STAFF REACTION OVERLAY */}
       {tvReaction && (
         <div className={`tv-reaction-overlay reaction-${tvReaction.type}`}>
@@ -184,8 +184,8 @@ export default function LiveTvScreen() {
       )}
 
       {/* Cinematic Ambient Glow Background */}
-      <div 
-        className="tv-cinematic-bg" 
+      <div
+        className="tv-cinematic-bg"
         style={currentRequest?.song?.cover ? { backgroundImage: `url(${currentRequest.song.cover})` } : {}}
       />
 
@@ -196,7 +196,7 @@ export default function LiveTvScreen() {
       {showTakeover && takeoverRequest && (
         <div className="tv-takeover-screen">
           <div className="tv-takeover-glow"></div>
-          
+
           <div className="tv-takeover-content">
             <span className="tv-takeover-subtitle">
               Prossimo Brano in Onda 🚀
@@ -204,9 +204,9 @@ export default function LiveTvScreen() {
 
             <div className="tv-takeover-cover-wrapper">
               <div className="tv-takeover-cover-shadow"></div>
-              <img 
-                src={takeoverRequest.song.cover} 
-                alt="" 
+              <img
+                src={takeoverRequest.song.cover}
+                alt=""
                 className="tv-takeover-cover"
               />
             </div>
@@ -233,7 +233,7 @@ export default function LiveTvScreen() {
 
       {/* LEFT: MAIN NOW PLAYING PANEL */}
       <div className="tv-main-panel">
-        
+
         {/* Top Header info */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div>
@@ -256,20 +256,20 @@ export default function LiveTvScreen() {
         {/* Center Now Playing card */}
         {currentRequest ? (
           <div style={{ display: "flex", gap: "50px", alignItems: "center", margin: "40px 0" }}>
-            
+
             {/* 3D Vinyl Sleeve & Rotating Disc */}
             <div className="tv-track-card-container">
               <div className="tv-vinyl-disc">
-                <img 
-                  src={currentRequest.song.cover} 
-                  alt="" 
+                <img
+                  src={currentRequest.song.cover}
+                  alt=""
                   className="tv-vinyl-label"
                 />
               </div>
               <div className="tv-vinyl-sleeve">
-                <img 
-                  src={currentRequest.song.cover} 
-                  alt="" 
+                <img
+                  src={currentRequest.song.cover}
+                  alt=""
                 />
               </div>
             </div>
@@ -280,7 +280,7 @@ export default function LiveTvScreen() {
                 <span className="tv-table-badge">
                   TAVOLO {currentRequest.table}
                 </span>
-                
+
                 {/* Audio visualizer */}
                 {playback.isPlaying && (
                   <div className="eq-container-premium">
@@ -326,9 +326,9 @@ export default function LiveTvScreen() {
         {currentRequest && (
           <div className="tv-progress-container">
             <div className="tv-progress-track">
-              <div 
-                className="tv-progress-fill" 
-                style={{ 
+              <div
+                className="tv-progress-fill"
+                style={{
                   width: `${(playback.progress / playback.duration) * 100}%`
                 }}
               >
@@ -346,21 +346,21 @@ export default function LiveTvScreen() {
 
       {/* RIGHT: UPCOMING QUEUE PANEL */}
       <div className="tv-side-panel">
-        
+
         {/* QR Code and CTA */}
         <div className="tv-qr-card">
-          
+
           {/* SVG Inline QR Code */}
           <svg width="100" height="100" viewBox="0 0 100 100" style={{ background: "white", padding: "8px", borderRadius: "8px" }}>
             {/* Corners */}
             <rect x="0" y="0" width="30" height="30" fill="black" />
             <rect x="5" y="5" width="20" height="20" fill="white" />
             <rect x="10" y="10" width="10" height="10" fill="black" />
-            
+
             <rect x="70" y="0" width="30" height="30" fill="black" />
             <rect x="75" y="5" width="20" height="20" fill="white" />
             <rect x="80" y="10" width="10" height="10" fill="black" />
-            
+
             <rect x="0" y="70" width="30" height="30" fill="black" />
             <rect x="5" y="75" width="20" height="20" fill="white" />
             <rect x="10" y="80" width="10" height="10" fill="black" />
@@ -385,12 +385,12 @@ export default function LiveTvScreen() {
           </div>
         </div>
 
-        <h3 style={{ 
-          fontFamily: "var(--font-display)", 
-          fontSize: "18px", 
-          fontWeight: "800", 
+        <h3 style={{
+          fontFamily: "var(--font-display)",
+          fontSize: "18px",
+          fontWeight: "800",
           letterSpacing: "1px",
-          marginBottom: "20px" 
+          marginBottom: "20px"
         }}>
           PROSSIMI IN CODA
         </h3>
@@ -403,17 +403,17 @@ export default function LiveTvScreen() {
             </div>
           ) : (
             approvedQueue.slice(0, 4).map((req, idx) => (
-              <div 
-                key={req.id} 
+              <div
+                key={req.id}
                 className="tv-queue-card"
               >
                 <span className="tv-queue-num">
                   {idx + 1}
                 </span>
-                
-                <img 
-                  src={req.song.cover} 
-                  alt="" 
+
+                <img
+                  src={req.song.cover}
+                  alt=""
                   className="tv-queue-cover"
                 />
 

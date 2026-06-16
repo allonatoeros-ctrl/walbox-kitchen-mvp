@@ -69,7 +69,7 @@ export default function CustomerKitchenMenu() {
         if (s.table) sessionTable = `T${s.table}`;
         sessionNickname = s.nickname || 'Ospite Walrus';
       }
-    } catch {}
+    } catch { }
     const newOrder = {
       id: `order-${Date.now()}`,
       table: sessionTable,
@@ -88,7 +88,7 @@ export default function CustomerKitchenMenu() {
     try {
       const existing = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
       localStorage.setItem(LS_KEY, JSON.stringify([...existing, newOrder]));
-    } catch {}
+    } catch { }
     setSubmitted(true);
   };
 
@@ -281,7 +281,7 @@ const styles = {
     minHeight: '100vh',
     background: '#20120b',
     color: '#f7dfb5',
-    fontFamily: "'Inter', sans-serif",
+    fontFamily: "var(--font-sans)",
     paddingBottom: 80,
   },
   header: {
@@ -289,10 +289,11 @@ const styles = {
     alignItems: 'center',
     gap: 12,
     padding: '20px 16px 12px',
-    borderBottom: '1px solid #2a2a2a',
+    borderTop: '5px solid #f05a24',
+    borderBottom: '2px solid #f5c842',
   },
   headerLogo: { fontSize: 32 },
-  headerTitle: { fontSize: 26, fontWeight: 900, letterSpacing: 2, color: '#f5c842' },
+  headerTitle: { fontSize: 26, fontWeight: 900, letterSpacing: 2, color: '#f5c842', fontFamily: 'var(--font-display)' },
   headerSub: { fontSize: 13, color: '#f7dfb5', fontWeight: 700, marginTop: 4, letterSpacing: 1 },
   promoBanner: {
     margin: '16px',
@@ -302,11 +303,11 @@ const styles = {
     padding: '14px 16px',
     cursor: 'pointer',
   },
-  promoTag: { fontSize: 11, color: '#f5c842', fontWeight: 700, letterSpacing: 1, marginBottom: 6 },
-  promoName: { fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 4 },
+  promoTag: { fontSize: 11, color: '#f5c842', fontWeight: 700, letterSpacing: 1, marginBottom: 6, fontFamily: 'var(--font-display)' },
+  promoName: { fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 4, fontFamily: 'var(--font-display)' },
   promoDesc: { fontSize: 13, color: '#aaa', marginBottom: 10 },
   promoFooter: { display: 'flex', alignItems: 'center', gap: 10 },
-  promoPrice: { fontSize: 20, fontWeight: 800, color: '#f5c842' },
+  promoPrice: { fontSize: 20, fontWeight: 800, color: '#f5c842', fontFamily: 'var(--font-display)' },
   promoPoints: { fontSize: 12, color: '#888', flex: 1 },
   promoAdd: { fontSize: 13, color: '#f5c842', fontWeight: 700 },
   tabs: {
@@ -338,10 +339,11 @@ const styles = {
     border: '1px solid #2a2a2a',
     borderRadius: 12,
     padding: '14px',
+    boxShadow: '4px 4px 0 #000',
   },
   cardTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 },
-  cardName: { fontSize: 16, fontWeight: 700, color: '#f5f0e8', flex: 1, marginRight: 8 },
-  cardPrice: { fontSize: 17, fontWeight: 800, color: '#f5c842', flexShrink: 0 },
+  cardName: { fontSize: 16, fontWeight: 700, color: '#f5f0e8', flex: 1, marginRight: 8, fontFamily: 'var(--font-display)' },
+  cardPrice: { fontSize: 17, fontWeight: 800, color: '#f5c842', flexShrink: 0, fontFamily: 'var(--font-display)' },
   cardDesc: { fontSize: 13, color: '#888', marginBottom: 10, lineHeight: 1.4 },
   cardFooter: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
   tagRow: { display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 },
@@ -381,11 +383,12 @@ const styles = {
     background: '#f05a24',
     color: '#fff',
     border: 'none',
-    borderRadius: 20,
+    borderRadius: 6,
     padding: '7px 16px',
     fontSize: 13,
     fontWeight: 800,
     cursor: 'pointer',
+    boxShadow: '3px 3px 0 #000',
   },
   cartPill: {
     position: 'fixed',
@@ -403,7 +406,7 @@ const styles = {
     fontWeight: 800,
     cursor: 'pointer',
     zIndex: 200,
-    boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+    boxShadow: '4px 4px 0 #000',
   },
   cartPillIcon: { fontSize: 18 },
   cartPillCount: { fontSize: 15, fontWeight: 900 },
@@ -530,7 +533,7 @@ const styles = {
     textAlign: 'center',
   },
   confirmEmoji: { fontSize: 64, marginBottom: 16 },
-  confirmTitle: { fontSize: 36, fontWeight: 900, color: '#f5c842', letterSpacing: 3, marginBottom: 12 },
+  confirmTitle: { fontSize: 36, fontWeight: 900, color: '#f5c842', letterSpacing: 3, marginBottom: 12, fontFamily: 'var(--font-display)' },
   confirmMsg: { fontSize: 18, color: '#f5f0e8', marginBottom: 8, lineHeight: 1.5 },
   confirmSub: { fontSize: 14, color: '#666', marginBottom: 32 },
   infoStrip: {
