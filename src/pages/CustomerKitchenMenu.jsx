@@ -60,10 +60,20 @@ export default function CustomerKitchenMenu() {
 
   const handleSubmit = () => {
     if (orderItems.length === 0) return;
+    let sessionTable = 'T7';
+    let sessionNickname = 'Ospite Walrus';
+    try {
+      const raw = localStorage.getItem('walboxCustomerSession');
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.table) sessionTable = `T${s.table}`;
+        sessionNickname = s.nickname || 'Ospite Walrus';
+      }
+    } catch {}
     const newOrder = {
       id: `order-${Date.now()}`,
-      table: 'T7',
-      nickname: 'Ospite Walrus',
+      table: sessionTable,
+      nickname: sessionNickname,
       items: orderItems.map((o) => ({
         itemId: o.id,
         name: o.name,
