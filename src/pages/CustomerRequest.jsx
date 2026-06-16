@@ -434,6 +434,29 @@ export default function CustomerRequest() {
           </div>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <button
+            onClick={() => {
+              window.history.pushState({}, "", "/kitchen");
+              window.dispatchEvent(new PopStateEvent("popstate"));
+            }}
+            style={{
+              background: "#1c0a00",
+              border: "2px solid #ff6600",
+              borderRadius: "4px",
+              color: "#ff6600",
+              fontSize: "11px",
+              fontWeight: "900",
+              fontFamily: "var(--font-display)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+              padding: "5px 10px",
+              cursor: "pointer",
+              boxShadow: "2px 2px 0 #000",
+              whiteSpace: "nowrap",
+            }}
+          >
+            🍔 Cibo
+          </button>
           <span style={{
             background: "#ff6600",
             border: "2px solid #000",
