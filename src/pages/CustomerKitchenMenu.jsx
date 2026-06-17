@@ -502,8 +502,9 @@ const styles = {
   card: {
     display: 'flex',
     gap: 16,
-    paddingBottom: 16,
-    borderBottom: '1px solid #332115',
+    padding: 16,
+    borderRadius: 16,
+    background: '#2b1b11',
   },
   cardImgBox: {
     width: 100,
@@ -556,11 +557,11 @@ const styles = {
     color: '#f05a24',
   },
   btnLoVoglio: {
-    background: '#f05a24',
-    color: '#f7dfb5',
+    background: '#f8c53a',
+    color: '#20120b',
     fontFamily: 'Impact, Haettenschweiler, "Arial Black", sans-serif',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 24,
     padding: '6px 12px',
     fontSize: 14,
     cursor: 'pointer',
