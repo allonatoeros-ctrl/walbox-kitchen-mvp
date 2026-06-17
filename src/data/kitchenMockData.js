@@ -15,6 +15,10 @@ export const kitchenMenuItems = [
     price: 8.5,
     points: 10,
     tags: ['bestseller', 'hot'],
+    image: '/assets/kitchen/photo-walrus-classic.png',
+    available: true,
+    ingredients: 'Pane croccante, porchetta nostrana, salsa verde artigianale (prezzemolo, acciughe, capperi), cipolla rossa di Tropea glassata.',
+    allergens: ['glutine', 'pesce'],
   },
   {
     id: 'item-002',
@@ -24,6 +28,10 @@ export const kitchenMenuItems = [
     price: 9.0,
     points: 12,
     tags: ['walrus-special'],
+    image: '/assets/kitchen/photo-tricheco-burger.png',
+    available: true,
+    ingredients: 'Panino al latte, spalla di maiale sfilacciata (pulled pork), insalata coleslaw (cavolo cappuccio, carote, maionese), salsa BBQ.',
+    allergens: ['glutine', 'uova', 'senape'],
   },
   {
     id: 'item-003',
@@ -33,6 +41,10 @@ export const kitchenMenuItems = [
     price: 4.0,
     points: 5,
     tags: ['veg'],
+    image: '/assets/kitchen/photo-patatine-da-banco.png',
+    available: true,
+    ingredients: 'Patate fresche tagliate a mano, fritte in olio di semi, sale.',
+    allergens: [],
   },
   {
     id: 'item-004',
@@ -42,6 +54,10 @@ export const kitchenMenuItems = [
     price: 5.5,
     points: 7,
     tags: ['veg', 'spicy'],
+    image: '/assets/kitchen/photo-patatine-fuori-di-testa.png',
+    available: true,
+    ingredients: 'Patate fritte, mix di paprika dolce e piccante, Parmigiano Reggiano DOP grattugiato, cipollotto fresco a rondelle.',
+    allergens: ['latte'],
   },
   {
     id: 'item-005',
@@ -51,6 +67,10 @@ export const kitchenMenuItems = [
     price: 5.0,
     points: 6,
     tags: ['drink'],
+    image: '/assets/kitchen/photo-birra-del-tricheco.png',
+    available: true,
+    ingredients: 'Acqua purificata, malto d\'orzo, luppoli selezionati, lievito ad alta fermentazione.',
+    allergens: ['glutine'],
   },
   {
     id: 'item-006',
@@ -60,6 +80,10 @@ export const kitchenMenuItems = [
     price: 5.5,
     points: 6,
     tags: ['drink', 'dark'],
+    image: '/assets/kitchen/photo-birra-scura-problematica.png',
+    available: true,
+    ingredients: 'Acqua purificata, malto d\'orzo tostato, luppoli ad alto amaro, lievito.',
+    allergens: ['glutine'],
   },
   {
     id: 'item-007',
@@ -69,6 +93,10 @@ export const kitchenMenuItems = [
     price: 16.0,
     points: 25,
     tags: ['promo', 'bestseller', 'combo'],
+    image: '/assets/kitchen/photo-combo-cavalloooo.png',
+    available: true,
+    ingredients: 'Menu combinato composto da: un Panino Porcheria Seria, una porzione di Patatine da Banco, una Birra del Tricheco da 0,5L.',
+    allergens: ['glutine', 'pesce'],
   },
   {
     id: 'item-008',
@@ -78,6 +106,10 @@ export const kitchenMenuItems = [
     price: 17.5,
     points: 28,
     tags: ['promo', 'combo', 'spicy'],
+    image: '/assets/kitchen/photo-combo-sta-salendo-male.png',
+    available: true,
+    ingredients: 'Menu combinato composto da: un Panino del Tricheco, una porzione di Patatine Fuori di Testa, una Birra Scura Problemática.',
+    allergens: ['glutine', 'latte', 'uova', 'senape'],
   },
 ];
 
@@ -121,3 +153,27 @@ export const demoKitchenOrders = [
     note: 'Patatine extra croccanti se possibile.',
   },
 ];
+
+export const kitchenCategoryPromos = {
+  panini: {
+    image: '/assets/kitchen/02_hero_combo_porcheria_seria.png',
+    alt: 'Combo Porcheria Seria',
+  },
+  patatine: {
+    image: '/assets/kitchen/07_fries_promo_fritto_terapeutico.png',
+    alt: 'Fritto terapeutico',
+  },
+  combo: {
+    image: '/assets/kitchen/02_hero_combo_porcheria_seria.png',
+    alt: 'Combo Porcheria Seria',
+  },
+  birre: null,
+};
+
+export const kitchenCartUpsell = {
+  id: 'upsell-combo',
+  name: 'Upgrade Combo',
+  price: 2.00,
+  image: '/assets/kitchen/aggiungi_e_risparmia_combo_digitale.png',
+  alt: 'Aggiungi Upgrade Combo per €2,00',
+};
