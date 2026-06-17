@@ -93,6 +93,8 @@ export default function CustomerKitchenMenu() {
 
   const visibleItems = kitchenMenuItems.filter((i) => i.category === activeCategory);
 
+
+
   const addItem = (item) => {
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === item.id);
@@ -250,29 +252,23 @@ export default function CustomerKitchenMenu() {
       </div>
 
       {/* Promo hero card */}
-      {promoItem && (
+      {activeCategory === 'patatine' ? (
         <div className="kitch-promo-wrapper">
-          <div className="kitch-promo-badge">LA TOP<br />DEL BANCO</div>
-          <div className="kitch-promo-card">
-            <div className="kitch-promo-text">
-              <div className="kitch-promo-label">COMBO</div>
-              <div className="kitch-promo-name">PORCHERIA</div>
-              <div className="kitch-promo-name">SERIA</div>
-              <div className="kitch-promo-desc">PANINO + BIRRA + PATATINE</div>
-              <div className="kitch-promo-price-pill">
-                <span>14,90</span>
-              </div>
-            </div>
-            <div className="kitch-promo-img">
-              <img 
-                src="/assets/kitchen/02_hero_combo_food_only.png" 
-                alt="Combo Porcheria Seria" 
-                style={{ width: '120px', height: '105px', objectFit: 'cover', objectPosition: 'right center', borderRadius: '16px', display: 'block' }}
-              />
-            </div>
-          </div>
+          <img 
+            src="/assets/kitchen/07_fries_promo_fritto_terapeutico.png" 
+            alt="Fritto terapeutico" 
+            style={{ width: '100%', borderRadius: '28px', display: 'block' }}
+          />
         </div>
-      )}
+      ) : activeCategory === 'panini' || activeCategory === 'combo' ? (
+        <div className="kitch-promo-wrapper">
+          <img 
+            src="/assets/kitchen/02_hero_combo_porcheria_seria.png" 
+            alt="Combo Porcheria Seria" 
+            style={{ width: '100%', borderRadius: '28px', display: 'block' }}
+          />
+        </div>
+      ) : null}
 
       {/* Category tabs */}
       <KitchenCategoryTabs
