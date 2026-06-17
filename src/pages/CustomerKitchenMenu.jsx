@@ -33,19 +33,17 @@ const CATEGORY_SVGS = {
   ),
   patatine: (
     <svg width="30" height="36" viewBox="0 0 30 36" fill="none">
-      <rect x="5"  y="14" width="20" height="22" rx="3" fill="currentColor"/>
-      <rect x="0"  y="16" width="5"  height="18" rx="2" fill="currentColor"/>
-      <rect x="25" y="16" width="5"  height="18" rx="2" fill="currentColor"/>
-      <rect x="11" y="14" width="4"  height="20" rx="2" fill="currentColor"/>
-      <rect x="15" y="14" width="4"  height="20" rx="2" fill="currentColor"/>
-      <rect x="5"  y="12" width="20" height="6"  rx="2" fill="currentColor" opacity="0.7"/>
+      <rect x="6" y="5" width="4" height="13" rx="1.5" transform="rotate(-10 8 11.5)" fill="currentColor" />
+      <rect x="11" y="2" width="4.5" height="16" rx="2" fill="currentColor" />
+      <rect x="16" y="4" width="4.5" height="14" rx="2" transform="rotate(5 18.25 11)" fill="currentColor" />
+      <rect x="21" y="7" width="4" height="11" rx="1.5" transform="rotate(15 23 12.5)" fill="currentColor" />
+      <path d="M5,15 C9,18 21,18 25,15 L22.5,33 C22.2,34.5 21,35 15,35 C9,35 7.8,34.5 7.5,33 Z M15,21.5 A3.5,3.5 0 1,0 15,28.5 A3.5,3.5 0 1,0 15,21.5 Z" fill="currentColor" fillRule="evenodd" />
     </svg>
   ),
   birre: (
     <svg width="22" height="36" viewBox="0 0 22 36" fill="none">
-      <rect x="6"  y="0"  width="10" height="5"  rx="2" fill="currentColor"/>
-      <rect x="4"  y="4"  width="14" height="28" rx="4" fill="currentColor"/>
-      <rect x="6"  y="8"  width="4"  height="16" rx="2" fill="currentColor" opacity="0.25"/>
+      <rect x="9" y="1" width="4" height="2" rx="0.5" fill="currentColor" />
+      <path d="M9.5,3 H12.5 V11 C12.5,11.5 13,12 17,15 V33 C17,34.5 15.5,35 11,35 C6.5,35 5,34.5 5,33 V15 C9,12 9.5,11.5 9.5,11 Z M7,19 V26 H15 V19 Z M9.5,6 V7.5 H12.5 V6 Z" fill="currentColor" fillRule="evenodd" />
     </svg>
   ),
   combo: (
