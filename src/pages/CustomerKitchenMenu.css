@@ -75,11 +75,12 @@
 .kitch-promo-card {
   background: #f6deb5;
   border-radius: 28px;
-  padding: 28px 24px 24px 32px;
+  padding: 20px 16px 20px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: relative;
+  gap: 12px;
 }
 .kitch-promo-text {
   display: flex;
@@ -95,9 +96,9 @@
 }
 .kitch-promo-name {
   font-family: var(--k-font-display);
-  font-size: 48px;
+  font-size: 32px;
   color: var(--k-orange);
-  line-height: 0.85;
+  line-height: 0.95;
   text-transform: uppercase;
 }
 .kitch-promo-desc {

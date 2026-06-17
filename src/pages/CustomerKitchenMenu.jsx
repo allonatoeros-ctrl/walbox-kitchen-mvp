@@ -269,7 +269,7 @@ export default function CustomerKitchenMenu() {
               <img 
                 src="/assets/kitchen/02_hero_combo_porcheria_seria.png" 
                 alt="Combo Porcheria Seria" 
-                style={{ width: '128px', height: '106px', objectFit: 'cover', borderRadius: '16px', display: 'block' }}
+                style={{ width: '120px', height: '105px', objectFit: 'cover', objectPosition: 'right center', borderRadius: '16px', display: 'block' }}
               />
             </div>
           </div>
