@@ -1,4 +1,4 @@
-import { kitchenOrderStatuses } from '../data/kitchenMockData';
+import { kitchenOrderStatuses } from '../../data/kitchenMockData';
 import KitchenStatusBadge from './KitchenStatusBadge';
 
 function formatTime(isoString) {

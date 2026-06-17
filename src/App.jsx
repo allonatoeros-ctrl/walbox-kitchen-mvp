@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import CustomerEntry from "./pages/CustomerEntry";
 import CustomerRequest from "./pages/CustomerRequest";
 import StaffDashboard from "./pages/StaffDashboard";
-import LiveTvScreen from "./pages/LiveTvScreen";
-import LiveTvScreenWalrus from "./pages/LiveTvScreenWalrus";
 import LiveTvScreenWalrusPoster from "./pages/LiveTvScreenWalrusPoster";
 import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
@@ -57,13 +55,7 @@ export default function App() {
         return <CustomerRequest />;
       case "/staff":
         return <StaffDashboard />;
-      case "/tv": {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get("theme") === "walrus") {
-          return <LiveTvScreenWalrus />;
-        }
-        return <LiveTvScreen />;
-      }
+      case "/tv":
       case "/tv-poster":
         return <LiveTvScreenWalrusPoster />;
       case "/kitchen":
@@ -87,7 +79,7 @@ export default function App() {
           <NavLink to="/entry" activePath={currentPath}>Entry (Cliente)</NavLink>
           <NavLink to="/request?table=4" activePath={currentPath}>Request (Tavolo 4)</NavLink>
           <NavLink to="/staff" activePath={currentPath}>Staff Dashboard</NavLink>
-          <NavLink to="/tv" activePath={currentPath}>Live TV Screen</NavLink>
+          <NavLink to="/tv-poster" activePath={currentPath}>Poster TV</NavLink>
           
           <button 
             onClick={() => {

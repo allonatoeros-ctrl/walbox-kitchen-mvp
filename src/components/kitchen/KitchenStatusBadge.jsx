@@ -1,4 +1,4 @@
-import { kitchenOrderStatuses } from '../data/kitchenMockData';
+import { kitchenOrderStatuses } from '../../data/kitchenMockData';
 
 /**
  * Pill badge showing a kitchen order status with its official color.

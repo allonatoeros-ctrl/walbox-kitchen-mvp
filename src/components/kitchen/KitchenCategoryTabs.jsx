@@ -32,7 +32,7 @@ export default function KitchenCategoryTabs({ categories, activeKey, onSelect })
                 boxShadow:   isActive ? '0 8px 20px rgba(240, 90, 36, 0.35)' : 'none',
               }}
             >
-              <span style={{ fontSize: 28, transform: isActive ? 'scale(1.1)' : 'scale(1)', display: 'inline-block' }}>
+              <span style={{ transform: isActive ? 'scale(1.1)' : 'scale(1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {cat.icon}
               </span>
             </div>
