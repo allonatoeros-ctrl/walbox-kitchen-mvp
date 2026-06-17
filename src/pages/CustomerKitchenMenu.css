@@ -201,14 +201,14 @@
 }
 .kitch-card {
   display: flex;
-  gap: 16px;
-  padding: 16px;
+  gap: 12px;
+  padding: 12px;
   border-radius: 16px;
   background: #2b1b11;
 }
 .kitch-card-img {
-  width: 96px;
-  height: 96px;
+  width: 84px;
+  height: 84px;
   background: #1a0e08;
   border-radius: var(--k-radius);
   display: flex;
@@ -229,7 +229,7 @@
 }
 .kitch-card-name {
   font-family: var(--k-font-display);
-  font-size: 20px;
+  font-size: 18px;
   color: var(--k-text);
   letter-spacing: 0.5px;
   line-height: 1.1;
