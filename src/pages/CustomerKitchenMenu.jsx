@@ -1,25 +1,9 @@
 import { useState, useEffect } from 'react';
-import { kitchenMenuItems } from '../data/kitchenMockData';
+import { kitchenMenuItems, kitchenCategoryPromos, kitchenCartUpsell } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import './CustomerKitchenMenu.css';
-
-// ─── KITCHEN ITEM PHOTOS ────────────────────────────────────────────────────
-// Map item IDs to photo paths (served from public/assets/kitchen/).
-// To replace a photo: overwrite the PNG in public/assets/kitchen/ with the same filename,
-// or change the path here. Cards with no entry fall back to the SVG placeholder below.
-const KITCHEN_ITEM_PHOTOS = {
-  'item-001': '/assets/kitchen/photo-walrus-classic.png',
-  'item-002': '/assets/kitchen/photo-tricheco-burger.png',
-  'item-003': '/assets/kitchen/photo-patatine-da-banco.png',
-  'item-004': '/assets/kitchen/photo-patatine-fuori-di-testa.png',
-  'item-005': '/assets/kitchen/photo-birra-del-tricheco.png',
-  'item-006': '/assets/kitchen/photo-birra-scura-problematica.png',
-  'item-007': '/assets/kitchen/photo-combo-cavalloooo.png',
-  'item-008': '/assets/kitchen/photo-combo-sta-salendo-male.png',
-};
-// ────────────────────────────────────────────────────────────────────────────
 
 // Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
 const CATEGORY_SVGS = {
@@ -91,7 +75,7 @@ export default function CustomerKitchenMenu() {
   const [submittedOrderId, setSubmittedOrderId] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
 
-  const visibleItems = kitchenMenuItems.filter((i) => i.category === activeCategory);
+  const visibleItems = kitchenMenuItems.filter((i) => i.category === activeCategory && i.available !== false);
 
 
 
@@ -99,10 +83,10 @@ export default function CustomerKitchenMenu() {
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === item.id);
       if (existing) {
-        if (item.id === 'upsell-combo') return prev;
+        if (item.id === kitchenCartUpsell.id) return prev;
         return prev.map((o) => o.id === item.id ? { ...o, qty: o.qty + 1 } : o);
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1 }];
+      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1, image: item.image }];
     });
   };
 
@@ -255,19 +239,11 @@ export default function CustomerKitchenMenu() {
       </div>
 
       {/* Promo hero card */}
-      {activeCategory === 'patatine' ? (
+      {kitchenCategoryPromos[activeCategory] ? (
         <div className="kitch-promo-wrapper">
           <img
-            src="/assets/kitchen/07_fries_promo_fritto_terapeutico.png"
-            alt="Fritto terapeutico"
-            style={{ width: '100%', borderRadius: '28px', display: 'block' }}
-          />
-        </div>
-      ) : activeCategory === 'panini' || activeCategory === 'combo' ? (
-        <div className="kitch-promo-wrapper">
-          <img
-            src="/assets/kitchen/02_hero_combo_porcheria_seria.png"
-            alt="Combo Porcheria Seria"
+            src={kitchenCategoryPromos[activeCategory].image}
+            alt={kitchenCategoryPromos[activeCategory].alt || ''}
             style={{ width: '100%', borderRadius: '28px', display: 'block' }}
           />
         </div>
@@ -288,8 +264,8 @@ export default function CustomerKitchenMenu() {
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card">
             <div className="kitch-card-img" style={{ overflow: 'hidden' }}>
-              {KITCHEN_ITEM_PHOTOS[item.id]
-                ? <img src={KITCHEN_ITEM_PHOTOS[item.id]} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              {item.image
+                ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : (CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini)}
             </div>
             <div className="kitch-card-content">
@@ -347,9 +323,9 @@ export default function CustomerKitchenMenu() {
               {orderItems.map((o) => (
                 <div key={o.id} className="kitch-drawer-row">
                   <div className="kitch-drawer-row-img">
-                    {KITCHEN_ITEM_PHOTOS[o.id] ? (
+                    {o.image ? (
                       <img
-                        src={KITCHEN_ITEM_PHOTOS[o.id]}
+                        src={o.image}
                         alt={o.name}
                         className="kitch-drawer-row-photo"
                       />
@@ -372,12 +348,12 @@ export default function CustomerKitchenMenu() {
 
               <button
                 className="kitch-upsell-promo-card"
-                onClick={() => addItem({ id: 'upsell-combo', name: 'Upgrade Combo', price: 2.00 })}
-                aria-label="Aggiungi Upgrade Combo per €2,00"
+                onClick={() => addItem(kitchenCartUpsell)}
+                aria-label={`Aggiungi ${kitchenCartUpsell.name} per €${kitchenCartUpsell.price.toFixed(2).replace('.', ',')}`}
               >
                 <img
-                  src="/assets/kitchen/aggiungi_e_risparmia_combo_digitale.png"
-                  alt="Aggiungi Upgrade Combo per €2,00"
+                  src={kitchenCartUpsell.image}
+                  alt={kitchenCartUpsell.alt || kitchenCartUpsell.name}
                   className="kitch-upsell-promo-img"
                 />
               </button>
