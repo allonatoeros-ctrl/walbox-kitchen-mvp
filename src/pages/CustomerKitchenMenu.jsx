@@ -25,6 +25,37 @@ const promoItem = kitchenMenuItems.find((i) => i.id === 'item-007') || kitchenMe
 
 const LS_KEY = 'walbox_kitchen_orders_demo';
 
+const CATEGORY_THEMES = {
+  panini: {
+    activeBg: '#e05929',
+    activeBorder: '#f8c53a',
+    inactiveBg: '#2d1910',
+    inactiveBorder: '#442b1f',
+    inactiveLabel: '#a8927d',
+  },
+  patatine: {
+    activeBg: '#f3be32',
+    activeBorder: '#e05929',
+    inactiveBg: '#2c2212',
+    inactiveBorder: '#41351e',
+    inactiveLabel: '#a8927d',
+  },
+  birre: {
+    activeBg: '#e05929',
+    activeBorder: '#f8c53a',
+    inactiveBg: '#231c18',
+    inactiveBorder: '#342a24',
+    inactiveLabel: '#a8927d',
+  },
+  combo: {
+    activeBg: '#457c39',
+    activeBorder: '#f8c53a',
+    inactiveBg: '#1b2417',
+    inactiveBorder: '#293623',
+    inactiveLabel: '#a8927d',
+  },
+};
+
 export default function CustomerKitchenMenu() {
   const [activeCategory, setActiveCategory] = useState('panini');
   const [orderItems, setOrderItems] = useState([]);
@@ -211,16 +242,37 @@ export default function CustomerKitchenMenu() {
       <div style={styles.tabsContainer}>
         {CATEGORIES.map((cat) => {
           const isActive = activeCategory === cat.key;
+          const theme = CATEGORY_THEMES[cat.key];
           return (
             <button
               key={cat.key}
-              style={styles.tab}
+              style={{
+                ...styles.tab,
+                transform: isActive ? 'scale(1.08)' : 'scale(1)',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
               onClick={() => setActiveCategory(cat.key)}
             >
-              <div style={{...styles.tabIconCircle, borderColor: isActive ? '#f8c53a' : '#444'}}>
-                 <span style={{fontSize: 24}}>{cat.icon}</span>
+              <div style={{
+                ...styles.tabIconCircle,
+                background: isActive ? theme.activeBg : theme.inactiveBg,
+                borderColor: isActive ? theme.activeBorder : theme.inactiveBorder,
+                boxShadow: isActive ? '0 8px 20px rgba(240, 90, 36, 0.35)' : 'none',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}>
+                 <span style={{
+                   fontSize: 28,
+                   transform: isActive ? 'scale(1.1)' : 'scale(1)',
+                   transition: 'transform 0.2s ease',
+                   display: 'inline-block',
+                 }}>{cat.icon}</span>
               </div>
-              <span style={{...styles.tabLabel, color: isActive ? '#f8c53a' : '#aaa'}}>{cat.label}</span>
+              <span style={{
+                ...styles.tabLabel,
+                color: isActive ? '#f7dfb5' : theme.inactiveLabel,
+                fontWeight: isActive ? '900' : 'normal',
+                transition: 'all 0.2s ease',
+              }}>{cat.label}</span>
             </button>
           );
         })}
@@ -456,9 +508,7 @@ const styles = {
   tabsContainer: {
     display: 'flex',
     justifyContent: 'space-evenly',
-    padding: '16px',
-    borderTop: '1px solid #332115',
-    borderBottom: '1px solid #332115',
+    padding: '24px 12px 16px',
     marginTop: 8,
   },
   tab: {
@@ -467,19 +517,19 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     cursor: 'pointer',
     padding: 0,
   },
   tabIconCircle: {
-    width: 60,
-    height: 60,
+    width: 76,
+    height: 76,
     borderRadius: '50%',
-    border: '2px solid #444',
+    borderWidth: 3,
+    borderStyle: 'solid',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#1a0e08',
   },
   tabLabel: {
     fontFamily: 'Impact, Haettenschweiler, "Arial Black", sans-serif',
