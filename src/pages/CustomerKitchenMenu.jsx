@@ -342,7 +342,17 @@ export default function CustomerKitchenMenu() {
           <div className="kitch-drawer-body">
             {orderItems.map((o) => (
               <div key={o.id} className="kitch-drawer-row">
-                <div className="kitch-drawer-row-img">{drawerIcon(o.name)}</div>
+                <div className="kitch-drawer-row-img">
+                  {KITCHEN_ITEM_PHOTOS[o.id] ? (
+                    <img
+                      src={KITCHEN_ITEM_PHOTOS[o.id]}
+                      alt={o.name}
+                      className="kitch-drawer-row-photo"
+                    />
+                  ) : (
+                    drawerIcon(o.name)
+                  )}
+                </div>
                 <div className="kitch-drawer-row-content">
                   <div className="kitch-drawer-row-name">{o.name.toUpperCase()}</div>
                   <div className="kitch-drawer-row-price">€{o.price.toFixed(2)}</div>
