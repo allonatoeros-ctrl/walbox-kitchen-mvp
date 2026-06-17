@@ -12,8 +12,12 @@ import './CustomerKitchenMenu.css';
 const KITCHEN_ITEM_PHOTOS = {
   'item-001': '/assets/kitchen/photo-walrus-classic.png',
   'item-002': '/assets/kitchen/photo-tricheco-burger.png',
-  'item-003': '/assets/kitchen/07_fries_promo_fritto_terapeutico.png',
-  'item-007': '/assets/kitchen/02_hero_combo_porcheria_seria.png',
+  'item-003': '/assets/kitchen/photo-patatine-da-banco.png',
+  'item-004': '/assets/kitchen/photo-patatine-fuori-di-testa.png',
+  'item-005': '/assets/kitchen/photo-birra-del-tricheco.png',
+  'item-006': '/assets/kitchen/photo-birra-scura-problematica.png',
+  'item-007': '/assets/kitchen/photo-combo-cavalloooo.png',
+  'item-008': '/assets/kitchen/photo-combo-sta-salendo-male.png',
 };
 // ────────────────────────────────────────────────────────────────────────────
 
