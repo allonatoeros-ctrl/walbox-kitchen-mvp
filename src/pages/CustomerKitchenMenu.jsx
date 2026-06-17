@@ -2,14 +2,48 @@ import { useState, useEffect } from 'react';
 import { kitchenMenuItems } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
-import KitchenCategoryTabs from '../components/KitchenCategoryTabs';
+import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import './CustomerKitchenMenu.css';
 
+// Flat SVG icons — matching the reference flat icon style
+const CATEGORY_SVGS = {
+  panini: (
+    <svg width="38" height="30" viewBox="0 0 38 30" fill="none">
+      <rect x="1" y="0"  width="36" height="7"  rx="3.5" fill="white"/>
+      <rect x="3" y="10" width="32" height="4"  rx="2"   fill="white"/>
+      <rect x="3" y="16" width="32" height="4"  rx="2"   fill="white"/>
+      <rect x="1" y="23" width="36" height="7"  rx="3.5" fill="white"/>
+    </svg>
+  ),
+  patatine: (
+    <svg width="30" height="36" viewBox="0 0 30 36" fill="none">
+      <rect x="5"  y="14" width="20" height="22" rx="3" fill="white"/>
+      <rect x="0"  y="16" width="5"  height="18" rx="2" fill="white"/>
+      <rect x="25" y="16" width="5"  height="18" rx="2" fill="white"/>
+      <rect x="11" y="14" width="4"  height="20" rx="2" fill="white"/>
+      <rect x="15" y="14" width="4"  height="20" rx="2" fill="white"/>
+      <rect x="5"  y="12" width="20" height="6"  rx="2" fill="white" opacity="0.7"/>
+    </svg>
+  ),
+  birre: (
+    <svg width="22" height="36" viewBox="0 0 22 36" fill="none">
+      <rect x="6"  y="0"  width="10" height="5"  rx="2" fill="white"/>
+      <rect x="4"  y="4"  width="14" height="28" rx="4" fill="white"/>
+      <rect x="6"  y="8"  width="4"  height="16" rx="2" fill="white" opacity="0.25"/>
+    </svg>
+  ),
+  combo: (
+    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+      <polygon points="18,2 22,13 34,13 24,21 28,33 18,25 8,33 12,21 2,13 14,13" fill="white"/>
+    </svg>
+  ),
+};
+
 const CATEGORIES = [
-  { key: 'panini',   label: 'PANINI',   icon: '🍔' },
-  { key: 'patatine', label: 'PATATINE', icon: '🍟' },
-  { key: 'birre',    label: 'BIRRE',    icon: '🍺' },
-  { key: 'combo',    label: 'COMBO',    icon: '⭐' },
+  { key: 'panini',   label: 'PANINI',   icon: CATEGORY_SVGS.panini   },
+  { key: 'patatine', label: 'PATATINE', icon: CATEGORY_SVGS.patatine },
+  { key: 'birre',    label: 'BIRRE',    icon: CATEGORY_SVGS.birre    },
+  { key: 'combo',    label: 'COMBO',    icon: CATEGORY_SVGS.combo    },
 ];
 
 const promoItem =
@@ -17,13 +51,6 @@ const promoItem =
   kitchenMenuItems.find((i) => i.category === 'combo');
 
 
-
-function categoryIcon(category) {
-  if (category === 'panini')   return '🍔';
-  if (category === 'patatine') return '🍟';
-  if (category === 'birre')    return '🍺';
-  return '🍔🍟';
-}
 
 function drawerIcon(name) {
   const n = name.toLowerCase();
@@ -157,7 +184,16 @@ export default function CustomerKitchenMenu() {
 
       {/* Header */}
       <div className="kitch-header">
-        <div className="kitch-header-logo">🦭</div>
+        <div className="kitch-header-logo-box">
+          <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+            <path d="M5 14 C5 8 17 5 17 5 C17 5 29 8 29 14 L29 22 C29 28 17 31 17 31 C17 31 5 28 5 22 Z" fill="white" opacity="0.15"/>
+            <circle cx="11" cy="17" r="5" fill="none" stroke="white" strokeWidth="2.5"/>
+            <circle cx="23" cy="17" r="5" fill="none" stroke="white" strokeWidth="2.5"/>
+            <path d="M16 17 H18" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
+            <path d="M6 17 C6 12 11 10 11 10" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.6"/>
+            <path d="M28 17 C28 12 23 10 23 10" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.6"/>
+          </svg>
+        </div>
         <div className="kitch-header-text">
           <div className="kitch-header-title">WALRUS<br />KITCHEN</div>
           <div className="kitch-header-sub">PANINI IGNORANTI, FAME EDUCATA.</div>
@@ -205,7 +241,7 @@ export default function CustomerKitchenMenu() {
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card">
-            <div className="kitch-card-img">{categoryIcon(item.category)}</div>
+            <div className="kitch-card-img">{CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini}</div>
             <div className="kitch-card-content">
               <div className="kitch-card-header">
                 <div className="kitch-card-name">{item.name.toUpperCase()}</div>

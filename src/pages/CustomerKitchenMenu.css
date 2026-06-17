@@ -14,10 +14,19 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 24px 16px 16px;
+  padding: 20px 16px 16px;
+  background: #000;
 }
-.kitch-header-logo {
-  font-size: 50px;
+/* Yellow box logo — matches reference */
+.kitch-header-logo-box {
+  width: 60px;
+  height: 60px;
+  background: var(--k-yellow);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 .kitch-header-text {
   display: flex;
@@ -25,16 +34,16 @@
 }
 .kitch-header-title {
   font-family: var(--k-font-display);
-  font-size: 32px;
-  line-height: 1;
-  color: var(--k-text);
+  font-size: 34px;
+  line-height: 0.95;
+  color: #fff;
   letter-spacing: 1px;
 }
 .kitch-header-sub {
   font-family: var(--k-font-display);
-  font-size: 14px;
-  color: var(--k-yellow);
-  margin-top: 4px;
+  font-size: 13px;
+  color: var(--k-orange);
+  margin-top: 5px;
   letter-spacing: 0.5px;
 }
 
@@ -129,8 +138,8 @@
 .kitch-tabs {
   display: flex;
   justify-content: space-evenly;
-  padding: 24px 12px 16px;
-  margin-top: 8px;
+  padding: 20px 12px 12px;
+  background: var(--k-bg);
 }
 .kitch-tab {
   background: transparent;
@@ -138,14 +147,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
   padding: 0;
   transition: var(--k-transition);
 }
 .kitch-tab-circle {
-  width: 76px;
-  height: 76px;
+  width: 72px;
+  height: 72px;
   border-radius: 50%;
   border-width: 3px;
   border-style: solid;
@@ -156,8 +165,9 @@
 }
 .kitch-tab-label {
   font-family: var(--k-font-display);
-  font-size: 14px;
+  font-size: 13px;
   transition: var(--k-transition);
+  letter-spacing: 0.5px;
 }
 
 /* ── Section title ───────────────────────────────── */
@@ -184,8 +194,8 @@
   background: #2b1b11;
 }
 .kitch-card-img {
-  width: 100px;
-  height: 100px;
+  width: 96px;
+  height: 96px;
   background: #1a0e08;
   border-radius: var(--k-radius);
   display: flex;
@@ -193,7 +203,6 @@
   justify-content: center;
   flex-shrink: 0;
   border: 1px solid var(--k-border);
-  font-size: 50px;
 }
 .kitch-card-content {
   flex: 1;
@@ -305,15 +314,16 @@
 }
 .kitch-btn-vai {
   background: var(--k-orange);
-  color: var(--k-text);
+  color: #fff;
   font-family: var(--k-font-display);
   border: none;
-  border-radius: var(--k-radius-sm);
-  padding: 12px 20px;
+  border-radius: 9999px;
+  padding: 14px 24px;
   font-size: 16px;
   cursor: pointer;
   letter-spacing: 0.5px;
   transition: var(--k-transition);
+  white-space: nowrap;
 }
 .kitch-btn-vai:hover {
   background: var(--k-orange-hover);

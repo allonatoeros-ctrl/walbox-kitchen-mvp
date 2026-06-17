@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
-import KitchenOrderCard from '../components/KitchenOrderCard';
+import KitchenOrderCard from '../components/kitchen/KitchenOrderCard';
 import './CustomerOrderStatus.css';
 
 function getMostRecentId(orders) {
