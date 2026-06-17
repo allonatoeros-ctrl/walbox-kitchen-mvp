@@ -16,6 +16,7 @@
   gap: 16px;
   padding: 20px 16px 16px;
   background: #000;
+  margin-bottom: -10px;
 }
 /* Yellow box logo — matches reference */
 .kitch-header-logo-box {
@@ -81,6 +82,7 @@
   align-items: center;
   position: relative;
   gap: 12px;
+  margin-bottom: -12px;
 }
 .kitch-promo-text {
   display: flex;
@@ -146,6 +148,7 @@
   gap: 14px;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
+  margin-bottom: -12px;
 }
 .kitch-tabs::-webkit-scrollbar {
   display: none;
@@ -185,7 +188,7 @@
   font-family: var(--k-font-display);
   font-size: 24px;
   color: var(--k-text);
-  padding: 20px 16px 12px;
+  padding: 8px 16px 12px;
   letter-spacing: 1px;
 }
 
