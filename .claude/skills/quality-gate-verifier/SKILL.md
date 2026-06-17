@@ -663,6 +663,7 @@ Comandi tecnici consentiti solo se rilevati nel progetto e coerenti con lo scope
 - e2e
 - browser smoke test
 - API smoke test locale
+- test:e2e (playwright)
 ```
 
 Comandi che richiedono approvazione esplicita di Eros:
