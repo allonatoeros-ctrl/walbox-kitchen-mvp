@@ -25,10 +25,10 @@ const KITCHEN_ITEM_PHOTOS = {
 const CATEGORY_SVGS = {
   panini: (
     <svg width="38" height="30" viewBox="0 0 38 30" fill="none">
-      <rect x="1" y="0"  width="36" height="7"  rx="3.5" fill="currentColor"/>
-      <rect x="3" y="10" width="32" height="4"  rx="2"   fill="currentColor"/>
-      <rect x="3" y="16" width="32" height="4"  rx="2"   fill="currentColor"/>
-      <rect x="1" y="23" width="36" height="7"  rx="3.5" fill="currentColor"/>
+      <path d="M4,10 C4,5.5 10,2 19,2 C28,2 34,5.5 34,10 H4 Z M12.5,6.5 L13,5.5 L13.5,6.5 L13,7 Z M18.5,5 L19,4 L19.5,5 L19,5.5 Z M24.5,6.5 L25,5.5 L25.5,6.5 L25,7 Z" fill="currentColor" fillRule="evenodd" />
+      <path d="M2,13.5 H36 V15.5 C36,17 33,17.5 31,17.5 C29,17.5 28,16 26,16 C24,16 23,17.5 21,17.5 C19,17.5 18,16 16,16 C14,16 13,17.5 11,17.5 C9,17.5 8,16 6,16 C4,16 2,16.5 2,15 Z" fill="currentColor" />
+      <rect x="4" y="20" width="30" height="4" rx="2" fill="currentColor" />
+      <path d="M4,26 C4,25 6,25 19,25 C32,25 34,25 34,26 V27 C34,28.5 29,30 19,30 C9,30 4,28.5 4,27 Z" fill="currentColor" />
     </svg>
   ),
   patatine: (
@@ -50,7 +50,7 @@ const CATEGORY_SVGS = {
   ),
   combo: (
     <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-      <polygon points="18,2 22,13 34,13 24,21 28,33 18,25 8,33 12,21 2,13 14,13" fill="currentColor"/>
+      <path d="M18 2 C19.5 9 24.5 12 34 13 C25.5 17 26 23.5 28 33 C20 28 16 28 8 33 C10 23.5 10.5 17 2 13 C11.5 12 16.5 9 18 2 Z" fill="currentColor" />
     </svg>
   ),
 };
@@ -267,7 +267,7 @@ export default function CustomerKitchenMenu() {
             </div>
             <div className="kitch-promo-img">
               <img 
-                src="/assets/kitchen/02_hero_combo_porcheria_seria.png" 
+                src="/assets/kitchen/02_hero_combo_food_only.png" 
                 alt="Combo Porcheria Seria" 
                 style={{ width: '120px', height: '105px', objectFit: 'cover', objectPosition: 'right center', borderRadius: '16px', display: 'block' }}
               />
