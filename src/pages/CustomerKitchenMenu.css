@@ -138,9 +138,17 @@
 /* ── Category tabs ───────────────────────────────── */
 .kitch-tabs {
   display: flex;
-  justify-content: space-evenly;
+  justify-content: flex-start;
   padding: 20px 12px 12px;
+  padding-bottom: 6px;
   background: var(--k-bg);
+  overflow-x: auto;
+  gap: 14px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.kitch-tabs::-webkit-scrollbar {
+  display: none;
 }
 .kitch-tab {
   background: transparent;
@@ -152,6 +160,7 @@
   cursor: pointer;
   padding: 0;
   transition: var(--k-transition);
+  flex: 0 0 auto;
 }
 .kitch-tab-circle {
   width: 72px;
