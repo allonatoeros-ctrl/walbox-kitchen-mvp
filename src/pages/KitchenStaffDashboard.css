@@ -1,0 +1,160 @@
+/* KitchenStaffDashboard.css — Walrus Kitchen staff view */
+
+.ksd-page {
+  min-height: 100vh;
+  background: #0d0d0d;
+  color: #f5f0e8;
+  font-family: var(--k-font-body);
+  padding-bottom: 40px;
+}
+
+/* ── Header ─────────────────────────────────────── */
+.ksd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #1e1e1e;
+}
+.ksd-header-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--k-yellow);
+}
+.ksd-header-sub { font-size: 12px; color: rgba(245,240,232,0.4); margin-top: 2px; }
+.ksd-header-badges { display: flex; gap: 8px; align-items: center; }
+.ksd-badge-active {
+  background: #1a0800;
+  color: rgba(245,240,232,0.5);
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 4px 12px;
+  border: 1px solid #331100;
+}
+.ksd-badge-ready {
+  background: #0a2a0a;
+  color: #10b981;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 4px 12px;
+  border: 1px solid #10b98155;
+}
+.ksd-btn-reset {
+  background: transparent;
+  border: 1px solid #331100;
+  border-radius: 8px;
+  color: rgba(245,240,232,0.45);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+}
+
+/* ── Production summary bar ──────────────────────── */
+.ksd-production {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 16px;
+  background: #111;
+  border-bottom: 1px solid #1e1e1e;
+}
+.ksd-production-label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #444;
+  text-transform: uppercase;
+}
+.ksd-production-items { font-size: 14px; font-weight: 700; color: #f5f0e8; line-height: 1.5; }
+.ksd-production-empty { font-size: 13px; color: #333; }
+
+/* ── Ready alert ─────────────────────────────────── */
+.ksd-ready-alert {
+  background: #0a2a0a;
+  color: #10b981;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 11px 16px;
+  text-align: center;
+  border-bottom: 1px solid #10b98133;
+}
+
+/* ── Sections ────────────────────────────────────── */
+.ksd-sections { display: flex; flex-direction: column; }
+.ksd-section  { border-bottom: 1px solid #1a1a1a; }
+
+.ksd-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+}
+.ksd-section-label { font-size: 11px; font-weight: 900; letter-spacing: 1.5px; }
+.ksd-section-count { font-size: 13px; font-weight: 900; }
+
+/* ── Order rows ──────────────────────────────────── */
+.ksd-row-list { display: flex; flex-direction: column; }
+.ksd-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid #1a1a1a;
+}
+.ksd-row-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  flex-shrink: 0;
+  width: 80px;
+}
+.ksd-row-table {
+  background: var(--k-yellow);
+  color: #111;
+  font-size: 15px;
+  font-weight: 900;
+  border-radius: 5px;
+  padding: 2px 8px;
+  line-height: 1.4;
+}
+.ksd-row-nickname {
+  font-size: 12px;
+  color: #ccc;
+  font-weight: 600;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ksd-row-time { font-size: 11px; color: rgba(245,240,232,0.4); }
+.ksd-row-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ksd-row-items  { font-size: 14px; font-weight: 700; color: #f5f0e8; line-height: 1.4; }
+.ksd-row-note   { font-size: 13px; font-weight: 700; color: #f5a623; line-height: 1.3; }
+.ksd-row-right  { flex-shrink: 0; }
+
+.ksd-btn-action {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* ── Empty state ─────────────────────────────────── */
+.ksd-empty { color: #333; font-size: 14px; text-align: center; padding: 48px 16px; }

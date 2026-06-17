@@ -1,0 +1,658 @@
+/* CustomerKitchenMenu.css — Walrus Kitchen UI */
+
+/* ── Page ───────────────────────────────────────── */
+.kitch-page {
+  min-height: 100vh;
+  background: var(--k-bg);
+  color: var(--k-text);
+  font-family: var(--k-font-body);
+  overflow-x: hidden;
+}
+
+/* ── Header ─────────────────────────────────────── */
+.kitch-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 16px 16px;
+}
+.kitch-header-logo {
+  font-size: 50px;
+}
+.kitch-header-text {
+  display: flex;
+  flex-direction: column;
+}
+.kitch-header-title {
+  font-family: var(--k-font-display);
+  font-size: 32px;
+  line-height: 1;
+  color: var(--k-text);
+  letter-spacing: 1px;
+}
+.kitch-header-sub {
+  font-family: var(--k-font-display);
+  font-size: 14px;
+  color: var(--k-yellow);
+  margin-top: 4px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Promo hero card ─────────────────────────────── */
+.kitch-promo-wrapper {
+  position: relative;
+  margin: 24px 16px 16px;
+}
+.kitch-promo-badge {
+  position: absolute;
+  top: -20px;
+  right: 20px;
+  background: var(--k-yellow);
+  color: var(--k-bg);
+  border-radius: 50%;
+  width: 86px;
+  height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--k-font-display);
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.15;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+.kitch-promo-card {
+  background: #f6deb5;
+  border-radius: 28px;
+  padding: 28px 24px 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+}
+.kitch-promo-text {
+  display: flex;
+  flex-direction: column;
+  z-index: 2;
+}
+.kitch-promo-label {
+  font-family: var(--k-font-display);
+  font-size: 26px;
+  color: #150a06;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.kitch-promo-name {
+  font-family: var(--k-font-display);
+  font-size: 48px;
+  color: var(--k-orange);
+  line-height: 0.85;
+  text-transform: uppercase;
+}
+.kitch-promo-desc {
+  font-family: var(--k-font-body);
+  font-size: 12px;
+  color: #5c4738;
+  font-weight: 800;
+  margin-top: 10px;
+  line-height: 1.2;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+.kitch-promo-price-pill {
+  background: var(--k-orange);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 20px;
+  border-radius: 9999px;
+  margin-top: 14px;
+  align-self: flex-start;
+}
+.kitch-promo-price-pill span {
+  font-family: var(--k-font-display);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+}
+.kitch-promo-img {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  margin-left: 12px;
+}
+
+/* ── Category tabs ───────────────────────────────── */
+.kitch-tabs {
+  display: flex;
+  justify-content: space-evenly;
+  padding: 24px 12px 16px;
+  margin-top: 8px;
+}
+.kitch-tab {
+  background: transparent;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 0;
+  transition: var(--k-transition);
+}
+.kitch-tab-circle {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border-width: 3px;
+  border-style: solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--k-transition);
+}
+.kitch-tab-label {
+  font-family: var(--k-font-display);
+  font-size: 14px;
+  transition: var(--k-transition);
+}
+
+/* ── Section title ───────────────────────────────── */
+.kitch-section-title {
+  font-family: var(--k-font-display);
+  font-size: 24px;
+  color: var(--k-text);
+  padding: 20px 16px 12px;
+  letter-spacing: 1px;
+}
+
+/* ── Menu item cards ─────────────────────────────── */
+.kitch-menu-list {
+  padding: 0 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.kitch-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #2b1b11;
+}
+.kitch-card-img {
+  width: 100px;
+  height: 100px;
+  background: #1a0e08;
+  border-radius: var(--k-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--k-border);
+  font-size: 50px;
+}
+.kitch-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.kitch-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.kitch-card-name {
+  font-family: var(--k-font-display);
+  font-size: 20px;
+  color: var(--k-text);
+  letter-spacing: 0.5px;
+  line-height: 1.1;
+}
+.kitch-card-icon {
+  font-size: 16px;
+  opacity: 0.8;
+}
+.kitch-card-desc {
+  font-size: 12px;
+  color: var(--k-text-muted);
+  margin-top: 4px;
+  line-height: 1.3;
+  margin-bottom: 8px;
+}
+.kitch-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+}
+.kitch-card-price {
+  font-family: var(--k-font-display);
+  font-size: 20px;
+  color: var(--k-orange);
+}
+.kitch-btn-lo-voglio {
+  background: var(--k-yellow);
+  color: var(--k-surface);
+  font-family: var(--k-font-display);
+  border: none;
+  border-radius: 24px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: var(--k-transition);
+}
+.kitch-btn-lo-voglio:hover {
+  background: var(--k-yellow-hover);
+}
+
+/* ── Bottom cart bar ─────────────────────────────── */
+.kitch-bottom-spacer {
+  height: 90px;
+}
+.kitch-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--k-bg);
+  border-top: 1px solid var(--k-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 100;
+}
+.kitch-bottom-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+.kitch-cart-icon-wrap {
+  position: relative;
+  font-size: 24px;
+}
+.kitch-cart-badge {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  background: var(--k-orange);
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.kitch-bottom-title {
+  font-family: var(--k-font-display);
+  font-size: 14px;
+  color: var(--k-text);
+  letter-spacing: 0.5px;
+}
+.kitch-bottom-total {
+  font-size: 14px;
+  color: var(--k-text-muted);
+}
+.kitch-btn-vai {
+  background: var(--k-orange);
+  color: var(--k-text);
+  font-family: var(--k-font-display);
+  border: none;
+  border-radius: var(--k-radius-sm);
+  padding: 12px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: var(--k-transition);
+}
+.kitch-btn-vai:hover {
+  background: var(--k-orange-hover);
+}
+
+/* ── Cart drawer ─────────────────────────────────── */
+.kitch-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 200;
+}
+.kitch-drawer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--k-cream);
+  border-radius: 24px 24px 0 0;
+  z-index: 300;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+.kitch-drawer-handle {
+  width: 40px;
+  height: 4px;
+  background: #ccc;
+  border-radius: 2px;
+  margin: 12px auto;
+}
+.kitch-drawer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px 16px;
+  border-bottom: 1px solid #e0c89e;
+}
+.kitch-drawer-title {
+  font-family: var(--k-font-display);
+  font-size: 24px;
+  color: var(--k-surface);
+  letter-spacing: 1px;
+}
+.kitch-drawer-close {
+  background: transparent;
+  border: none;
+  font-size: 28px;
+  color: var(--k-surface);
+  cursor: pointer;
+  line-height: 1;
+}
+.kitch-drawer-body {
+  overflow-y: auto;
+  padding: 16px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.kitch-drawer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.kitch-drawer-row-img {
+  width: 60px;
+  height: 60px;
+  background: var(--k-surface);
+  border-radius: var(--k-radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 24px;
+}
+.kitch-drawer-row-content {
+  flex: 1;
+}
+.kitch-drawer-row-name {
+  font-family: var(--k-font-display);
+  font-size: 16px;
+  color: var(--k-surface);
+  margin-bottom: 4px;
+}
+.kitch-drawer-row-price {
+  color: #b8261d;
+  font-weight: 700;
+  font-size: 14px;
+}
+.kitch-drawer-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #eaddc2;
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+.kitch-qty-btn {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--k-surface);
+  cursor: pointer;
+  width: 24px;
+  display: flex;
+  justify-content: center;
+}
+.kitch-qty-num {
+  font-family: var(--k-font-display);
+  font-size: 18px;
+  color: var(--k-surface);
+  min-width: 20px;
+  text-align: center;
+}
+.kitch-trash-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* ── Upsell banner ───────────────────────────────── */
+.kitch-upsell {
+  background: var(--k-surface);
+  border-radius: var(--k-radius);
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+.kitch-upsell-text {
+  display: flex;
+  flex-direction: column;
+}
+.kitch-upsell-title {
+  font-family: var(--k-font-display);
+  font-size: 14px;
+  color: var(--k-yellow);
+  letter-spacing: 0.5px;
+}
+.kitch-upsell-sub {
+  font-size: 11px;
+  color: var(--k-text-muted);
+  margin-top: 2px;
+}
+.kitch-upsell-price {
+  font-size: 16px;
+  color: #fff;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.kitch-upsell-img {
+  font-size: 32px;
+}
+.kitch-upsell-add {
+  background: var(--k-yellow);
+  color: var(--k-surface);
+  border: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  font-size: 24px;
+  font-weight: 900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Drawer totals + submit ──────────────────────── */
+.kitch-drawer-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+.kitch-drawer-total-label,
+.kitch-drawer-total-value {
+  font-family: var(--k-font-display);
+  font-size: 24px;
+  color: var(--k-surface);
+}
+.kitch-btn-submit {
+  background: var(--k-orange);
+  color: var(--k-cream);
+  font-family: var(--k-font-display);
+  border: none;
+  border-radius: var(--k-radius);
+  padding: 16px;
+  font-size: 20px;
+  cursor: pointer;
+  letter-spacing: 1px;
+  width: 100%;
+  transition: var(--k-transition);
+}
+.kitch-btn-submit:hover {
+  background: var(--k-orange-hover);
+}
+.kitch-secure-hint {
+  text-align: center;
+  font-size: 12px;
+  color: #555;
+  margin-top: 8px;
+}
+
+/* ── Confirm / order submitted screen ────────────── */
+.kitch-confirm {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--k-bg);
+}
+.kitch-confirm-logo {
+  margin-bottom: 20px;
+  font-size: 80px;
+}
+.kitch-confirm-title {
+  font-family: var(--k-font-display);
+  font-size: 36px;
+  color: var(--k-text);
+  text-align: center;
+  line-height: 1;
+  letter-spacing: 1px;
+  margin-bottom: 40px;
+}
+.kitch-confirm-title span {
+  color: var(--k-orange);
+}
+.kitch-status-list {
+  width: 100%;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+.kitch-status-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.kitch-status-icon-done {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #4b7a2f;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+.kitch-status-icon-pending {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px dashed var(--k-yellow);
+  color: var(--k-yellow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+.kitch-status-label-done {
+  font-family: var(--k-font-display);
+  font-size: 16px;
+  color: #4b7a2f;
+  letter-spacing: 0.5px;
+}
+.kitch-status-label-pending {
+  font-family: var(--k-font-display);
+  font-size: 16px;
+  color: var(--k-yellow);
+  letter-spacing: 0.5px;
+}
+.kitch-status-desc {
+  font-size: 12px;
+  color: #888;
+  margin-top: 4px;
+}
+.kitch-follow-hint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--k-surface);
+  padding: 16px;
+  border-radius: var(--k-radius);
+  border: 1px solid var(--k-border);
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 300px;
+  font-size: 20px;
+}
+.kitch-follow-hint-text strong {
+  font-family: var(--k-font-display);
+  color: var(--k-text);
+  display: block;
+}
+.kitch-follow-hint-text small {
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 2px;
+  display: block;
+}
+.kitch-btn-follow {
+  background: var(--k-yellow);
+  color: var(--k-bg);
+  font-family: var(--k-font-display);
+  border: none;
+  border-radius: var(--k-radius);
+  padding: 16px;
+  font-size: 18px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 300px;
+  margin-bottom: 12px;
+  transition: var(--k-transition);
+}
+.kitch-btn-follow:hover {
+  background: var(--k-yellow-hover);
+}
+.kitch-btn-secondary {
+  background: transparent;
+  color: #aaa;
+  border: 1px solid #444;
+  border-radius: var(--k-radius);
+  padding: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  width: 100%;
+  max-width: 300px;
+}

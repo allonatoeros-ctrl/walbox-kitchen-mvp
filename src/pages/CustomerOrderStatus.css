@@ -1,0 +1,345 @@
+/* CustomerOrderStatus.css — Walrus Kitchen order tracking */
+
+/* ── Page ───────────────────────────────────────── */
+.ost-page {
+  min-height: 100vh;
+  background: var(--k-surface);
+  color: #f5f0e8;
+  font-family: var(--k-font-body);
+  padding-bottom: 48px;
+}
+
+/* ── Header ─────────────────────────────────────── */
+.ost-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 12px;
+  border-top: 5px solid var(--k-orange);
+  border-bottom: 1px solid #1e1e1e;
+}
+.ost-header-logo { font-size: 30px; }
+.ost-header-title {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--k-yellow);
+  font-family: var(--k-font-display);
+}
+.ost-header-sub { font-size: 12px; color: #666; margin-top: 2px; }
+
+/* ── Orders switcher ─────────────────────────────── */
+.ost-orders-list {
+  margin: 16px 16px 0;
+  background: #150c07;
+  border: 1px solid #2f1c12;
+  border-radius: var(--k-radius);
+  padding: 12px 14px;
+  box-shadow: 4px 4px 0 #000;
+}
+.ost-orders-list-title {
+  font-size: 10px;
+  color: #8b7a72;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  font-family: var(--k-font-display);
+}
+.ost-orders-grid {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.ost-order-card {
+  flex: 0 0 auto;
+  width: 140px;
+  background: #1e130d;
+  border: 1px solid #362217;
+  border-radius: var(--k-radius-sm);
+  padding: 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: var(--k-transition);
+  outline: none;
+}
+.ost-order-card--selected {
+  background: linear-gradient(135deg, #2a1a11, #3c2417);
+  border: 1px solid var(--k-yellow);
+  box-shadow: 0 0 8px rgba(245, 200, 66, 0.2);
+}
+.ost-order-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+.ost-order-card-id { font-size: 12px; font-weight: 800; color: #f5f0e8; }
+.ost-order-card-status {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.ost-order-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #a3928a;
+}
+
+/* ── Meta box ────────────────────────────────────── */
+.ost-meta-box {
+  margin: 16px 16px 0;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: var(--k-radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 4px 4px 0 #000;
+}
+.ost-meta-row { display: flex; justify-content: space-between; }
+.ost-meta-key { font-size: 12px; color: #555; }
+.ost-meta-val { font-size: 13px; font-weight: 700; color: #f5f0e8; }
+
+/* ── Status banners ──────────────────────────────── */
+.ost-banner {
+  margin: 16px;
+  border-radius: var(--k-radius);
+  padding: 18px 16px;
+  text-align: center;
+  box-shadow: 4px 4px 0 #000;
+}
+.ost-banner--preparing {
+  background: linear-gradient(135deg, #0a0e1a, #0a1428);
+  border: 2px solid #3b82f6;
+}
+.ost-banner--ready {
+  background: linear-gradient(135deg, #1f1600, #3d2c00);
+  border: 2px solid var(--k-yellow);
+}
+.ost-banner--cancelled {
+  background: #1a0a0a;
+  border: 1px solid #ef4444;
+}
+.ost-banner-emoji { font-size: 32px; margin-bottom: 8px; }
+.ost-banner-emoji--ready { font-size: 40px; }
+.ost-banner-title {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+  font-family: var(--k-font-display);
+}
+.ost-banner-title--preparing { color: #3b82f6; }
+.ost-banner-title--ready { font-size: 28px; color: var(--k-yellow); letter-spacing: 3px; }
+.ost-banner-msg { font-size: 14px; line-height: 1.5; }
+.ost-banner-msg--preparing { color: #93c5fd; }
+.ost-banner-msg--ready { font-size: 15px; color: var(--k-text); }
+.ost-banner-msg--cancelled { font-size: 14px; color: #ef4444; }
+
+/* ── Timeline ────────────────────────────────────── */
+.ost-timeline { margin: 20px 16px 0; }
+.ost-timeline-item {
+  display: flex;
+  gap: 14px;
+  min-height: 56px;
+}
+.ost-timeline-left {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 28px;
+}
+.ost-timeline-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.ost-dot-check { font-size: 13px; color: #fff; font-weight: 800; }
+.ost-dot-pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.9;
+}
+.ost-timeline-line {
+  width: 2px;
+  flex: 1;
+  min-height: 20px;
+  margin: 4px 0;
+  border-radius: 2px;
+}
+.ost-timeline-content { padding-top: 4px; padding-bottom: 16px; flex: 1; }
+.ost-timeline-label { font-size: 15px; margin-bottom: 4px; }
+.ost-timeline-sub { font-size: 12px; color: #888; line-height: 1.4; }
+
+/* ── Order items summary ─────────────────────────── */
+.ost-section {
+  margin: 20px 16px 0;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: var(--k-radius-sm);
+  padding: 14px;
+  box-shadow: 4px 4px 0 #000;
+}
+.ost-section-title {
+  font-size: 12px;
+  color: #555;
+  font-weight: 700;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  font-family: var(--k-font-display);
+}
+.ost-item-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.ost-item-qty { font-size: 13px; color: var(--k-yellow); font-weight: 700; min-width: 20px; }
+.ost-item-name { font-size: 14px; color: #ccc; flex: 1; }
+.ost-item-price { font-size: 13px; color: #f5f0e8; font-weight: 600; }
+.ost-divider { border-top: 1px solid #2a2a2a; margin: 10px 0; }
+.ost-total-row { display: flex; justify-content: space-between; align-items: center; }
+.ost-total-label { font-size: 13px; color: #888; font-weight: 600; }
+.ost-total-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--k-yellow);
+  font-family: var(--k-font-display);
+}
+
+/* ── Note ───────────────────────────────────────── */
+.ost-note-box {
+  margin: 12px 16px 0;
+  background: #151510;
+  border: 1px solid #2a2500;
+  border-radius: var(--k-radius-sm);
+  padding: 10px 14px;
+}
+.ost-note-label { font-size: 11px; color: #666; }
+.ost-note-text  { font-size: 13px; color: #aaa; }
+
+/* ── Status chip ─────────────────────────────────── */
+.ost-status-chip-wrap {
+  margin: 16px 16px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+.ost-status-chip {
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 4px 14px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Jukebox bridge ──────────────────────────────── */
+.ost-juke-bridge {
+  margin: 20px 16px 0;
+  background: #161616;
+  border: 1px solid #2a2a2a;
+  border-radius: var(--k-radius-sm);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 4px 4px 0 #000;
+}
+.ost-juke-bridge-text { font-size: 13px; color: #888; flex: 1; line-height: 1.4; }
+.ost-juke-bridge-btn {
+  background: transparent;
+  border: 1px solid #333;
+  border-radius: 20px;
+  color: var(--k-yellow);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ── Back button ─────────────────────────────────── */
+.ost-back-wrap {
+  margin: 32px 16px 0;
+  display: flex;
+  justify-content: center;
+}
+.ost-back-btn {
+  background: transparent;
+  border: 1px solid #444;
+  border-radius: 20px;
+  color: #aaa;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  cursor: pointer;
+}
+
+/* ── Dev tools ───────────────────────────────────── */
+.ost-dev-toggle-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+.ost-dev-toggle-btn {
+  background: transparent;
+  border: none;
+  color: #2a2a2a;
+  font-size: 10px;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  padding: 4px 8px;
+}
+.ost-dev-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 24px;
+  overflow-x: auto;
+  flex-wrap: nowrap;
+  opacity: 0.5;
+}
+.ost-dev-label { font-size: 10px; color: #444; flex-shrink: 0; letter-spacing: 0.5px; }
+.ost-dev-btn {
+  background: transparent;
+  border: 1px solid #222;
+  border-radius: 12px;
+  color: #444;
+  padding: 4px 10px;
+  font-size: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ost-dev-btn--active { border-color: #555; color: #888; }
+.ost-dev-note {
+  font-size: 9px;
+  color: #2a2a2a;
+  margin-top: 8px;
+  letter-spacing: 0.3px;
+  flex-basis: 100%;
+  padding-top: 4px;
+}

@@ -46,6 +46,25 @@
   --mood-energetic: linear-gradient(135deg, var(--walrus-amber-beer), var(--walrus-copper));
   --mood-romantic: linear-gradient(135deg, var(--walrus-brick-red), var(--walrus-neon-fuchsia));
   --mood-retro: linear-gradient(135deg, var(--walrus-trunk-brown), var(--walrus-amber-beer));
+
+  /* ── Kitchen Design System ─────────────────────────────────────────── */
+  --k-bg:            #150a06;
+  --k-surface:       #20120b;
+  --k-surface-mid:   #2c1a10;
+  --k-border:        #332115;
+  --k-orange:        #f05a24;
+  --k-orange-hover:  #d94e1c;
+  --k-yellow:        #f8c53a;
+  --k-yellow-hover:  #e0ae28;
+  --k-cream:         #f7dfb5;
+  --k-green:         #457c39;
+  --k-text:          #f7dfb5;
+  --k-text-muted:    #a8927d;
+  --k-font-display:  'Bungee', 'Anton', Impact, 'Arial Black', sans-serif;
+  --k-font-body:     'Montserrat', system-ui, sans-serif;
+  --k-radius:        12px;
+  --k-radius-sm:     8px;
+  --k-transition:    all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
