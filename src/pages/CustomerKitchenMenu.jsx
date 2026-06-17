@@ -54,10 +54,10 @@ const CATEGORY_SVGS = {
 };
 
 const CATEGORIES = [
-  { key: 'panini',   label: 'PANINI',   icon: CATEGORY_SVGS.panini   },
+  { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
   { key: 'patatine', label: 'PATATINE', icon: CATEGORY_SVGS.patatine },
-  { key: 'birre',    label: 'BIRRE',    icon: CATEGORY_SVGS.birre    },
-  { key: 'combo',    label: 'COMBO',    icon: CATEGORY_SVGS.combo    },
+  { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
+  { key: 'combo', label: 'COMBO', icon: CATEGORY_SVGS.combo },
 ];
 
 const promoItem =
@@ -74,10 +74,10 @@ function drawerIcon(name) {
 }
 
 function getCategoryTitle(cat) {
-  if (cat === 'panini')   return <>I PANINI DA <span style={{ color: 'var(--k-orange)' }}>SPACCO</span></>;
+  if (cat === 'panini') return <>I PANINI DA <span style={{ color: 'var(--k-orange)' }}>SPACCO</span></>;
   if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
-  if (cat === 'birre')    return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
-  if (cat === 'combo')    return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
+  if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
+  if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
   return cat.toUpperCase();
 }
 
@@ -98,7 +98,10 @@ export default function CustomerKitchenMenu() {
   const addItem = (item) => {
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === item.id);
-      if (existing) return prev.map((o) => o.id === item.id ? { ...o, qty: o.qty + 1 } : o);
+      if (existing) {
+        if (item.id === 'upsell-combo') return prev;
+        return prev.map((o) => o.id === item.id ? { ...o, qty: o.qty + 1 } : o);
+      }
       return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1 }];
     });
   };
@@ -120,11 +123,11 @@ export default function CustomerKitchenMenu() {
     if (orderItems.length === 0) return;
     const newOrder = {
       id: `order-${Date.now()}`,
-      table:    session.table ? `T${session.table}` : 'T7',
+      table: session.table ? `T${session.table}` : 'T7',
       nickname: session.nickname,
-      items:    orderItems.map((o) => ({ itemId: o.id, name: o.name, quantity: o.qty, price: o.price })),
+      items: orderItems.map((o) => ({ itemId: o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
-      status:    'received',
+      status: 'received',
       createdAt: new Date().toISOString(),
     };
     addOrder(newOrder);
@@ -244,9 +247,9 @@ export default function CustomerKitchenMenu() {
 
       {/* Header */}
       <div className="kitch-header" style={{ padding: 0, display: 'block', background: 'transparent' }}>
-        <img 
-          src="/assets/kitchen/01_header_walrus_kitchen.png" 
-          alt="Walrus Kitchen - Panini Ignoranti, Fame Educata." 
+        <img
+          src="/assets/kitchen/01_header_walrus_kitchen.png"
+          alt="Walrus Kitchen - Panini Ignoranti, Fame Educata."
           style={{ width: '100%', height: 'auto', display: 'block' }}
         />
       </div>
@@ -254,17 +257,17 @@ export default function CustomerKitchenMenu() {
       {/* Promo hero card */}
       {activeCategory === 'patatine' ? (
         <div className="kitch-promo-wrapper">
-          <img 
-            src="/assets/kitchen/07_fries_promo_fritto_terapeutico.png" 
-            alt="Fritto terapeutico" 
+          <img
+            src="/assets/kitchen/07_fries_promo_fritto_terapeutico.png"
+            alt="Fritto terapeutico"
             style={{ width: '100%', borderRadius: '28px', display: 'block' }}
           />
         </div>
       ) : activeCategory === 'panini' || activeCategory === 'combo' ? (
         <div className="kitch-promo-wrapper">
-          <img 
-            src="/assets/kitchen/02_hero_combo_porcheria_seria.png" 
-            alt="Combo Porcheria Seria" 
+          <img
+            src="/assets/kitchen/02_hero_combo_porcheria_seria.png"
+            alt="Combo Porcheria Seria"
             style={{ width: '100%', borderRadius: '28px', display: 'block' }}
           />
         </div>
@@ -285,10 +288,10 @@ export default function CustomerKitchenMenu() {
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card">
             <div className="kitch-card-img" style={{ overflow: 'hidden' }}>
-                {KITCHEN_ITEM_PHOTOS[item.id]
-                  ? <img src={KITCHEN_ITEM_PHOTOS[item.id]} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  : (CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini)}
-              </div>
+              {KITCHEN_ITEM_PHOTOS[item.id]
+                ? <img src={KITCHEN_ITEM_PHOTOS[item.id]} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : (CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini)}
+            </div>
             <div className="kitch-card-content">
               <div className="kitch-card-header">
                 <div className="kitch-card-name">{item.name.toUpperCase()}</div>
@@ -309,7 +312,7 @@ export default function CustomerKitchenMenu() {
         <>
           <div className="kitch-bottom-spacer" />
           <div className="kitch-bottom-bar">
-            <div className="kitch-bottom-left" onClick={() => setCartOpen(true)}>
+            <div className="kitch-bottom-left" onClick={() => setCartOpen(true)} role="button" aria-label="🛒">
               <div className="kitch-cart-icon-wrap">
                 🛍️
                 <div className="kitch-cart-badge">{orderItems.reduce((s, o) => s + o.qty, 0)}</div>
@@ -340,48 +343,54 @@ export default function CustomerKitchenMenu() {
             <button className="kitch-drawer-close" onClick={() => setCartOpen(false)}>×</button>
           </div>
           <div className="kitch-drawer-body">
-            {orderItems.map((o) => (
-              <div key={o.id} className="kitch-drawer-row">
-                <div className="kitch-drawer-row-img">
-                  {KITCHEN_ITEM_PHOTOS[o.id] ? (
-                    <img
-                      src={KITCHEN_ITEM_PHOTOS[o.id]}
-                      alt={o.name}
-                      className="kitch-drawer-row-photo"
-                    />
-                  ) : (
-                    drawerIcon(o.name)
-                  )}
+            <div className="kitch-drawer-items-list">
+              {orderItems.map((o) => (
+                <div key={o.id} className="kitch-drawer-row">
+                  <div className="kitch-drawer-row-img">
+                    {KITCHEN_ITEM_PHOTOS[o.id] ? (
+                      <img
+                        src={KITCHEN_ITEM_PHOTOS[o.id]}
+                        alt={o.name}
+                        className="kitch-drawer-row-photo"
+                      />
+                    ) : (
+                      drawerIcon(o.name)
+                    )}
+                  </div>
+                  <div className="kitch-drawer-row-content">
+                    <div className="kitch-drawer-row-name">{o.name.toUpperCase()}</div>
+                    <div className="kitch-drawer-row-price">€{o.price.toFixed(2)}</div>
+                  </div>
+                  <div className="kitch-drawer-row-controls">
+                    <button className="kitch-qty-btn" onClick={() => removeItem(o.id)}>−</button>
+                    <span className="kitch-qty-num">{o.qty}</span>
+                    <button className="kitch-qty-btn" onClick={() => addItem(o)}>+</button>
+                    <button className="kitch-trash-btn" onClick={() => removeAllOfItem(o.id)}>🗑️</button>
+                  </div>
                 </div>
-                <div className="kitch-drawer-row-content">
-                  <div className="kitch-drawer-row-name">{o.name.toUpperCase()}</div>
-                  <div className="kitch-drawer-row-price">€{o.price.toFixed(2)}</div>
-                </div>
-                <div className="kitch-drawer-row-controls">
-                  <button className="kitch-qty-btn" onClick={() => removeItem(o.id)}>−</button>
-                  <span className="kitch-qty-num">{o.qty}</span>
-                  <button className="kitch-qty-btn" onClick={() => addItem(o)}>+</button>
-                  <button className="kitch-trash-btn" onClick={() => removeAllOfItem(o.id)}>🗑️</button>
-                </div>
-              </div>
-            ))}
+              ))}
 
-            <div className="kitch-upsell">
-              <div className="kitch-upsell-text">
-                <div className="kitch-upsell-title">AGGIUNGI E RISPARMIA!</div>
-                <div className="kitch-upsell-sub">RENDI LA TUA COMBO</div>
-                <div className="kitch-upsell-price">+€2,00</div>
-              </div>
-              <div className="kitch-upsell-img">🍟🍺</div>
-              <button className="kitch-upsell-add" onClick={() => setActiveCategory('combo')}>+</button>
+              <button
+                className="kitch-upsell-promo-card"
+                onClick={() => addItem({ id: 'upsell-combo', name: 'Upgrade Combo', price: 2.00 })}
+                aria-label="Aggiungi Upgrade Combo per €2,00"
+              >
+                <img
+                  src="/assets/kitchen/aggiungi_e_risparmia_combo_digitale.png"
+                  alt="Aggiungi Upgrade Combo per €2,00"
+                  className="kitch-upsell-promo-img"
+                />
+              </button>
             </div>
 
-            <div className="kitch-drawer-total-row">
-              <div className="kitch-drawer-total-label">TOTALE</div>
-              <div className="kitch-drawer-total-value">€{total.toFixed(2)}</div>
+            <div className="kitch-drawer-footer">
+              <div className="kitch-drawer-total-row">
+                <div className="kitch-drawer-total-label">TOTALE</div>
+                <div className="kitch-drawer-total-value">€{total.toFixed(2)}</div>
+              </div>
+              <button className="kitch-btn-submit" onClick={handleSubmit} aria-label="Invia ordine">VAI ALL'ORDINE</button>
+              <div className="kitch-secure-hint">🔒 Ordine sicuro e veloce</div>
             </div>
-            <button className="kitch-btn-submit" onClick={handleSubmit}>VAI ALL'ORDINE</button>
-            <div className="kitch-secure-hint">🔒 Ordine sicuro e veloce</div>
           </div>
         </div>
       )}
