@@ -5,36 +5,46 @@ import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import './CustomerKitchenMenu.css';
 
-// Flat SVG icons — matching the reference flat icon style
+// ─── KITCHEN ITEM PHOTOS ────────────────────────────────────────────────────
+// Map item IDs to photo paths (served from public/assets/kitchen/).
+// To replace a photo: overwrite the PNG in public/assets/kitchen/ with the same filename,
+// or change the path here. Cards with no entry fall back to the SVG placeholder below.
+const KITCHEN_ITEM_PHOTOS = {
+  'item-001': '/assets/kitchen/photo-walrus-classic.png',
+  'item-002': '/assets/kitchen/photo-tricheco-burger.png',
+};
+// ────────────────────────────────────────────────────────────────────────────
+
+// Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
 const CATEGORY_SVGS = {
   panini: (
     <svg width="38" height="30" viewBox="0 0 38 30" fill="none">
-      <rect x="1" y="0"  width="36" height="7"  rx="3.5" fill="white"/>
-      <rect x="3" y="10" width="32" height="4"  rx="2"   fill="white"/>
-      <rect x="3" y="16" width="32" height="4"  rx="2"   fill="white"/>
-      <rect x="1" y="23" width="36" height="7"  rx="3.5" fill="white"/>
+      <rect x="1" y="0"  width="36" height="7"  rx="3.5" fill="currentColor"/>
+      <rect x="3" y="10" width="32" height="4"  rx="2"   fill="currentColor"/>
+      <rect x="3" y="16" width="32" height="4"  rx="2"   fill="currentColor"/>
+      <rect x="1" y="23" width="36" height="7"  rx="3.5" fill="currentColor"/>
     </svg>
   ),
   patatine: (
     <svg width="30" height="36" viewBox="0 0 30 36" fill="none">
-      <rect x="5"  y="14" width="20" height="22" rx="3" fill="white"/>
-      <rect x="0"  y="16" width="5"  height="18" rx="2" fill="white"/>
-      <rect x="25" y="16" width="5"  height="18" rx="2" fill="white"/>
-      <rect x="11" y="14" width="4"  height="20" rx="2" fill="white"/>
-      <rect x="15" y="14" width="4"  height="20" rx="2" fill="white"/>
-      <rect x="5"  y="12" width="20" height="6"  rx="2" fill="white" opacity="0.7"/>
+      <rect x="5"  y="14" width="20" height="22" rx="3" fill="currentColor"/>
+      <rect x="0"  y="16" width="5"  height="18" rx="2" fill="currentColor"/>
+      <rect x="25" y="16" width="5"  height="18" rx="2" fill="currentColor"/>
+      <rect x="11" y="14" width="4"  height="20" rx="2" fill="currentColor"/>
+      <rect x="15" y="14" width="4"  height="20" rx="2" fill="currentColor"/>
+      <rect x="5"  y="12" width="20" height="6"  rx="2" fill="currentColor" opacity="0.7"/>
     </svg>
   ),
   birre: (
     <svg width="22" height="36" viewBox="0 0 22 36" fill="none">
-      <rect x="6"  y="0"  width="10" height="5"  rx="2" fill="white"/>
-      <rect x="4"  y="4"  width="14" height="28" rx="4" fill="white"/>
-      <rect x="6"  y="8"  width="4"  height="16" rx="2" fill="white" opacity="0.25"/>
+      <rect x="6"  y="0"  width="10" height="5"  rx="2" fill="currentColor"/>
+      <rect x="4"  y="4"  width="14" height="28" rx="4" fill="currentColor"/>
+      <rect x="6"  y="8"  width="4"  height="16" rx="2" fill="currentColor" opacity="0.25"/>
     </svg>
   ),
   combo: (
     <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-      <polygon points="18,2 22,13 34,13 24,21 28,33 18,25 8,33 12,21 2,13 14,13" fill="white"/>
+      <polygon points="18,2 22,13 34,13 24,21 28,33 18,25 8,33 12,21 2,13 14,13" fill="currentColor"/>
     </svg>
   ),
 };
@@ -180,24 +190,59 @@ export default function CustomerKitchenMenu() {
 
   // ── Main menu ─────────────────────────────────────────────────────────
   return (
-    <div className="kitch-page">
+    <div className={`kitch-page active-cat-${activeCategory}`}>
+      <style>{`
+        /* Overrides to match the category tabs row look of 03_category_icon_row.png */
+        .kitch-tabs .kitch-tab .kitch-tab-circle {
+          color: #fff;
+          transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+        }
+
+        /* PANINI tab (Yellow circle, dark icon) */
+        .active-cat-panini .kitch-tabs .kitch-tab:nth-child(1) .kitch-tab-circle {
+          background-color: #f8c53a !important;
+          border-color: #e05929 !important;
+          color: #150a06 !important;
+          box-shadow: 0 8px 20px rgba(248, 197, 58, 0.4) !important;
+        }
+
+        /* PATATINE tab (Orange circle, white icon) */
+        .active-cat-patatine .kitch-tabs .kitch-tab:nth-child(2) .kitch-tab-circle {
+          background-color: #e05929 !important;
+          border-color: #f8c53a !important;
+          color: #fff !important;
+          box-shadow: 0 8px 20px rgba(224, 89, 41, 0.4) !important;
+        }
+
+        /* BIRRE tab (Beige/cream circle, dark icon) */
+        .active-cat-birre .kitch-tabs .kitch-tab:nth-child(3) .kitch-tab-circle {
+          background-color: #f6deb5 !important;
+          border-color: #e05929 !important;
+          color: #150a06 !important;
+          box-shadow: 0 8px 20px rgba(246, 222, 181, 0.4) !important;
+        }
+
+        /* COMBO tab (Green circle, white icon) */
+        .active-cat-combo .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle {
+          background-color: #457c39 !important;
+          border-color: #f8c53a !important;
+          color: #fff !important;
+          box-shadow: 0 8px 20px rgba(69, 124, 57, 0.4) !important;
+        }
+
+        /* Ensure card product icons retain their white fill color */
+        .kitch-card-img svg {
+          color: #fff !important;
+        }
+      `}</style>
 
       {/* Header */}
-      <div className="kitch-header">
-        <div className="kitch-header-logo-box">
-          <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
-            <path d="M5 14 C5 8 17 5 17 5 C17 5 29 8 29 14 L29 22 C29 28 17 31 17 31 C17 31 5 28 5 22 Z" fill="white" opacity="0.15"/>
-            <circle cx="11" cy="17" r="5" fill="none" stroke="white" strokeWidth="2.5"/>
-            <circle cx="23" cy="17" r="5" fill="none" stroke="white" strokeWidth="2.5"/>
-            <path d="M16 17 H18" stroke="white" strokeWidth="2.5" strokeLinecap="round"/>
-            <path d="M6 17 C6 12 11 10 11 10" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.6"/>
-            <path d="M28 17 C28 12 23 10 23 10" stroke="white" strokeWidth="2" strokeLinecap="round" fill="none" opacity="0.6"/>
-          </svg>
-        </div>
-        <div className="kitch-header-text">
-          <div className="kitch-header-title">WALRUS<br />KITCHEN</div>
-          <div className="kitch-header-sub">PANINI IGNORANTI, FAME EDUCATA.</div>
-        </div>
+      <div className="kitch-header" style={{ padding: 0, display: 'block', background: 'transparent' }}>
+        <img 
+          src="/assets/kitchen/01_header_walrus_kitchen.png" 
+          alt="Walrus Kitchen - Panini Ignoranti, Fame Educata." 
+          style={{ width: '100%', height: 'auto', display: 'block' }}
+        />
       </div>
 
       {/* Promo hero card */}
@@ -215,13 +260,11 @@ export default function CustomerKitchenMenu() {
               </div>
             </div>
             <div className="kitch-promo-img">
-              <svg width="128" height="106" viewBox="0 0 140 106" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M 10,45 C 10,12 130,12 130,45 C 130,48 125,49 120,49 L 20,49 C 15,49 10,48 10,45 Z" fill="#dfa65d" />
-                <rect x="6"  y="47" width="128" height="10" rx="5" fill="#69b14d" />
-                <rect x="8"  y="55" width="124" height="6"  rx="3" fill="#f7cb37" />
-                <rect x="10" y="59" width="120" height="16" rx="8" fill="#8c4e29" />
-                <path d="M 10,72 H 130 C 130,90 110,96 70,96 C 30,96 10,90 10,72 Z" fill="#dfa65d" />
-              </svg>
+              <img 
+                src="/assets/kitchen/02_hero_combo_porcheria_seria.png" 
+                alt="Combo Porcheria Seria" 
+                style={{ width: '128px', height: '106px', objectFit: 'cover', borderRadius: '16px', display: 'block' }}
+              />
             </div>
           </div>
         </div>
@@ -241,7 +284,11 @@ export default function CustomerKitchenMenu() {
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card">
-            <div className="kitch-card-img">{CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini}</div>
+            <div className="kitch-card-img" style={{ overflow: 'hidden' }}>
+                {KITCHEN_ITEM_PHOTOS[item.id]
+                  ? <img src={KITCHEN_ITEM_PHOTOS[item.id]} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini)}
+              </div>
             <div className="kitch-card-content">
               <div className="kitch-card-header">
                 <div className="kitch-card-name">{item.name.toUpperCase()}</div>
