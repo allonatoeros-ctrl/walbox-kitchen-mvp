@@ -12,6 +12,8 @@ import './CustomerKitchenMenu.css';
 const KITCHEN_ITEM_PHOTOS = {
   'item-001': '/assets/kitchen/photo-walrus-classic.png',
   'item-002': '/assets/kitchen/photo-tricheco-burger.png',
+  'item-003': '/assets/kitchen/07_fries_promo_fritto_terapeutico.png',
+  'item-007': '/assets/kitchen/02_hero_combo_porcheria_seria.png',
 };
 // ────────────────────────────────────────────────────────────────────────────
 
