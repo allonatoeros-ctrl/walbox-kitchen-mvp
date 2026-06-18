@@ -74,6 +74,29 @@ export default function CustomerKitchenMenu() {
   const [submitted, setSubmitted] = useState(false);
   const [submittedOrderId, setSubmittedOrderId] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [countdown, setCountdown] = useState(5);
+
+  useEffect(() => {
+    if (!submitted || !submittedOrderId) {
+      setCountdown(5);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          const url = `/kitchen/status?orderId=${submittedOrderId}`;
+          window.history.pushState({}, '', url);
+          window.dispatchEvent(new PopStateEvent('popstate'));
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [submitted, submittedOrderId]);
 
   const visibleItems = kitchenMenuItems.filter((i) => i.category === activeCategory && i.available !== false);
 
@@ -124,6 +147,7 @@ export default function CustomerKitchenMenu() {
     setOrderItems([]);
     setSubmittedOrderId(null);
     setSubmitted(false);
+    setCountdown(5);
   };
 
   useEffect(() => {
@@ -199,6 +223,9 @@ export default function CustomerKitchenMenu() {
           >
             SEGUI IL TUO ORDINE
           </button>
+          <div style={{ fontSize: '12px', color: 'rgba(245,234,216,0.45)', textAlign: 'center', marginTop: '-4px', marginBottom: '8px' }}>
+            Segui il tuo ordine in {countdown}…
+          </div>
           <button className="kitch-btn-secondary" onClick={handleReset}>
             NUOVO ORDINE
           </button>

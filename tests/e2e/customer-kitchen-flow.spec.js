@@ -52,7 +52,7 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   await page.getByRole('button', { name: 'LO VOGLIO' }).first().click();
 
   // Open cart bottom sheet via the floating pill
-  await page.getByRole('button', { name: /🛒/ }).click();
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
 
   // Submit the order
   await page.getByRole('button', { name: /Invia ordine/i }).click();

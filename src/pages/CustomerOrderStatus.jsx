@@ -13,6 +13,13 @@ function getMostRecentId(orders) {
 
 const TIMELINE_STEPS = ['received', 'preparing', 'ready', 'delivered'];
 
+const STEP_LABELS = {
+  received:  'RICEVUTO',
+  preparing: 'IN PREPARAZIONE',
+  ready:     'PRONTO',
+  delivered: 'CONSEGNATO',
+};
+
 function getStepState(step, currentStatus) {
   const currentIndex = TIMELINE_STEPS.indexOf(currentStatus);
   const stepIndex    = TIMELINE_STEPS.indexOf(step);
@@ -23,6 +30,15 @@ function getStepState(step, currentStatus) {
 
 function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
+
+function elapsedMinutes(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (isNaN(d.getTime())) return '';
+  const diff = Math.floor((Date.now() - d.getTime()) / 60000);
+  if (diff < 1) return 'ora';
+  return `${diff} min fa`;
 }
 
 function navigate(path) {
@@ -45,6 +61,14 @@ export default function CustomerOrderStatus() {
   const { orders } = useKitchenOrders();
   const [selectedId, setSelectedId] = useState(() => resolveInitialId(orders));
   const [devOpen, setDevOpen] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTick((t) => t + 1);
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Keep selectedId in sync when orders update (e.g. cross-tab) or URL changes
   useEffect(() => {
@@ -73,6 +97,9 @@ export default function CustomerOrderStatus() {
   const isReceived   = order?.status === 'received';
   const isCancelled  = order?.status === 'cancelled';
 
+  const elapsed = order ? elapsedMinutes(order.createdAt) : '';
+  const elapsedText = elapsed ? ` · ${elapsed}` : '';
+
   useEffect(() => {
     if (isReady && navigator.vibrate) navigator.vibrate([200, 100, 200]);
   }, [isReady]);
@@ -84,30 +111,25 @@ export default function CustomerOrderStatus() {
 
   if (!order) {
     return (
-      <div className="ost-page" style={{ paddingBottom: 80 }}>
-        <div className="ost-header">
-          <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Kitchen" className="ost-header-logo-img" />
-          <div>
-            <div className="ost-header-title">WALRUS KITCHEN</div>
-            <div className="ost-header-sub">Segui il tuo ordine in tempo reale</div>
-          </div>
+      <div className="ost-page">
+        <div className="ost-topbar">
+          <button className="ost-topbar-back" onClick={() => navigate('/kitchen')}>‹</button>
+          <span className="ost-topbar-title">STATO ORDINE</span>
+          <span className="ost-topbar-bell">🔔</span>
         </div>
-        <div style={{ padding: '60px 16px', textAlign: 'center' }}>
-          <h2 style={{ color: 'var(--k-yellow)', marginBottom: 12, fontSize: 20, fontWeight: 800, fontFamily: 'var(--k-font-display)', letterSpacing: 1 }}>
-            Nessun ordine trovato
-          </h2>
-          <p style={{ color: '#aaa', fontSize: 14, marginBottom: 24, lineHeight: 1.5 }}>
-            Non abbiamo trovato nessun ordine attivo da mostrare.
-          </p>
-          <div className="ost-back-wrap">
-            <button className="ost-back-btn" onClick={() => navigate('/kitchen')}>
-              ← Torna al menu
-            </button>
-          </div>
+        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+          <h2 className="ost-empty-title">Nessun ordine trovato</h2>
+          <p className="ost-empty-sub">Non abbiamo trovato nessun ordine attivo da mostrare.</p>
+          <button className="ost-topbar-back-btn" onClick={() => navigate('/kitchen')}>
+            ← Torna al menu
+          </button>
         </div>
-        <div className="ost-bottom-banner">
-          <span className="ost-bottom-banner-bell">🔔</span>
-          <span className="ost-bottom-banner-text">QUANDO È PRONTO TI AVVISIAMO NOI</span>
+        <div className="ost-bottom-bar">
+          <span className="ost-bottom-bar-bell">🔔</span>
+          <div className="ost-bottom-bar-text">
+            <div>QUANDO È PRONTO</div>
+            <div className="ost-bottom-bar-accent">TI AVVISIAMO NOI</div>
+          </div>
         </div>
       </div>
     );
@@ -124,28 +146,157 @@ export default function CustomerOrderStatus() {
     .slice(0, 5);
 
   return (
-    <div className="ost-page" style={{ paddingBottom: 80 }}>
+    <div className="ost-page">
 
-      {/* Header */}
-      <div className="ost-header">
-        <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Kitchen" className="ost-header-logo-img" />
-        <div>
-          <div className="ost-header-title">WALRUS KITCHEN</div>
-          <div className="ost-header-sub">Segui il tuo ordine in tempo reale</div>
+      {/* TopBar */}
+      <div className="ost-topbar">
+        <button className="ost-topbar-back" onClick={() => navigate('/kitchen')}>‹</button>
+        <span className="ost-topbar-title">STATO ORDINE</span>
+        <span className="ost-topbar-bell">🔔</span>
+      </div>
+
+      {/* WalrusChefHero */}
+      <div className="ost-hero">
+        <div className="ost-hero-glow" />
+        <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Chef" className="ost-hero-mascot" />
+        <div className="ost-hero-headline">
+          <div className="ost-hero-line1">IL TUO ORDINE<br />È IN CUCINA.</div>
+          <div className="ost-hero-line2">PREGATE.</div>
         </div>
       </div>
 
-      {/* Hero title */}
-      <div className="ost-hero-title">
-        <div className="ost-hero-main">IL TUO ORDINE È IN CUCINA.</div>
-        <div className="ost-hero-sub">PREGATE.</div>
+      {/* OrderInfoGrid */}
+      <div className="ost-info-grid">
+        <div className="ost-info-grid-header">DATI ORDINE</div>
+        <div className="ost-info-grid-cells">
+          <div className="ost-info-cell">
+            <div className="ost-info-label">TAVOLO</div>
+            <div className="ost-info-value ost-info-value--yellow">{order.table}</div>
+          </div>
+          <div className="ost-info-cell">
+            <div className="ost-info-label">NICKNAME</div>
+            <div className="ost-info-value ost-info-value--orange">{order.nickname}</div>
+          </div>
+          <div className="ost-info-cell ost-info-cell--bottom">
+            <div className="ost-info-label">ORA ORDINE</div>
+            <div className="ost-info-value ost-info-value--time">🕐 {formatTime(order.createdAt)}</div>
+          </div>
+          <div className="ost-info-cell ost-info-cell--bottom">
+            <div className="ost-info-label">ORDINE N.</div>
+            <div className="ost-info-value ost-info-value--muted">#{order.id.replace('order-', '')}</div>
+          </div>
+        </div>
       </div>
 
-      {/* Orders switcher */}
+      {/* CurrentStatusBanner */}
+      <div className={`ost-status-banner ost-status-banner--${order.status}`}>
+        <div className="ost-status-banner-dot" />
+        <div className="ost-status-banner-content">
+          <div className="ost-status-banner-label">
+            {STEP_LABELS[order.status] ?? statusInfo?.label ?? order.status.toUpperCase()}
+          </div>
+          <div className="ost-status-banner-sub">
+            {order.status === 'received'  && `Ordine ricevuto. La cucina è avvisata.${elapsedText}`}
+            {order.status === 'preparing' && `Ci stanno mettendo le mani.${elapsedText}`}
+            {order.status === 'ready'     && 'Vieni a ritirarlo al banco. CAVALLOOOO.'}
+            {order.status === 'delivered' && 'Buon appetito.'}
+            {order.status === 'cancelled' && 'Ordine annullato. Parla con il personale.'}
+          </div>
+        </div>
+      </div>
+
+      {/* StatusTimeline */}
+      {!isCancelled && (
+        <div className="ost-timeline">
+          <div className="ost-timeline-header">PROGRESSIONE</div>
+          {TIMELINE_STEPS.map((step, i) => {
+            const state = getStepState(step, order.status);
+            return (
+              <div key={step} className={`ost-timeline-item ost-timeline-item--${state}`}>
+                <div className="ost-timeline-left">
+                  <div className={`ost-timeline-dot ost-timeline-dot--${state}`}>
+                    {state === 'done'   && <span className="ost-dot-check">✓</span>}
+                    {state === 'active' && <span className="ost-dot-inner" />}
+                  </div>
+                  {i < TIMELINE_STEPS.length - 1 && (
+                    <div className={`ost-timeline-line ost-timeline-line--${state}`} />
+                  )}
+                </div>
+                <div className="ost-timeline-content">
+                  <div className="ost-timeline-label">{STEP_LABELS[step]}</div>
+                  {state === 'active' && (
+                    <div className="ost-timeline-sub">
+                    {step === 'received'  && `Ordine ricevuto. La cucina è avvisata.${elapsedText}`}
+                    {step === 'preparing' && `Ci stanno mettendo le mani.${elapsedText}`}
+                    {step === 'ready'     && 'CAVALLOOOO. È pronto al banco.'}
+                    {step === 'delivered' && 'Buon appetito.'}
+                  </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* OrderedItemsPanel */}
+      <div className="ost-items-panel">
+        <div className="ost-items-panel-header">
+          <span>HAI ORDINATO</span>
+          <span>QTÀ / PREZZO</span>
+        </div>
+        {order.items.map((item, i) => (
+          <div key={i} className="ost-item-row">
+            <div className="ost-item-qty-badge">{item.quantity}</div>
+            <span className="ost-item-name">{item.name}</span>
+            <span className="ost-item-price">€{(item.price * item.quantity).toFixed(2)}</span>
+          </div>
+        ))}
+        <div className="ost-total-row">
+          <span className="ost-total-label">TOTALE</span>
+          <span className="ost-total-value">€{order.total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* KitchenNotesPanel */}
+      {order.note && (
+        <div className="ost-notes-panel">
+          <div className="ost-notes-header">
+            <span>📝</span>
+            <span className="ost-notes-label">NOTE PER LA CUCINA</span>
+          </div>
+          <div className="ost-notes-text">{order.note}</div>
+        </div>
+      )}
+
+      {/* JukeboxBridgeCard */}
+      {(isReceived || isPreparing) && (
+        <div 
+          className="ost-jukebox-card"
+          onClick={() => navigate(`/request?table=${(order.table || '').replace(/^T/i, '') || '7'}`)}
+        >
+          <div className="ost-jukebox-text">
+            <div className="ost-jukebox-headline">MENTRE ASPETTI<br />METTI UN PEZZO<br />AL JUKEBOX</div>
+            <div className="ost-jukebox-desc">Vota le canzoni, manda una dedica.</div>
+          </div>
+          <button
+            className="ost-jukebox-btn"
+            aria-label="Vai al jukebox"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/request?table=${(order.table || '').replace(/^T/i, '') || '7'}`);
+            }}
+          >
+            🎵
+          </button>
+        </div>
+      )}
+
+      {/* MyOrdersSwitcher */}
       {sortedOrders.length > 1 && (
-        <div className="ost-orders-list">
-          <div className="ost-orders-list-title">I MIEI ORDINI</div>
-          <div className="ost-orders-grid">
+        <div className="ost-switcher">
+          <div className="ost-switcher-label">I MIEI ORDINI</div>
+          <div className="ost-switcher-scroll">
             {sortedOrders.map((o) => (
               <KitchenOrderCard
                 key={o.id}
@@ -158,174 +309,16 @@ export default function CustomerOrderStatus() {
         </div>
       )}
 
-      {/* Order meta */}
-      <div className="ost-meta-box">
-        <div className="ost-meta-row"><span className="ost-meta-key">Ordine</span><span className="ost-meta-val">#{order.id.replace('order-', '')}</span></div>
-        <div className="ost-meta-row"><span className="ost-meta-key">Tavolo</span><span className="ost-meta-val">{order.table}</span></div>
-        <div className="ost-meta-row"><span className="ost-meta-key">Nickname</span><span className="ost-meta-val">{order.nickname}</span></div>
-        <div className="ost-meta-row"><span className="ost-meta-key">Orario</span><span className="ost-meta-val">{formatTime(order.createdAt)}</span></div>
-      </div>
-
-      {/* Status banners */}
-      {isPreparing && (
-        <div className="ost-banner ost-banner--preparing">
-          <div className="ost-banner-emoji">🍳</div>
-          <div className="ost-banner-title ost-banner-title--preparing">IN PREPARAZIONE</div>
-          <div className="ost-banner-msg ost-banner-msg--preparing">
-            Stanno preparando il tuo ordine. Tieniti pronto — ti avvisiamo qui.
-          </div>
-        </div>
-      )}
-      {isReady && (
-        <div className="ost-banner ost-banner--ready">
-          <div className="ost-banner-emoji ost-banner-emoji--ready">🐴</div>
-          <div className="ost-banner-title ost-banner-title--ready">CAVALLOOOO</div>
-          <div className="ost-banner-msg ost-banner-msg--ready">
-            Il tuo ordine è pronto. Vieni a ritirarlo al banco.
-          </div>
-        </div>
-      )}
-      {isCancelled && (
-        <div className="ost-banner ost-banner--cancelled">
-          <div className="ost-banner-msg ost-banner-msg--cancelled">
-            Ordine annullato dalla SALA VAR. Parla con il personale.
-          </div>
-        </div>
-      )}
-
-      {/* Timeline */}
-      {!isCancelled && (
-        <div className="ost-timeline">
-          {TIMELINE_STEPS.map((step, i) => {
-            const state = getStepState(step, order.status);
-            const STEP_LABELS = {
-              received:  'RICEVUTO',
-              preparing: 'IN PREPARAZIONE',
-              ready:     'PRONTO',
-              delivered: 'CONSEGNATO',
-            };
-            const dotBg =
-              state === 'done'   ? '#10b981' :
-              state === 'active' && step === 'preparing' ? '#f5c842' :
-              state === 'active' ? '#10b981' :
-              '#1e1e1e';
-            const dotBorder =
-              state === 'done'   ? '2px solid #10b981' :
-              state === 'active' && step === 'preparing' ? '2px solid #f5c842' :
-              state === 'active' ? '2px solid #10b981' :
-              '2px solid #333';
-            const lineBg = state === 'done' ? '#10b981' : '#222';
-            const labelColor =
-              state === 'done'   ? '#10b981' :
-              state === 'active' && step === 'preparing' ? '#f5c842' :
-              state === 'active' ? '#10b981' :
-              '#3a3a3a';
-            return (
-              <div key={step} className="ost-timeline-item">
-                <div className="ost-timeline-left">
-                  <div
-                    className="ost-timeline-dot"
-                    style={{
-                      background: dotBg,
-                      border: dotBorder,
-                      boxShadow: state === 'active' ? `0 0 10px ${dotBg}88` : 'none',
-                    }}
-                  >
-                    {state === 'done'   && <span className="ost-dot-check">✓</span>}
-                    {state === 'active' && <span className="ost-dot-pulse" />}
-                  </div>
-                  {i < TIMELINE_STEPS.length - 1 && (
-                    <div className="ost-timeline-line" style={{ background: lineBg }} />
-                  )}
-                </div>
-                <div className="ost-timeline-content">
-                  <div
-                    className="ost-timeline-label"
-                    style={{ color: labelColor, fontWeight: state === 'pending' ? 600 : 800 }}
-                  >
-                    {STEP_LABELS[step]}
-                  </div>
-                  {state === 'active' && (
-                    <div className="ost-timeline-sub">
-                      {step === 'received'  && 'Ordine ricevuto. La cucina è avvisata.'}
-                      {step === 'preparing' && 'Ci stanno mettendo le mani.'}
-                      {step === 'ready'     && 'CAVALLOOOO. È pronto al banco.'}
-                      {step === 'delivered' && 'Buon appetito.'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Items summary */}
-      <div className="ost-section">
-        <div className="ost-section-title">Riepilogo ordine</div>
-        {order.items.map((item, i) => (
-          <div key={i} className="ost-item-row">
-            <span className="ost-item-qty">{item.quantity}×</span>
-            <span className="ost-item-name">{item.name}</span>
-            <span className="ost-item-price">€{(item.price * item.quantity).toFixed(2)}</span>
-          </div>
-        ))}
-        <div className="ost-divider" />
-        <div className="ost-total-row">
-          <span className="ost-total-label">Totale</span>
-          <span className="ost-total-value">€{order.total.toFixed(2)}</span>
+      {/* ReadyAlertBottomBox */}
+      <div className="ost-bottom-bar">
+        <span className="ost-bottom-bar-bell">🔔</span>
+        <div className="ost-bottom-bar-text">
+          <div>QUANDO È PRONTO</div>
+          <div className="ost-bottom-bar-accent">TI AVVISIAMO NOI</div>
         </div>
       </div>
 
-      {/* Note */}
-      {order.note && (
-        <div className="ost-note-box">
-          <span className="ost-note-label">Note cucina: </span>
-          <span className="ost-note-text">{order.note}</span>
-        </div>
-      )}
-
-      {/* Jukebox bridge */}
-      {(isReceived || isPreparing) && (
-        <div className="ost-juke-bridge">
-          <span className="ost-juke-bridge-text">Mentre aspetti, metti una canzone.</span>
-          <button
-            className="ost-juke-bridge-btn"
-            onClick={() => navigate(`/request?table=${(order.table || '').replace(/^T/i, '') || '7'}`)}
-          >
-            🎵 Vai al jukebox
-          </button>
-        </div>
-      )}
-
-      {/* Status chip */}
-      <div className="ost-status-chip-wrap">
-        <span
-          className="ost-status-chip"
-          style={{
-            background: statusInfo?.color + '22',
-            color: statusInfo?.color,
-            border: `1px solid ${statusInfo?.color}44`,
-          }}
-        >
-          {statusInfo?.label}
-        </span>
-      </div>
-
-      {/* Back */}
-      <div className="ost-back-wrap">
-        <button className="ost-back-btn" onClick={() => navigate('/kitchen')}>
-          ← Torna al menu
-        </button>
-      </div>
-
-      {/* Fixed bottom banner */}
-      <div className="ost-bottom-banner">
-        <span className="ost-bottom-banner-bell">🔔</span>
-        <span className="ost-bottom-banner-text">QUANDO È PRONTO TI AVVISIAMO NOI</span>
-      </div>
-
-      {/* Dev tools */}
+      {/* DemoStateControls */}
       {import.meta.env.DEV && (
         <>
           <div className="ost-dev-toggle-row">
