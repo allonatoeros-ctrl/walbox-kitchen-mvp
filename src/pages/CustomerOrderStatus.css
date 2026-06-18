@@ -6,7 +6,7 @@
   background: var(--k-surface);
   color: #f5f0e8;
   font-family: var(--k-font-body);
-  padding-bottom: 48px;
+  padding-bottom: 80px;
 }
 
 /* ── Header ─────────────────────────────────────── */
@@ -18,7 +18,12 @@
   border-top: 5px solid var(--k-orange);
   border-bottom: 1px solid #1e1e1e;
 }
-.ost-header-logo { font-size: 30px; }
+.ost-header-logo-img {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
 .ost-header-title {
   font-size: 18px;
   font-weight: 800;
@@ -27,6 +32,56 @@
   font-family: var(--k-font-display);
 }
 .ost-header-sub { font-size: 12px; color: #666; margin-top: 2px; }
+
+/* ── Hero title ──────────────────────────────────── */
+.ost-hero-title {
+  padding: 20px 16px 4px;
+  text-align: left;
+}
+.ost-hero-main {
+  font-size: 22px;
+  font-weight: 900;
+  color: #f5f0e8;
+  font-family: var(--k-font-display);
+  letter-spacing: 1px;
+  line-height: 1.2;
+}
+.ost-hero-sub {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--k-orange);
+  font-family: var(--k-font-display);
+  letter-spacing: 2px;
+  margin-top: 2px;
+}
+
+/* ── Fixed bottom banner ─────────────────────────── */
+.ost-bottom-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #1a1108;
+  border-top: 2px solid var(--k-orange);
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  z-index: 100;
+}
+.ost-bottom-banner-bell {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.ost-bottom-banner-text {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #f5f0e8;
+  font-family: var(--k-font-display);
+  text-transform: uppercase;
+}
 
 /* ── Orders switcher ─────────────────────────────── */
 .ost-orders-list {

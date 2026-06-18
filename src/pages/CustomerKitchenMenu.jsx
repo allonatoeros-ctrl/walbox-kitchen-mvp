@@ -135,29 +135,55 @@ export default function CustomerKitchenMenu() {
     return (
       <div className="kitch-page">
         <div className="kitch-confirm">
-          <div className="kitch-confirm-logo">🦭</div>
+          <div className="kitch-confirm-logo"><img src="/assets/kitchen/walrus-chef.png" className="kitch-confirm-logo-img" /></div>
           <div className="kitch-confirm-title">
-            IL TUO ORDINE È IN CUCINA.<br />
-            <span>PREGATE.</span>
+            <p>IL TUO ORDINE</p>
+            <p>È IN CUCINA.</p>
           </div>
+          <div className="kitch-confirm-subtitle">PREGATE.</div>
           <div className="kitch-status-list">
             <div className="kitch-status-row">
-              <div className="kitch-status-icon-done">✓</div>
-              <div>
+              <div className="kitch-status-col">
+                <div className="kitch-status-icon-done">✓</div>
+                <div className="kitch-status-connector" />
+              </div>
+              <div className="kitch-status-text">
                 <div className="kitch-status-label-done">RICEVUTO</div>
                 <div className="kitch-status-desc">Il tuo ordine è stato ricevuto.</div>
               </div>
             </div>
             <div className="kitch-status-row">
-              <div className="kitch-status-icon-pending">+</div>
-              <div>
+              <div className="kitch-status-col">
+                <div className="kitch-status-icon-pending">+</div>
+                <div className="kitch-status-connector" />
+              </div>
+              <div className="kitch-status-text">
                 <div className="kitch-status-label-pending">IN PREPARAZIONE</div>
                 <div className="kitch-status-desc">Stiamo cucinando roba seria.</div>
               </div>
             </div>
+            <div className="kitch-status-row">
+              <div className="kitch-status-col">
+                <div className="kitch-status-icon-inactive" />
+                <div className="kitch-status-connector" />
+              </div>
+              <div className="kitch-status-text">
+                <div className="kitch-status-label-inactive">PRONTO</div>
+                <div className="kitch-status-desc-inactive">Stiamo impiattando.</div>
+              </div>
+            </div>
+            <div className="kitch-status-row">
+              <div className="kitch-status-col">
+                <div className="kitch-status-icon-inactive" />
+              </div>
+              <div className="kitch-status-text">
+                <div className="kitch-status-label-inactive">CONSEGNATO</div>
+                <div className="kitch-status-desc-inactive">Vieni al banco e spacca tutto.</div>
+              </div>
+            </div>
           </div>
           <div className="kitch-follow-hint">
-            <span>🔔</span>
+            <span className="kitch-follow-hint-icon">🔔</span>
             <div className="kitch-follow-hint-text">
               <strong>QUANDO È PRONTO TI AVVISIAMO NOI</strong>
               <small>Rimani nei paraggi, non sparire.</small>

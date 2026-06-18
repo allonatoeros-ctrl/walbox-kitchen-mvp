@@ -11,7 +11,7 @@ function getMostRecentId(orders) {
   ).id;
 }
 
-const TIMELINE_STEPS = ['received', 'preparing', 'ready'];
+const TIMELINE_STEPS = ['received', 'preparing', 'ready', 'delivered'];
 
 function getStepState(step, currentStatus) {
   const currentIndex = TIMELINE_STEPS.indexOf(currentStatus);
@@ -84,16 +84,15 @@ export default function CustomerOrderStatus() {
 
   if (!order) {
     return (
-      <div className="ost-page">
+      <div className="ost-page" style={{ paddingBottom: 80 }}>
         <div className="ost-header">
-          <div className="ost-header-logo">🦭</div>
+          <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Kitchen" className="ost-header-logo-img" />
           <div>
             <div className="ost-header-title">WALRUS KITCHEN</div>
             <div className="ost-header-sub">Segui il tuo ordine in tempo reale</div>
           </div>
         </div>
         <div style={{ padding: '60px 16px', textAlign: 'center' }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
           <h2 style={{ color: 'var(--k-yellow)', marginBottom: 12, fontSize: 20, fontWeight: 800, fontFamily: 'var(--k-font-display)', letterSpacing: 1 }}>
             Nessun ordine trovato
           </h2>
@@ -105,6 +104,10 @@ export default function CustomerOrderStatus() {
               ← Torna al menu
             </button>
           </div>
+        </div>
+        <div className="ost-bottom-banner">
+          <span className="ost-bottom-banner-bell">🔔</span>
+          <span className="ost-bottom-banner-text">QUANDO È PRONTO TI AVVISIAMO NOI</span>
         </div>
       </div>
     );
@@ -121,15 +124,21 @@ export default function CustomerOrderStatus() {
     .slice(0, 5);
 
   return (
-    <div className="ost-page">
+    <div className="ost-page" style={{ paddingBottom: 80 }}>
 
       {/* Header */}
       <div className="ost-header">
-        <div className="ost-header-logo">🦭</div>
+        <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Kitchen" className="ost-header-logo-img" />
         <div>
           <div className="ost-header-title">WALRUS KITCHEN</div>
           <div className="ost-header-sub">Segui il tuo ordine in tempo reale</div>
         </div>
+      </div>
+
+      {/* Hero title */}
+      <div className="ost-hero-title">
+        <div className="ost-hero-main">IL TUO ORDINE È IN CUCINA.</div>
+        <div className="ost-hero-sub">PREGATE.</div>
       </div>
 
       {/* Orders switcher */}
@@ -189,11 +198,28 @@ export default function CustomerOrderStatus() {
         <div className="ost-timeline">
           {TIMELINE_STEPS.map((step, i) => {
             const state = getStepState(step, order.status);
-            const info  = kitchenOrderStatuses[step];
-            const dotBg = state === 'active' ? info.color : state === 'done' ? '#10b981' : '#2a2a2a';
-            const dotBorder = state === 'pending' ? '2px solid #444' : `2px solid ${state === 'done' ? '#10b981' : info.color}`;
-            const lineBg = state === 'done' ? '#10b981' : '#2a2a2a';
-            const labelColor = state === 'active' ? info.color : state === 'done' ? '#10b981' : '#555';
+            const STEP_LABELS = {
+              received:  'RICEVUTO',
+              preparing: 'IN PREPARAZIONE',
+              ready:     'PRONTO',
+              delivered: 'CONSEGNATO',
+            };
+            const dotBg =
+              state === 'done'   ? '#10b981' :
+              state === 'active' && step === 'preparing' ? '#f5c842' :
+              state === 'active' ? '#10b981' :
+              '#1e1e1e';
+            const dotBorder =
+              state === 'done'   ? '2px solid #10b981' :
+              state === 'active' && step === 'preparing' ? '2px solid #f5c842' :
+              state === 'active' ? '2px solid #10b981' :
+              '2px solid #333';
+            const lineBg = state === 'done' ? '#10b981' : '#222';
+            const labelColor =
+              state === 'done'   ? '#10b981' :
+              state === 'active' && step === 'preparing' ? '#f5c842' :
+              state === 'active' ? '#10b981' :
+              '#3a3a3a';
             return (
               <div key={step} className="ost-timeline-item">
                 <div className="ost-timeline-left">
@@ -202,7 +228,7 @@ export default function CustomerOrderStatus() {
                     style={{
                       background: dotBg,
                       border: dotBorder,
-                      boxShadow: state === 'active' ? `0 0 10px ${info.color}88` : 'none',
+                      boxShadow: state === 'active' ? `0 0 10px ${dotBg}88` : 'none',
                     }}
                   >
                     {state === 'done'   && <span className="ost-dot-check">✓</span>}
@@ -215,15 +241,16 @@ export default function CustomerOrderStatus() {
                 <div className="ost-timeline-content">
                   <div
                     className="ost-timeline-label"
-                    style={{ color: labelColor, fontWeight: state === 'active' ? 800 : 600 }}
+                    style={{ color: labelColor, fontWeight: state === 'pending' ? 600 : 800 }}
                   >
-                    {info.label}
+                    {STEP_LABELS[step]}
                   </div>
                   {state === 'active' && (
                     <div className="ost-timeline-sub">
                       {step === 'received'  && 'Ordine ricevuto. La cucina è avvisata.'}
                       {step === 'preparing' && 'Ci stanno mettendo le mani.'}
                       {step === 'ready'     && 'CAVALLOOOO. È pronto al banco.'}
+                      {step === 'delivered' && 'Buon appetito.'}
                     </div>
                   )}
                 </div>
@@ -290,6 +317,12 @@ export default function CustomerOrderStatus() {
         <button className="ost-back-btn" onClick={() => navigate('/kitchen')}>
           ← Torna al menu
         </button>
+      </div>
+
+      {/* Fixed bottom banner */}
+      <div className="ost-bottom-banner">
+        <span className="ost-bottom-banner-bell">🔔</span>
+        <span className="ost-bottom-banner-text">QUANDO È PRONTO TI AVVISIAMO NOI</span>
       </div>
 
       {/* Dev tools */}
