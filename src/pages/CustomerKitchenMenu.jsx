@@ -211,47 +211,47 @@ export default function CustomerKitchenMenu() {
   return (
     <div className={`kitch-page active-cat-${activeCategory}`}>
       <style>{`
-        /* Overrides to match the category tabs row look of 03_category_icon_row.png */
         .kitch-tabs .kitch-tab .kitch-tab-circle {
-          color: #fff;
-          transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+          transition: background-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
         }
 
-        /* PANINI tab (Yellow circle, dark icon) */
+        /* Inactive tab base colors (dimmed) */
+        .kitch-tabs .kitch-tab:nth-child(1) .kitch-tab-circle { background-color: rgba(200,150,10,0.28) !important; color: rgba(212,200,154,0.7) !important; }
+        .kitch-tabs .kitch-tab:nth-child(2) .kitch-tab-circle { background-color: rgba(184,48,32,0.28) !important; color: rgba(212,200,154,0.7) !important; }
+        .kitch-tabs .kitch-tab:nth-child(3) .kitch-tab-circle { background-color: rgba(196,168,106,0.28) !important; color: rgba(212,200,154,0.7) !important; }
+        .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle { background-color: rgba(58,74,40,0.28) !important; color: rgba(212,200,154,0.7) !important; }
+
+        /* PANINI tab active */
         .active-cat-panini .kitch-tabs .kitch-tab:nth-child(1) .kitch-tab-circle {
-          background-color: #f8c53a !important;
-          border-color: #e05929 !important;
-          color: #150a06 !important;
-          box-shadow: 0 8px 20px rgba(248, 197, 58, 0.4) !important;
+          background-color: #c8960a !important;
+          color: #0e0c08 !important;
+          box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(200,150,10,0.5) !important;
         }
 
-        /* PATATINE tab (Orange circle, white icon) */
+        /* PATATINE tab active */
         .active-cat-patatine .kitch-tabs .kitch-tab:nth-child(2) .kitch-tab-circle {
-          background-color: #e05929 !important;
-          border-color: #f8c53a !important;
+          background-color: #b83020 !important;
           color: #fff !important;
-          box-shadow: 0 8px 20px rgba(224, 89, 41, 0.4) !important;
+          box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(184,48,32,0.5) !important;
         }
 
-        /* BIRRE tab (Beige/cream circle, dark icon) */
+        /* BIRRE tab active */
         .active-cat-birre .kitch-tabs .kitch-tab:nth-child(3) .kitch-tab-circle {
-          background-color: #f6deb5 !important;
-          border-color: #e05929 !important;
-          color: #150a06 !important;
-          box-shadow: 0 8px 20px rgba(246, 222, 181, 0.4) !important;
+          background-color: #c4a86a !important;
+          color: #0e0c08 !important;
+          box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(196,168,106,0.45) !important;
         }
 
-        /* COMBO tab (Green circle, white icon) */
+        /* COMBO tab active */
         .active-cat-combo .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle {
-          background-color: #457c39 !important;
-          border-color: #f8c53a !important;
+          background-color: #3a4a28 !important;
           color: #fff !important;
-          box-shadow: 0 8px 20px rgba(69, 124, 57, 0.4) !important;
+          box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(58,74,40,0.5) !important;
         }
 
-        /* Ensure card product icons retain their white fill color */
+        /* Card svg icons: dark color on cream background */
         .kitch-card-img svg {
-          color: #fff !important;
+          color: #1c1a14 !important;
         }
       `}</style>
 
@@ -314,21 +314,27 @@ export default function CustomerKitchenMenu() {
         <>
           <div className="kitch-bottom-spacer" />
           <div className="kitch-bottom-bar">
-            <div className="kitch-bottom-left" onClick={() => setCartOpen(true)} role="button" aria-label="🛒">
-              <div className="kitch-cart-icon-wrap">
-                🛍️
-                <div className="kitch-cart-badge">{orderItems.reduce((s, o) => s + o.qty, 0)}</div>
-              </div>
-              <div>
-                <div className="kitch-bottom-title">
-                  {orderItems.reduce((s, o) => s + o.qty, 0)} ROBE NEL SACCO
+            <div className="kitch-bottom-card">
+              <div className="kitch-bottom-left" onClick={() => setCartOpen(true)} role="button" aria-label="Apri carrello">
+                <div className="kitch-cart-icon-wrap">
+                  <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
+                    <circle cx="23" cy="27" r="2" fill="#e8ddb8"/>
+                  </svg>
+                  <div className="kitch-cart-badge">{orderItems.reduce((s, o) => s + o.qty, 0)}</div>
                 </div>
-                <div className="kitch-bottom-total">€{total.toFixed(2)}</div>
+                <div>
+                  <div className="kitch-bottom-title">
+                    {orderItems.reduce((s, o) => s + o.qty, 0)} ROBE NEL SACCO
+                  </div>
+                  <div className="kitch-bottom-total">€{total.toFixed(2).replace('.', ',')}</div>
+                </div>
               </div>
+              <button className="kitch-btn-vai" onClick={() => setCartOpen(true)}>
+                VAI ALL'ORDINE
+              </button>
             </div>
-            <button className="kitch-btn-vai" onClick={() => setCartOpen(true)}>
-              VAI ALL'ORDINE
-            </button>
           </div>
         </>
       )}

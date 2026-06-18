@@ -55,7 +55,7 @@
 /* ── Promo hero card ─────────────────────────────── */
 .kitch-promo-wrapper {
   position: relative;
-  margin: 24px 16px 16px;
+  margin: 10px 10px 0;
 }
 
 .kitch-promo-badge {
@@ -153,15 +153,14 @@
 /* ── Category tabs ───────────────────────────────── */
 .kitch-tabs {
   display: flex;
-  justify-content: flex-start;
-  padding: 20px 12px 12px;
-  padding-bottom: 6px;
+  justify-content: space-between;
+  padding: 18px 22px 0;
   background: var(--k-bg);
   overflow-x: auto;
-  gap: 14px;
+  gap: 0;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
-  margin-bottom: -12px;
+  margin-bottom: 0;
 }
 
 .kitch-tabs::-webkit-scrollbar {
@@ -182,65 +181,77 @@
 }
 
 .kitch-tab-circle {
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  border-width: 3px;
+  width: 68px;
+  height: 68px;
+  border-radius: 34px;
+  border-width: 0;
   border-style: solid;
+  border-color: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: var(--k-transition);
+  box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35);
 }
 
 .kitch-tab-label {
   font-family: var(--k-font-display);
   font-size: 13px;
+  color: #d4c89a;
   transition: var(--k-transition);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.78px;
+  text-transform: uppercase;
 }
 
 /* ── Section title ───────────────────────────────── */
 .kitch-section-title {
   font-family: var(--k-font-display);
-  font-size: 24px;
-  color: var(--k-text);
-  padding: 8px 16px 12px;
-  letter-spacing: 1px;
+  font-size: 26px;
+  font-weight: 900;
+  color: #c8960a;
+  padding: 4px 10px 0;
+  letter-spacing: 1.04px;
+  text-transform: uppercase;
 }
 
 /* ── Menu item cards ─────────────────────────────── */
 .kitch-menu-list {
-  padding: 0 16px 24px;
+  padding: 14px 10px 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .kitch-card {
   display: flex;
-  gap: 12px;
-  padding: 12px;
-  border-radius: 16px;
-  background: #2b1b11;
+  gap: 0;
+  padding: 0;
+  border-radius: 14px;
+  background: #e8ddb8;
+  height: 148px;
+  overflow: hidden;
+  box-shadow: 0px 3px 12px 0px rgba(0,0,0,0.55);
 }
 
 .kitch-card-img {
-  width: 84px;
-  height: 84px;
-  background: #1a0e08;
-  border-radius: var(--k-radius);
+  width: 148px;
+  height: 148px;
+  background: #c4a86a;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 1px solid var(--k-border);
+  border: none;
+  overflow: hidden;
 }
 
 .kitch-card-content {
   flex: 1;
   display: flex;
   flex-direction: column;
+  padding: 12px 12px 12px 12px;
+  min-width: 0;
 }
 
 .kitch-card-header {
@@ -251,23 +262,31 @@
 
 .kitch-card-name {
   font-family: var(--k-font-display);
-  font-size: 18px;
-  color: var(--k-text);
-  letter-spacing: 0.5px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1c1a14;
+  letter-spacing: 0.64px;
   line-height: 1.1;
+  text-transform: uppercase;
 }
 
 .kitch-card-icon {
-  font-size: 16px;
+  font-size: 14px;
   opacity: 0.8;
+  flex-shrink: 0;
+  margin-left: 4px;
 }
 
 .kitch-card-desc {
   font-size: 12px;
-  color: #eaddc2;
+  color: #5c4738;
   margin-top: 4px;
   line-height: 1.3;
   margin-bottom: 8px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .kitch-card-footer {
@@ -281,33 +300,37 @@
 .kitch-card-price {
   font-family: var(--k-font-display);
   font-size: 20px;
-  color: var(--k-orange);
+  font-weight: 800;
+  color: #c84020;
 }
 
 .kitch-btn-lo-voglio {
-  background: var(--k-yellow);
-  color: var(--k-surface);
+  background: #c84020;
+  color: #fff;
   font-family: var(--k-font-display);
+  font-weight: 900;
   border: none;
-  border-radius: 24px;
-  padding: 10px 16px;
-  min-height: 44px;
+  border-radius: 10px;
+  padding: 11px 14px;
+  min-height: 38px;
   font-size: 14px;
+  letter-spacing: 0.75px;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  text-transform: uppercase;
   transition: var(--k-transition);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  white-space: nowrap;
 }
 
 .kitch-btn-lo-voglio:hover {
-  background: var(--k-yellow-hover);
+  background: #a83318;
 }
 
 /* ── Bottom cart bar ─────────────────────────────── */
 .kitch-bottom-spacer {
-  height: 80px;
+  height: 96px;
 }
 
 .kitch-bottom-bar {
@@ -315,14 +338,22 @@
   bottom: 0;
   left: 0;
   right: 0;
-  background: var(--k-bg);
-  border-top: 1px solid var(--k-border);
+  background: linear-gradient(to top, #0e0c08 70%, transparent);
+  border-top: none;
+  padding: 10px 10px calc(14px + env(safe-area-inset-bottom));
+  z-index: 100;
+}
+
+.kitch-bottom-card {
+  background: #1c1a14;
+  border: 1px solid #2e2a1e;
+  border-radius: 14px;
+  box-shadow: 0px 4px 12px rgba(0,0,0,0.7);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  z-index: 100;
+  padding: 13px 13px 13px 17px;
+  gap: 12px;
 }
 
 .kitch-bottom-left {
@@ -330,61 +361,75 @@
   align-items: center;
   gap: 12px;
   cursor: pointer;
+  flex: 1;
+  min-width: 0;
 }
 
 .kitch-cart-icon-wrap {
   position: relative;
-  font-size: 24px;
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
 }
 
 .kitch-cart-badge {
   position: absolute;
-  top: -5px;
-  right: -8px;
-  background: var(--k-orange);
+  top: -4px;
+  left: 22px;
+  background: #c84020;
   color: #fff;
-  font-size: 10px;
-  font-weight: bold;
+  font-family: var(--k-font-display);
+  font-size: 11px;
+  font-weight: 800;
   width: 18px;
   height: 18px;
-  border-radius: 50%;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 }
 
 .kitch-bottom-title {
   font-family: var(--k-font-display);
-  font-size: 14px;
-  color: var(--k-text);
-  letter-spacing: 0.5px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #e8ddb8;
+  letter-spacing: 0.64px;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .kitch-bottom-total {
-  font-size: 13px;
-  color: var(--k-text-muted);
+  font-family: var(--k-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: #8a7e60;
 }
 
 .kitch-btn-vai {
-  background: var(--k-orange);
+  background: #c84020;
   color: #fff;
   font-family: var(--k-font-display);
+  font-weight: 900;
   border: none;
-  border-radius: 9999px;
-  padding: 10px 20px;
-  min-height: 44px;
+  border-radius: 10px;
+  padding: 11px 16px;
+  min-height: 38px;
   font-size: 15px;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.75px;
+  text-transform: uppercase;
   transition: var(--k-transition);
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .kitch-btn-vai:hover {
-  background: var(--k-orange-hover);
+  background: #a83318;
 }
 
 /* ── Cart drawer ─────────────────────────────────── */
