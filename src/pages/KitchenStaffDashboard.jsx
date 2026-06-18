@@ -26,6 +26,13 @@ function elapsedMinutes(isoString) {
   return `${diff} min fa`;
 }
 
+function urgencyClass(isoString) {
+  const mins = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
+  if (mins >= 15) return 'ksd-row--danger';
+  if (mins >= 10) return 'ksd-row--warning';
+  return '';
+}
+
 function sortByTime(orders) {
   return [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
@@ -102,15 +109,17 @@ export default function KitchenStaffDashboard() {
                   const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
 
                   return (
-                    <div key={order.id} className="ksd-row">
+                    <div key={order.id} className={`ksd-row ${urgencyClass(order.createdAt)}`}>
                       <div className="ksd-row-left">
                         <span className="ksd-row-table">{order.table}</span>
                         <span className="ksd-row-nickname">{order.nickname}</span>
                         <span className="ksd-row-time">{formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}</span>
+                        {order.total != null && (
+                          <span className="ksd-row-total">€ {order.total.toFixed(2)}</span>
+                        )}
                       </div>
                       <div className="ksd-row-center">
                         <div className="ksd-row-items">{itemsSummary}</div>
-                        {order.note && <div className="ksd-row-note">⚠️ {order.note}</div>}
                       </div>
                       <div className="ksd-row-right">
                         {action && (
@@ -126,6 +135,12 @@ export default function KitchenStaffDashboard() {
                           </button>
                         )}
                       </div>
+                      {order.note && (
+                        <div className="ksd-row-note-block">
+                          <span className="ksd-note-icon">⚠️</span>
+                          <span className="ksd-note-text">{order.note}</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
