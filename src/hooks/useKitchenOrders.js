@@ -61,11 +61,28 @@ export function useKitchenOrders() {
     });
   };
 
+  const confirmPayment = (orderId, paymentMethod = 'counter') => {
+    setOrders((prev) => {
+      const next = prev.map((o) => {
+        if (o.id !== orderId) return o;
+        return {
+          ...o,
+          paymentStatus: 'paid',
+          paymentMethod,
+          paidAt: new Date().toISOString(),
+          status: o.status === 'pending_counter_payment' ? 'received' : o.status,
+        };
+      });
+      saveOrders(next);
+      return next;
+    });
+  };
+
   const resetToDemo = () => {
     const fresh = demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
     saveOrders(fresh);
     setOrders(fresh);
   };
 
-  return { orders, updateOrderStatus, addOrder, resetToDemo };
+  return { orders, updateOrderStatus, addOrder, confirmPayment, resetToDemo };
 }
