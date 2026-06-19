@@ -148,7 +148,9 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
   if (!hasAnything) {
     return (
       <div className="ksd-sections">
-        <div className="ksd-empty">Nessun ordine al banco. In attesa di comande.</div>
+        <div className="ksd-empty" style={{ color: 'rgba(245,240,232,0.45)' }}>
+          Nessun ordine al banco. In attesa di comande.
+        </div>
       </div>
     );
   }

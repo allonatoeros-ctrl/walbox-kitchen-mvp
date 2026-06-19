@@ -1,11 +1,8 @@
-import { useKitchenMenu } from '../hooks/useKitchenMenu';
-
 const CATEGORY_LABEL = { panini: 'PANINI', patatine: 'PATATINE', birre: 'BIRRE', combo: 'COMBO' };
 
 const CATEGORY_ORDER = ['panini', 'patatine', 'birre', 'combo'];
 
-export default function MenuView() {
-  const { menuItems, toggleAvailability } = useKitchenMenu();
+export default function MenuView({ menuItems, toggleAvailability }) {
 
   const unavailableCount = menuItems.filter((i) => !i.available).length;
 

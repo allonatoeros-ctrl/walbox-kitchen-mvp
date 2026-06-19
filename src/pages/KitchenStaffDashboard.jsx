@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import CounterOrdersView from './CounterOrdersView';
 import KitchenOrdersView from './KitchenOrdersView';
 import MenuView from './MenuView';
@@ -9,6 +10,7 @@ import './KitchenStaffDashboard.css';
 
 export default function KitchenStaffDashboard() {
   const { orders, updateOrderStatus, confirmPayment, cancelOrder, resetToDemo, updateStaffNote } = useKitchenOrders();
+  const { menuItems, toggleAvailability } = useKitchenMenu();
 
   // Default to BANCONE ('counter'), but switch to CUCINA ('kitchen') if there are only kitchen orders and no counter orders.
   const [activeTab, setActiveTab] = useState(() => {
@@ -22,6 +24,8 @@ export default function KitchenStaffDashboard() {
     const hasKitchen = activeKitchen > 0;
     return (!hasCounter && hasKitchen) ? 'kitchen' : 'counter';
   });
+
+  const unavailableCount    = menuItems.filter((i) => !i.available).length;
 
   const pendingPaymentCount = orders.filter((o) => o.status === 'pending_counter_payment').length;
   const kitchenOrders       = orders.filter((o) => o.status !== 'pending_counter_payment');
@@ -47,6 +51,12 @@ export default function KitchenStaffDashboard() {
           )}
           {readyCount > 0 && (
             <span className="ksd-badge-ready">{readyCount} pronti 🟢</span>
+          )}
+          {unavailableCount > 0 && (
+            <span className="ksd-badge-menu-out">{unavailableCount} esaurit{unavailableCount === 1 ? 'o' : 'i'} 🟡</span>
+          )}
+          {urgentCount > 0 && (
+            <span className="ksd-badge-alert">{urgentCount} alert ⚠️</span>
           )}
           <button className="ksd-btn-reset" onClick={resetToDemo}>RESET DEMO</button>
         </div>
@@ -102,7 +112,7 @@ export default function KitchenStaffDashboard() {
       {activeTab === 'kitchen' && (
         <KitchenOrdersView orders={orders} updateOrderStatus={updateOrderStatus} />
       )}
-      {activeTab === 'menu' && <MenuView />}
+      {activeTab === 'menu' && <MenuView menuItems={menuItems} toggleAvailability={toggleAvailability} />}
       {activeTab === 'storico' && <StoricoView orders={orders} />}
       {activeTab === 'alert' && <AlertView orders={orders} />}
     </div>

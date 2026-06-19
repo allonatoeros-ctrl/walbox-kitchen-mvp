@@ -51,6 +51,24 @@
   padding: 4px 12px;
   border: 1px solid #10b98155;
 }
+.ksd-badge-menu-out {
+  background: #1a1400;
+  color: #f59e0b;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 4px 12px;
+  border: 1px solid #f59e0b55;
+}
+.ksd-badge-alert {
+  background: #1a0800;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 20px;
+  padding: 4px 12px;
+  border: 1px solid #ef444455;
+}
 .ksd-btn-reset {
   background: transparent;
   border: 1px solid #331100;
