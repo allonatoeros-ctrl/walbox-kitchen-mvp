@@ -3,6 +3,7 @@ import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import CounterOrdersView from './CounterOrdersView';
 import KitchenOrdersView from './KitchenOrdersView';
 import MenuView from './MenuView';
+import StoricoView from './StoricoView';
 import './KitchenStaffDashboard.css';
 
 export default function KitchenStaffDashboard() {
@@ -72,6 +73,12 @@ export default function KitchenStaffDashboard() {
         >
           MENU
         </button>
+        <button
+          className={`ksd-tab ${activeTab === 'storico' ? 'ksd-tab--active-storico' : ''}`}
+          onClick={() => setActiveTab('storico')}
+        >
+          STORICO
+        </button>
       </div>
 
       {/* View */}
@@ -82,6 +89,7 @@ export default function KitchenStaffDashboard() {
         <KitchenOrdersView orders={orders} updateOrderStatus={updateOrderStatus} />
       )}
       {activeTab === 'menu' && <MenuView />}
+      {activeTab === 'storico' && <StoricoView orders={orders} />}
     </div>
   );
 }
