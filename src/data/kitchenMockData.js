@@ -153,6 +153,23 @@ export const demoKitchenOrders = [
     createdAt: '2026-06-15T21:19:00.000Z',
     note: 'Patatine extra croccanti se possibile.',
   },
+  {
+    id: 'order-004',
+    orderCode: 'W42',
+    table: 'T5',
+    nickname: 'MarcoCavallo',
+    items: [
+      { itemId: 'item-002', name: 'Panino del Tricheco', quantity: 1, price: 9.0 },
+      { itemId: 'item-003', name: 'Patatine da Banco', quantity: 1, price: 4.0 },
+    ],
+    total: 13.0,
+    status: 'ready',
+    paymentStatus: 'paid',
+    paymentMethod: 'counter',
+    paidAt: '2026-06-15T21:16:00.000Z',
+    createdAt: '2026-06-15T21:15:00.000Z',
+    note: '',
+  },
 ];
 
 export const kitchenCategoryPromos = {

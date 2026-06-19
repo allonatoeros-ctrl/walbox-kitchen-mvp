@@ -1,65 +1,29 @@
-import { kitchenOrderStatuses } from '../data/kitchenMockData';
+import { useState } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import CounterOrdersView from './CounterOrdersView';
+import KitchenOrdersView from './KitchenOrdersView';
 import './KitchenStaffDashboard.css';
 
-const PRIMARY_ACTION = {
-  received:  { next: 'preparing', label: 'INIZIA' },
-  preparing: { next: 'ready',     label: 'PRONTO ✓' },
-  ready:     { next: 'delivered', label: 'CONSEGNATO ✓' },
-};
-
-// Per-section colors are data-driven → must stay inline
-const SECTIONS = [
-  { key: 'ready',     label: 'PRONTI',          color: '#10b981', bg: '#0a2a0a' },
-  { key: 'preparing', label: 'IN PREPARAZIONE', color: '#3b82f6', bg: '#0a1020' },
-  { key: 'received',  label: 'NUOVI',           color: '#f5c842', bg: '#1a1400' },
-];
-
-function formatTime(isoString) {
-  return new Date(isoString).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-}
-
-function elapsedMinutes(isoString) {
-  const diff = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
-  if (diff < 1) return 'adesso';
-  if (diff === 1) return '1 min fa';
-  return `${diff} min fa`;
-}
-
-function urgencyClass(isoString) {
-  const mins = Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
-  if (mins >= 15) return 'ksd-row--danger';
-  if (mins >= 10) return 'ksd-row--warning';
-  return '';
-}
-
-function sortByTime(orders) {
-  return [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-}
-
-function buildProductionSummary(orders) {
-  const totals = {};
-  orders
-    .filter((o) => o.status === 'received' || o.status === 'preparing')
-    .forEach((o) => o.items.forEach((item) => {
-      totals[item.name] = (totals[item.name] || 0) + item.quantity;
-    }));
-  return Object.entries(totals).map(([name, qty]) => `${qty}× ${name}`);
-}
-
-function isKitchenReady(order) {
-  return order.paymentStatus === 'paid' || order.paymentStatus == null;
-}
-
 export default function KitchenStaffDashboard() {
-  const { orders, updateOrderStatus, confirmPayment, resetToDemo } = useKitchenOrders();
+  const { orders, updateOrderStatus, confirmPayment, cancelOrder, resetToDemo } = useKitchenOrders();
 
-  const pendingPaymentOrders = orders.filter((o) => o.status === 'pending_counter_payment');
-  const kitchenOrders        = orders.filter((o) => o.status !== 'pending_counter_payment' && isKitchenReady(o));
+  // Default to BANCONE ('counter'), but switch to CUCINA ('kitchen') if there are only kitchen orders and no counter orders.
+  const [activeTab, setActiveTab] = useState(() => {
+    const pendingPayment = orders.filter((o) => o.status === 'pending_counter_payment').length;
+    const ready = orders.filter((o) => o.status === 'ready').length;
+    const activeKitchen = orders.filter(
+      (o) => o.status !== 'pending_counter_payment' && o.status !== 'delivered' && o.status !== 'cancelled'
+    ).length;
 
-  const activeCount    = kitchenOrders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled').length;
-  const readyCount     = kitchenOrders.filter((o) => o.status === 'ready').length;
-  const productionItems = buildProductionSummary(kitchenOrders);
+    const hasCounter = pendingPayment > 0 || ready > 0;
+    const hasKitchen = activeKitchen > 0;
+    return (!hasCounter && hasKitchen) ? 'kitchen' : 'counter';
+  });
+
+  const pendingPaymentCount = orders.filter((o) => o.status === 'pending_counter_payment').length;
+  const kitchenOrders       = orders.filter((o) => o.status !== 'pending_counter_payment');
+  const activeKitchenCount  = kitchenOrders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled').length;
+  const readyCount          = kitchenOrders.filter((o) => o.status === 'ready').length;
 
   return (
     <div className="ksd-page">
@@ -68,144 +32,46 @@ export default function KitchenStaffDashboard() {
       <div className="ksd-header">
         <div>
           <div className="ksd-header-title">WALBOX KITCHEN</div>
-          <div className="ksd-header-sub">Staff · Cucina</div>
+          <div className="ksd-header-sub">Staff · Gestione Ordini</div>
         </div>
         <div className="ksd-header-badges">
-          <span className="ksd-badge-active">{activeCount} attivi</span>
-          {pendingPaymentOrders.length > 0 && <span className="ksd-badge-payment">{pendingPaymentOrders.length} pagamento 💳</span>}
-          {readyCount > 0 && <span className="ksd-badge-ready">{readyCount} pronti 🟢</span>}
+          {pendingPaymentCount > 0 && (
+            <span className="ksd-badge-payment">{pendingPaymentCount} pagamento 💳</span>
+          )}
+          {readyCount > 0 && (
+            <span className="ksd-badge-ready">{readyCount} pronti 🟢</span>
+          )}
           <button className="ksd-btn-reset" onClick={resetToDemo}>RESET DEMO</button>
         </div>
       </div>
 
-      {/* Production summary */}
-      <div className="ksd-production">
-        <span className="ksd-production-label">ORA IN CUCINA</span>
-        {productionItems.length > 0
-          ? <span className="ksd-production-items">{productionItems.join('  ·  ')}</span>
-          : <span className="ksd-production-empty">Nessun item da preparare.</span>
-        }
+      {/* Tab switcher */}
+      <div className="ksd-tabs">
+        <button
+          className={`ksd-tab ${activeTab === 'counter' ? 'ksd-tab--active-counter' : ''}`}
+          onClick={() => setActiveTab('counter')}
+        >
+          BANCONE
+          {pendingPaymentCount > 0 && (
+            <span className="ksd-tab-badge ksd-tab-badge--counter">{pendingPaymentCount}</span>
+          )}
+        </button>
+        <button
+          className={`ksd-tab ${activeTab === 'kitchen' ? 'ksd-tab--active-kitchen' : ''}`}
+          onClick={() => setActiveTab('kitchen')}
+        >
+          CUCINA
+          {activeKitchenCount > 0 && (
+            <span className="ksd-tab-badge ksd-tab-badge--kitchen">{activeKitchenCount}</span>
+          )}
+        </button>
       </div>
 
-      {/* Ready alert */}
-      {readyCount > 0 && (
-        <div className="ksd-ready-alert">
-          🟢 {readyCount} {readyCount === 1 ? 'ordine pronto' : 'ordini pronti'} — chiama il cliente al banco
-        </div>
-      )}
-
-      {/* Pending payment section */}
-      {pendingPaymentOrders.length > 0 && (
-        <div className="ksd-sections">
-          <div className="ksd-section">
-            <div
-              className="ksd-section-header"
-              style={{ background: '#1a0a20', borderLeft: '3px solid #a855f7' }}
-            >
-              <span className="ksd-section-label" style={{ color: '#a855f7' }}>IN ATTESA PAGAMENTO</span>
-              <span className="ksd-section-count" style={{ color: '#a855f7' }}>{pendingPaymentOrders.length}</span>
-            </div>
-            <div className="ksd-row-list">
-              {sortByTime(pendingPaymentOrders).map((order) => {
-                const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
-                return (
-                  <div key={order.id} className="ksd-row">
-                    <div className="ksd-row-left">
-                      {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
-                      <span className="ksd-row-table">{order.table}</span>
-                      <span className="ksd-row-nickname">{order.nickname}</span>
-                      <span className="ksd-row-time">{formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}</span>
-                      {order.total != null && (
-                        <span className="ksd-row-total" style={{ color: '#a855f7', fontWeight: 700 }}>€ {order.total.toFixed(2)}</span>
-                      )}
-                    </div>
-                    <div className="ksd-row-center">
-                      <div className="ksd-row-items">{itemsSummary}</div>
-                    </div>
-                    <div className="ksd-row-right">
-                      <button
-                        className="ksd-btn-action"
-                        style={{ background: '#a855f7', color: '#fff' }}
-                        onClick={() => confirmPayment(order.id, 'counter')}
-                      >
-                        PAGATO ✓
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Kitchen sections */}
-      <div className="ksd-sections">
-        {SECTIONS.map((section) => {
-          const sectionOrders = sortByTime(kitchenOrders.filter((o) => o.status === section.key));
-          if (sectionOrders.length === 0) return null;
-
-          return (
-            <div key={section.key} className="ksd-section">
-              {/* Section header — colors from data, must stay inline */}
-              <div
-                className="ksd-section-header"
-                style={{ background: section.bg, borderLeft: `3px solid ${section.color}` }}
-              >
-                <span className="ksd-section-label" style={{ color: section.color }}>{section.label}</span>
-                <span className="ksd-section-count" style={{ color: section.color }}>{sectionOrders.length}</span>
-              </div>
-
-              <div className="ksd-row-list">
-                {sectionOrders.map((order) => {
-                  const action       = PRIMARY_ACTION[order.status];
-                  const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
-
-                  return (
-                    <div key={order.id} className={`ksd-row ${urgencyClass(order.createdAt)}`}>
-                      <div className="ksd-row-left">
-                        <span className="ksd-row-table">{order.table}</span>
-                        <span className="ksd-row-nickname">{order.nickname}</span>
-                        <span className="ksd-row-time">{formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}</span>
-                        {order.total != null && (
-                          <span className="ksd-row-total">€ {order.total.toFixed(2)}</span>
-                        )}
-                      </div>
-                      <div className="ksd-row-center">
-                        <div className="ksd-row-items">{itemsSummary}</div>
-                      </div>
-                      <div className="ksd-row-right">
-                        {action && (
-                          <button
-                            className="ksd-btn-action"
-                            style={{
-                              background: section.color,
-                              color: section.key === 'received' ? '#111' : '#fff',
-                            }}
-                            onClick={() => updateOrderStatus(order.id, action.next)}
-                          >
-                            {action.label}
-                          </button>
-                        )}
-                      </div>
-                      {order.note && (
-                        <div className="ksd-row-note-block">
-                          <span className="ksd-note-icon">⚠️</span>
-                          <span className="ksd-note-text">{order.note}</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
-        {activeCount === 0 && (
-          <div className="ksd-empty">Nessun ordine in cucina. In attesa di comande.</div>
-        )}
-      </div>
+      {/* View */}
+      {activeTab === 'counter'
+        ? <CounterOrdersView orders={orders} confirmPayment={confirmPayment} updateOrderStatus={updateOrderStatus} cancelOrder={cancelOrder} />
+        : <KitchenOrdersView orders={orders} updateOrderStatus={updateOrderStatus} />
+      }
     </div>
   );
 }

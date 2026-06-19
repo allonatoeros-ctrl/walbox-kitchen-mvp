@@ -78,11 +78,21 @@ export function useKitchenOrders() {
     });
   };
 
+  const cancelOrder = (id, reason) => {
+    setOrders((prev) => {
+      const next = prev.map((o) =>
+        o.id !== id ? o : { ...o, status: 'cancelled', cancelReason: reason, cancelledAt: new Date().toISOString() }
+      );
+      saveOrders(next);
+      return next;
+    });
+  };
+
   const resetToDemo = () => {
     const fresh = demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
     saveOrders(fresh);
     setOrders(fresh);
   };
 
-  return { orders, updateOrderStatus, addOrder, confirmPayment, resetToDemo };
+  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo };
 }

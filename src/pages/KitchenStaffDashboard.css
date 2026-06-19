@@ -63,6 +63,64 @@
   letter-spacing: 0.5px;
 }
 
+/* ── Tab switcher ────────────────────────────────── */
+.ksd-tabs {
+  display: flex;
+  border-bottom: 2px solid #1a1a1a;
+}
+.ksd-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: rgba(245,240,232,0.35);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  margin-bottom: -2px;
+}
+.ksd-tab:hover {
+  color: rgba(245,240,232,0.65);
+  background: #141414;
+}
+.ksd-tab--active-counter {
+  color: #a855f7;
+  border-bottom-color: #a855f7;
+  background: #12091a;
+}
+.ksd-tab--active-kitchen {
+  color: #f5c842;
+  border-bottom-color: #f5c842;
+  background: #1a1400;
+}
+.ksd-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 0 6px;
+  line-height: 1;
+}
+.ksd-tab-badge--counter {
+  background: #a855f7;
+  color: #fff;
+}
+.ksd-tab-badge--kitchen {
+  background: #f5c842;
+  color: #111;
+}
+
 /* ── Production summary bar ──────────────────────── */
 .ksd-production {
   display: flex;
@@ -225,6 +283,137 @@
     font-size: 15px;
     min-height: 52px;
   }
+}
+
+/* ── Row actions (stacked buttons) ───────────────── */
+.ksd-row-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ksd-btn-cancel {
+  border: 1px solid #3a1a1a;
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(245,240,232,0.4);
+  white-space: nowrap;
+  min-height: 36px;
+  transition: border-color 0.15s, color 0.15s;
+}
+.ksd-btn-cancel:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+/* ── Cancel panel (inline, full-width) ───────────── */
+.ksd-row--cancelling {
+  background: #140808;
+  border-left-color: #ef4444;
+}
+.ksd-cancel-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #1a0a0a;
+  border: 1px solid #ef444455;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-top: 2px;
+}
+.ksd-cancel-label {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #ef4444;
+}
+.ksd-cancel-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ksd-cancel-preset {
+  border: 1px solid #3a1a1a;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(245,240,232,0.55);
+  transition: border-color 0.12s, color 0.12s, background 0.12s;
+}
+.ksd-cancel-preset:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+.ksd-cancel-preset--active {
+  background: #3a0a0a;
+  border-color: #ef4444;
+  color: #ef4444;
+}
+.ksd-cancel-input {
+  background: #0d0d0d;
+  border: 1px solid #3a1a1a;
+  border-radius: 8px;
+  color: #f5f0e8;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 12px;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.ksd-cancel-input:focus {
+  border-color: #ef4444;
+}
+.ksd-cancel-input::placeholder { color: #444; }
+.ksd-cancel-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ksd-btn-cancel-abort {
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  background: transparent;
+  color: rgba(245,240,232,0.4);
+  min-height: 40px;
+}
+.ksd-btn-cancel-abort:hover { color: rgba(245,240,232,0.7); border-color: #444; }
+.ksd-btn-cancel-confirm {
+  flex: 1;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  background: #ef4444;
+  color: #fff;
+  min-height: 40px;
+  transition: opacity 0.15s;
+}
+.ksd-btn-cancel-confirm:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* ── Mobile layout ───────────────────────────────── */
+@media (max-width: 600px) {
+  .ksd-row-actions { width: 100%; }
+  .ksd-btn-cancel  { width: 100%; min-height: 44px; font-size: 13px; }
 }
 
 /* ── Empty state ─────────────────────────────────── */
