@@ -11,9 +11,10 @@ function getMostRecentId(orders) {
   ).id;
 }
 
-const TIMELINE_STEPS = ['received', 'preparing', 'ready', 'delivered'];
+const TIMELINE_STEPS = ['pending_counter_payment', 'received', 'preparing', 'ready', 'delivered'];
 
 const STEP_LABELS = {
+  pending_counter_payment: 'DA PAGARE',
   received:  'RICEVUTO',
   preparing: 'IN PREPARAZIONE',
   ready:     'PRONTO',
@@ -91,7 +92,9 @@ export default function CustomerOrderStatus() {
   }, [orders]);
 
   const order      = orders.find((o) => o.id === selectedId) ?? orders[0];
-  const statusInfo = order ? kitchenOrderStatuses[order.status] : null;
+  const isPendingPayment = order ? (order.status === 'pending_counter_payment' || order.paymentStatus === 'pending_counter_payment') : false;
+  const displayStatus = isPendingPayment ? 'pending_counter_payment' : (order ? order.status : 'received');
+  const statusInfo = order ? kitchenOrderStatuses[displayStatus] : null;
   const isReady      = order?.status === 'ready';
   const isPreparing  = order?.status === 'preparing';
   const isReceived   = order?.status === 'received';
@@ -160,10 +163,52 @@ export default function CustomerOrderStatus() {
         <div className="ost-hero-glow" />
         <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Chef" className="ost-hero-mascot" />
         <div className="ost-hero-headline">
-          <div className="ost-hero-line1">IL TUO ORDINE<br />È IN CUCINA.</div>
-          <div className="ost-hero-line2">PREGATE.</div>
+          {isPendingPayment ? (
+            <>
+              <div className="ost-hero-line1" style={{ fontSize: '30px' }}>NON ANCORA IN CUCINA.</div>
+              <div className="ost-hero-line2" style={{ color: '#c8960a', fontSize: '36px' }}>PASSA AL BANCO!</div>
+            </>
+          ) : (
+            <>
+              <div className="ost-hero-line1">IL TUO ORDINE<br />È IN CUCINA.</div>
+              <div className="ost-hero-line2">PREGATE.</div>
+            </>
+          )}
         </div>
       </div>
+
+      {/* Code for payment at counter */}
+      {isPendingPayment && order.orderCode && (
+        <div style={{
+          margin: '0 20px 16px',
+          padding: '20px 16px',
+          background: 'rgba(200,150,10,0.12)',
+          border: '2px solid #c8960a',
+          borderRadius: '8px',
+          textAlign: 'center',
+        }}>
+          <div style={{
+            fontFamily: 'Montserrat',
+            fontSize: '11px',
+            fontWeight: 700,
+            letterSpacing: '1.5px',
+            color: 'rgba(245,234,216,0.6)',
+            marginBottom: '4px'
+          }}>
+            MOSTRA QUESTO CODICE ALLA CASSA:
+          </div>
+          <div style={{
+            fontFamily: 'Anton',
+            fontSize: '44px',
+            fontWeight: 900,
+            letterSpacing: '3px',
+            color: '#c8960a',
+            lineHeight: 1
+          }}>
+            {order.orderCode}
+          </div>
+        </div>
+      )}
 
       {/* OrderInfoGrid */}
       <div className="ost-info-grid">
@@ -185,22 +230,35 @@ export default function CustomerOrderStatus() {
             <div className="ost-info-label">ORDINE N.</div>
             <div className="ost-info-value ost-info-value--muted">#{order.id.replace('order-', '')}</div>
           </div>
+          {order.orderCode && (
+            <div className="ost-info-cell ost-info-cell--bottom" style={{ gridColumn: 'span 2', textAlign: 'center', background: 'rgba(200,150,10,0.1)', borderTop: '1px solid rgba(245,234,216,0.07)' }}>
+              <div className="ost-info-label" style={{ color: '#c8960a', letterSpacing: '1.5px' }}>CODICE ORDINE PER LA CASSA</div>
+              <div className="ost-info-value" style={{ color: '#c8960a', fontSize: '36px', letterSpacing: '2px', marginTop: '4px' }}>{order.orderCode}</div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* CurrentStatusBanner */}
-      <div className={`ost-status-banner ost-status-banner--${order.status}`}>
+      <div 
+        className={`ost-status-banner ost-status-banner--${displayStatus}`}
+        style={displayStatus === 'pending_counter_payment' ? {
+          background: '#c8960a',
+          boxShadow: '0 4px 16px rgba(200,150,10,0.33)'
+        } : undefined}
+      >
         <div className="ost-status-banner-dot" />
         <div className="ost-status-banner-content">
           <div className="ost-status-banner-label">
-            {STEP_LABELS[order.status] ?? statusInfo?.label ?? order.status.toUpperCase()}
+            {displayStatus === 'pending_counter_payment' ? 'PASSA AL BANCO A PAGARE' : (STEP_LABELS[displayStatus] ?? statusInfo?.label ?? displayStatus.toUpperCase())}
           </div>
           <div className="ost-status-banner-sub">
-            {order.status === 'received'  && `Ordine ricevuto. La cucina è avvisata.${elapsedText}`}
-            {order.status === 'preparing' && `Ci stanno mettendo le mani.${elapsedText}`}
-            {order.status === 'ready'     && 'Vieni a ritirarlo al banco. CAVALLOOOO.'}
-            {order.status === 'delivered' && 'Buon appetito.'}
-            {order.status === 'cancelled' && 'Ordine annullato. Parla con il personale.'}
+            {displayStatus === 'pending_counter_payment' && 'Mostra il codice ordine e paga in cassa. La cucina partirà appena lo staff conferma.'}
+            {displayStatus === 'received'  && `Ordine ricevuto. La cucina è avvisata.${elapsedText}`}
+            {displayStatus === 'preparing' && `Ci stanno mettendo le mani.${elapsedText}`}
+            {displayStatus === 'ready'     && 'Vieni a ritirarlo al banco. CAVALLOOOO.'}
+            {displayStatus === 'delivered' && 'Buon appetito.'}
+            {displayStatus === 'cancelled' && 'Ordine annullato. Parla con il personale.'}
           </div>
         </div>
       </div>
@@ -210,7 +268,7 @@ export default function CustomerOrderStatus() {
         <div className="ost-timeline">
           <div className="ost-timeline-header">PROGRESSIONE</div>
           {TIMELINE_STEPS.map((step, i) => {
-            const state = getStepState(step, order.status);
+            const state = getStepState(step, displayStatus);
             return (
               <div key={step} className={`ost-timeline-item ost-timeline-item--${state}`}>
                 <div className="ost-timeline-left">
@@ -226,11 +284,12 @@ export default function CustomerOrderStatus() {
                   <div className="ost-timeline-label">{STEP_LABELS[step]}</div>
                   {state === 'active' && (
                     <div className="ost-timeline-sub">
-                    {step === 'received'  && `Ordine ricevuto. La cucina è avvisata.${elapsedText}`}
-                    {step === 'preparing' && `Ci stanno mettendo le mani.${elapsedText}`}
-                    {step === 'ready'     && 'CAVALLOOOO. È pronto al banco.'}
-                    {step === 'delivered' && 'Buon appetito.'}
-                  </div>
+                      {step === 'pending_counter_payment' && 'Mostra il codice ordine e paga in cassa. La cucina partirà appena lo staff conferma.'}
+                      {step === 'received'  && `Ordine ricevuto. La cucina è avvisata.${elapsedText}`}
+                      {step === 'preparing' && `Ci stanno mettendo le mani.${elapsedText}`}
+                      {step === 'ready'     && 'CAVALLOOOO. È pronto al banco.'}
+                      {step === 'delivered' && 'Buon appetito.'}
+                    </div>
                   )}
                 </div>
               </div>
