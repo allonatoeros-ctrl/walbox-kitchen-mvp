@@ -117,6 +117,7 @@ export const kitchenMenuItems = [
 export const demoKitchenOrders = [
   {
     id: 'order-001',
+    orderCode: 'W40',
     table: 'T3',
     nickname: 'Gamba Lunga',
     items: [
@@ -129,6 +130,7 @@ export const demoKitchenOrders = [
   },
   {
     id: 'order-002',
+    orderCode: 'W41',
     table: 'T7',
     nickname: 'Sabrina87',
     items: [
@@ -143,6 +145,7 @@ export const demoKitchenOrders = [
   },
   {
     id: 'order-003',
+    orderCode: 'W43',
     table: 'T1',
     nickname: 'IlCapo',
     items: [
