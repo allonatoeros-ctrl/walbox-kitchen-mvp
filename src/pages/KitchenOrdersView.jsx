@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { kitchenMenuItems } from '../data/kitchenMockData';
 
 const PRIMARY_ACTION = {
   received:  { next: 'preparing', label: 'INIZIA' },
@@ -37,6 +38,15 @@ function timerRef(order) {
 
 function sortByTime(orders) {
   return [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+}
+
+function getAllergens(order) {
+  const set = new Set();
+  order.items.forEach((item) => {
+    const mi = kitchenMenuItems.find((m) => m.id === item.itemId);
+    if (mi?.allergens) mi.allergens.forEach((a) => set.add(a));
+  });
+  return [...set];
 }
 
 function buildProductionSummary(orders) {
@@ -103,6 +113,8 @@ export default function KitchenOrdersView({ orders, updateOrderStatus }) {
                   const action       = PRIMARY_ACTION[order.status];
                   const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
 
+                  const allergens = getAllergens(order);
+
                   return (
                     <div key={order.id} className={`ksd-row ${urgencyClass(timerRef(order))}`}>
                       <div className="ksd-row-left">
@@ -139,6 +151,33 @@ export default function KitchenOrdersView({ orders, updateOrderStatus }) {
                         <div className="ksd-row-note-block">
                           <span className="ksd-note-icon">⚠️</span>
                           <span className="ksd-note-text">{order.note}</span>
+                        </div>
+                      )}
+                      {allergens.length > 0 && (
+                        <div style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+                          background: '#1a0505', border: '1px solid #ef444455', borderRadius: '6px',
+                          padding: '6px 10px', marginTop: '2px',
+                        }}>
+                          <span style={{ fontSize: '13px', flexShrink: 0 }}>⚠</span>
+                          <span style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.5px', color: '#ef4444', flexShrink: 0 }}>ALLERGENI:</span>
+                          {allergens.map((a) => (
+                            <span key={a} style={{
+                              fontSize: '11px', fontWeight: 800, background: '#2a0808',
+                              color: '#ef4444', borderRadius: '4px', padding: '2px 7px',
+                              border: '1px solid #ef444455', letterSpacing: '0.3px',
+                            }}>{a.toUpperCase()}</span>
+                          ))}
+                        </div>
+                      )}
+                      {order.staffNote && (
+                        <div style={{
+                          width: '100%', display: 'flex', alignItems: 'flex-start', gap: '8px',
+                          background: '#071420', border: '1px solid #3b82f655', borderRadius: '6px',
+                          padding: '7px 12px', marginTop: '2px',
+                        }}>
+                          <span style={{ fontSize: '14px', flexShrink: 0 }}>📋</span>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#60a5fa', lineHeight: 1.4 }}>{order.staffNote}</span>
                         </div>
                       )}
                     </div>

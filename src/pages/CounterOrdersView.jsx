@@ -18,7 +18,8 @@ function sortByTime(orders) {
   return [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
 
-export default function CounterOrdersView({ orders, confirmPayment, updateOrderStatus, cancelOrder }) {
+export default function CounterOrdersView({ orders, confirmPayment, updateOrderStatus, cancelOrder, updateStaffNote }) {
+
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 30000);
@@ -30,6 +31,11 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
   const [customReason, setCustomReason] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historySearch, setHistorySearch] = useState('');
+  const [editingNoteId, setEditingNoteId] = useState(null);
+  const [noteValue, setNoteValue] = useState('');
+
+  const startNote = (order) => { setEditingNoteId(order.id); setNoteValue(order.staffNote || ''); };
+  const saveNote = (orderId) => { updateStaffNote(orderId, noteValue.trim()); setEditingNoteId(null); };
 
   const pendingOrders = sortByTime(orders.filter((o) => o.status === 'pending_counter_payment'));
   const readyOrders   = sortByTime(orders.filter((o) => o.status === 'ready'));
@@ -102,6 +108,52 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
           CONFERMA ANNULLAMENTO
         </button>
       </div>
+    </div>
+  );
+
+  const renderStaffNote = (order) => (
+    <div style={{ width: '100%', marginTop: '4px' }}>
+      {editingNoteId === order.id ? (
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <input
+            style={{
+              flex: 1, background: '#071420', border: '1px solid #3b82f6',
+              borderRadius: '6px', color: '#e0f0ff', fontSize: '13px',
+              fontWeight: 700, padding: '7px 10px', fontFamily: 'inherit', outline: 'none',
+            }}
+            value={noteValue}
+            onChange={(e) => setNoteValue(e.target.value)}
+            onBlur={() => saveNote(order.id)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveNote(order.id);
+              if (e.key === 'Escape') setEditingNoteId(null);
+            }}
+            autoFocus
+            placeholder="Nota interna per cucina..."
+          />
+          <button
+            style={{
+              background: '#3b82f6', border: 'none', borderRadius: '6px',
+              color: '#fff', fontSize: '11px', fontWeight: 900, padding: '7px 10px', cursor: 'pointer',
+            }}
+            onMouseDown={(e) => { e.preventDefault(); saveNote(order.id); }}
+          >OK</button>
+        </div>
+      ) : (
+        <button
+          onClick={() => startNote(order)}
+          style={{
+            background: order.staffNote ? '#071420' : 'transparent',
+            border: order.staffNote ? '1px solid #3b82f655' : '1px dashed #3b82f630',
+            borderRadius: '6px', color: order.staffNote ? '#60a5fa' : 'rgba(245,240,232,0.28)',
+            fontSize: '12px', fontWeight: 700, padding: '5px 10px', cursor: 'pointer',
+            textAlign: 'left', width: '100%', display: 'flex', alignItems: 'center', gap: '6px',
+          }}
+        >
+          <span style={{ fontSize: '13px' }}>📋</span>
+          <span>{order.staffNote || '+ nota interna'}</span>
+        </button>
+      )}
     </div>
   );
 
@@ -241,6 +293,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                     </div>
                   )}
                   {isCancelling && renderCancelPanel(order)}
+                  {!isCancelling && renderStaffNote(order)}
                 </div>
               );
             })}
@@ -303,6 +356,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                     </div>
                   )}
                   {isCancelling && renderCancelPanel(order)}
+                  {!isCancelling && renderStaffNote(order)}
                 </div>
               );
             })}

@@ -5,7 +5,7 @@ import KitchenOrdersView from './KitchenOrdersView';
 import './KitchenStaffDashboard.css';
 
 export default function KitchenStaffDashboard() {
-  const { orders, updateOrderStatus, confirmPayment, cancelOrder, resetToDemo } = useKitchenOrders();
+  const { orders, updateOrderStatus, confirmPayment, cancelOrder, resetToDemo, updateStaffNote } = useKitchenOrders();
 
   // Default to BANCONE ('counter'), but switch to CUCINA ('kitchen') if there are only kitchen orders and no counter orders.
   const [activeTab, setActiveTab] = useState(() => {
@@ -69,7 +69,7 @@ export default function KitchenStaffDashboard() {
 
       {/* View */}
       {activeTab === 'counter'
-        ? <CounterOrdersView orders={orders} confirmPayment={confirmPayment} updateOrderStatus={updateOrderStatus} cancelOrder={cancelOrder} />
+        ? <CounterOrdersView orders={orders} confirmPayment={confirmPayment} updateOrderStatus={updateOrderStatus} cancelOrder={cancelOrder} updateStaffNote={updateStaffNote} />
         : <KitchenOrdersView orders={orders} updateOrderStatus={updateOrderStatus} />
       }
     </div>

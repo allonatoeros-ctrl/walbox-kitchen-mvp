@@ -92,11 +92,19 @@ export function useKitchenOrders() {
     });
   };
 
+  const updateStaffNote = (id, note) => {
+    setOrders((prev) => {
+      const next = prev.map((o) => o.id !== id ? o : { ...o, staffNote: note });
+      saveOrders(next);
+      return next;
+    });
+  };
+
   const resetToDemo = () => {
     const fresh = demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
     saveOrders(fresh);
     setOrders(fresh);
   };
 
-  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo };
+  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote };
 }

@@ -153,6 +153,7 @@ export const demoKitchenOrders = [
     status: 'received',
     createdAt: '2026-06-15T21:19:00.000Z',
     note: 'Patatine extra croccanti se possibile.',
+    staffNote: 'Cliente ha confermato allergia al latte — preparare separato.',
   },
   {
     id: 'order-004',
