@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useKitchenMenu } from '../hooks/useKitchenMenu';
 
 const CANCEL_PRESETS = ['Cliente andato via', 'Fuori stock', 'Errore ordine', 'Altro'];
 const HISTORY_PAGE_SIZE = 15;
@@ -18,7 +19,11 @@ function sortByTime(orders) {
   return [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
 
+const CATEGORY_LABEL = { panini: 'PANINI', patatine: 'PATATINE', birre: 'BIRRE', combo: 'COMBO' };
+
 export default function CounterOrdersView({ orders, confirmPayment, updateOrderStatus, cancelOrder, updateStaffNote }) {
+
+  const { menuItems, toggleAvailability } = useKitchenMenu();
 
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -33,6 +38,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
   const [historySearch, setHistorySearch] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteValue, setNoteValue] = useState('');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const startNote = (order) => { setEditingNoteId(order.id); setNoteValue(order.staffNote || ''); };
   const saveNote = (orderId) => { updateStaffNote(orderId, noteValue.trim()); setEditingNoteId(null); };
@@ -158,6 +164,77 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
   );
 
   const historyTotal = orders.filter((o) => o.status === 'delivered' || o.status === 'cancelled').length;
+  const unavailableCount = menuItems.filter((i) => !i.available).length;
+
+  const renderMenuSection = () => (
+    <div className="ksd-history">
+      <button
+        className="ksd-history-toggle"
+        onClick={() => setMenuOpen((v) => !v)}
+      >
+        <span>GESTIONE MENU</span>
+        {unavailableCount > 0 && (
+          <span className="ksd-history-toggle-count" style={{ background: '#b83020' }}>
+            {unavailableCount} esaurit{unavailableCount === 1 ? 'o' : 'i'}
+          </span>
+        )}
+        <span className="ksd-history-toggle-arrow">{menuOpen ? '▲' : '▼'}</span>
+      </button>
+
+      {menuOpen && (
+        <div className="ksd-history-body">
+          {menuItems.map((item) => (
+            <div
+              key={item.id}
+              className="ksd-history-row"
+              style={{ opacity: item.available ? 1 : 0.55 }}
+            >
+              <div className="ksd-history-row-left" style={{ flex: 1 }}>
+                <span
+                  className="ksd-row-nickname"
+                  style={{ textDecoration: item.available ? 'none' : 'line-through' }}
+                >
+                  {item.name}
+                </span>
+                <span
+                  className="ksd-row-time"
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    borderRadius: '4px',
+                    padding: '1px 6px',
+                    fontSize: '10px',
+                    letterSpacing: '0.08em',
+                  }}
+                >
+                  {CATEGORY_LABEL[item.category] || item.category}
+                </span>
+              </div>
+              <div className="ksd-history-row-right" style={{ gap: '10px', alignItems: 'center' }}>
+                <span className="ksd-history-total">€ {item.price.toFixed(2)}</span>
+                <button
+                  onClick={() => toggleAvailability(item.id)}
+                  style={{
+                    background: item.available ? '#10b981' : '#6b7280',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 900,
+                    padding: '5px 12px',
+                    cursor: 'pointer',
+                    letterSpacing: '0.06em',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {item.available ? '✓ DISPONIBILE' : '✕ ESAURITO'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   const renderHistorySection = () => (
     <div className="ksd-history">
@@ -235,6 +312,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
     return (
       <div className="ksd-sections">
         <div className="ksd-empty">Nessun ordine al banco. In attesa di comande.</div>
+        {renderMenuSection()}
         {renderHistorySection()}
       </div>
     );
@@ -364,6 +442,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
         </div>
       )}
 
+      {renderMenuSection()}
       {renderHistorySection()}
 
     </div>

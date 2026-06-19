@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { kitchenMenuItems, kitchenCategoryPromos, kitchenCartUpsell } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import './CustomerKitchenMenu.css';
 
@@ -73,6 +74,7 @@ function getCategoryTitle(cat) {
 export default function CustomerKitchenMenu() {
   const { session } = useCustomerSession();
   const { addOrder } = useKitchenOrders();
+  const { menuItems } = useKitchenMenu();
 
   const [activeCategory, setActiveCategory] = useState('panini');
   const [orderItems, setOrderItems] = useState([]);
@@ -104,7 +106,7 @@ export default function CustomerKitchenMenu() {
     return () => clearInterval(timer);
   }, [submitted, submittedOrderId]);
 
-  const visibleItems = kitchenMenuItems.filter((i) => i.category === activeCategory && i.available !== false);
+  const visibleItems = menuItems.filter((i) => i.category === activeCategory && i.available !== false);
 
 
 
