@@ -9,6 +9,14 @@ function formatTime(isoString) {
 export default function StoricoView({ orders }) {
   const [historySearch, setHistorySearch] = useState('');
 
+  const summary = useMemo(() => {
+    const delivered = orders.filter((o) => o.status === 'delivered');
+    const count = delivered.length;
+    const total = delivered.reduce((sum, o) => sum + (o.total ?? 0), 0);
+    const avg = count > 0 ? total / count : 0;
+    return { count, total, avg };
+  }, [orders]);
+
   const historyOrders = useMemo(() => {
     const completed = orders
       .filter((o) => o.status === 'delivered' || o.status === 'cancelled')
@@ -24,6 +32,21 @@ export default function StoricoView({ orders }) {
     <div className="ksd-sections">
       <div className="ksd-history" style={{ borderTop: 'none' }}>
         <div className="ksd-history-body">
+          <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Consegnati</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4ade80' }}>{summary.count}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Totale incassato</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>€ {summary.total.toFixed(2)}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Media ticket</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>€ {summary.avg.toFixed(2)}</span>
+            </div>
+          </div>
+
           <div className="ksd-history-search-wrap">
             <input
               className="ksd-history-search"
