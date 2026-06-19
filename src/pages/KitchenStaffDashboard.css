@@ -23,7 +23,7 @@
   color: var(--k-yellow);
 }
 .ksd-header-sub { font-size: 12px; color: rgba(245,240,232,0.4); margin-top: 2px; }
-.ksd-header-badges { display: flex; gap: 8px; align-items: center; }
+.ksd-header-badges { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .ksd-badge-active {
   background: #1a0800;
   color: rgba(245,240,232,0.5);
@@ -231,7 +231,7 @@
   align-items: flex-start;
   gap: 3px;
   flex-shrink: 0;
-  width: 88px;
+  width: 130px;
 }
 .ksd-row-table {
   background: var(--k-yellow);
@@ -246,7 +246,7 @@
   font-size: 12px;
   color: #ccc;
   font-weight: 600;
-  max-width: 88px;
+  max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

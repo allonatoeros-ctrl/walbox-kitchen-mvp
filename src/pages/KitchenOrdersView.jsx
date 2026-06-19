@@ -111,7 +111,6 @@ export default function KitchenOrdersView({ orders, updateOrderStatus }) {
               <div className="ksd-row-list">
                 {sectionOrders.map((order) => {
                   const action       = PRIMARY_ACTION[order.status];
-                  const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
 
                   const allergens = getAllergens(order);
 
@@ -131,7 +130,13 @@ export default function KitchenOrdersView({ orders, updateOrderStatus }) {
                         )}
                       </div>
                       <div className="ksd-row-center">
-                        <div className="ksd-row-items">{itemsSummary}</div>
+                        <div className="ksd-row-items">
+                          {order.items.map((item, idx) => (
+                            <div key={idx}>
+                              {item.quantity}× {item.name}
+                            </div>
+                          ))}
+                        </div>
                       </div>
                       <div className="ksd-row-right">
                         {action && (

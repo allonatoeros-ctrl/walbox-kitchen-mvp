@@ -171,7 +171,6 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
 
           <div className="ksd-row-list">
             {pendingOrders.map((order) => {
-              const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
               const isCancelling = cancellingId === order.id;
               return (
                 <div key={order.id} className={`ksd-row ${isCancelling ? 'ksd-row--cancelling' : ''}`}>
@@ -189,7 +188,13 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                     )}
                   </div>
                   <div className="ksd-row-center">
-                    <div className="ksd-row-items">{itemsSummary}</div>
+                    <div className="ksd-row-items">
+                      {order.items.map((item, idx) => (
+                        <div key={idx}>
+                          {item.quantity}× {item.name}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   {!isCancelling && (
                     <div className="ksd-row-right">
@@ -229,7 +234,6 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
 
           <div className="ksd-row-list">
             {readyOrders.map((order) => {
-              const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
               const isCancelling = cancellingId === order.id;
               return (
                 <div key={order.id} className={`ksd-row ${isCancelling ? 'ksd-row--cancelling' : ''}`}>
@@ -252,7 +256,13 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                     )}
                   </div>
                   <div className="ksd-row-center">
-                    <div className="ksd-row-items">{itemsSummary}</div>
+                    <div className="ksd-row-items">
+                      {order.items.map((item, idx) => (
+                        <div key={idx}>
+                          {item.quantity}× {item.name}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                   {!isCancelling && (
                     <div className="ksd-row-right">
