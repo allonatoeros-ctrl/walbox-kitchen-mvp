@@ -4,6 +4,7 @@ import CounterOrdersView from './CounterOrdersView';
 import KitchenOrdersView from './KitchenOrdersView';
 import MenuView from './MenuView';
 import StoricoView from './StoricoView';
+import AlertView from './AlertView';
 import './KitchenStaffDashboard.css';
 
 export default function KitchenStaffDashboard() {
@@ -26,6 +27,10 @@ export default function KitchenStaffDashboard() {
   const kitchenOrders       = orders.filter((o) => o.status !== 'pending_counter_payment');
   const activeKitchenCount  = kitchenOrders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled').length;
   const readyCount          = kitchenOrders.filter((o) => o.status === 'ready').length;
+  const urgentCount         = kitchenOrders.filter((o) => {
+    if (o.status === 'delivered' || o.status === 'cancelled') return false;
+    return Math.floor((Date.now() - new Date(o.createdAt).getTime()) / 60000) >= 10;
+  }).length;
 
   return (
     <div className="ksd-page">
@@ -79,6 +84,15 @@ export default function KitchenStaffDashboard() {
         >
           STORICO
         </button>
+        <button
+          className={`ksd-tab ${activeTab === 'alert' ? 'ksd-tab--active-alert' : ''}`}
+          onClick={() => setActiveTab('alert')}
+        >
+          ALERT
+          {urgentCount > 0 && (
+            <span className="ksd-tab-badge ksd-tab-badge--alert">{urgentCount}</span>
+          )}
+        </button>
       </div>
 
       {/* View */}
@@ -90,6 +104,7 @@ export default function KitchenStaffDashboard() {
       )}
       {activeTab === 'menu' && <MenuView />}
       {activeTab === 'storico' && <StoricoView orders={orders} />}
+      {activeTab === 'alert' && <AlertView orders={orders} />}
     </div>
   );
 }

@@ -130,6 +130,15 @@
   background: #f5c842;
   color: #111;
 }
+.ksd-tab--active-alert {
+  color: #ef4444;
+  border-bottom-color: #ef4444;
+  background: #1a0505;
+}
+.ksd-tab-badge--alert {
+  background: #ef4444;
+  color: #fff;
+}
 
 /* ── Production summary bar ──────────────────────── */
 .ksd-production {
