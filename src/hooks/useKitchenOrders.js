@@ -47,7 +47,11 @@ export function useKitchenOrders() {
 
   const updateOrderStatus = (id, newStatus) => {
     setOrders((prev) => {
-      const next = prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o));
+      const next = prev.map((o) => {
+        if (o.id !== id) return o;
+        const extra = newStatus === 'ready' ? { readyAt: new Date().toISOString() } : {};
+        return { ...o, status: newStatus, ...extra };
+      });
       saveOrders(next);
       return next;
     });

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 
 const CANCEL_PRESETS = ['Cliente andato via', 'Fuori stock', 'Errore ordine', 'Altro'];
 const HISTORY_PAGE_SIZE = 15;
@@ -19,6 +19,12 @@ function sortByTime(orders) {
 }
 
 export default function CounterOrdersView({ orders, confirmPayment, updateOrderStatus, cancelOrder }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+
   const [cancellingId, setCancellingId] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
   const [customReason, setCustomReason] = useState('');
@@ -206,7 +212,9 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                     {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
                     <span className="ksd-row-table">{order.table}</span>
                     <span className="ksd-row-nickname">{order.nickname}</span>
-                    <span className="ksd-row-time">{formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}</span>
+                    <span className="ksd-row-time">
+                      {formatTime(order.createdAt)} · in attesa {elapsedMinutes(order.createdAt)}
+                    </span>
                     {order.total != null && (
                       <span className="ksd-row-total" style={{ color: '#a855f7', fontWeight: 700 }}>
                         € {order.total.toFixed(2)}
@@ -261,7 +269,16 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                     {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
                     <span className="ksd-row-table">{order.table}</span>
                     <span className="ksd-row-nickname">{order.nickname}</span>
-                    <span className="ksd-row-time">{formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}</span>
+                    <span className="ksd-row-time">
+                      {order.readyAt
+                        ? `pronto ${elapsedMinutes(order.readyAt)}`
+                        : `${formatTime(order.createdAt)} · ${elapsedMinutes(order.createdAt)}`}
+                    </span>
+                    {order.paidAt && (
+                      <span className="ksd-row-time" style={{ color: '#a855f7' }}>
+                        pagato {elapsedMinutes(order.paidAt)}
+                      </span>
+                    )}
                     {order.total != null && (
                       <span className="ksd-row-total">€ {order.total.toFixed(2)}</span>
                     )}

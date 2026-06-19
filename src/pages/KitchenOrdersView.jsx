@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 const PRIMARY_ACTION = {
   received:  { next: 'preparing', label: 'INIZIA' },
   preparing: { next: 'ready',     label: 'PRONTO ✓' },
@@ -28,6 +30,11 @@ function urgencyClass(isoString) {
   return '';
 }
 
+function timerRef(order) {
+  if (order.status === 'ready') return order.readyAt || order.createdAt;
+  return order.createdAt;
+}
+
 function sortByTime(orders) {
   return [...orders].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 }
@@ -47,6 +54,11 @@ function isKitchenReady(order) {
 }
 
 export default function KitchenOrdersView({ orders, updateOrderStatus }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
   const kitchenOrders   = orders.filter((o) => o.status !== 'pending_counter_payment' && isKitchenReady(o));
   const activeCount     = kitchenOrders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled').length;
   const readyCount      = kitchenOrders.filter((o) => o.status === 'ready').length;
@@ -92,11 +104,16 @@ export default function KitchenOrdersView({ orders, updateOrderStatus }) {
                   const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
 
                   return (
-                    <div key={order.id} className={`ksd-row ${urgencyClass(order.createdAt)}`}>
+                    <div key={order.id} className={`ksd-row ${urgencyClass(timerRef(order))}`}>
                       <div className="ksd-row-left">
                         <span className="ksd-row-table">{order.table}</span>
                         <span className="ksd-row-nickname">{order.nickname}</span>
-                        <span className="ksd-row-time">{formatTime(order.createdAt)} · {elapsedMinutes(order.createdAt)}</span>
+                        <span className="ksd-row-time">
+                          {formatTime(order.createdAt)}
+                          {order.status === 'ready' && order.readyAt
+                            ? ` · pronto ${elapsedMinutes(order.readyAt)}`
+                            : ` · ${elapsedMinutes(order.createdAt)}`}
+                        </span>
                         {order.total != null && (
                           <span className="ksd-row-total">€ {order.total.toFixed(2)}</span>
                         )}
