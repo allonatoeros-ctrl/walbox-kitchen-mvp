@@ -50,6 +50,11 @@ const promoItem =
 
 
 
+function generateOrderCode() {
+  const num = (Date.now() % 900) + 100; // 100–999, changes every ms
+  return `W-${num}`;
+}
+
 function drawerIcon(name) {
   const n = name.toLowerCase();
   if (n.includes('birra') || n.includes('pils')) return '🍺';
@@ -73,6 +78,7 @@ export default function CustomerKitchenMenu() {
   const [orderItems, setOrderItems] = useState([]);
   const [submitted, setSubmitted] = useState(false);
   const [submittedOrderId, setSubmittedOrderId] = useState(null);
+  const [submittedOrderCode, setSubmittedOrderCode] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [countdown, setCountdown] = useState(5);
 
@@ -128,24 +134,31 @@ export default function CustomerKitchenMenu() {
 
   const handleSubmit = () => {
     if (orderItems.length === 0) return;
+    const orderCode = generateOrderCode();
     const newOrder = {
       id: `order-${Date.now()}`,
       table: session.table ? `T${session.table}` : 'T7',
       nickname: session.nickname,
       items: orderItems.map((o) => ({ itemId: o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
-      status: 'received',
+      status: 'pending_counter_payment',
+      paymentStatus: 'pending_counter_payment',
+      paymentMethod: 'counter',
+      paidAt: null,
+      orderCode,
       createdAt: new Date().toISOString(),
     };
     addOrder(newOrder);
     try { localStorage.setItem('walbox_kitchen_last_order_id', newOrder.id); } catch { }
     setSubmittedOrderId(newOrder.id);
+    setSubmittedOrderCode(orderCode);
     setSubmitted(true);
   };
 
   const handleReset = () => {
     setOrderItems([]);
     setSubmittedOrderId(null);
+    setSubmittedOrderCode(null);
     setSubmitted(false);
     setCountdown(5);
   };
@@ -161,10 +174,23 @@ export default function CustomerKitchenMenu() {
         <div className="kitch-confirm">
           <div className="kitch-confirm-logo"><img src="/assets/kitchen/walrus-chef.png" className="kitch-confirm-logo-img" /></div>
           <div className="kitch-confirm-title">
-            <p>IL TUO ORDINE</p>
-            <p>È IN CUCINA.</p>
+            <p>ORDINE RICEVUTO —</p>
+            <p>PASSA AL BANCO.</p>
           </div>
-          <div className="kitch-confirm-subtitle">PREGATE.</div>
+          <div className="kitch-confirm-subtitle">PORTA QUESTO CODICE.</div>
+          {submittedOrderCode && (
+            <div style={{
+              margin: '0 0 20px',
+              padding: '14px 28px',
+              background: 'rgba(200,150,10,0.15)',
+              border: '2px solid #c8960a',
+              borderRadius: '12px',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: '11px', letterSpacing: '0.12em', color: 'rgba(245,234,216,0.55)', marginBottom: '4px' }}>CODICE ORDINE</div>
+              <div style={{ fontSize: '42px', fontWeight: 900, letterSpacing: '0.08em', color: '#c8960a', lineHeight: 1 }}>{submittedOrderCode}</div>
+            </div>
+          )}
           <div className="kitch-status-list">
             <div className="kitch-status-row">
               <div className="kitch-status-col">
@@ -182,8 +208,8 @@ export default function CustomerKitchenMenu() {
                 <div className="kitch-status-connector" />
               </div>
               <div className="kitch-status-text">
-                <div className="kitch-status-label-pending">IN PREPARAZIONE</div>
-                <div className="kitch-status-desc">Stiamo cucinando roba seria.</div>
+                <div className="kitch-status-label-pending">IN ATTESA PAGAMENTO</div>
+                <div className="kitch-status-desc">Mostra il codice e paga in cassa.</div>
               </div>
             </div>
             <div className="kitch-status-row">
@@ -192,8 +218,8 @@ export default function CustomerKitchenMenu() {
                 <div className="kitch-status-connector" />
               </div>
               <div className="kitch-status-text">
-                <div className="kitch-status-label-inactive">PRONTO</div>
-                <div className="kitch-status-desc-inactive">Stiamo impiattando.</div>
+                <div className="kitch-status-label-inactive">IN PREPARAZIONE</div>
+                <div className="kitch-status-desc-inactive">La cucina partirà appena lo staff conferma.</div>
               </div>
             </div>
             <div className="kitch-status-row">
