@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import CounterOrdersView from './CounterOrdersView';
 import KitchenOrdersView from './KitchenOrdersView';
+import MenuView from './MenuView';
 import './KitchenStaffDashboard.css';
 
 export default function KitchenStaffDashboard() {
@@ -65,13 +66,22 @@ export default function KitchenStaffDashboard() {
             <span className="ksd-tab-badge ksd-tab-badge--kitchen">{activeKitchenCount}</span>
           )}
         </button>
+        <button
+          className={`ksd-tab ${activeTab === 'menu' ? 'ksd-tab--active-menu' : ''}`}
+          onClick={() => setActiveTab('menu')}
+        >
+          MENU
+        </button>
       </div>
 
       {/* View */}
-      {activeTab === 'counter'
-        ? <CounterOrdersView orders={orders} confirmPayment={confirmPayment} updateOrderStatus={updateOrderStatus} cancelOrder={cancelOrder} updateStaffNote={updateStaffNote} />
-        : <KitchenOrdersView orders={orders} updateOrderStatus={updateOrderStatus} />
-      }
+      {activeTab === 'counter' && (
+        <CounterOrdersView orders={orders} confirmPayment={confirmPayment} updateOrderStatus={updateOrderStatus} cancelOrder={cancelOrder} updateStaffNote={updateStaffNote} />
+      )}
+      {activeTab === 'kitchen' && (
+        <KitchenOrdersView orders={orders} updateOrderStatus={updateOrderStatus} />
+      )}
+      {activeTab === 'menu' && <MenuView />}
     </div>
   );
 }
