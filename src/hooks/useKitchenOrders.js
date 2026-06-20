@@ -17,6 +17,11 @@ function saveOrders(orders) {
   } catch { }
 }
 
+function appendLog(order, action) {
+  const log = [...(order.actionLog ?? []), { action, at: new Date().toISOString() }];
+  return { ...order, actionLog: log };
+}
+
 /**
  * Shared hook for kitchen order state.
  * Provides cross-tab sync via the storage event (same pattern as the jukebox).
@@ -50,7 +55,9 @@ export function useKitchenOrders() {
       const next = prev.map((o) => {
         if (o.id !== id) return o;
         const extra = newStatus === 'ready' ? { readyAt: new Date().toISOString() } : {};
-        return { ...o, status: newStatus, ...extra };
+        const actionMap = { ready: 'pronto', delivered: 'ritirato', cancelled: 'annullato' };
+        const updated = { ...o, status: newStatus, ...extra };
+        return actionMap[newStatus] ? appendLog(updated, actionMap[newStatus]) : updated;
       });
       saveOrders(next);
       return next;
@@ -59,7 +66,7 @@ export function useKitchenOrders() {
 
   const addOrder = (order) => {
     setOrders((prev) => {
-      const next = [...prev, order];
+      const next = [...prev, { actionLog: [], ...order }];
       saveOrders(next);
       return next;
     });
@@ -69,13 +76,14 @@ export function useKitchenOrders() {
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== orderId) return o;
-        return {
+        const updated = {
           ...o,
           paymentStatus: 'paid',
           paymentMethod,
           paidAt: new Date().toISOString(),
           status: o.status === 'pending_counter_payment' ? 'received' : o.status,
         };
+        return appendLog(updated, 'pagato');
       });
       saveOrders(next);
       return next;
@@ -84,9 +92,11 @@ export function useKitchenOrders() {
 
   const cancelOrder = (id, reason) => {
     setOrders((prev) => {
-      const next = prev.map((o) =>
-        o.id !== id ? o : { ...o, status: 'cancelled', cancelReason: reason, cancelledAt: new Date().toISOString() }
-      );
+      const next = prev.map((o) => {
+        if (o.id !== id) return o;
+        const updated = { ...o, status: 'cancelled', cancelReason: reason, cancelledAt: new Date().toISOString() };
+        return appendLog(updated, 'annullato');
+      });
       saveOrders(next);
       return next;
     });

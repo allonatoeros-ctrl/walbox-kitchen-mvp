@@ -69,27 +69,38 @@ export default function StoricoView({ orders }) {
                 const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
                 const isDelivered = order.status === 'delivered';
                 return (
-                  <div key={order.id} className="ksd-history-row">
-                    <div className="ksd-history-row-left">
-                      {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
-                      <span className="ksd-row-table">{order.table}</span>
-                      <span className="ksd-row-nickname">{order.nickname}</span>
-                      <span className="ksd-row-time">{formatTime(order.createdAt)}</span>
+                  <div key={order.id} className="ksd-history-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <div className="ksd-history-row-left">
+                        {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
+                        <span className="ksd-row-table">{order.table}</span>
+                        <span className="ksd-row-nickname">{order.nickname}</span>
+                        <span className="ksd-row-time">{formatTime(order.createdAt)}</span>
+                      </div>
+                      <div className="ksd-history-row-center">
+                        <div className="ksd-row-items">{itemsSummary}</div>
+                        {!isDelivered && order.cancelReason && (
+                          <div className="ksd-history-cancel-reason">{order.cancelReason}</div>
+                        )}
+                      </div>
+                      <div className="ksd-history-row-right">
+                        {order.total != null && (
+                          <span className="ksd-history-total">€ {order.total.toFixed(2)}</span>
+                        )}
+                        <span className={`ksd-history-status ksd-history-status--${isDelivered ? 'delivered' : 'cancelled'}`}>
+                          {isDelivered ? 'RITIRATO' : 'ANNULLATO'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="ksd-history-row-center">
-                      <div className="ksd-row-items">{itemsSummary}</div>
-                      {!isDelivered && order.cancelReason && (
-                        <div className="ksd-history-cancel-reason">{order.cancelReason}</div>
-                      )}
-                    </div>
-                    <div className="ksd-history-row-right">
-                      {order.total != null && (
-                        <span className="ksd-history-total">€ {order.total.toFixed(2)}</span>
-                      )}
-                      <span className={`ksd-history-status ksd-history-status--${isDelivered ? 'delivered' : 'cancelled'}`}>
-                        {isDelivered ? 'RITIRATO' : 'ANNULLATO'}
-                      </span>
-                    </div>
+                    {order.actionLog?.length > 0 && (
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingLeft: '0.25rem' }}>
+                        {order.actionLog.map((entry, i) => (
+                          <span key={i} style={{ fontSize: '0.68rem', color: '#6b7280', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '1px 6px' }}>
+                            {entry.action} {formatTime(entry.at)}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

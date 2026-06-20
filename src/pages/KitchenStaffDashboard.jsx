@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import CounterOrdersView from './CounterOrdersView';
@@ -24,6 +24,12 @@ export default function KitchenStaffDashboard() {
     const hasKitchen = activeKitchen > 0;
     return (!hasCounter && hasKitchen) ? 'kitchen' : 'counter';
   });
+
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
 
   const unavailableCount    = menuItems.filter((i) => !i.available).length;
 
@@ -87,6 +93,9 @@ export default function KitchenStaffDashboard() {
           onClick={() => setActiveTab('menu')}
         >
           MENU
+          {unavailableCount > 0 && (
+            <span className="ksd-tab-badge ksd-tab-badge--alert">{unavailableCount}</span>
+          )}
         </button>
         <button
           className={`ksd-tab ${activeTab === 'storico' ? 'ksd-tab--active-storico' : ''}`}

@@ -243,7 +243,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                     <span className="ksd-row-nickname">{order.nickname}</span>
                     <span className="ksd-row-time">
                       {order.readyAt
-                        ? `pronto ${elapsedMinutes(order.readyAt)}`
+                        ? elapsedMinutes(order.readyAt) === 'adesso' ? 'appena pronto' : `pronto ${elapsedMinutes(order.readyAt)}`
                         : `${formatTime(order.createdAt)} · ${elapsedMinutes(order.createdAt)}`}
                     </span>
                     {order.paidAt && (
