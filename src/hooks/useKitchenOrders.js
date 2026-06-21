@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { demoKitchenOrders } from '../data/kitchenMockData';
+import { supabase } from '../lib/supabaseClient';
 
 const LS_KEY = 'walbox_kitchen_orders_demo';
 
@@ -64,12 +65,19 @@ export function useKitchenOrders() {
     });
   };
 
-  const addOrder = (order) => {
+  const addOrder = async (order) => {
     setOrders((prev) => {
       const next = [...prev, { actionLog: [], ...order }];
       saveOrders(next);
       return next;
     });
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) await supabase.auth.signInAnonymously();
+    } catch (err) {
+      console.warn('[Walbox] Supabase anon auth failed — running on localStorage only', err);
+    }
   };
 
   const confirmPayment = (orderId, paymentMethod = 'counter') => {
