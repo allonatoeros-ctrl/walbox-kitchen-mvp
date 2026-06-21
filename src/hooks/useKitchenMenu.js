@@ -63,9 +63,6 @@ export function useKitchenMenu() {
   useEffect(() => {
     (async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session || session.user.is_anonymous) return;
-
         const { data, error } = await supabase
           .from('kitchen_menu_availability')
           .select('item_id, available')
