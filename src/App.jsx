@@ -7,6 +7,7 @@ import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import KitchenStaffDashboard from "./pages/KitchenStaffDashboard";
 import KitchenLogin from "./pages/KitchenLogin";
+import KitchenTvScreen from "./pages/KitchenTvScreen";
 import { initializeStorage } from "./data/mockData";
 
 // Custom Link helper component for internal navigation without full-page reloads
@@ -67,6 +68,8 @@ export default function App() {
         return <KitchenStaffDashboard />;
       case "/kitchen/login":
         return <KitchenLogin />;
+      case "/kitchen/tv":
+        return <KitchenTvScreen />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;
