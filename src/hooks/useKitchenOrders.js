@@ -49,6 +49,17 @@ function mapSupabaseOrder(row) {
   };
 }
 
+async function supabaseUpdateOrder(id, patch) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || session.user.is_anonymous) return;
+    const { error } = await supabase.from('kitchen_orders').update(patch).eq('id', id);
+    if (error) throw error;
+  } catch (err) {
+    console.warn('[Walbox] Supabase update failed — localStorage updated only', err);
+  }
+}
+
 /**
  * Shared hook for kitchen order state.
  * Provides cross-tab sync via the storage event (same pattern as the jukebox).
@@ -100,10 +111,11 @@ export function useKitchenOrders() {
   }, []);
 
   const updateOrderStatus = (id, newStatus) => {
+    const now = new Date().toISOString();
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== id) return o;
-        const extra = newStatus === 'ready' ? { readyAt: new Date().toISOString() } : {};
+        const extra = newStatus === 'ready' ? { readyAt: now } : {};
         const actionMap = { ready: 'pronto', delivered: 'ritirato', cancelled: 'annullato' };
         const updated = { ...o, status: newStatus, ...extra };
         return actionMap[newStatus] ? appendLog(updated, actionMap[newStatus]) : updated;
@@ -111,6 +123,8 @@ export function useKitchenOrders() {
       saveOrders(next);
       return next;
     });
+    const patch = { status: newStatus, ...(newStatus === 'ready' ? { ready_at: now } : {}) };
+    supabaseUpdateOrder(id, patch);
   };
 
   const addOrder = async (order) => {
@@ -164,6 +178,8 @@ export function useKitchenOrders() {
   };
 
   const confirmPayment = (orderId, paymentMethod = 'counter') => {
+    const now = new Date().toISOString();
+    const current = orders.find((o) => o.id === orderId);
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== orderId) return o;
@@ -171,7 +187,7 @@ export function useKitchenOrders() {
           ...o,
           paymentStatus: 'paid',
           paymentMethod,
-          paidAt: new Date().toISOString(),
+          paidAt: now,
           status: o.status === 'pending_counter_payment' ? 'received' : o.status,
         };
         return appendLog(updated, 'pagato');
@@ -179,18 +195,27 @@ export function useKitchenOrders() {
       saveOrders(next);
       return next;
     });
+    const patch = {
+      payment_status: 'paid',
+      payment_method: paymentMethod,
+      paid_at: now,
+      ...(current?.status === 'pending_counter_payment' ? { status: 'received' } : {}),
+    };
+    supabaseUpdateOrder(orderId, patch);
   };
 
   const cancelOrder = (id, reason) => {
+    const now = new Date().toISOString();
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== id) return o;
-        const updated = { ...o, status: 'cancelled', cancelReason: reason, cancelledAt: new Date().toISOString() };
+        const updated = { ...o, status: 'cancelled', cancelReason: reason, cancelledAt: now };
         return appendLog(updated, 'annullato');
       });
       saveOrders(next);
       return next;
     });
+    supabaseUpdateOrder(id, { status: 'cancelled', cancel_reason: reason, cancelled_at: now });
   };
 
   const updateStaffNote = (id, note) => {
@@ -199,6 +224,7 @@ export function useKitchenOrders() {
       saveOrders(next);
       return next;
     });
+    supabaseUpdateOrder(id, { staff_note: note });
   };
 
   const resetToDemo = () => {
