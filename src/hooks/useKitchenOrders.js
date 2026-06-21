@@ -73,10 +73,45 @@ export function useKitchenOrders() {
     });
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) await supabase.auth.signInAnonymously();
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error) throw error;
+        session = data.session;
+      }
+      if (!session) return;
+
+      const { error: orderError } = await supabase.from('kitchen_orders').insert({
+        id:             order.id,
+        order_code:     order.orderCode,
+        venue_id:       'walrus-main',
+        table_id:       order.table,
+        nickname:       order.nickname,
+        customer_id:    session.user.id,
+        status:         order.status,
+        total:          order.total,
+        payment_status: order.paymentStatus,
+        payment_method: order.paymentMethod,
+        paid_at:        order.paidAt,
+        created_at:     order.createdAt,
+      });
+      if (orderError) throw orderError;
+
+      if (order.items?.length) {
+        const { error: itemsError } = await supabase.from('kitchen_order_items').insert(
+          order.items.map((item) => ({
+            order_id: order.id,
+            venue_id: 'walrus-main',
+            item_id:  item.itemId,
+            name:     item.name,
+            quantity: item.quantity,
+            price:    item.price,
+          }))
+        );
+        if (itemsError) throw itemsError;
+      }
     } catch (err) {
-      console.warn('[Walbox] Supabase anon auth failed — running on localStorage only', err);
+      console.warn('[Walbox] Supabase write failed — order saved to localStorage only', err);
     }
   };
 
