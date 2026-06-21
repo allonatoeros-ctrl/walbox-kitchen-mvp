@@ -60,6 +60,28 @@ async function supabaseUpdateOrder(id, patch) {
   }
 }
 
+async function supabaseInsertActionLog({ order_id, action, from_status, to_status, reason, metadata, created_at }) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || session.user.is_anonymous) return;
+    const { error } = await supabase.from('kitchen_action_log').insert({
+      order_id,
+      venue_id:    'walrus-main',
+      action,
+      from_status: from_status ?? null,
+      to_status:   to_status   ?? null,
+      actor_type:  'staff',
+      actor_id:    session.user.id,
+      reason:      reason   ?? null,
+      metadata:    metadata ?? null,
+      created_at,
+    });
+    if (error) throw error;
+  } catch (err) {
+    console.warn('[Walbox] Supabase action log insert failed', err);
+  }
+}
+
 /**
  * Shared hook for kitchen order state.
  * Provides cross-tab sync via the storage event (same pattern as the jukebox).
@@ -112,11 +134,12 @@ export function useKitchenOrders() {
 
   const updateOrderStatus = (id, newStatus) => {
     const now = new Date().toISOString();
+    const fromOrder = orders.find((o) => o.id === id);
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== id) return o;
         const extra = newStatus === 'ready' ? { readyAt: now } : {};
-        const actionMap = { ready: 'pronto', delivered: 'ritirato', cancelled: 'annullato' };
+        const actionMap = { received: 'ricevuto', preparing: 'in preparazione', ready: 'pronto', delivered: 'ritirato', cancelled: 'annullato' };
         const updated = { ...o, status: newStatus, ...extra };
         return actionMap[newStatus] ? appendLog(updated, actionMap[newStatus]) : updated;
       });
@@ -125,6 +148,7 @@ export function useKitchenOrders() {
     });
     const patch = { status: newStatus, ...(newStatus === 'ready' ? { ready_at: now } : {}) };
     supabaseUpdateOrder(id, patch);
+    supabaseInsertActionLog({ order_id: id, action: newStatus, from_status: fromOrder?.status ?? null, to_status: newStatus, created_at: now });
   };
 
   const addOrder = async (order) => {
@@ -202,10 +226,19 @@ export function useKitchenOrders() {
       ...(current?.status === 'pending_counter_payment' ? { status: 'received' } : {}),
     };
     supabaseUpdateOrder(orderId, patch);
+    supabaseInsertActionLog({
+      order_id:    orderId,
+      action:      'payment_confirmed',
+      from_status: current?.status ?? null,
+      to_status:   current?.status === 'pending_counter_payment' ? 'received' : (current?.status ?? null),
+      metadata:    { payment_method: paymentMethod },
+      created_at:  now,
+    });
   };
 
   const cancelOrder = (id, reason) => {
     const now = new Date().toISOString();
+    const fromOrder = orders.find((o) => o.id === id);
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== id) return o;
@@ -216,6 +249,7 @@ export function useKitchenOrders() {
       return next;
     });
     supabaseUpdateOrder(id, { status: 'cancelled', cancel_reason: reason, cancelled_at: now });
+    supabaseInsertActionLog({ order_id: id, action: 'cancelled', from_status: fromOrder?.status ?? null, to_status: 'cancelled', reason: reason ?? null, created_at: now });
   };
 
   const updateStaffNote = (id, note) => {
