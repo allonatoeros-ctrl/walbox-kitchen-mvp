@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { kitchenMenuItems } from '../data/kitchenMockData';
+import { supabase } from '../lib/supabaseClient';
 
 const LS_KEY = 'walbox_kitchen_menu_availability';
 
@@ -25,6 +26,20 @@ function saveMenu(items) {
   } catch {}
 }
 
+async function supabaseUpsertMenuAvailability(itemId, available) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session || session.user.is_anonymous) return;
+    const { error } = await supabase
+      .from('kitchen_menu_availability')
+      .upsert({ venue_id: 'walrus-main', item_id: itemId, available },
+               { onConflict: 'venue_id,item_id' });
+    if (error) throw error;
+  } catch (err) {
+    console.warn('[Walbox] Supabase menu availability update failed', err);
+  }
+}
+
 export function useKitchenMenu() {
   const [menuItems, setMenuItems] = useState(loadMenu);
 
@@ -45,14 +60,43 @@ export function useKitchenMenu() {
     };
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || session.user.is_anonymous) return;
+
+        const { data, error } = await supabase
+          .from('kitchen_menu_availability')
+          .select('item_id, available')
+          .eq('venue_id', 'walrus-main');
+
+        if (error) throw error;
+        if (!data?.length) return;
+
+        setMenuItems((prev) =>
+          prev.map((item) => {
+            const row = data.find((r) => r.item_id === item.id);
+            return row ? { ...item, available: row.available } : item;
+          })
+        );
+      } catch (err) {
+        console.warn('[Walbox] Supabase menu read failed — using localStorage', err);
+      }
+    })();
+  }, []);
+
   const toggleAvailability = (itemId) => {
+    const current = menuItems.find((item) => item.id === itemId);
+    const newAvailable = current ? !current.available : true;
     setMenuItems((prev) => {
       const next = prev.map((item) =>
-        item.id === itemId ? { ...item, available: !item.available } : item
+        item.id === itemId ? { ...item, available: newAvailable } : item
       );
       saveMenu(next);
       return next;
     });
+    supabaseUpsertMenuAvailability(itemId, newAvailable);
   };
 
   return { menuItems, toggleAvailability };
