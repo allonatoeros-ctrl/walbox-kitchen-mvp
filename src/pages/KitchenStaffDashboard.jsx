@@ -1,12 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
+import { getStaffSession, signOut, onAuthStateChange } from '../lib/supabaseAuth';
 import CounterOrdersView from './CounterOrdersView';
 import KitchenOrdersView from './KitchenOrdersView';
 import MenuView from './MenuView';
 import StoricoView from './StoricoView';
 import AlertView from './AlertView';
 import './KitchenStaffDashboard.css';
+
+function navigate(path) {
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
 
 export default function KitchenStaffDashboard() {
   const { orders, updateOrderStatus, confirmPayment, cancelOrder, resetToDemo, updateStaffNote } = useKitchenOrders();
@@ -30,6 +36,25 @@ export default function KitchenStaffDashboard() {
     const id = setInterval(() => setTick((n) => n + 1), 30000);
     return () => clearInterval(id);
   }, []);
+
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    if (import.meta.env.VITE_E2E_BYPASS_STAFF_AUTH === 'true') {
+      setAuthChecked(true);
+      return;
+    }
+    getStaffSession().then((session) => {
+      setAuthChecked(true);
+      if (!session) navigate('/kitchen/login');
+    });
+    const { data: { subscription } } = onAuthStateChange((session) => {
+      if (!session) navigate('/kitchen/login');
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (!authChecked) return null;
 
   const unavailableCount    = menuItems.filter((i) => !i.available).length;
 
@@ -65,6 +90,7 @@ export default function KitchenStaffDashboard() {
             <span className="ksd-badge-alert">{urgentCount} alert ⚠️</span>
           )}
           <button className="ksd-btn-reset" onClick={resetToDemo}>RESET DEMO</button>
+          <button className="ksd-btn-reset" onClick={() => signOut()}>LOGOUT</button>
         </div>
       </div>
 
