@@ -23,6 +23,32 @@ function appendLog(order, action) {
   return { ...order, actionLog: log };
 }
 
+function mapSupabaseOrder(row) {
+  return {
+    id:            row.id,
+    orderCode:     row.order_code,
+    table:         row.table_id,
+    nickname:      row.nickname,
+    status:        row.status,
+    total:         row.total,
+    paymentStatus: row.payment_status,
+    paymentMethod: row.payment_method ?? null,
+    paidAt:        row.paid_at ?? null,
+    createdAt:     row.created_at,
+    readyAt:       row.ready_at ?? null,
+    staffNote:     row.staff_note ?? null,
+    cancelReason:  row.cancel_reason ?? null,
+    cancelledAt:   row.cancelled_at ?? null,
+    actionLog:     [],
+    items: (row.kitchen_order_items ?? []).map((i) => ({
+      itemId:   i.item_id,
+      name:     i.name,
+      quantity: i.quantity,
+      price:    i.price,
+    })),
+  };
+}
+
 /**
  * Shared hook for kitchen order state.
  * Provides cross-tab sync via the storage event (same pattern as the jukebox).
@@ -49,6 +75,28 @@ export function useKitchenOrders() {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
     };
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session || session.user.is_anonymous) return;
+
+        const { data, error } = await supabase
+          .from('kitchen_orders')
+          .select('*, kitchen_order_items(*)')
+          .eq('venue_id', 'walrus-main')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        if (!data?.length) return;
+
+        setOrders(data.map(mapSupabaseOrder));
+      } catch (err) {
+        console.warn('[Walbox] Supabase read failed — using localStorage', err);
+      }
+    })();
   }, []);
 
   const updateOrderStatus = (id, newStatus) => {
