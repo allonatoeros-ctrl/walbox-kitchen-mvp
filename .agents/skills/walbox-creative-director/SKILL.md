@@ -95,6 +95,24 @@ Non usare questa skill per:
 
 ---
 
+## References
+
+- **[creative-director-agent-contract.md](references/creative-director-agent-contract.md)**: contratto generale del Creative Director Agent;
+- **[creative-director-knowledge-base.md](references/creative-director-knowledge-base.md)**: knowledge lunga su percezione, gerarchia, trust, feature creep e handoff;
+- **[legacy-walbox-v2-neon-brief.md](references/legacy-walbox-v2-neon-brief.md)**: vecchia direzione cyberpunk/glassmorphism, da NON usare come visual DNA principale attuale.
+
+---
+
+## Current Walbox TV Direction
+
+- **Jukebox TV**: musica, dediche, mood, queue, tavoli attivi, atmosfera live;
+- **Kitchen TV**: food, promo, combo, ordini pronti, ritiro al banco;
+- **Bridge**: massimo 10–15%;
+- Le due TV devono essere sorelle visive, non una TV unica confusa;
+- **Visual DNA attuale**: dark grunge, cream/red/orange, poster pub, sticker, texture sporca, copy ironica, leggibilità TV.
+
+---
+
 ## Source principles
 
 Questa skill usa principi derivati da fonti autorevoli di visual design, UX, accessibilità e digital signage.
