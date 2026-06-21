@@ -73,7 +73,7 @@ async function supabaseInsertActionLog({ order_id, action, from_status, to_statu
       actor_type:  'staff',
       actor_id:    session.user.id,
       reason:      reason   ?? null,
-      metadata:    metadata ?? null,
+      metadata:    metadata ?? {},
       created_at,
     });
     if (error) throw error;
