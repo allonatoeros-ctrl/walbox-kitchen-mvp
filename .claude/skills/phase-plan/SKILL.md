@@ -1,6 +1,6 @@
 ---
 name: phase-plan
-description: Dopo un audit read-only con piano multi-fase, spezza il piano in micro-task, salva i prompt brevi in memoria e li stampa pronti per copia-incolla.
+description: Dopo un audit read-only con piano multi-fase, spezza il piano in micro-task e salva i prompt brevi nel file di memoria. NON stampare i prompt in chat.
 ---
 
 # Phase Plan
@@ -64,19 +64,7 @@ metadata:
 [Un blocco di codice per fase nel formato standard sotto]
 ```
 
-### Step 4 — Stampa i prompt brevi
-
-Formato standard per ogni prompt:
-```
-Fase [ID] — [nome breve].
-File approvati: [file1.jsx, file2.css]
-Crea: [src/pages/NuovoFile.jsx]   ← solo se serve, altrimenti ometti la riga
-Vai.
-```
-
-Stampa tutti i prompt in sequenza, numerati, pronti per copia-incolla.
-
-### Step 5 — Aggiorna MEMORY.md
+### Step 4 — Aggiorna MEMORY.md
 
 Aggiungi una riga in `MEMORY.md` che punta al file creato.
 
@@ -93,17 +81,10 @@ Aggiungi una riga in `MEMORY.md` che punta al file creato.
 
 ## Output finale atteso
 
+Una sola riga in chat:
+
 ```
-Piano salvato in memoria: project_[nome].md
-
-Fasi identificate: N
-
---- PROMPT BREVI ---
-
-Fase 1 — ...
-File approvati: ...
-Vai.
-
-Fase 2 — ...
-...
+Piano salvato: memory/project_[nome].md — N fasi pronte.
 ```
+
+Niente prompt in chat. I prompt sono già nel file .md — Eros li legge da lì.
