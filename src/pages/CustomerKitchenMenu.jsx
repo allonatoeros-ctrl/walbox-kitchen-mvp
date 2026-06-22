@@ -63,6 +63,19 @@ function drawerIcon(name) {
   return '🍔';
 }
 
+const ALLERGEN_LABEL = {
+  glutine:   '🌾 Glutine',
+  latte:     '🥛 Latte',
+  uova:      '🥚 Uova',
+  pesce:     '🐟 Pesce',
+  senape:    '🌿 Senape',
+  soia:      '🌱 Soia',
+  arachidi:  '🥜 Arachidi',
+  noci:      '🥜 Frutta secca',
+  crostacei: '🦐 Crostacei',
+  sedano:    '🌿 Sedano',
+};
+
 function getCategoryTitle(cat) {
   if (cat === 'panini') return <>I PANINI DA <span style={{ color: 'var(--k-orange)' }}>SPACCO</span></>;
   if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
@@ -357,6 +370,25 @@ export default function CustomerKitchenMenu() {
                 <span className="kitch-card-icon">🦭</span>
               </div>
               <div className="kitch-card-desc">{item.description}</div>
+              {item.allergens?.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                  {item.allergens.map((a) => (
+                    <span key={a} style={{
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      letterSpacing: '0.04em',
+                      padding: '2px 7px',
+                      borderRadius: '20px',
+                      background: 'rgba(200,150,10,0.12)',
+                      border: '1px solid rgba(200,150,10,0.3)',
+                      color: 'rgba(212,200,154,0.75)',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {ALLERGEN_LABEL[a] ?? a}
+                    </span>
+                  ))}
+                </div>
+              )}
               <div className="kitch-card-footer">
                 <div className="kitch-card-price">€{item.price.toFixed(2)}</div>
                 <button className="kitch-btn-lo-voglio" onClick={() => addItem(item)}>LO VOGLIO</button>
