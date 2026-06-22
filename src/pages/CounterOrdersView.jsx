@@ -145,6 +145,28 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
     </div>
   );
 
+  const renderCustomerNote = (order) => {
+    if (!order.note) return null;
+    return (
+      <div style={{
+        width: '100%',
+        marginTop: '6px',
+        padding: '6px 10px',
+        background: '#1a0f00',
+        border: '1px solid #f05a2455',
+        borderRadius: '6px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '6px',
+      }}>
+        <span style={{ fontSize: '13px', flexShrink: 0 }}>⚠️</span>
+        <span style={{ fontSize: '12px', fontWeight: 700, color: '#f09a60', lineHeight: 1.4 }}>
+          Nota cliente: {order.note}
+        </span>
+      </div>
+    );
+  };
+
   if (!hasAnything) {
     return (
       <div className="ksd-sections">
@@ -212,6 +234,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                       </div>
                     </div>
                   )}
+                  {renderCustomerNote(order)}
                   {isCancelling && renderCancelPanel(order)}
                   {!isCancelling && renderStaffNote(order)}
                 </div>
@@ -280,6 +303,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                       </div>
                     </div>
                   )}
+                  {renderCustomerNote(order)}
                   {isCancelling && renderCancelPanel(order)}
                   {!isCancelling && renderStaffNote(order)}
                 </div>
