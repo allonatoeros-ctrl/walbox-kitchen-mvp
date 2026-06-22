@@ -161,16 +161,16 @@ export default function KitchenOrdersView({ orders, updateOrderStatus }) {
                       {allergens.length > 0 && (
                         <div style={{
                           width: '100%', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
-                          background: '#1a0505', border: '1px solid #ef444455', borderRadius: '6px',
+                          background: '#2b0b0b', border: '1px solid #ef4444', borderRadius: '6px',
                           padding: '6px 10px', marginTop: '2px',
                         }}>
-                          <span style={{ fontSize: '13px', flexShrink: 0 }}>⚠</span>
+                          <span style={{ fontSize: '13px', flexShrink: 0, color: '#ef4444' }}>⚠</span>
                           <span style={{ fontSize: '11px', fontWeight: 900, letterSpacing: '0.5px', color: '#ef4444', flexShrink: 0 }}>ALLERGENI:</span>
                           {allergens.map((a) => (
                             <span key={a} style={{
-                              fontSize: '11px', fontWeight: 800, background: '#2a0808',
-                              color: '#ef4444', borderRadius: '4px', padding: '2px 7px',
-                              border: '1px solid #ef444455', letterSpacing: '0.3px',
+                              fontSize: '11px', fontWeight: 900, background: '#ef4444',
+                              color: '#000000', borderRadius: '4px', padding: '2px 7px',
+                              border: '1px solid #ff8888', letterSpacing: '0.3px',
                             }}>{a.toUpperCase()}</span>
                           ))}
                         </div>

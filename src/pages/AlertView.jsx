@@ -132,16 +132,16 @@ export default function AlertView({ orders }) {
                 </div>
                 <div className="ksd-row-center">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '13px', flexShrink: 0 }}>⚠</span>
+                    <span style={{ fontSize: '13px', flexShrink: 0, color: '#ef4444' }}>⚠</span>
                     {row.allergens.map((a) => (
                       <span key={a} style={{
                         fontSize: '11px',
-                        fontWeight: 800,
-                        background: '#2a0808',
-                        color: '#ef4444',
+                        fontWeight: 900,
+                        background: '#ef4444',
+                        color: '#000000',
                         borderRadius: '4px',
                         padding: '2px 7px',
-                        border: '1px solid #ef444455',
+                        border: '1px solid #ff8888',
                         letterSpacing: '0.3px',
                       }}>
                         {a.toUpperCase()}

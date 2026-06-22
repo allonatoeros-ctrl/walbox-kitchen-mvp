@@ -388,13 +388,13 @@ export default function CustomerKitchenMenu() {
                   {item.allergens.map((a) => (
                     <span key={a} style={{
                       fontSize: '10px',
-                      fontWeight: 600,
+                      fontWeight: 800,
                       letterSpacing: '0.04em',
                       padding: '2px 7px',
                       borderRadius: '20px',
-                      background: 'rgba(200,150,10,0.22)',
-                      border: '1px solid rgba(200,150,10,0.6)',
-                      color: '#e8d88a',
+                      background: '#ffc107',
+                      border: '1px solid #ffb300',
+                      color: '#000000',
                       whiteSpace: 'nowrap',
                     }}>
                       {ALLERGEN_LABEL[a] ?? a}
