@@ -50,6 +50,7 @@ export default function App() {
   // Simple client-side routing logic
   const renderRoute = () => {
     switch (currentPath) {
+      // === JUKEBOX MODULE ROUTES ===
       case "/":
       case "/entry":
         return <CustomerEntry />;
@@ -57,9 +58,13 @@ export default function App() {
         return <CustomerRequest />;
       case "/staff":
         return <StaffDashboard />;
+
+      // === TV / POSTER ROUTES ===
       case "/tv":
       case "/tv-poster":
         return <LiveTvScreenWalrusPoster />;
+
+      // === KITCHEN MODULE ROUTES ===
       case "/kitchen":
         return <CustomerKitchenMenu />;
       case "/kitchen/status":
