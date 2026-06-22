@@ -6,6 +6,11 @@ function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
+function todayLocalDate() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export default function StoricoView({ orders }) {
   const [historySearch, setHistorySearch] = useState('');
 
@@ -15,6 +20,31 @@ export default function StoricoView({ orders }) {
     const total = delivered.reduce((sum, o) => sum + (o.total ?? 0), 0);
     const avg = count > 0 ? total / count : 0;
     return { count, total, avg };
+  }, [orders]);
+
+  const reportOggi = useMemo(() => {
+    const today = todayLocalDate();
+    const isToday = (o) => o.createdAt?.startsWith(today);
+    const todayDelivered = orders.filter((o) => o.status === 'delivered' && isToday(o));
+    const todayCancelled = orders.filter((o) => o.status === 'cancelled' && isToday(o));
+
+    const count = todayDelivered.length;
+    const incasso = todayDelivered.reduce((sum, o) => sum + (o.total ?? 0), 0);
+    const avg = count > 0 ? incasso / count : 0;
+
+    const itemCounts = {};
+    todayDelivered.forEach((o) => {
+      o.items?.forEach((i) => { itemCounts[i.name] = (itemCounts[i.name] ?? 0) + i.quantity; });
+    });
+    const topItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0] ?? null;
+
+    const byPayment = { counter: 0, card: 0 };
+    todayDelivered.forEach((o) => {
+      if (o.paymentMethod === 'counter') byPayment.counter++;
+      else if (o.paymentMethod === 'card') byPayment.card++;
+    });
+
+    return { count, incasso, avg, annullati: todayCancelled.length, topItem, byPayment };
   }, [orders]);
 
   const historyOrders = useMemo(() => {
@@ -44,6 +74,43 @@ export default function StoricoView({ orders }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Media ticket</span>
               <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>€ {summary.avg.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {/* Report oggi / serata */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ fontSize: '0.65rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
+              Oggi / serata
+            </div>
+            <div style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.75rem 1rem', flexWrap: 'wrap', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ordini</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4ade80' }}>{reportOggi.count}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Incasso stimato</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>€ {reportOggi.incasso.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket medio</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>€ {reportOggi.avg.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Annullati</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: reportOggi.annullati > 0 ? '#f87171' : '#6b7280' }}>{reportOggi.annullati}</span>
+              </div>
+              {reportOggi.topItem && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top prodotto</span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#e2e8f0' }}>{reportOggi.topItem[0]} <span style={{ color: '#6b7280', fontWeight: 400 }}>×{reportOggi.topItem[1]}</span></span>
+                </div>
+              )}
+              {(reportOggi.byPayment.counter > 0 || reportOggi.byPayment.card > 0) && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cassa / Carta</span>
+                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#e2e8f0' }}>{reportOggi.byPayment.counter} / {reportOggi.byPayment.card}</span>
+                </div>
+              )}
             </div>
           </div>
 
