@@ -37,6 +37,7 @@ function mapSupabaseOrder(row) {
     createdAt:     row.created_at,
     readyAt:       row.ready_at ?? null,
     staffNote:     row.staff_note ?? null,
+    note:          row.customer_note ?? null,
     cancelReason:  row.cancel_reason ?? null,
     cancelledAt:   row.cancelled_at ?? null,
     actionLog:     [],
@@ -180,6 +181,7 @@ export function useKitchenOrders() {
         payment_method: order.paymentMethod,
         paid_at:        order.paidAt,
         created_at:     order.createdAt,
+        customer_note:  order.note ?? null,
       });
       if (orderError) throw orderError;
 
