@@ -82,6 +82,7 @@ export default function CustomerKitchenMenu() {
   const [submittedOrderId, setSubmittedOrderId] = useState(null);
   const [submittedOrderCode, setSubmittedOrderCode] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const [customerNote, setCustomerNote] = useState('');
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
@@ -143,6 +144,7 @@ export default function CustomerKitchenMenu() {
       nickname: session.nickname,
       items: orderItems.map((o) => ({ itemId: o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
+      note: customerNote.trim() || null,
       status: 'pending_counter_payment',
       paymentStatus: 'pending_counter_payment',
       paymentMethod: 'counter',
@@ -444,6 +446,29 @@ export default function CustomerKitchenMenu() {
                   className="kitch-upsell-promo-img"
                 />
               </button>
+            </div>
+
+            <div style={{ padding: '0 16px 12px' }}>
+              <textarea
+                value={customerNote}
+                onChange={(e) => setCustomerNote(e.target.value)}
+                placeholder="Note per la cucina (allergie, variazioni…)"
+                maxLength={200}
+                rows={3}
+                style={{
+                  width: '100%',
+                  background: '#1a0800',
+                  border: '1.5px solid #3a1800',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontSize: 14,
+                  padding: '10px 12px',
+                  resize: 'none',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                }}
+              />
             </div>
 
             <div className="kitch-drawer-footer">
