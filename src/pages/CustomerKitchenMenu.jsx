@@ -119,7 +119,7 @@ export default function CustomerKitchenMenu() {
     return () => clearInterval(timer);
   }, [submitted, submittedOrderId]);
 
-  const visibleItems = menuItems.filter((i) => i.category === activeCategory && i.available !== false);
+  const visibleItems = menuItems.filter((i) => i.category === activeCategory);
 
 
 
@@ -357,8 +357,22 @@ export default function CustomerKitchenMenu() {
       {/* Menu items */}
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
-          <div key={item.id} className="kitch-card">
-            <div className="kitch-card-img" style={{ overflow: 'hidden' }}>
+          <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>
+            <div className="kitch-card-img" style={{ overflow: 'hidden', position: 'relative' }}>
+              {item.available === false && (
+                <div style={{
+                  position: 'absolute', inset: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(14,12,8,0.55)',
+                  zIndex: 2,
+                }}>
+                  <span style={{
+                    fontSize: '13px', fontWeight: 900, letterSpacing: '0.12em',
+                    color: '#f5ead8', background: 'rgba(180,40,20,0.85)',
+                    padding: '4px 10px', borderRadius: '6px',
+                  }}>ESAURITO</span>
+                </div>
+              )}
               {item.image
                 ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : (CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini)}
@@ -390,7 +404,12 @@ export default function CustomerKitchenMenu() {
               )}
               <div className="kitch-card-footer">
                 <div className="kitch-card-price">€{item.price.toFixed(2)}</div>
-                <button className="kitch-btn-lo-voglio" onClick={() => addItem(item)}>LO VOGLIO</button>
+                <button
+                  className="kitch-btn-lo-voglio"
+                  onClick={() => addItem(item)}
+                  disabled={item.available === false}
+                  style={item.available === false ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+                >LO VOGLIO</button>
               </div>
             </div>
           </div>
