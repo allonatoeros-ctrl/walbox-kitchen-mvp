@@ -30,9 +30,9 @@ const KitchenTvScreen = () => {
     .filter(o => o.status === 'ready')
     .slice(0, 5);
 
-  const cookingOrders = validOrders.filter(o => 
-    o.status === 'received' || 
-    o.status === 'preparing' || 
+  const cookingOrders = validOrders.filter(o =>
+    o.status === 'received' ||
+    o.status === 'preparing' ||
     o.status === 'pending_counter_payment'
   );
 
@@ -55,11 +55,9 @@ const KitchenTvScreen = () => {
             <span className="note-text-small">SE NON LO RITIRI CE LO MANGIAMO NOI</span>
           </div>
         </div>
-        
+
         <div className="tv-header-center">
-          <h1 className="brand-title">THE WALRUS</h1>
-          <h2 className="brand-subtitle">KITCHEN TV</h2>
-          <p className="operational-line">RITIRA AL BANCO QUANDO VEDI IL TUO CODICE</p>
+          <img src="/assets/kitchen-tv/walrus-kitchen-tv-logo.png" alt="The Walrus Kitchen TV" className="tv-brand-logo" />
         </div>
 
         <div className="tv-header-right">
@@ -73,7 +71,7 @@ const KitchenTvScreen = () => {
       <main className="tv-main">
         <section className="tv-ready-section">
           <h3 className="section-title">PRONTI AL BANCO</h3>
-          
+
           {readyOrders.length > 0 ? (
             <div className="ready-tickets-grid">
               {readyOrders.map(order => (
@@ -101,7 +99,7 @@ const KitchenTvScreen = () => {
 
         <aside className="tv-cooking-section">
           <h3 className="section-title">IN COTTURA</h3>
-          
+
           {cookingOrders.length > 0 ? (
             <div className="cooking-list">
               {cookingOrders.map(order => (

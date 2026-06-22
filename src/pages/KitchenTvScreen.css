@@ -1,15 +1,15 @@
 @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Bebas+Neue&family=Permanent+Marker&display=swap');
 
 :root {
-  --tv-bg-dark: #121212;
-  --tv-bg-darker: #080808;
-  --tv-cream: #f4ecd8;
-  --tv-cream-dark: #e8dbbc;
-  --tv-red: #d92d20;
+  --tv-bg-dark: #12100f;
+  --tv-bg-darker: #0b0a09;
+  --tv-cream: #ebdcb9;
+  --tv-cream-dark: #c7b692;
+  --tv-red: #aa1e14;
   --tv-orange: #f05e16;
   --tv-yellow: #f5b700;
-  --tv-text-dark: #1a1a1a;
-  
+  --tv-text-dark: #1e1915;
+
   --font-condensed: 'Oswald', sans-serif;
   --font-display: 'Bebas Neue', cursive;
   --font-marker: 'Permanent Marker', cursive;
@@ -19,12 +19,17 @@
   width: 100vw;
   height: 100vh;
   background-color: var(--tv-bg-darker);
-  background-image: radial-gradient(circle at center, #2a2a2a 0%, #0a0a0a 100%);
+  /* Real background frame */
+  background-image: url('/assets/kitchen-tv/kitchen-tv-bg.png');
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
   color: var(--tv-cream);
   font-family: var(--font-condensed);
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* No scroll for TV */
+  overflow: hidden;
+  /* No scroll for TV */
   position: relative;
   box-sizing: border-box;
 }
@@ -33,14 +38,22 @@
   box-sizing: border-box;
 }
 
+/* Worn double border framing the screen - Removed as we have real frame */
+.kitchen-tv-container::after {
+  display: none;
+}
+
 /* Grungy Noise Overlay */
 .tv-noise-overlay {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   pointer-events: none;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.06'/%3E%3C/svg%3E");
   z-index: 100;
-  opacity: 0.6;
+  opacity: 0.75;
 }
 
 /* HEADER */
@@ -48,12 +61,13 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  padding: 2vh 3vw;
+  padding: 3vh 4vw 0 4vw;
   height: 18vh;
-  border-bottom: 2px dashed rgba(244, 236, 216, 0.2);
+  flex-shrink: 0;
 }
 
-.tv-header-left, .tv-header-right {
+.tv-header-left,
+.tv-header-right {
   flex: 1;
 }
 
@@ -65,209 +79,458 @@
 .tv-header-center {
   text-align: center;
   flex: 2;
-}
-
-.brand-title {
-  font-family: var(--font-display);
-  font-size: 5vh;
-  letter-spacing: 4px;
-  margin: 0;
-  color: var(--tv-orange);
-  text-shadow: 2px 2px 0px var(--tv-bg-dark), 4px 4px 0px rgba(0,0,0,0.5);
-}
-
-.brand-subtitle {
-  font-family: var(--font-display);
-  font-size: 6vh;
-  margin: -1vh 0 0 0;
-  letter-spacing: 2px;
-  color: var(--tv-cream);
-}
-
-.operational-line {
-  font-size: 1.8vh;
-  margin: 0;
-  text-transform: uppercase;
-  color: var(--tv-yellow);
-  letter-spacing: 1px;
-}
-
-.paper-note, .red-note {
-  padding: 1.5vh 1.5vw;
-  transform: rotate(-3deg);
-  box-shadow: 4px 4px 10px rgba(0,0,0,0.6);
-  max-width: 20vw;
   display: flex;
   flex-direction: column;
+  align-items: center;
 }
 
+.tv-brand-logo {
+  max-width: 100%;
+  height: auto;
+  max-height: 16vh;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  opacity: 0.95;
+  margin-top: -1vh;
+}
+
+/* Worn paper tape note */
 .paper-note {
-  background-color: var(--tv-cream);
-  color: var(--tv-text-dark);
-  border-left: 5px solid var(--tv-yellow);
+  background-color: #ebdcb9;
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 10% 10%, rgba(255, 255, 255, 0.25), transparent);
+  background-size: 100% 2vh, 100% 100%;
+  color: #2b2518;
+  border: 1px solid #c7b692;
+  border-left: 6px solid #8e2b20;
+  /* thick dark red border like tape */
+  padding: 1.2vh 1.5vw 1.2vh 3.5vw;
+  /* space for the bell */
+  transform: rotate(-3deg);
+  box-shadow: 3px 5px 12px rgba(0, 0, 0, 0.6);
+  max-width: 18vw;
+  position: relative;
 }
 
+.paper-note::before {
+  content: '🔔';
+  position: absolute;
+  left: 0.8vw;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 3.5vh;
+  opacity: 0.85;
+}
+
+.paper-note::after {
+  content: '❤️';
+  position: absolute;
+  right: 0.5vw;
+  bottom: 0.5vh;
+  font-size: 1.5vh;
+  opacity: 0.7;
+}
+
+/* Worn red tape note */
 .red-note {
-  background-color: var(--tv-red);
-  color: var(--tv-cream);
+  background-color: #aa1e14;
+  background-image: linear-gradient(135deg, #aa1e14 0%, #85130b 100%);
+  color: #ebdcb9;
+  border: 1px solid #730e06;
+  border-right: 5px solid #dcb56a;
+  padding: 1.2vh 1.5vw;
   transform: rotate(2deg);
-  border-right: 5px solid var(--tv-bg-dark);
+  box-shadow: 3px 5px 12px rgba(0, 0, 0, 0.6);
+  max-width: 18vw;
+  position: relative;
+}
+
+.red-note::before {
+  content: '⚡';
+  position: absolute;
+  left: 0.5vw;
+  top: 0.5vh;
+  font-size: 2vh;
+  color: #ebdcb9;
+  opacity: 0.6;
+}
+
+.red-note::after {
+  content: '⚡';
+  position: absolute;
+  right: 0.5vw;
+  bottom: 0.5vh;
+  font-size: 2vh;
+  color: #ebdcb9;
+  opacity: 0.6;
 }
 
 .note-text-large {
   font-weight: 700;
-  font-size: 2.2vh;
+  font-size: 2vh;
   line-height: 1.1;
   text-transform: uppercase;
 }
 
 .note-text-small {
   font-family: var(--font-marker);
-  font-size: 1.5vh;
+  font-size: 1.4vh;
   line-height: 1.2;
-  margin-top: 0.5vh;
+  margin-top: 0.3vh;
 }
 
 /* MAIN CONTENT */
 .tv-main {
   display: flex;
   flex: 1;
-  padding: 2vh 3vw;
+  padding: 1.5vh 4vw;
   gap: 3vw;
-  height: 52vh; /* Adjust depending on layout */
-}
-
-.section-title {
-  font-family: var(--font-display);
-  font-size: 5vh;
-  margin: 0 0 2vh 0;
-  color: var(--tv-cream);
-  border-bottom: 3px solid var(--tv-red);
-  display: inline-block;
-  padding-bottom: 0.5vh;
-  letter-spacing: 1px;
+  min-height: 0;
+  /* allows flex item to shrink below content size */
 }
 
 /* READY SECTION */
 .tv-ready-section {
-  flex: 2;
+  flex: 2.2;
   display: flex;
   flex-direction: column;
 }
 
-.ready-tickets-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2vh 2vw;
-  align-content: start;
+/* Paint banner styled title */
+.tv-ready-section .section-title {
+  font-family: var(--font-display);
+  font-size: 4.5vh;
+  margin: 0 auto 2vh auto;
+  color: var(--tv-cream);
+  display: inline-block;
+  padding: 0.6vh 4vw;
+  letter-spacing: 2px;
+  background-color: var(--tv-red);
+  background-image:
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent),
+    repeating-linear-gradient(45deg, rgba(0, 0, 0, 0.15) 0px, rgba(0, 0, 0, 0.15) 2px, transparent 2px, transparent 4px);
+  border: 1px solid #a31c12;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.6);
+  transform: rotate(-1deg);
+  position: relative;
+  text-align: center;
 }
 
+.tv-ready-section .section-title::before {
+  content: '★ ';
+  margin-right: 10px;
+  color: var(--tv-yellow);
+}
+
+.tv-ready-section .section-title::after {
+  content: ' ★';
+  margin-left: 10px;
+  color: var(--tv-yellow);
+}
+
+/* Horizontal ticket cards container */
+.ready-tickets-grid {
+  display: flex;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 1.5vw;
+  height: 29vh;
+  margin-top: 0.5vh;
+}
+
+/* Worn paper tickets style */
 .ready-ticket {
+  flex: 1;
+  max-width: calc(20% - 1.2vw);
+  min-width: 140px;
+  height: 100%;
   background-color: var(--tv-cream);
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+    radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.25) 0%, transparent 80%),
+    linear-gradient(to bottom, rgba(230, 218, 192, 0.5), var(--tv-cream));
+  background-size: 100% 2vh, 2vh 100%, 100% 100%, 100% 100%;
   color: var(--tv-text-dark);
-  border-radius: 8px;
-  padding: 2vh 2vw;
-  box-shadow: 6px 6px 0px rgba(0,0,0,0.5);
-  border: 2px solid var(--tv-text-dark);
+  border-radius: 4px;
+  padding: 1.8vh 1.2vw 1.5vh 1.2vw;
+  box-shadow: 4px 6px 12px rgba(0, 0, 0, 0.6);
+  border: 1px solid #c7b692;
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  transform: rotate(var(--rotation, 0deg));
   transition: transform 0.3s ease;
 }
 
+/* Rotating card effect */
+.ready-ticket:nth-child(odd) {
+  --rotation: -1.2deg;
+}
+
+.ready-ticket:nth-child(even) {
+  --rotation: 1.5deg;
+}
+
+.ready-ticket:nth-child(3n) {
+  --rotation: -0.6deg;
+}
+
+.ready-ticket:nth-child(4n) {
+  --rotation: 0.8deg;
+}
+
+/* Punch-hole at the top */
 .ready-ticket::before {
   content: '';
   position: absolute;
-  top: 0; bottom: 0; left: 0; width: 10px;
-  background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, var(--tv-red) 5px, var(--tv-red) 10px);
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  background-color: #12100f;
+  /* cuts through card displaying dark background */
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  box-shadow: inset 1px 1px 3px rgba(0, 0, 0, 0.8);
+  z-index: 2;
 }
 
-.ready-ticket.just-ready {
-  background-color: #fff8e1; /* slightly brighter for highlight */
-  border-color: var(--tv-orange);
-  box-shadow: 6px 6px 0px var(--tv-orange);
+/* Star at the bottom center */
+.ready-ticket::after {
+  content: '★';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1.5vh;
+  color: var(--tv-text-dark);
+  opacity: 0.65;
 }
 
 .ticket-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1vh;
-  padding-left: 1vw;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  width: 100%;
+  margin-bottom: 0.5vh;
 }
 
 .ticket-code {
   font-family: var(--font-display);
-  font-size: 10vh;
-  line-height: 0.8;
+  font-size: 8vh;
+  line-height: 0.9;
   color: var(--tv-text-dark);
   margin: 0;
-}
-
-.badge-just-ready {
-  background-color: var(--tv-orange);
-  color: white;
-  padding: 0.5vh 1vw;
-  font-size: 1.8vh;
-  font-weight: 700;
-  border-radius: 4px;
-  text-transform: uppercase;
-  animation: pulse 1.5s infinite alternate;
-}
-
-@keyframes pulse {
-  from { transform: scale(1); }
-  to { transform: scale(1.05); }
+  letter-spacing: -2px;
 }
 
 .ticket-body {
-  padding-left: 1vw;
+  border-top: 1px dashed rgba(0, 0, 0, 0.2);
+  padding-top: 0.8vh;
+  margin-top: auto;
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
 }
 
 .ticket-name {
-  font-size: 3vh;
-  font-weight: 600;
+  font-size: 2.2vh;
+  font-weight: 700;
   text-transform: uppercase;
-  white-space: nowrap;
+  color: #2b2518;
+  word-break: break-all;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 70%;
+  max-width: 100%;
+  line-height: 1.1;
 }
 
 .ticket-items-count {
-  font-size: 1.8vh;
+  font-size: 1.5vh;
   color: #666;
   font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* HIGHLIGHTED JUST READY TICKET */
+.ready-ticket.just-ready {
+  background-color: var(--tv-red);
+  background-image:
+    radial-gradient(circle at 50% 10%, rgba(255, 255, 255, 0.15) 0%, transparent 80%),
+    linear-gradient(to bottom, #aa1e14, #7a130c);
+  color: var(--tv-cream);
+  border: 2px solid #730e06;
+  box-shadow: 0px 0px 25px rgba(217, 45, 32, 0.35), 4px 6px 12px rgba(0, 0, 0, 0.6);
+  transform: scale(1.04) rotate(var(--rotation, -2deg));
+  z-index: 10;
+}
+
+/* Punch-hole for just-ready ticket */
+.ready-ticket.just-ready::before {
+  background-color: #12100f;
+  border-color: rgba(0, 0, 0, 0.4);
+}
+
+.ready-ticket.just-ready::after {
+  color: var(--tv-cream);
+}
+
+.ready-ticket.just-ready .ticket-code {
+  color: var(--tv-cream);
+  text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.4);
+}
+
+.ready-ticket.just-ready .ticket-name {
+  color: var(--tv-cream-dark);
+}
+
+.ready-ticket.just-ready .ticket-items-count {
+  color: var(--tv-cream-dark);
+  opacity: 0.8;
+}
+
+.ready-ticket.just-ready .ticket-body {
+  border-top-color: rgba(244, 236, 216, 0.2);
+}
+
+/* Stamp "APPENA FATTO" rotated at the bottom */
+.ready-ticket.just-ready .badge-just-ready {
+  position: absolute;
+  bottom: 22px;
+  /* placed above the star */
+  left: 50%;
+  transform: translateX(-50%) rotate(-4deg);
+  background-color: var(--tv-cream);
+  color: var(--tv-red);
+  border: 1px solid var(--tv-red);
+  font-family: var(--font-marker);
+  font-size: 1.5vh;
+  padding: 1px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  animation: pulse 1.5s infinite alternate;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes pulse {
+  from {
+    transform: translateX(-50%) rotate(-4deg) scale(0.98);
+  }
+
+  to {
+    transform: translateX(-50%) rotate(-4deg) scale(1.04);
+  }
 }
 
 /* COOKING SECTION */
 .tv-cooking-section {
   flex: 1;
-  background-color: rgba(26, 26, 26, 0.8);
-  border: 2px solid #333;
-  border-radius: 12px;
-  padding: 2vh 2vw;
+  background-color: #161413;
+  /* Charcoal frame effect */
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(30, 27, 25, 0.3) 0%, rgba(10, 8, 7, 0.8) 100%);
+  background-size: 100% 3vh, 100% 100%;
+  border: 3px solid #2e2823;
+  border-radius: 4px;
+  padding: 2vh 1.5vw;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8), 4px 6px 15px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Wood frame inner edge */
+.tv-cooking-section::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  right: 2px;
+  bottom: 2px;
+  border: 1px solid rgba(235, 220, 185, 0.12);
+  pointer-events: none;
+}
+
+/* Rock Rustico circular stamp on the right */
+.tv-cooking-section::after {
+  content: 'MOOD:\nROCK\nRUSTICO';
+  white-space: pre-wrap;
+  position: absolute;
+  right: 1.5vw;
+  top: 35%;
+  transform: rotate(15deg);
+  border: 2px dashed var(--tv-orange);
+  color: var(--tv-orange);
+  font-family: var(--font-display);
+  font-size: 1.5vh;
+  line-height: 1.1;
+  padding: 8px;
+  border-radius: 50%;
+  text-align: center;
+  width: 65px;
+  height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.45;
+  pointer-events: none;
+  font-weight: 700;
+}
+
+.tv-cooking-section .section-title {
+  font-family: var(--font-display);
+  font-size: 4vh;
+  margin: 0 auto 2vh auto;
+  color: var(--tv-cream);
+  border-bottom: 2px dashed rgba(235, 220, 185, 0.15);
+  display: block;
+  text-align: center;
+  padding-bottom: 0.5vh;
+  letter-spacing: 1px;
+  width: 100%;
+}
+
+.tv-cooking-section .section-title::before {
+  content: '★ ';
+  color: var(--tv-orange);
+}
+
+.tv-cooking-section .section-title::after {
+  content: ' ★';
+  color: var(--tv-orange);
 }
 
 .cooking-list {
   display: flex;
   flex-direction: column;
-  gap: 1.5vh;
+  gap: 1.2vh;
   overflow-y: hidden;
+  position: relative;
+  z-index: 1;
 }
 
 .cooking-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.05);
-  padding: 1.5vh 1vw;
-  border-radius: 6px;
-  border-left: 4px solid #555;
+  background-color: rgba(0, 0, 0, 0.25);
+  padding: 1.2vh 1vw;
+  border-radius: 2px;
+  border-bottom: 1px solid rgba(235, 220, 185, 0.08);
 }
 
 .cooking-row-left {
@@ -278,18 +541,20 @@
 
 .cooking-code {
   font-family: var(--font-display);
-  font-size: 4vh;
+  font-size: 3.5vh;
   color: var(--tv-cream);
+  letter-spacing: 0.5px;
 }
 
 .cooking-name {
-  font-size: 2.2vh;
-  color: #ccc;
+  font-size: 1.8vh;
+  color: var(--tv-cream-dark);
   text-transform: uppercase;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 12vw;
+  max-width: 10vw;
+  opacity: 0.85;
 }
 
 .cooking-row-right {
@@ -297,13 +562,13 @@
 }
 
 .status-label {
-  font-size: 1.5vh;
+  font-size: 1.4vh;
   font-weight: 700;
-  padding: 0.5vh 0.8vw;
-  border-radius: 4px;
+  padding: 0.4vh 0.8vw;
+  border-radius: 2px;
   text-transform: uppercase;
   color: white;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
 }
 
 /* EMPTY STATES */
@@ -313,113 +578,189 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  opacity: 0.5;
+  min-height: 25vh;
+  opacity: 0.8;
+  border: 2px dashed rgba(235, 220, 185, 0.15);
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 3vh;
+  margin: 1vh 0;
+  text-align: center;
 }
+
 
 .empty-title {
   font-family: var(--font-display);
-  font-size: 6vh;
-  color: var(--tv-cream);
-  text-shadow: 2px 2px 0px var(--tv-bg-dark);
+  font-size: 5vh;
+  color: var(--tv-cream-dark);
+  text-shadow: 2px 2px 0px var(--tv-bg-darker);
+  margin-bottom: 0.5vh;
 }
 
 .empty-subtitle {
   font-family: var(--font-marker);
-  font-size: 2.5vh;
+  font-size: 2.2vh;
   color: var(--tv-yellow);
 }
 
 /* LOWER BLOCKS */
 .tv-lower-blocks {
   display: flex;
-  padding: 0 3vw 2vh 3vw;
+  padding: 0 4vw 2vh 4vw;
   gap: 3vw;
-  height: 20vh;
+  height: 18vh;
+  flex-shrink: 0;
 }
 
+/* Promo Board Ad */
 .promo-block {
-  flex: 2;
-  background: linear-gradient(135deg, var(--tv-red) 0%, #8a1c14 100%);
-  border-radius: 8px;
-  padding: 2vh 2vw;
+  flex: 2.2;
+  background-color: #12100f;
+  /* Left dark overlay + warm orange glow on the right */
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.6) 0%, transparent 40%),
+    radial-gradient(circle at 80% 50%, rgba(170, 30, 20, 0.25) 0%, transparent 70%);
+  border: 2px solid #2e2823;
+  border-radius: 4px;
+  padding: 1.5vh 12vw 1.5vh 8vw;
+  /* wide space for the hamburger on the left & sticker on the right */
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  box-shadow: inset 0 0 40px rgba(0,0,0,0.5);
-  border: 2px solid var(--tv-orange);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9), 4px 6px 15px rgba(0, 0, 0, 0.7);
 }
 
+/* Real burger photo on the left */
+.promo-block::before {
+  content: '';
+  position: absolute;
+  left: -3vw;
+  bottom: -2vh;
+  width: 20vw;
+  height: 28vh;
+  background-image: url('/assets/kitchen/02_hero_combo_porcheria_seria.png');
+  background-size: contain;
+  background-position: bottom left;
+  background-repeat: no-repeat;
+  filter: drop-shadow(6px 8px 15px rgba(0, 0, 0, 0.8));
+  z-index: 10;
+}
+
+/* Sticker on the right */
 .promo-badge {
   position: absolute;
-  top: -1.5vh;
-  left: 2vw;
+  right: 2vw;
+  top: 50%;
+  transform: translateY(-50%) rotate(12deg);
   background-color: var(--tv-yellow);
+  background-image: radial-gradient(circle at center, var(--tv-yellow) 0%, #dca200 100%);
   color: var(--tv-text-dark);
-  padding: 0.5vh 1vw;
+  width: 9.5vh;
+  height: 9.5vh;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-family: var(--font-display);
-  font-size: 2vh;
-  transform: rotate(-2deg);
-  box-shadow: 2px 2px 0px rgba(0,0,0,0.4);
+  font-size: 1.5vh;
+  line-height: 1.1;
+  text-align: center;
+  font-weight: bold;
+  padding: 6px;
+  box-shadow: 3px 3px 8px rgba(0, 0, 0, 0.5);
+  border: 2px dashed rgba(0, 0, 0, 0.25);
+  text-transform: uppercase;
 }
 
 .promo-title {
   font-family: var(--font-display);
-  font-size: 4vh;
+  font-size: 4.2vh;
   margin: 0;
   text-transform: uppercase;
+  color: var(--tv-orange);
+  letter-spacing: 1px;
+  text-shadow: 2px 2px 0px #000;
 }
 
 .promo-desc {
-  font-size: 2vh;
-  margin: 0.5vh 0 1vh 0;
-  color: rgba(255,255,255,0.9);
+  font-size: 1.8vh;
+  margin: 0.2vh 0 0.8vh 0;
+  color: var(--tv-cream-dark);
+  opacity: 0.9;
+  letter-spacing: 0.5px;
 }
 
 .promo-price {
   display: flex;
-  align-items: baseline;
-  gap: 1vw;
+  align-items: center;
+  gap: 1.5vw;
 }
 
 .price-old {
-  font-size: 2.5vh;
+  font-size: 2.2vh;
   text-decoration: line-through;
-  color: rgba(255,255,255,0.6);
+  color: #888;
+  font-weight: bold;
 }
 
+/* Torn price paper sticker */
 .price-new {
   font-family: var(--font-display);
-  font-size: 5vh;
-  color: var(--tv-yellow);
-  text-shadow: 2px 2px 0px rgba(0,0,0,0.5);
+  font-size: 4.5vh;
+  color: #8e2b20;
+  /* dark red ink */
+  background-color: var(--tv-cream);
+  padding: 0.2vh 1.5vw;
+  transform: rotate(-2deg);
+  border: 1px solid #c7b692;
+  box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+  display: inline-block;
+  position: relative;
 }
 
+.price-new::before {
+  content: '★ ';
+  font-size: 2vh;
+  color: var(--tv-orange);
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+/* Jukebox Flyer Card */
 .jukebox-bridge {
   flex: 1;
-  background-color: #222;
-  border-radius: 8px;
-  border: 2px dashed #444;
-  padding: 2vh;
+  background-color: #ebdcb9;
+  background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.1), transparent);
+  border: 1px solid #c7b692;
+  border-radius: 4px;
+  padding: 1.5vh;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  box-shadow: 4px 6px 15px rgba(0, 0, 0, 0.6);
+  color: var(--tv-text-dark);
+  transform: rotate(1deg);
 }
 
 .jukebox-header {
   display: flex;
   flex-direction: column;
+  border-bottom: 2px dashed rgba(0, 0, 0, 0.15);
+  padding-bottom: 0.5vh;
 }
 
 .juke-pre {
-  font-size: 1.5vh;
-  color: #aaa;
+  font-size: 1.4vh;
+  color: #666;
+  font-weight: bold;
+  text-transform: uppercase;
 }
 
 .juke-action {
   font-family: var(--font-display);
-  font-size: 3vh;
-  color: var(--tv-cream);
+  font-size: 2.8vh;
+  color: var(--tv-text-dark);
   letter-spacing: 1px;
 }
 
@@ -427,15 +768,15 @@
   display: flex;
   align-items: center;
   gap: 1vw;
-  background-color: #111;
-  padding: 1.5vh;
-  border-radius: 6px;
-  border-left: 3px solid var(--tv-yellow);
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 1vh;
+  border-radius: 4px;
+  border-left: 4px solid var(--tv-red);
 }
 
 .play-circle-icon {
-  font-size: 3vh;
-  color: var(--tv-yellow);
+  font-size: 2.5vh;
+  color: var(--tv-red);
 }
 
 .song-info {
@@ -445,31 +786,34 @@
 
 .now-playing-label {
   font-size: 1vh;
-  color: var(--tv-yellow);
+  color: #888;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 
 .song-title {
   font-weight: 700;
-  font-size: 2vh;
-  color: white;
+  font-size: 1.8vh;
+  color: var(--tv-text-dark);
 }
 
 .song-artist {
-  font-size: 1.5vh;
-  color: #888;
+  font-size: 1.3vh;
+  color: #666;
 }
 
 /* FOOTER MARQUEE */
 .tv-footer {
-  height: 6vh;
-  background-color: var(--tv-bg-dark);
-  border-top: 2px solid #333;
+  height: 5vh;
+  background-color: transparent;
+  border-top: none;
   display: flex;
   align-items: center;
   overflow: hidden;
   white-space: nowrap;
+  flex-shrink: 0;
+  padding: 0 4vw;
+  margin-bottom: 2vh;
 }
 
 .marquee-container {
@@ -481,7 +825,8 @@
   display: inline-block;
   padding-left: 100%;
   animation: marquee 25s linear infinite;
-  font-size: 2vh;
+  font-size: 1.8vh;
+  font-weight: 600;
   color: var(--tv-cream-dark);
   letter-spacing: 1px;
 }
@@ -498,6 +843,11 @@
 }
 
 @keyframes marquee {
-  0% { transform: translate(0, 0); }
-  100% { transform: translate(-100%, 0); }
+  0% {
+    transform: translate(0, 0);
+  }
+
+  100% {
+    transform: translate(-100%, 0);
+  }
 }
