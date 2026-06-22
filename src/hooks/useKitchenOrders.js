@@ -111,26 +111,33 @@ export function useKitchenOrders() {
     };
   }, []);
 
+  const fetchSupabaseOrders = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase
+        .from('kitchen_orders')
+        .select('*, kitchen_order_items(*)')
+        .eq('venue_id', 'walrus-main')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      if (!data?.length) return;
+
+      setOrders(data.map(mapSupabaseOrder));
+    } catch (err) {
+      console.warn('[Walbox] Supabase read failed — using localStorage', err);
+    }
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session || session.user.is_anonymous) return;
+    fetchSupabaseOrders();
+  }, []);
 
-        const { data, error } = await supabase
-          .from('kitchen_orders')
-          .select('*, kitchen_order_items(*)')
-          .eq('venue_id', 'walrus-main')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        if (!data?.length) return;
-
-        setOrders(data.map(mapSupabaseOrder));
-      } catch (err) {
-        console.warn('[Walbox] Supabase read failed — using localStorage', err);
-      }
-    })();
+  useEffect(() => {
+    const intervalId = setInterval(fetchSupabaseOrders, 10000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const updateOrderStatus = (id, newStatus) => {
