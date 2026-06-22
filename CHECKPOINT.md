@@ -1,6 +1,6 @@
 # CHECKPOINT — Walbox
-Aggiornato: 2026-06-21
-Fase: Supabase V1 completo (S1→S10d). Audit Kitchen TV screen completato. Prossimo: Phase 1 KitchenTvScreen.jsx.
+Aggiornato: 2026-06-22
+Fase: Cleanup Sprint CL completato (CL-1→CL-6b). Build PASS. Playwright 22/22 PASS. Prossimo: Productization Sprint V1 o deploy staging.
 
 ---
 
@@ -14,6 +14,14 @@ Fase: Supabase V1 completo (S1→S10d). Audit Kitchen TV screen completato. Pros
 - S10d hotfix (commit c8dac05): anon read menu abilitato — RLS policy + guard rimosso ✅
 - QA manuale PASS cross-session: staff disattiva item → incognito refresh → sparisce ✅
 - AUDIT Kitchen TV (2026-06-21): data shape confermata, status values mappati, piano 3 fasi pronto
+- **CLEANUP SPRINT CL (2026-06-22) — completato**
+  - CL-1: /kitchen/tv route verificata — PASS, zero errori console
+  - CL-2a: localStorage audit completato — dual-write pattern documentato
+  - CL-2b: deferred — localStorage ancora necessario (fallback/optimistic/cross-tab sync)
+  - CL-3b: 17 doc storici spostati in docs/archive/ — root pulita
+  - CL-4: commenti namespacing aggiunti in App.jsx (JUKEBOX / TV / KITCHEN) — zero logica modificata
+  - CL-5b: KPI "Oggi/serata" aggiunti in StoricoView.jsx (ordini, incasso stimato, ticket medio, annullati, top prodotto, cassa/carta)
+  - CL-6: build PASS ✅ — Playwright 22/22 PASS ✅
 
 ## STABLE — non toccare senza approvazione
 - src/hooks/useKitchenOrders.js — dual-write+reads+updates Supabase, localStorage primary
@@ -31,7 +39,6 @@ Fase: Supabase V1 completo (S1→S10d). Audit Kitchen TV screen completato. Pros
 - src/data/kitchenMockData.js — dati demo stabili
 - .env / .env.local / package.json — sempre protetti
 - Jukebox / Poster TV — non toccare
-- App.jsx — routing Kitchen TV da aggiungere solo in Phase 3 dopo approvazione
 
 ## SUPABASE V1 STATUS
 | Fase | Stato |
@@ -49,13 +56,14 @@ Fase: Supabase V1 completo (S1→S10d). Audit Kitchen TV screen completato. Pros
 
 ## OPEN ISSUES
 - orderCode collision risk: Date.now() % 900 — mitigabile con DB unique constraint
-- S11: localStorage writes ancora attivi (cleanup dipende da verifica cross-device)
-- Kitchen TV sync cross-device: richiede Supabase Realtime subscription (fuori scope Phase 1)
+- S11: localStorage writes ancora attivi — deferred (CL-2b) per fallback/optimistic/cross-tab
+- Kitchen TV sync cross-device: richiede Supabase Realtime subscription (fuori scope corrente)
+- KPI "Oggi/serata" in StoricoView: in demo mode mostra zeri (mock data datati Jun 15) — corretto in live con Supabase
 
 ## NEXT STEP
-Eros approva piano Kitchen TV → Phase 1: creare `src/pages/KitchenTvScreen.jsx` con struttura JSX + filtro ordini attivi.
+Productization Sprint V1 oppure deploy staging. Codebase stabile, test 22/22 PASS.
 
 ## RESTART PROMPT
-Walbox Kitchen TV — audit dati completato. Data shape confermata: useKitchenOrders espone orders con orderCode/nickname/table/items/status.
-Piano 3 fasi pronto (Phase 1: JSX, Phase 2: CSS TV-first, Phase 3: routing App.jsx).
-Prossimo step: approvazione Eros → Phase 1 KitchenTvScreen.jsx. File caldo: src/hooks/useKitchenOrders.js.
+Walbox Cleanup Sprint CL completato (2026-06-22). Build PASS, Playwright 22/22 PASS.
+Root pulita (17 doc archiviati). App.jsx namespaced. StoricoView con KPI giornalieri.
+Prossimo: Productization Sprint V1 o staging deploy. File caldi: src/pages/StoricoView.jsx, src/App.jsx.
