@@ -392,9 +392,9 @@ export default function CustomerKitchenMenu() {
                       letterSpacing: '0.04em',
                       padding: '2px 7px',
                       borderRadius: '20px',
-                      background: 'rgba(200,150,10,0.12)',
-                      border: '1px solid rgba(200,150,10,0.3)',
-                      color: 'rgba(212,200,154,0.75)',
+                      background: 'rgba(200,150,10,0.22)',
+                      border: '1px solid rgba(200,150,10,0.6)',
+                      color: '#e8d88a',
                       whiteSpace: 'nowrap',
                     }}>
                       {ALLERGEN_LABEL[a] ?? a}
