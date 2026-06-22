@@ -52,8 +52,7 @@ const promoItem =
 
 
 function generateOrderCode() {
-  const num = (Date.now() % 900) + 100; // 100–999, changes every ms
-  return `W-${num}`;
+  return 'W-' + Math.random().toString(36).slice(2, 5).toUpperCase() + Date.now().toString(36).slice(-2).toUpperCase();
 }
 
 function drawerIcon(name) {
