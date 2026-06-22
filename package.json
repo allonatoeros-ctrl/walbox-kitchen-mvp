@@ -27,5 +27,22 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
     "vite": "^8.0.12"
-  }
+  },
+  "description": "This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.",
+  "main": "eslint.config.js",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/allonatoeros-ctrl/walbox-kitchen-mvp.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/allonatoeros-ctrl/walbox-kitchen-mvp/issues"
+  },
+  "homepage": "https://github.com/allonatoeros-ctrl/walbox-kitchen-mvp#readme"
 }
