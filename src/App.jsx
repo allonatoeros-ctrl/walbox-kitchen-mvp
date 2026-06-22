@@ -4,6 +4,7 @@ import CustomerRequest from "./pages/CustomerRequest";
 import StaffDashboard from "./pages/StaffDashboard";
 import LiveTvScreenWalrusPoster from "./pages/LiveTvScreenWalrusPoster";
 import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
+import CustomerKitchenEntry from "./pages/CustomerKitchenEntry";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import KitchenStaffDashboard from "./pages/KitchenStaffDashboard";
 import KitchenLogin from "./pages/KitchenLogin";
@@ -65,6 +66,8 @@ export default function App() {
         return <LiveTvScreenWalrusPoster />;
 
       // === KITCHEN MODULE ROUTES ===
+      case "/kitchen/entry":
+        return <CustomerKitchenEntry />;
       case "/kitchen":
         return <CustomerKitchenMenu />;
       case "/kitchen/status":
