@@ -384,7 +384,7 @@ export default function CustomerKitchenMenu() {
               </div>
               <div className="kitch-card-desc">{item.description}</div>
               {item.allergens?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 4px', marginTop: '6px', marginBottom: '4px' }}>
                   {item.allergens.map((a) => (
                     <span key={a} style={{
                       fontSize: '10px',
