@@ -1,3 +1,7 @@
+function minutesAgo(minutes) {
+  return new Date(Date.now() - minutes * 60 * 1000).toISOString();
+}
+
 export const kitchenOrderStatuses = {
   received: { label: 'Ricevuto', color: '#f59e0b' },
   preparing: { label: 'In preparazione', color: '#3b82f6' },
@@ -125,7 +129,7 @@ export const demoKitchenOrders = [
     ],
     total: 32.0,
     status: 'preparing',
-    createdAt: '2026-06-15T21:14:00.000Z',
+    createdAt: minutesAgo(40),
     note: 'Senza cipolla sul panino, per favore.',
   },
   {
@@ -139,8 +143,8 @@ export const demoKitchenOrders = [
     ],
     total: 18.5,
     status: 'ready',
-    readyAt: '2026-06-15T21:18:00.000Z',
-    createdAt: '2026-06-15T21:08:00.000Z',
+    readyAt: minutesAgo(12),
+    createdAt: minutesAgo(55),
     note: '',
   },
   {
@@ -154,7 +158,7 @@ export const demoKitchenOrders = [
     ],
     total: 11.0,
     status: 'received',
-    createdAt: '2026-06-15T21:19:00.000Z',
+    createdAt: minutesAgo(18),
     note: 'Patatine extra croccanti se possibile.',
     staffNote: 'Cliente ha confermato allergia al latte — preparare separato.',
   },
@@ -171,10 +175,42 @@ export const demoKitchenOrders = [
     status: 'ready',
     paymentStatus: 'paid',
     paymentMethod: 'counter',
-    paidAt: '2026-06-15T21:16:00.000Z',
-    readyAt: '2026-06-15T21:20:00.000Z',
-    createdAt: '2026-06-15T21:15:00.000Z',
+    paidAt: minutesAgo(68),
+    readyAt: minutesAgo(55),
+    createdAt: minutesAgo(70),
     note: '',
+  },
+  {
+    id: 'order-005',
+    orderCode: 'W44',
+    table: 'T4',
+    nickname: 'FuriosaDelBanco',
+    items: [
+      { itemId: 'item-007', name: 'Combo CAVALLOOOO', quantity: 1, price: 16.0 },
+      { itemId: 'item-004', name: 'Patatine Fuori di Testa', quantity: 1, price: 5.5 },
+    ],
+    total: 21.5,
+    status: 'delivered',
+    paymentStatus: 'paid',
+    paymentMethod: 'counter',
+    createdAt: minutesAgo(95),
+    readyAt: minutesAgo(80),
+    paidAt: minutesAgo(82),
+    note: '',
+  },
+  {
+    id: 'order-006',
+    orderCode: 'W45',
+    table: 'T9',
+    nickname: 'SpartatoViaSubito',
+    items: [
+      { itemId: 'item-002', name: 'Panino del Tricheco', quantity: 1, price: 9.0 },
+      { itemId: 'item-005', name: 'Birra del Tricheco', quantity: 1, price: 5.0 },
+    ],
+    total: 14.0,
+    status: 'cancelled',
+    createdAt: minutesAgo(115),
+    note: 'Cliente se ne è andato prima di pagare.',
   },
 ];
 
