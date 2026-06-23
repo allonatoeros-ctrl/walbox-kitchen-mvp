@@ -530,6 +530,15 @@
 }
 .ost-bottom-bar-accent { color: #f8c534; }
 
+@keyframes ostReadyFlash {
+  0%   { box-shadow: 0 -4px 24px rgba(16,185,129,0); }
+  30%  { box-shadow: 0 -4px 24px rgba(16,185,129,0.6); }
+  100% { box-shadow: 0 -4px 24px rgba(16,185,129,0); }
+}
+.ost-ready-flash {
+  animation: ostReadyFlash 0.5s ease-out 3;
+}
+
 /* ── Dev tools ───────────────────────────────────── */
 .ost-dev-toggle-row {
   display: flex;

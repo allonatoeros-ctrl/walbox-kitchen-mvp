@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import KitchenOrderCard from '../components/kitchen/KitchenOrderCard';
@@ -63,6 +63,7 @@ export default function CustomerOrderStatus() {
   const [selectedId, setSelectedId] = useState(() => resolveInitialId(orders));
   const [devOpen, setDevOpen] = useState(false);
   const [tick, setTick] = useState(0);
+  const [readyFlash, setReadyFlash] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -100,11 +101,20 @@ export default function CustomerOrderStatus() {
   const isReceived   = order?.status === 'received';
   const isCancelled  = order?.status === 'cancelled';
 
+  const prevIsReadyRef = useRef(isReady);
+
   const elapsed = order ? elapsedMinutes(order.createdAt) : '';
   const elapsedText = elapsed ? ` · ${elapsed}` : '';
 
   useEffect(() => {
-    if (isReady && navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    const wasReady = prevIsReadyRef.current;
+    prevIsReadyRef.current = isReady;
+    if (isReady && !wasReady) {
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      setReadyFlash(true);
+      const t = setTimeout(() => setReadyFlash(false), 1500);
+      return () => clearTimeout(t);
+    }
   }, [isReady]);
 
   const handleSelectOrder = (oId) => {
@@ -369,7 +379,7 @@ export default function CustomerOrderStatus() {
       )}
 
       {/* ReadyAlertBottomBox */}
-      <div className="ost-bottom-bar" style={isReady ? { background: '#0a2a1a', borderTop: '2px solid #10b981' } : undefined}>
+      <div className={`ost-bottom-bar${readyFlash ? ' ost-ready-flash' : ''}`} style={isReady ? { background: '#0a2a1a', borderTop: '2px solid #10b981' } : undefined}>
         <span className="ost-bottom-bar-bell">{isReady ? '🟢' : '🔔'}</span>
         <div className="ost-bottom-bar-text">
           {isReady ? (
