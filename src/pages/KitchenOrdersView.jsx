@@ -4,7 +4,6 @@ import { kitchenMenuItems } from '../data/kitchenMockData';
 const PRIMARY_ACTION = {
   received:  { next: 'preparing', label: 'INIZIA' },
   preparing: { next: 'ready',     label: 'PRONTO ✓' },
-  ready:     { next: 'delivered', label: 'CONSEGNATO ✓' },
 };
 
 const SECTIONS = [

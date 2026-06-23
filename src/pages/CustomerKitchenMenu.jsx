@@ -243,7 +243,7 @@ export default function CustomerKitchenMenu() {
                 <div className="kitch-status-icon-inactive" />
               </div>
               <div className="kitch-status-text">
-                <div className="kitch-status-label-inactive">CONSEGNATO</div>
+                <div className="kitch-status-label-inactive">PRONTO AL BANCO</div>
                 <div className="kitch-status-desc-inactive">Vieni al banco e spacca tutto.</div>
               </div>
             </div>

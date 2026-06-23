@@ -18,7 +18,7 @@ const STEP_LABELS = {
   received:  'RICEVUTO',
   preparing: 'IN PREPARAZIONE',
   ready:     'PRONTO',
-  delivered: 'CONSEGNATO',
+  delivered: 'RITIRATO AL BANCO',
 };
 
 function getStepState(step, currentStatus) {
@@ -369,11 +369,20 @@ export default function CustomerOrderStatus() {
       )}
 
       {/* ReadyAlertBottomBox */}
-      <div className="ost-bottom-bar">
-        <span className="ost-bottom-bar-bell">🔔</span>
+      <div className="ost-bottom-bar" style={isReady ? { background: '#0a2a1a', borderTop: '2px solid #10b981' } : undefined}>
+        <span className="ost-bottom-bar-bell">{isReady ? '🟢' : '🔔'}</span>
         <div className="ost-bottom-bar-text">
-          <div>QUANDO È PRONTO</div>
-          <div className="ost-bottom-bar-accent">TI AVVISIAMO NOI</div>
+          {isReady ? (
+            <>
+              <div>IL TUO ORDINE È PRONTO</div>
+              <div className="ost-bottom-bar-accent">VAI AL BANCO ORA</div>
+            </>
+          ) : (
+            <>
+              <div>QUANDO È PRONTO</div>
+              <div className="ost-bottom-bar-accent">TI AVVISIAMO NOI</div>
+            </>
+          )}
         </div>
       </div>
 
