@@ -95,6 +95,7 @@ export default function CustomerKitchenMenu() {
   const [submittedOrderCode, setSubmittedOrderCode] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [customerNote, setCustomerNote] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
@@ -148,7 +149,8 @@ export default function CustomerKitchenMenu() {
   const total = orderItems.reduce((sum, o) => sum + o.price * o.qty, 0);
 
   const handleSubmit = () => {
-    if (orderItems.length === 0) return;
+    if (orderItems.length === 0 || submitting) return;
+    setSubmitting(true);
     const orderCode = generateOrderCode();
     const newOrder = {
       id: `order-${Date.now()}`,
@@ -176,6 +178,7 @@ export default function CustomerKitchenMenu() {
     setSubmittedOrderId(null);
     setSubmittedOrderCode(null);
     setSubmitted(false);
+    setSubmitting(false);
     setCountdown(5);
   };
 
@@ -526,7 +529,7 @@ export default function CustomerKitchenMenu() {
                 <div className="kitch-drawer-total-label">TOTALE</div>
                 <div className="kitch-drawer-total-value">€{total.toFixed(2)}</div>
               </div>
-              <button className="kitch-btn-submit" onClick={handleSubmit} aria-label="Invia ordine">VAI ALL'ORDINE</button>
+              <button className="kitch-btn-submit" onClick={handleSubmit} aria-label="Invia ordine" disabled={submitting} style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}>VAI ALL'ORDINE</button>
               <div className="kitch-secure-hint">🔒 Ordine sicuro e veloce</div>
             </div>
           </div>
