@@ -592,3 +592,45 @@
   flex-basis: 100%;
   padding-top: 4px;
 }
+
+/* ── KitchenOrderCard (MyOrdersSwitcher) ─────────── */
+.ost-order-card {
+  background: #261508;
+  border: 1px solid rgba(245,234,216,0.1);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ost-order-card--selected {
+  border-color: #f05a24;
+  background: #2e1a08;
+}
+.ost-order-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.ost-order-card-id {
+  font-family: 'Anton', sans-serif;
+  font-size: 13px;
+  letter-spacing: 1px;
+  color: #f5ead8;
+}
+.ost-order-card-status {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #f05a24;
+  text-transform: uppercase;
+}
+.ost-order-card-meta {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(245,234,216,0.45);
+}
