@@ -4,11 +4,19 @@ export default function CustomerKitchenEntry() {
   const [table, setTable] = useState("");
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
+  const [hasActiveOrder, setHasActiveOrder] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tableParam = params.get("table");
     if (tableParam) setTable(tableParam);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const lastId = localStorage.getItem("walbox_kitchen_last_order_id");
+      if (lastId) setHasActiveOrder(true);
+    } catch {}
   }, []);
 
   const handleSubmit = (e) => {
@@ -193,6 +201,33 @@ export default function CustomerKitchenEntry() {
           Vai al menu →
         </button>
       </form>
+
+      {hasActiveOrder && (
+        <button
+          onClick={() => {
+            window.history.pushState({}, "", "/kitchen/status");
+            window.dispatchEvent(new PopStateEvent("popstate"));
+          }}
+          style={{
+            marginTop: 16,
+            width: "100%",
+            maxWidth: 360,
+            padding: "12px 16px",
+            background: "transparent",
+            border: "1px solid rgba(240,90,36,0.4)",
+            borderRadius: 8,
+            color: "#f05a24",
+            fontSize: 14,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: "0.06em",
+            cursor: "pointer",
+            textAlign: "center",
+          }}
+        >
+          Hai già un ordine? → Segui il tuo ordine
+        </button>
+      )}
     </div>
   );
 }
