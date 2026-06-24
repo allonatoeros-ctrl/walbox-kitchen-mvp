@@ -348,7 +348,8 @@
   right: 0;
   background: linear-gradient(to top, #0e0c08 70%, transparent);
   border-top: none;
-  padding: 10px 10px calc(14px + env(safe-area-inset-bottom));
+  padding: 10px 10px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 100;
 }
 
@@ -623,7 +624,8 @@
 
 /* ── Drawer totals + submit ──────────────────────── */
 .kitch-drawer-footer {
-  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+  padding: 16px 20px;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
   background: var(--k-cream);
   border-top: 1px solid #e0c89e;
   display: flex;
