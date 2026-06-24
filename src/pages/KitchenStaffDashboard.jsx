@@ -60,7 +60,7 @@ export default function KitchenStaffDashboard() {
 
   const pendingPaymentCount = orders.filter((o) => o.status === 'pending_counter_payment').length;
   const kitchenOrders       = orders.filter((o) => o.status !== 'pending_counter_payment');
-  const activeKitchenCount  = kitchenOrders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled').length;
+  const activeKitchenCount  = kitchenOrders.filter((o) => o.status === 'received' || o.status === 'preparing').length;
   const readyCount          = kitchenOrders.filter((o) => o.status === 'ready').length;
   const urgentCount         = kitchenOrders.filter((o) => {
     if (o.status === 'delivered' || o.status === 'cancelled') return false;
