@@ -97,6 +97,14 @@ export default function CustomerKitchenMenu() {
   const [customerNote, setCustomerNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [bannerOrderId, setBannerOrderId] = useState(null);
+
+  useEffect(() => {
+    try {
+      const lastId = localStorage.getItem('walbox_kitchen_last_order_id');
+      if (lastId) setBannerOrderId(lastId);
+    } catch { }
+  }, []);
 
   useEffect(() => {
     if (!submitted || !submittedOrderId) {
@@ -326,6 +334,26 @@ export default function CustomerKitchenMenu() {
           color: #1c1a14 !important;
         }
       `}</style>
+
+      {/* Active order banner */}
+      {bannerOrderId && (
+        <button
+          style={{
+            position: 'sticky', top: 0, zIndex: 80, width: '100%',
+            display: 'block', background: '#f05a24', border: 'none', cursor: 'pointer',
+            padding: '10px 14px', textAlign: 'left',
+          }}
+          onClick={() => {
+            const url = `/kitchen/status?orderId=${bannerOrderId}`;
+            window.history.pushState({}, '', url);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          }}
+        >
+          <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 13, letterSpacing: '1.5px', color: '#fff' }}>
+            HAI UN ORDINE ATTIVO → SEGUI IL TUO ORDINE
+          </span>
+        </button>
+      )}
 
       {/* Header */}
       <div className="kitch-header" style={{ padding: 0, display: 'block', background: 'transparent' }}>
