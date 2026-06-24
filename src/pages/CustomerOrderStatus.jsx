@@ -180,7 +180,7 @@ export default function CustomerOrderStatus() {
       </div>
 
       {/* WalrusChefHero */}
-      <div className="ost-hero">
+      <div className="ost-hero" style={isPendingPayment ? { height: '180px' } : undefined}>
         <div className="ost-hero-glow" />
         <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Chef" className="ost-hero-mascot" />
         <div className="ost-hero-headline">
@@ -251,7 +251,7 @@ export default function CustomerOrderStatus() {
             <div className="ost-info-label">ORDINE N.</div>
             <div className="ost-info-value ost-info-value--muted">#{order.id.replace('order-', '')}</div>
           </div>
-          {order.orderCode && (
+          {order.orderCode && !isPendingPayment && (
             <div className="ost-info-cell ost-info-cell--bottom" style={{ gridColumn: 'span 2', textAlign: 'center', background: 'rgba(200,150,10,0.1)', borderTop: '1px solid rgba(245,234,216,0.07)' }}>
               <div className="ost-info-label" style={{ color: '#c8960a', letterSpacing: '1.5px' }}>CODICE ORDINE PER LA CASSA</div>
               <div className="ost-info-value" style={{ color: '#c8960a', fontSize: '36px', letterSpacing: '2px', marginTop: '4px' }}>{order.orderCode}</div>
