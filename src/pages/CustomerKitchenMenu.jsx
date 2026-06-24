@@ -355,6 +355,34 @@ export default function CustomerKitchenMenu() {
         </button>
       )}
 
+      {/* Missing table warning */}
+      {!session.table && (
+        <div style={{
+          margin: '12px 16px 0',
+          padding: '12px 14px',
+          background: 'rgba(240,90,36,0.08)',
+          border: '1px solid rgba(240,90,36,0.3)',
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: 8,
+        }}>
+          <span style={{ flexShrink: 0, fontSize: 15 }}>⚠️</span>
+          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, fontWeight: 600, color: 'rgba(245,234,216,0.8)', lineHeight: 1.4 }}>
+            Nessun tavolo rilevato — l&apos;ordine sarà assegnato al tavolo 7.{' '}
+            <button
+              onClick={() => {
+                window.history.pushState({}, '', '/kitchen/entry');
+                window.dispatchEvent(new PopStateEvent('popstate'));
+              }}
+              style={{ background: 'none', border: 'none', padding: 0, color: '#f05a24', fontWeight: 700, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
+            >
+              Torna all&apos;ingresso per selezionare il tuo tavolo.
+            </button>
+          </span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="kitch-header" style={{ padding: 0, display: 'block', background: 'transparent' }}>
         <img
