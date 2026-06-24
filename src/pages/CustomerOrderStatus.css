@@ -6,7 +6,7 @@
   background: #1c1008;
   color: #f5ead8;
   font-family: 'Montserrat', sans-serif;
-  padding-bottom: 100px;
+  padding-bottom: 180px;
 }
 
 /* ── TopBar ─────────────────────────────────────── */
@@ -73,6 +73,9 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+.ost-hero--pending-payment {
+  height: 180px;
 }
 .ost-hero-glow {
   position: absolute;
@@ -185,10 +188,13 @@
   align-items: center;
   gap: 14px;
 }
-.ost-status-banner--received,
+.ost-status-banner--received {
+  background: #f59e0b;
+  box-shadow: 0 4px 16px rgba(245,158,11,0.33);
+}
 .ost-status-banner--preparing {
-  background: #f05a24;
-  box-shadow: 0 4px 16px rgba(240,90,36,0.33);
+  background: #3b82f6;
+  box-shadow: 0 4px 16px rgba(59,130,246,0.33);
 }
 .ost-status-banner--ready {
   background: #22c55e;
@@ -278,6 +284,77 @@
   background: #f05a24;
   border: 2px solid #f05a24;
   box-shadow: 0 0 16px rgba(240,90,36,0.5);
+}
+/* ── Theme color overrides for timeline based on displayStatus ── */
+
+/* Pending Counter Payment Theme */
+.ost-timeline--pending_counter_payment .ost-timeline-dot--done,
+.ost-timeline--pending_counter_payment .ost-timeline-dot--active {
+  background: #c8960a;
+  border-color: #c8960a;
+  box-shadow: 0 0 16px rgba(200, 150, 10, 0.4);
+}
+.ost-timeline--pending_counter_payment .ost-timeline-line--done {
+  background: #c8960a;
+}
+.ost-timeline--pending_counter_payment .ost-timeline-item--active .ost-timeline-label {
+  color: #c8960a;
+}
+
+/* Received Theme */
+.ost-timeline--received .ost-timeline-dot--done,
+.ost-timeline--received .ost-timeline-dot--active {
+  background: #f59e0b;
+  border-color: #f59e0b;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+}
+.ost-timeline--received .ost-timeline-line--done {
+  background: #f59e0b;
+}
+.ost-timeline--received .ost-timeline-item--active .ost-timeline-label {
+  color: #f59e0b;
+}
+
+/* Preparing Theme */
+.ost-timeline--preparing .ost-timeline-dot--done,
+.ost-timeline--preparing .ost-timeline-dot--active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+}
+.ost-timeline--preparing .ost-timeline-line--done {
+  background: #3b82f6;
+}
+.ost-timeline--preparing .ost-timeline-item--active .ost-timeline-label {
+  color: #3b82f6;
+}
+
+/* Ready Theme */
+.ost-timeline--ready .ost-timeline-dot--done,
+.ost-timeline--ready .ost-timeline-dot--active {
+  background: #22c55e;
+  border-color: #22c55e;
+  box-shadow: 0 0 16px rgba(34, 197, 94, 0.4);
+}
+.ost-timeline--ready .ost-timeline-line--done {
+  background: #22c55e;
+}
+.ost-timeline--ready .ost-timeline-item--active .ost-timeline-label {
+  color: #22c55e;
+}
+
+/* Delivered Theme */
+.ost-timeline--delivered .ost-timeline-dot--done,
+.ost-timeline--delivered .ost-timeline-dot--active {
+  background: #94a3b8;
+  border-color: #94a3b8;
+  box-shadow: 0 0 16px rgba(148, 163, 184, 0.4);
+}
+.ost-timeline--delivered .ost-timeline-line--done {
+  background: #94a3b8;
+}
+.ost-timeline--delivered .ost-timeline-item--active .ost-timeline-label {
+  color: #94a3b8;
 }
 .ost-timeline-dot--pending {
   width: 28px;
@@ -515,6 +592,7 @@
   background: linear-gradient(90deg, #1a1108, #1c1008);
   border-top: 2px solid #f05a24;
   padding: 14px 20px;
+  padding-bottom: max(14px, env(safe-area-inset-bottom));
   display: flex;
   align-items: center;
   gap: 12px;
@@ -633,4 +711,29 @@
   font-size: 11px;
   font-weight: 500;
   color: rgba(245,234,216,0.45);
+}
+
+/* ── Responsive Mobile scaling ───────────────────── */
+@media (max-width: 600px) {
+  .ost-hero {
+    height: 250px;
+  }
+  .ost-hero--pending-payment {
+    height: 140px;
+  }
+  .ost-hero-mascot {
+    width: 110px;
+    height: 110px;
+  }
+  .ost-hero--pending-payment .ost-hero-mascot {
+    width: 80px;
+    height: 80px;
+  }
+  .ost-hero-line1 {
+    font-size: 20px;
+  }
+  .ost-hero-line2 {
+    font-size: 24px;
+    margin-top: 2px;
+  }
 }

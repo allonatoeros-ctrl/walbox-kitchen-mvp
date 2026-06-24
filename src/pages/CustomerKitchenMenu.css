@@ -381,6 +381,12 @@
   flex-shrink: 0;
 }
 
+.kitch-cart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 .kitch-cart-badge {
   position: absolute;
   top: -4px;
@@ -399,6 +405,13 @@
   line-height: 1;
 }
 
+.kitch-bottom-text-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
 .kitch-bottom-title {
   font-family: var(--k-font-display);
   font-size: 16px;
@@ -407,6 +420,8 @@
   letter-spacing: 0.64px;
   text-transform: uppercase;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kitch-bottom-total {
@@ -949,6 +964,36 @@
     width: 62px;
     height: 62px;
   }
+  .kitch-bottom-card {
+    padding: 10px 10px 10px 12px;
+    gap: 8px;
+  }
+  .kitch-bottom-left {
+    gap: 8px;
+  }
+  .kitch-cart-icon-wrap {
+    width: 28px;
+    height: 28px;
+  }
+  .kitch-cart-badge {
+    top: -5px;
+    left: 18px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+  .kitch-bottom-title {
+    font-size: 14px;
+    letter-spacing: 0.4px;
+  }
+  .kitch-bottom-total {
+    font-size: 12px;
+  }
+  .kitch-btn-vai {
+    font-size: 13px;
+    padding: 8px 12px;
+    min-height: 34px;
+  }
 }
 
 @media (max-width: 380px) {
@@ -973,5 +1018,35 @@
   .kitch-tab-circle {
     width: 56px;
     height: 56px;
+  }
+  .kitch-bottom-card {
+    padding: 8px 8px 8px 10px;
+    gap: 6px;
+  }
+  .kitch-bottom-left {
+    gap: 6px;
+  }
+  .kitch-cart-icon-wrap {
+    width: 24px;
+    height: 24px;
+  }
+  .kitch-cart-badge {
+    top: -6px;
+    left: 15px;
+    width: 14px;
+    height: 14px;
+    font-size: 9px;
+  }
+  .kitch-bottom-title {
+    font-size: 13px;
+    letter-spacing: 0.2px;
+  }
+  .kitch-bottom-total {
+    font-size: 11px;
+  }
+  .kitch-btn-vai {
+    font-size: 12px;
+    padding: 6px 10px;
+    min-height: 32px;
   }
 }

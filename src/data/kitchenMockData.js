@@ -8,7 +8,7 @@ export const kitchenOrderStatuses = {
   ready: { label: 'Pronto', color: '#10b981' },
   delivered: { label: 'Consegnato', color: '#6b7280' },
   cancelled: { label: 'Annullato', color: '#ef4444' },
-  pending_counter_payment: { label: 'In attesa pagamento', color: '#8b5cf6' },
+  pending_counter_payment: { label: 'In attesa pagamento', color: '#c8960a' },
 };
 
 export const kitchenMenuItems = [

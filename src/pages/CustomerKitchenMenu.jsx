@@ -132,6 +132,7 @@ export default function CustomerKitchenMenu() {
   const removeAllOfItem = (id) => setOrderItems((prev) => prev.filter((o) => o.id !== id));
 
   const total = orderItems.reduce((sum, o) => sum + o.price * o.qty, 0);
+  const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
 
   const handleSubmit = () => {
     if (orderItems.length === 0 || submitting) return;
@@ -177,21 +178,40 @@ export default function CustomerKitchenMenu() {
         <div className="kitch-confirm">
           <div className="kitch-confirm-logo"><img src="/assets/kitchen/walrus-chef.png" className="kitch-confirm-logo-img" /></div>
           <div className="kitch-confirm-title">
-            <p>ORDINE RICEVUTO —</p>
-            <p>PASSA AL BANCO.</p>
+            <p style={{ margin: 0 }}>ORDINE RICEVUTO</p>
+            <p style={{ margin: 0, color: '#f05a24' }}>PASSA AL BANCO</p>
           </div>
-          <div className="kitch-confirm-subtitle">PORTA QUESTO CODICE.</div>
+          <div className="kitch-confirm-subtitle" style={{ fontSize: '32px', margin: '4px 0 16px' }}>PORTA QUESTO CODICE:</div>
           {submittedOrderCode && (
             <div style={{
-              margin: '0 0 20px',
-              padding: '14px 28px',
-              background: 'rgba(200,150,10,0.15)',
+              margin: '0 20px 20px',
+              padding: '16px 24px',
+              background: 'rgba(200,150,10,0.12)',
               border: '2px solid #c8960a',
               borderRadius: '12px',
               textAlign: 'center',
             }}>
-              <div style={{ fontSize: '11px', letterSpacing: '0.12em', color: 'rgba(245,234,216,0.55)', marginBottom: '4px' }}>CODICE ORDINE</div>
-              <div style={{ fontSize: '42px', fontWeight: 900, letterSpacing: '0.08em', color: '#c8960a', lineHeight: 1 }}>{submittedOrderCode}</div>
+              <div style={{
+                fontFamily: "'Montserrat', sans-serif",
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '1.5px',
+                color: 'rgba(245,234,216,0.55)',
+                textTransform: 'uppercase',
+                marginBottom: '4px'
+              }}>
+                MOSTRA QUESTO CODICE ALLA CASSA
+              </div>
+              <div style={{
+                fontFamily: "'Anton', sans-serif",
+                fontSize: '44px',
+                fontWeight: 900,
+                letterSpacing: '3px',
+                color: '#c8960a',
+                lineHeight: 1
+              }}>
+                {submittedOrderCode}
+              </div>
             </div>
           )}
           <div className="kitch-status-list">
@@ -456,16 +476,16 @@ export default function CustomerKitchenMenu() {
             <div className="kitch-bottom-card">
               <div className="kitch-bottom-left" onClick={() => setCartOpen(true)} role="button" aria-label="Apri carrello">
                 <div className="kitch-cart-icon-wrap">
-                  <svg width="34" height="34" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg className="kitch-cart-svg" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
                     <circle cx="23" cy="27" r="2" fill="#e8ddb8"/>
                   </svg>
-                  <div className="kitch-cart-badge">{orderItems.reduce((s, o) => s + o.qty, 0)}</div>
+                  <div className="kitch-cart-badge">{itemCount}</div>
                 </div>
-                <div>
+                <div className="kitch-bottom-text-wrap">
                   <div className="kitch-bottom-title">
-                    {orderItems.reduce((s, o) => s + o.qty, 0)} ROBE NEL SACCO
+                    {itemCount === 1 ? '1 prodotto' : `${itemCount} prodotti`}
                   </div>
                   <div className="kitch-bottom-total">€{total.toFixed(2).replace('.', ',')}</div>
                 </div>
