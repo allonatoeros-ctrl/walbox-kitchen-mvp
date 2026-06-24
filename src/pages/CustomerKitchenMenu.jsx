@@ -446,7 +446,7 @@ export default function CustomerKitchenMenu() {
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 4px', marginTop: '6px', marginBottom: '4px' }}>
                   {item.allergens.map((a) => (
                     <span key={a} style={{
-                      fontSize: '10px',
+                      fontSize: '12px',
                       fontWeight: 800,
                       letterSpacing: '0.04em',
                       padding: '2px 7px',
