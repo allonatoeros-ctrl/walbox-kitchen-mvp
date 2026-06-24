@@ -89,7 +89,7 @@ export default function KitchenStaffDashboard() {
           {urgentCount > 0 && (
             <span className="ksd-badge-alert">{urgentCount} alert ⚠️</span>
           )}
-          <button className="ksd-btn-reset" onClick={resetToDemo}>RESET DEMO</button>
+          <button className="ksd-btn-reset" onClick={() => { if (window.confirm('Sei sicuro? Tutti gli ordini attivi saranno cancellati.')) resetToDemo(); }}>RESET DEMO</button>
           <button className="ksd-btn-reset" onClick={() => signOut()}>LOGOUT</button>
         </div>
       </div>
