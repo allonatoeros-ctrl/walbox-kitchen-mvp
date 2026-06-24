@@ -55,7 +55,18 @@ function resolveInitialId(orders) {
     const lastId = localStorage.getItem('walbox_kitchen_last_order_id');
     if (lastId && orders.some((o) => o.id === lastId)) return lastId;
   } catch { }
-  return getMostRecentId(orders);
+  try {
+    const sessionRaw = localStorage.getItem('walboxCustomerSession');
+    if (sessionRaw) {
+      const session = JSON.parse(sessionRaw);
+      const filtered = orders.filter((o) =>
+        (session.table && o.table === `T${session.table}`) ||
+        (session.nickname && o.nickname === session.nickname)
+      );
+      return getMostRecentId(filtered);
+    }
+  } catch { }
+  return null;
 }
 
 export default function CustomerOrderStatus() {
