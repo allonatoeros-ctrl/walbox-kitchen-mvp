@@ -21,7 +21,7 @@ export default function KitchenOrderCard({ order, isSelected, onClick }) {
       onClick={onClick}
     >
       <div className="ost-order-card-header">
-        <span className="ost-order-card-id">{order.orderCode || `#${order.id.replace('order-', '')}`}</span>
+        <span className="ost-order-card-id">{order.orderCode || '-'}</span>
         <span
           className="ost-order-card-status"
           style={{

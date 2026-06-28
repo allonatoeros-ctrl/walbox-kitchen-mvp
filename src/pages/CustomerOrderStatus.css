@@ -6,6 +6,8 @@
   background: #1c1008;
   color: #f5ead8;
   font-family: 'Montserrat', sans-serif;
+}
+.ost-page--has-bottom-bar {
   padding-bottom: 180px;
 }
 

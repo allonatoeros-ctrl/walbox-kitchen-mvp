@@ -111,6 +111,7 @@ export default function CustomerOrderStatus() {
   const isPreparing  = order?.status === 'preparing';
   const isReceived   = order?.status === 'received';
   const isCancelled  = order?.status === 'cancelled';
+  const hasBottomBar = order && order.status !== 'delivered' && order.status !== 'cancelled';
 
   const prevIsReadyRef = useRef(isReady);
 
@@ -163,7 +164,7 @@ export default function CustomerOrderStatus() {
     .slice(0, 5);
 
   return (
-    <div className="ost-page">
+    <div className={`ost-page${hasBottomBar ? ' ost-page--has-bottom-bar' : ''}`}>
 
       {/* TopBar */}
       <div className="ost-topbar">
@@ -420,22 +421,29 @@ export default function CustomerOrderStatus() {
       )}
 
       {/* ReadyAlertBottomBox */}
-      <div className={`ost-bottom-bar${readyFlash ? ' ost-ready-flash' : ''}`} style={isReady ? { background: '#0a2a1a', borderTop: '2px solid #10b981' } : undefined}>
-        <span className="ost-bottom-bar-bell">{isReady ? '🟢' : '🔔'}</span>
-        <div className="ost-bottom-bar-text">
-          {isReady ? (
-            <>
-              <div>IL TUO ORDINE È PRONTO</div>
-              <div className="ost-bottom-bar-accent">RITIRALO ORA AL BANCO</div>
-            </>
-          ) : (
-            <>
-              <div>MONITORAGGIO ATTIVO</div>
-              <div className="ost-bottom-bar-accent">TI NOTIFICHEREMO QUANDO SARÀ PRONTO</div>
-            </>
-          )}
+      {hasBottomBar && (
+        <div className={`ost-bottom-bar${readyFlash ? ' ost-ready-flash' : ''}`} style={isReady ? { background: '#0a2a1a', borderTop: '2px solid #10b981' } : undefined}>
+          <span className="ost-bottom-bar-bell">{isReady ? '🟢' : (isPendingPayment ? '💳' : '🔔')}</span>
+          <div className="ost-bottom-bar-text">
+            {isReady ? (
+              <>
+                <div>IL TUO ORDINE È PRONTO</div>
+                <div className="ost-bottom-bar-accent">RITIRALO ORA AL BANCO</div>
+              </>
+            ) : isPendingPayment ? (
+              <>
+                <div>IN ATTESA DI PAGAMENTO</div>
+                <div className="ost-bottom-bar-accent">PAGA ALLA CASSA PER AVVIARE LA PREPARAZIONE</div>
+              </>
+            ) : (
+              <>
+                <div>MONITORAGGIO ATTIVO</div>
+                <div className="ost-bottom-bar-accent">TI NOTIFICHEREMO QUANDO SARÀ PRONTO</div>
+              </>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* DemoStateControls */}
       {import.meta.env.DEV && (
