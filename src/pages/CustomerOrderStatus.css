@@ -718,18 +718,18 @@
 /* ── Responsive Mobile scaling ───────────────────── */
 @media (max-width: 600px) {
   .ost-hero {
-    height: 250px;
+    height: 270px;
   }
   .ost-hero--pending-payment {
-    height: 140px;
+    height: 160px;
   }
   .ost-hero-mascot {
-    width: 110px;
-    height: 110px;
+    width: 135px;
+    height: 135px;
   }
   .ost-hero--pending-payment .ost-hero-mascot {
-    width: 80px;
-    height: 80px;
+    width: 98px;
+    height: 98px;
   }
   .ost-hero-line1 {
     font-size: 20px;
@@ -737,5 +737,23 @@
   .ost-hero-line2 {
     font-size: 24px;
     margin-top: 2px;
+  }
+}
+
+/* Mobile status hero mascot visibility override */
+@media (max-width: 600px) {
+  .ost-hero .ost-hero-mascot,
+  .ost-hero--pending-payment .ost-hero-mascot {
+    width: clamp(185px, 56vw, 235px);
+    height: auto;
+    max-height: 235px;
+  }
+
+  .ost-hero {
+    min-height: 310px;
+  }
+
+  .ost-hero--pending-payment {
+    min-height: 280px;
   }
 }
