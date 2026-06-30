@@ -25,6 +25,8 @@ export default function LiveTvScreenWalrusPoster() {
 
   const prevSongIdRef = useRef(null);
 
+  const currentRequest = requests.find((r) => r.status === "playing");
+
   useEffect(() => {
     setPlayback(getPlaybackState());
     const handleStorage = (e) => {
@@ -52,21 +54,18 @@ export default function LiveTvScreenWalrusPoster() {
   }, [tvReaction]);
 
   useEffect(() => {
-    if (currentRequest) {
-      if (prevSongIdRef.current !== currentRequest.id) {
-        setTakeoverRequest(currentRequest);
-        setShowTakeover(true);
-        prevSongIdRef.current = currentRequest.id;
-        const timer = setTimeout(() => setShowTakeover(false), 4000);
-        return () => clearTimeout(timer);
-      }
-    } else {
-      prevSongIdRef.current = null;
+    if (!currentRequest) {
       setShowTakeover(false);
+      prevSongIdRef.current = null;
+      return;
     }
-  }, [requests, playback]);
-
-  const currentRequest = requests.find((r) => r.status === "playing");
+    if (prevSongIdRef.current === currentRequest.id) return;
+    prevSongIdRef.current = currentRequest.id;
+    setTakeoverRequest(currentRequest);
+    setShowTakeover(true);
+    const timer = setTimeout(() => setShowTakeover(false), 4000);
+    return () => clearTimeout(timer);
+  }, [currentRequest?.id]);
   const approvedQueue = requests.filter((r) => r.status === "approved");
 
   const fallbackQueue = [
