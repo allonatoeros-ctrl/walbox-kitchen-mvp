@@ -11,12 +11,14 @@ import {
   MOOD_EMOJIS
 } from "../data/mockData";
 import { useRealtimeRequests, updateStatus, setPlaying } from "../hooks/useSongRequests";
+import { addToQueue, getStoredToken } from "../services/spotifyApi";
 
 export default function StaffDashboard() {
   const requests = useRealtimeRequests();
   const [playback, setPlayback] = useState({ isPlaying: false, progress: 0, duration: 0, currentRequestId: null });
   const [settings, setSettings] = useState({ queuePaused: false });
   const [cooldown, setCooldown] = useState(0);
+  const [spotifyWarning, setSpotifyWarning] = useState(null);
 
   // Reaction triggering
   const handleTriggerReaction = (type) => {
@@ -29,6 +31,13 @@ export default function StaffDashboard() {
     }));
     setCooldown(15);
   };
+
+  // Auto-dismiss Spotify warning after 5s
+  useEffect(() => {
+    if (!spotifyWarning) return;
+    const t = setTimeout(() => setSpotifyWarning(null), 5000);
+    return () => clearTimeout(t);
+  }, [spotifyWarning]);
 
   // Cooldown timer decrement
   useEffect(() => {
@@ -93,6 +102,23 @@ export default function StaffDashboard() {
   const handleSkipToNext = async () => {
     const nextApproved = approvedQueue[0];
     if (!nextApproved) return;
+
+    const uri = nextApproved.song?.spotify_uri;
+    const hasToken = !!getStoredToken();
+
+    if (!uri) {
+      setSpotifyWarning('⚠️ Brano senza link Spotify. Avvialo manualmente.');
+    } else if (!hasToken) {
+      setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
+    } else {
+      try {
+        await addToQueue(uri);
+      } catch (err) {
+        console.warn('Spotify addToQueue failed:', err);
+        setSpotifyWarning('⚠️ Spotify non raggiunto. Avvia il brano manualmente.');
+      }
+    }
+
     try { await setPlaying(nextApproved.id); } catch (err) { console.error('setPlaying failed:', err); }
   };
 
@@ -140,6 +166,18 @@ export default function StaffDashboard() {
   };
 
   return (
+    <>
+    {spotifyWarning && (
+      <div style={{
+        position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
+        background: 'rgba(255,200,0,0.12)', border: '1px solid rgba(255,200,0,0.4)',
+        color: '#ffd700', padding: '10px 24px', borderRadius: '8px',
+        fontSize: '13px', fontWeight: '700', zIndex: 9999,
+        backdropFilter: 'blur(8px)', pointerEvents: 'none'
+      }}>
+        {spotifyWarning}
+      </div>
+    )}
     <div className="dashboard-container">
       {/* 1. COLUMN: PENDING APPROVALS */}
       <div className="dashboard-col">
@@ -507,5 +545,6 @@ export default function StaffDashboard() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -9,6 +9,7 @@ import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import KitchenStaffDashboard from "./pages/KitchenStaffDashboard";
 import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
+import SpotifyTestPanel from "./pages/SpotifyTestPanel";
 import { initializeStorage } from "./data/mockData";
 
 // Custom Link helper component for internal navigation without full-page reloads
@@ -78,6 +79,8 @@ export default function App() {
         return <KitchenLogin />;
       case "/kitchen/tv":
         return <KitchenTvScreen />;
+      case "/spotify-test":
+        return <SpotifyTestPanel />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;

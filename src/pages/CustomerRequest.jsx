@@ -1,4 +1,16 @@
 import { useState, useEffect, useRef } from "react";
+
+function normalizeSpotifySong(track) {
+  return {
+    id: track.id,
+    title: track.name,
+    artist: track.artists,
+    cover: track.image || '',
+    duration: Math.floor((track.durationMs || 0) / 1000),
+    mood: 'chill',
+    spotify_uri: track.uri,
+  };
+}
 import walrusLogo from "../../references/original_rebrand_pack/assets/walrus-logo2.png";
 import {
   MOCK_SONGS,
@@ -23,6 +35,8 @@ export default function CustomerRequest() {
   const [venueSettings, setVenueSettings] = useState({ queuePaused: false });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [spotifyResults, setSpotifyResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const [hasActiveKitchenOrder, setHasActiveKitchenOrder] = useState(false);
   const notifiedSongIds = useRef(new Set());
@@ -144,14 +158,63 @@ export default function CustomerRequest() {
     setActiveTab("my-songs");
   };
 
-  // Filter songs by search query
-  const filteredSongs = searchQuery.trim() === ""
-    ? []
-    : MOCK_SONGS.filter(
-      (song) =>
-        song.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        song.artist.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  // Debounced Spotify search with fallback to MOCK_SONGS
+  useEffect(() => {
+    const query = searchQuery.trim();
+    if (query.length < 2) {
+      setSpotifyResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    let isActive = true;
+    const controller = new AbortController();
+
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal: controller.signal });
+        if (!isActive) return;
+        if (res.ok) {
+          const data = await res.json();
+          if (!isActive) return;
+          // Defensive format handling
+          let tracks = [];
+          if (Array.isArray(data)) {
+            tracks = data;
+          } else if (Array.isArray(data?.tracks)) {
+            tracks = data.tracks;
+          } else if (Array.isArray(data?.results)) {
+            tracks = data.results;
+          }
+          if (tracks.length > 0) {
+            setSpotifyResults(tracks.map(normalizeSpotifySong));
+            return;
+          }
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+      } finally {
+        if (isActive) setIsSearching(false);
+      }
+      // Fallback: filter MOCK_SONGS locally
+      if (isActive) {
+        setSpotifyResults(
+          MOCK_SONGS.filter(
+            (s) =>
+              s.title.toLowerCase().includes(query.toLowerCase()) ||
+              s.artist.toLowerCase().includes(query.toLowerCase())
+          )
+        );
+      }
+    }, 400);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchQuery]);
 
   // Mood color helper for dynamic glow
   const getMoodColor = (mood) => {
@@ -609,8 +672,12 @@ export default function CustomerRequest() {
                   overflowY: "auto",
                   padding: "5px 4px 5px 0"
                 }}>
-                  {filteredSongs.length > 0 ? (
-                    filteredSongs.map((song) => (
+                  {isSearching ? (
+                    <div style={{ textAlign: "center", padding: "20px", color: "#ff6600", fontSize: "14px", fontFamily: "var(--font-display)", fontWeight: "600", textTransform: "uppercase" }}>
+                      Cerco su Spotify... 🎵
+                    </div>
+                  ) : spotifyResults.length > 0 ? (
+                    spotifyResults.map((song) => (
                       <div
                         key={song.id}
                         onClick={() => handleSelectSong(song)}
@@ -729,6 +796,7 @@ export default function CustomerRequest() {
                       Nessun brano trovato 😢
                     </div>
                   )}
+
                 </div>
               )}
 
