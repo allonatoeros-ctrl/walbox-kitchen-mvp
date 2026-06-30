@@ -687,13 +687,13 @@ export default function CustomerRequest() {
                           flexDirection: "column",
                           gap: "8px",
                           padding: "12px",
+                          minHeight: "64px",
                           cursor: "pointer",
                           background: "#1a0a00",
                           border: "2px solid #ff6600",
                           borderRadius: "6px",
                           boxShadow: "4px 4px 0 #000000",
-                          position: "relative",
-                          overflow: "hidden"
+                          position: "relative"
                         }}
                       >
                         {/* Playlist label */}
@@ -734,12 +734,21 @@ export default function CustomerRequest() {
 
                         {/* Song Details */}
                         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <div style={{ position: "relative" }}>
-                            <img
-                              src={song.cover}
-                              alt={song.title}
-                              style={{ width: "48px", height: "48px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000" }}
-                            />
+                          <div style={{ position: "relative", flexShrink: 0 }}>
+                            {song.cover ? (
+                              <img
+                                src={song.cover}
+                                alt={song.title}
+                                style={{ width: "48px", height: "48px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000", display: "block" }}
+                              />
+                            ) : (
+                              <div style={{
+                                width: "48px", height: "48px", borderRadius: "4px",
+                                border: "2px solid #333", background: "#2a1000",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: "20px"
+                              }}>🎵</div>
+                            )}
                             <div style={{
                               position: "absolute",
                               top: "-6px",
