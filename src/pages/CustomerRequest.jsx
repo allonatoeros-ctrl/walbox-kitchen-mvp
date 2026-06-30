@@ -683,22 +683,27 @@ export default function CustomerRequest() {
                         onClick={() => handleSelectSong(song)}
                         className="walbox-song-card"
                         style={{
+                          width: "100%",
+                          minHeight: "112px",
+                          padding: "12px",
+                          border: "2px solid rgba(255, 106, 0, 0.85)",
+                          background: "rgba(18, 7, 1, 0.96)",
+                          borderRadius: "12px",
+                          marginBottom: "12px",
+                          boxSizing: "border-box",
+                          overflow: "visible",
                           display: "flex",
                           flexDirection: "column",
-                          gap: "8px",
-                          padding: "12px",
-                          minHeight: "64px",
                           cursor: "pointer",
-                          background: "#1a0a00",
-                          border: "2px solid #ff6600",
-                          borderRadius: "6px",
                           boxShadow: "4px 4px 0 #000000",
-                          position: "relative"
                         }}
                       >
                         {/* Playlist label */}
                         <div style={{
-                          alignSelf: "flex-start",
+                          display: "inline-flex",
+                          height: "auto",
+                          maxWidth: "fit-content",
+                          marginBottom: "10px",
                           background: "#ff6600",
                           color: "#000",
                           fontSize: "9px",
@@ -708,7 +713,6 @@ export default function CustomerRequest() {
                           fontFamily: "var(--font-display)",
                           textTransform: "uppercase",
                           letterSpacing: "0.5px",
-                          display: "inline-flex",
                           alignItems: "center",
                           gap: "4px"
                         }}>
@@ -733,70 +737,75 @@ export default function CustomerRequest() {
                         </div>
 
                         {/* Song Details */}
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                          <div style={{ position: "relative", flexShrink: 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", width: "100%" }}>
+                          <div style={{ flex: "0 0 56px" }}>
                             {song.cover ? (
                               <img
                                 src={song.cover}
                                 alt={song.title}
-                                style={{ width: "48px", height: "48px", borderRadius: "4px", objectFit: "cover", border: "2px solid #000", display: "block" }}
+                                style={{ width: "56px", height: "56px", borderRadius: "8px", objectFit: "cover", display: "block" }}
                               />
                             ) : (
                               <div style={{
-                                width: "48px", height: "48px", borderRadius: "4px",
+                                width: "56px", height: "56px", borderRadius: "8px",
                                 border: "2px solid #333", background: "#2a1000",
                                 display: "flex", alignItems: "center", justifyContent: "center",
                                 fontSize: "20px"
                               }}>🎵</div>
                             )}
-                            <div style={{
-                              position: "absolute",
-                              top: "-6px",
-                              right: "-6px",
-                              background: "#fffdd0",
-                              color: "#000",
-                              border: "1.5px solid #000",
-                              borderRadius: "50%",
-                              width: "16px",
-                              height: "16px",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              fontSize: "10px",
-                              fontWeight: "900",
-                              boxShadow: "1px 1px 0 #000"
-                            }}>
-                              +
-                            </div>
                           </div>
-                          <div style={{ flex: 1, minWidth: "0" }}>
+                          
+                          <div style={{ flex: 1, minWidth: "0", display: "flex", flexDirection: "column", gap: "4px" }}>
                             <h4 style={{
-                              fontSize: "15px",
+                              color: "#fffdd0",
+                              fontSize: "16px",
                               fontWeight: "800",
                               fontFamily: "var(--font-display)",
-                              color: "#fffdd0",
+                              lineHeight: "1.15",
+                              display: "-webkit-box",
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: "vertical",
                               overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
                               margin: "0"
                             }}>
                               {song.title.toUpperCase()}
                             </h4>
                             <p style={{
-                              fontSize: "12px",
                               color: "#ff6600",
+                              fontSize: "14px",
+                              lineHeight: "1.2",
                               fontWeight: "600",
+                              whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                              margin: "2px 0 0 0"
+                              margin: "0"
                             }}>
                               {song.artist}
                             </p>
                           </div>
-                          <span style={{ fontSize: "11px", color: "#a0a0a0", fontFamily: "monospace", paddingRight: "5px" }}>
-                            {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, "0")}
-                          </span>
+                          
+                          <div style={{ flex: "0 0 auto", display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ color: "rgba(255,255,255,.65)", fontSize: "13px", fontFamily: "monospace", alignSelf: "center" }}>
+                              {Math.floor(song.duration / 60)}:{(song.duration % 60).toString().padStart(2, "0")}
+                            </span>
+                            <div style={{
+                              background: "#fffdd0",
+                              color: "#000",
+                              border: "1.5px solid #000",
+                              borderRadius: "50%",
+                              width: "20px",
+                              height: "20px",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              fontSize: "12px",
+                              fontWeight: "900",
+                              boxShadow: "1px 1px 0 #000",
+                              flexShrink: 0
+                            }}>
+                              +
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))

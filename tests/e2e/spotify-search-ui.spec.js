@@ -159,3 +159,59 @@ test('P8.1 — Spotify search: card non sono width/height 0', async ({ page }) =
     expect(titleBox.width, `Titolo card ${i} width deve essere > 0`).toBeGreaterThan(0);
   }
 });
+
+test('P8.2 — Mobile Layout per risultati Spotify Search', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  
+  await page.route('**/api/search*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(MOCK_SEARCH_RESULTS),
+    });
+  });
+
+  await page.goto('/request?table=4');
+
+  const searchInput = page.locator('.walbox-search-input');
+  await searchInput.fill('queen');
+  await page.waitForTimeout(600);
+
+  const bohemianCard = page.locator('.walbox-song-card').filter({ hasText: 'BOHEMIAN RHAPSODY' });
+  await expect(bohemianCard).toBeVisible();
+
+  const dontStopCard = page.locator('.walbox-song-card').filter({ hasText: "DON'T STOP ME NOW" });
+  await expect(dontStopCard).toBeVisible();
+
+  const queenArtist = bohemianCard.locator('p').first();
+  await expect(queenArtist).toBeVisible();
+  await expect(queenArtist).toContainText('Queen');
+
+  const cardBox = await bohemianCard.boundingBox();
+  expect(cardBox).not.toBeNull();
+  expect(cardBox.height).toBeGreaterThanOrEqual(100);
+
+  const artistBox = await queenArtist.boundingBox();
+  expect(artistBox).not.toBeNull();
+  expect(artistBox.y).toBeGreaterThanOrEqual(cardBox.y);
+  expect(artistBox.y + artistBox.height).toBeLessThanOrEqual(cardBox.y + cardBox.height);
+
+  const durationText = bohemianCard.locator('span').filter({ hasText: ':' }).first();
+  await expect(durationText).toBeVisible();
+
+  const lookUpOverlay = page.locator('.look-up-overlay');
+  if (await lookUpOverlay.isVisible()) {
+    const closeBtn = page.locator('.look-up-close-btn');
+    await closeBtn.click();
+    await expect(lookUpOverlay).not.toBeVisible();
+  }
+
+  await bohemianCard.click();
+
+  const ricontrollaBtn = page.getByRole('button', { name: /RICONTROLLA/i });
+  await expect(ricontrollaBtn).toBeVisible();
+  await ricontrollaBtn.click();
+
+  await expect(page.getByText('PREVIEW RICHIESTA')).toBeVisible();
+  await expect(page.getByText('Bohemian Rhapsody').last()).toBeVisible();
+});
