@@ -11,7 +11,7 @@ import {
   MOOD_EMOJIS
 } from "../data/mockData";
 import { useRealtimeRequests, updateStatus, setPlaying } from "../hooks/useSongRequests";
-import { addToQueue, getStoredToken } from "../services/spotifyApi";
+import { playTrack, getStoredToken } from "../services/spotifyApi";
 
 export default function StaffDashboard() {
   const requests = useRealtimeRequests();
@@ -112,9 +112,9 @@ export default function StaffDashboard() {
       setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
     } else {
       try {
-        await addToQueue(uri);
+        await playTrack(uri);
       } catch (err) {
-        console.warn('Spotify addToQueue failed:', err);
+        console.warn('Spotify playTrack failed:', err);
         setSpotifyWarning('⚠️ Spotify non raggiunto. Avvia il brano manualmente.');
       }
     }
