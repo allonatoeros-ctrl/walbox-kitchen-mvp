@@ -1,22 +1,19 @@
 import { useState, useEffect } from "react";
-import { 
-  getRequests, 
-  getPlaybackState, 
+import {
+  getPlaybackState,
   getVenueSettings,
-  savePlaybackState, 
+  savePlaybackState,
   saveVenueSettings,
-  approveRequest, 
-  rejectRequest, 
   prioritizeRequest,
   skipToNext,
   resetToDemoState,
-  subscribeState,
   saveRequests,
   MOOD_EMOJIS
 } from "../data/mockData";
+import { useRealtimeRequests, updateStatus, setPlaying } from "../hooks/useSongRequests";
 
 export default function StaffDashboard() {
-  const [requests, setRequests] = useState([]);
+  const requests = useRealtimeRequests();
   const [playback, setPlayback] = useState({ isPlaying: false, progress: 0, duration: 0, currentRequestId: null });
   const [settings, setSettings] = useState({ queuePaused: false });
   const [cooldown, setCooldown] = useState(0);
@@ -42,21 +39,15 @@ export default function StaffDashboard() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  // Sync state helper
+  // Sync playback and settings from localStorage
   const syncState = () => {
-    setRequests(getRequests());
     setPlayback(getPlaybackState());
     setSettings(getVenueSettings());
   };
 
   useEffect(() => {
-    // Initial load
     syncState();
 
-    // Subscribe to local memory state changes (same tab)
-    const unsubscribe = subscribeState(syncState);
-
-    // Subscribe to cross-tab updates (other tabs)
     const handleStorage = (e) => {
       if (e.key && e.key.startsWith("walbox_")) {
         syncState();
@@ -65,7 +56,6 @@ export default function StaffDashboard() {
     window.addEventListener("storage", handleStorage);
 
     return () => {
-      unsubscribe();
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
@@ -97,8 +87,14 @@ export default function StaffDashboard() {
   const pendingRequests = requests.filter((r) => r.status === "pending");
   const approvedQueue = requests.filter((r) => r.status === "approved");
   
-  // Find current request info
-  const currentRequest = requests.find((r) => r.id === playback.currentRequestId && r.status === "playing");
+  // Find current request info — source of truth is Supabase status='playing'
+  const currentRequest = requests.find((r) => r.status === "playing");
+
+  const handleSkipToNext = async () => {
+    const nextApproved = approvedQueue[0];
+    if (!nextApproved) return;
+    try { await setPlaying(nextApproved.id); } catch (err) { console.error('setPlaying failed:', err); }
+  };
 
   // Format seconds to mm:ss
   const formatTime = (secs) => {
@@ -194,14 +190,14 @@ export default function StaffDashboard() {
                 )}
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "4px" }}>
-                  <button 
-                    onClick={() => approveRequest(req.id)}
+                  <button
+                    onClick={() => updateStatus(req.id, 'approved')}
                     className="btn-approve"
                   >
                     Metti in scaletta
                   </button>
-                  <button 
-                    onClick={() => rejectRequest(req.id)}
+                  <button
+                    onClick={() => updateStatus(req.id, 'rejected')}
                     className="btn-reject"
                   >
                     Scarta
@@ -276,8 +272,8 @@ export default function StaffDashboard() {
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </button>
-                  <button 
-                    onClick={() => rejectRequest(req.id)}
+                  <button
+                    onClick={() => updateStatus(req.id, 'rejected')}
                     className="icon-btn-queue remove"
                     title="Rimuovi"
                   >
@@ -392,8 +388,8 @@ export default function StaffDashboard() {
                     )}
                   </button>
                   
-                  <button 
-                    onClick={skipToNext}
+                  <button
+                    onClick={handleSkipToNext}
                     className="btn-skip-next"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
@@ -409,9 +405,9 @@ export default function StaffDashboard() {
                   Approva un brano nella colonna a sinistra, oppure clicca sul bottone sotto per caricare la coda dimostrativa.
                 </p>
                 {approvedQueue.length > 0 && (
-                  <button 
-                    onClick={skipToNext}
-                    className="btn-primary" 
+                  <button
+                    onClick={handleSkipToNext}
+                    className="btn-primary"
                     style={{ alignSelf: "center", marginTop: "10px" }}
                   >
                     Avvia Riproduzione 🚀

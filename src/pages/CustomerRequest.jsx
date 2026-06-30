@@ -3,12 +3,12 @@ import walrusLogo from "../../references/original_rebrand_pack/assets/walrus-log
 import {
   MOCK_SONGS,
   MOOD_EMOJIS,
-  addRequest,
   getRequests,
   subscribeState,
   getVenueSettings,
   MOOD_LABELS
 } from "../data/mockData";
+import { insertRequest } from "../hooks/useSongRequests";
 
 export default function CustomerRequest() {
   const [table, setTable] = useState("");
@@ -110,32 +110,29 @@ export default function CustomerRequest() {
   };
 
   // Submit request
-  const handleSubmitRequest = (e) => {
+  const handleSubmitRequest = async (e) => {
     if (e) e.preventDefault();
     if (!selectedSong) return;
-    if (venueSettings.queuePaused) {
-      return;
-    }
+    if (venueSettings.queuePaused) return;
 
     setIsSubmitting(true);
+    try {
+      await insertRequest(table, nickname, selectedSong, selectedMood, dedication);
+    } catch (err) {
+      console.error('insertRequest failed:', err);
+    }
 
-    setTimeout(() => {
-      addRequest(table, nickname, selectedSong.id, selectedMood, dedication);
+    setSelectedSong(null);
+    setDedication("");
+    setShowPreview(false);
+    setSubmissionSuccess(true);
+    setIsSubmitting(false);
 
-      // Reset form
-      setSelectedSong(null);
-      setDedication("");
-      setShowPreview(false);
-      setSubmissionSuccess(true);
-      setIsSubmitting(false);
-
-      // Flash success and switch tabs after 4 seconds
-      if (submissionTimeoutRef.current) clearTimeout(submissionTimeoutRef.current);
-      submissionTimeoutRef.current = setTimeout(() => {
-        setSubmissionSuccess(false);
-        setActiveTab("my-songs");
-      }, 4000);
-    }, 800); // simulated network delay
+    if (submissionTimeoutRef.current) clearTimeout(submissionTimeoutRef.current);
+    submissionTimeoutRef.current = setTimeout(() => {
+      setSubmissionSuccess(false);
+      setActiveTab("my-songs");
+    }, 4000);
   };
 
   const handleDismissSubmission = () => {

@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  getRequests,
   getPlaybackState,
-  subscribeState,
   MOOD_EMOJIS
 } from "../data/mockData";
+import { useRealtimeRequests } from "../hooks/useSongRequests";
 import "./LiveTvScreenWalrusPoster.css";
 
 export default function LiveTvScreenWalrusPoster() {
-  const [requests, setRequests] = useState([]);
+  const requests = useRealtimeRequests();
   const [playback, setPlayback] = useState({ isPlaying: false, progress: 0, duration: 0, currentRequestId: null });
   const [showTakeover, setShowTakeover] = useState(false);
   const [takeoverRequest, setTakeoverRequest] = useState(null);
@@ -26,17 +25,11 @@ export default function LiveTvScreenWalrusPoster() {
 
   const prevSongIdRef = useRef(null);
 
-  const syncState = () => {
-    setRequests(getRequests());
-    setPlayback(getPlaybackState());
-  };
-
   useEffect(() => {
-    syncState();
-    const unsubscribe = subscribeState(syncState);
+    setPlayback(getPlaybackState());
     const handleStorage = (e) => {
       if (e.key && e.key.startsWith("walbox_")) {
-        syncState();
+        setPlayback(getPlaybackState());
         if (e.key === "walbox_tv_reaction" && e.newValue) {
           try {
             const data = JSON.parse(e.newValue);
@@ -46,7 +39,7 @@ export default function LiveTvScreenWalrusPoster() {
       }
     };
     window.addEventListener("storage", handleStorage);
-    return () => { unsubscribe(); window.removeEventListener("storage", handleStorage); };
+    return () => { window.removeEventListener("storage", handleStorage); };
   }, []);
 
   useEffect(() => {
@@ -73,7 +66,7 @@ export default function LiveTvScreenWalrusPoster() {
     }
   }, [requests, playback]);
 
-  const currentRequest = requests.find((r) => r.id === playback.currentRequestId && r.status === "playing");
+  const currentRequest = requests.find((r) => r.status === "playing");
   const approvedQueue = requests.filter((r) => r.status === "approved");
 
   const fallbackQueue = [
