@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   getVenueSettings,
   savePlaybackState,
@@ -211,6 +211,61 @@ export default function StaffDashboard() {
 
     try { await setPlaying(nextApproved.id); } catch (err) { console.error('setPlaying failed:', err); }
   };
+
+  // Keep a live ref to handleSkipToNext so the auto-skip effect below can
+  // call the latest version without needing it in its dependency array
+  // (it's a new function reference every render).
+  const handleSkipToNextRef = useRef(handleSkipToNext);
+  useEffect(() => {
+    handleSkipToNextRef.current = handleSkipToNext;
+  });
+
+  // Auto-advance to the next approved song when the current one ends
+  // naturally (real Spotify progress reaching real duration), reusing the
+  // same handleSkipToNext used by the manual "SALTA" button — no separate
+  // skip logic. Detection is based only on remotePlayback (progress_ms/
+  // duration_ms/is_playing), the raw Supabase row, not the stale-adjusted
+  // `playback` derived above.
+  const prevRemotePlaybackRef = useRef(null);
+  const autoSkipTriggeredRef = useRef(false);
+
+  useEffect(() => {
+    if (!remotePlayback) return;
+
+    const prev = prevRemotePlaybackRef.current;
+    prevRemotePlaybackRef.current = remotePlayback;
+    if (!prev) return;
+
+    const duration = remotePlayback.duration_ms;
+    const progress = remotePlayback.progress_ms;
+
+    // Once clearly mid-track again (playing, well before the end), re-arm
+    // the guard so a future natural end can trigger another auto-skip.
+    if (remotePlayback.is_playing && duration > 0 && (duration - progress) > 3000) {
+      autoSkipTriggeredRef.current = false;
+      return;
+    }
+
+    if (autoSkipTriggeredRef.current) return;
+
+    // Previous tick was playing and within ~3s of the end of the track.
+    const prevWasNearEnd =
+      prev.is_playing &&
+      prev.duration_ms > 0 &&
+      (prev.duration_ms - prev.progress_ms) <= 3000;
+
+    // Natural end: either playback stopped (no next-up on Spotify's own
+    // queue) or progress reset to a lower value (a new track started).
+    // A manual pause mid-track never satisfies prevWasNearEnd, so it never
+    // triggers this branch.
+    const trackEndedNaturally =
+      prevWasNearEnd && (!remotePlayback.is_playing || progress < prev.progress_ms);
+
+    if (trackEndedNaturally) {
+      autoSkipTriggeredRef.current = true;
+      handleSkipToNextRef.current();
+    }
+  }, [remotePlayback]);
 
   // Format seconds to mm:ss
   const formatTime = (secs) => {
