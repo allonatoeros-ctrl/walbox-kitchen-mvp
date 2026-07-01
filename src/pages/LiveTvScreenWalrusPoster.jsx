@@ -32,8 +32,6 @@ export default function LiveTvScreenWalrusPoster() {
   const prevSongIdRef = useRef(null);
   const songSwitchTimeRef = useRef(0);
 
-  const currentRequest = requests.find((r) => r.status === "playing");
-
   useEffect(() => {
     const handleStorage = (e) => {
       if (e.key === "walbox_tv_reaction" && e.newValue) {
@@ -105,6 +103,31 @@ export default function LiveTvScreenWalrusPoster() {
         duration: Math.round((remotePlayback.duration_ms || 0) / 1000),
       };
 
+  // Native Queue Mode (Step 3): the main title/artist/cover must always
+  // reflect the real Spotify now-playing track (written by the Staff
+  // device's pollPlayback into playback_state), not song_requests.status.
+  const nowPlayingTrack = !playbackStale && remotePlayback?.track_name
+    ? {
+        title: remotePlayback.track_name,
+        artist: remotePlayback.artist_name,
+        cover: remotePlayback.cover_url,
+      }
+    : null;
+
+  // Native Queue Mode (Step 3): the nickname/dedication/table overlay must
+  // only appear when the real playing track's URI matches an actual Walbox
+  // request — matched independently here (not just trusting song_requests
+  // status, which is set by the Staff device and could lag a beat behind
+  // this device's own Realtime feed). No match = real track shown plainly,
+  // no fake "Tavolo X" attribution.
+  const currentRequest = remotePlayback?.spotify_track_uri
+    ? requests.find(
+        (r) =>
+          (r.status === 'playing' || r.status === 'approved' || r.status === 'played') &&
+          r.song?.spotify_uri === remotePlayback.spotify_track_uri
+      )
+    : null;
+
   useEffect(() => {
     if (!tvReaction) return;
     const elapsed = Date.now() - tvReaction.timestamp;
@@ -114,20 +137,27 @@ export default function LiveTvScreenWalrusPoster() {
     return () => clearTimeout(timer);
   }, [tvReaction]);
 
+  // Native Queue Mode (Step 3): trigger the "just switched" takeover on a
+  // real Spotify track change (spotify_track_uri), not on Supabase status —
+  // the takeover reveal itself only appears for genuine Walbox requests
+  // (takeoverRequest stays null for manually-started Spotify tracks, so the
+  // existing `{showTakeover && takeoverRequest && ...}` JSX below simply
+  // doesn't render, no fake attribution).
   useEffect(() => {
-    if (!currentRequest) {
+    const uri = remotePlayback?.spotify_track_uri;
+    if (!uri) {
       setShowTakeover(false);
       prevSongIdRef.current = null;
       return;
     }
-    if (prevSongIdRef.current === currentRequest.id) return;
+    if (prevSongIdRef.current === uri) return;
     if (prevSongIdRef.current !== null) songSwitchTimeRef.current = Date.now();
-    prevSongIdRef.current = currentRequest.id;
-    setTakeoverRequest(currentRequest);
+    prevSongIdRef.current = uri;
+    setTakeoverRequest(currentRequest || null);
     setShowTakeover(true);
     const timer = setTimeout(() => setShowTakeover(false), 4000);
     return () => clearTimeout(timer);
-  }, [currentRequest?.id]);
+  }, [remotePlayback?.spotify_track_uri, currentRequest]);
   const approvedQueue = requests.filter((r) => r.status === "approved");
 
   const fallbackQueue = [
@@ -196,15 +226,15 @@ export default function LiveTvScreenWalrusPoster() {
               )}
             </div>
 
-            {currentRequest ? (
+            {nowPlayingTrack ? (
               <div className="wlp-now-playing">
                 <div className="wlp-cover-row">
                   <div className="wlp-vinyl">
                     <div className={`wlp-vinyl-disc ${playback.isPlaying ? "spinning" : ""}`}>
-                      <img src={currentRequest.song.cover} alt="" className="wlp-vinyl-label" />
+                      <img src={nowPlayingTrack.cover} alt="" className="wlp-vinyl-label" />
                     </div>
                     <div className="wlp-vinyl-sleeve">
-                      <img src={currentRequest.song.cover} alt="" className="wlp-sleeve-img" />
+                      <img src={nowPlayingTrack.cover} alt="" className="wlp-sleeve-img" />
                       <img
                         src="/assets/tv-poster/cover-frame-worn.png"
                         className="wlp-cover-frame"
@@ -221,11 +251,16 @@ export default function LiveTvScreenWalrusPoster() {
                         alt=""
                         className="wlp-waveform"
                       />
-                      <div className="wlp-table-pill">TAVOLO {currentRequest.table}</div>
+                      {/* Native Queue Mode (Step 3): table pill only for a
+                          real Walbox-request match — no fake attribution on
+                          manually-started Spotify tracks. */}
+                      {currentRequest && (
+                        <div className="wlp-table-pill">TAVOLO {currentRequest.table}</div>
+                      )}
                     </div>
-                    <h1 className="wlp-title">{currentRequest.song.title}</h1>
-                    <h2 className="wlp-artist">{currentRequest.song.artist}</h2>
-                    {currentRequest.dedication && (
+                    <h1 className="wlp-title">{nowPlayingTrack.title}</h1>
+                    <h2 className="wlp-artist">{nowPlayingTrack.artist}</h2>
+                    {currentRequest?.dedication && (
                       <div className="wlp-dedication">
                         <div className="wlp-dedic-label">DEDICA DEL TAVOLO ★★</div>
                         <div className="wlp-dedic-bubble">
@@ -282,7 +317,7 @@ export default function LiveTvScreenWalrusPoster() {
 
         </div>
 
-        {currentRequest && (
+        {nowPlayingTrack && (
           <div className="wlp-progress-wrap">
             <div className="wlp-progress-track">
               <div
