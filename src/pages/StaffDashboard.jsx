@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  getPlaybackState,
   getVenueSettings,
   savePlaybackState,
   saveVenueSettings,
@@ -9,12 +8,18 @@ import {
   MOOD_EMOJIS
 } from "../data/mockData";
 import { useRealtimeRequests, updateStatus, setPlaying, closeAllActiveRequests } from "../hooks/useSongRequests";
-import { playTrack, getStoredToken, getCurrentPlayback } from "../services/spotifyApi";
+import { playTrack, getStoredToken, getCurrentPlayback, pauseTrack, resumeTrack } from "../services/spotifyApi";
 import { supabase } from "../lib/supabaseClient";
+
+// Playback is considered stale (staff device offline / Spotify closed) if
+// playback_state hasn't been updated in this many ms — avoids showing a
+// frozen fake percentage.
+const PLAYBACK_STALE_MS = 15000;
 
 export default function StaffDashboard() {
   const requests = useRealtimeRequests();
-  const [playback, setPlayback] = useState({ isPlaying: false, progress: 0, duration: 0, currentRequestId: null });
+  const [remotePlayback, setRemotePlayback] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
   const [settings, setSettings] = useState({ queuePaused: false });
   const [cooldown, setCooldown] = useState(0);
   const [spotifyWarning, setSpotifyWarning] = useState(null);
@@ -47,9 +52,8 @@ export default function StaffDashboard() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  // Sync playback and settings from localStorage
+  // Sync venue settings (queue pause) from localStorage — unrelated to playback
   const syncState = () => {
-    setPlayback(getPlaybackState());
     setSettings(getVenueSettings());
   };
 
@@ -67,6 +71,60 @@ export default function StaffDashboard() {
       window.removeEventListener("storage", handleStorage);
     };
   }, []);
+
+  // Real Spotify playback state, written by this same device's polling (Step 1)
+  // into Supabase playback_state (single row, id=1). Replaces the old
+  // localStorage-based simulated progress.
+  useEffect(() => {
+    let channel;
+    let cancelled = false;
+
+    async function init() {
+      const { data, error } = await supabase
+        .from('playback_state')
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error) console.error('[playback_state] SELECT failed:', error);
+      else if (data && !cancelled) setRemotePlayback(data);
+
+      if (cancelled) return;
+
+      channel = supabase
+        .channel('realtime:playback_state:staff')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'playback_state' },
+          (payload) => {
+            if (payload.new && payload.new.id === 1) setRemotePlayback(payload.new);
+          }
+        )
+        .subscribe();
+    }
+
+    init();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Re-check staleness periodically even if no new payload arrives
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  const playbackStale = !remotePlayback || (now - new Date(remotePlayback.updated_at).getTime() > PLAYBACK_STALE_MS);
+  const playback = playbackStale
+    ? { isPlaying: false, progress: 0, duration: 0 }
+    : {
+        isPlaying: !!remotePlayback.is_playing,
+        progress: Math.round((remotePlayback.progress_ms || 0) / 1000),
+        duration: Math.round((remotePlayback.duration_ms || 0) / 1000),
+      };
 
   // DISABLED (Step 1 — real Spotify polling): questo timer simulava
   // l'avanzamento del progress in localStorage, scollegato da cosa
@@ -161,10 +219,24 @@ export default function StaffDashboard() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Play / Pause toggle
-  const togglePlay = () => {
-    const updated = { ...playback, isPlaying: !playback.isPlaying };
-    savePlaybackState(updated);
+  // Play / Pause toggle — commands real Spotify playback; playback_state
+  // (Supabase) will reflect the change on the next staff-device poll tick.
+  const togglePlay = async () => {
+    const hasToken = !!getStoredToken();
+    if (!hasToken) {
+      setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
+      return;
+    }
+    try {
+      if (playback.isPlaying) {
+        await pauseTrack();
+      } else {
+        await resumeTrack();
+      }
+    } catch (err) {
+      console.error('togglePlay failed:', err);
+      setSpotifyWarning('⚠️ Spotify non raggiunto. Controlla il device.');
+    }
   };
 
   // Toggle submission pause
@@ -426,17 +498,23 @@ export default function StaffDashboard() {
                 {/* Progress Bar */}
                 <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px", marginTop: "5px" }}>
                   <div className="progress-bar-container" style={{ height: "5px" }}>
-                    <div 
-                      className="progress-bar-fill" 
-                      style={{ 
-                        width: `${(playback.progress / playback.duration) * 100}%`,
+                    <div
+                      className="progress-bar-fill"
+                      style={{
+                        width: `${playback.duration > 0 ? (playback.progress / playback.duration) * 100 : 0}%`,
                         background: getMoodColor(currentRequest.mood)
                       }}
                     ></div>
                   </div>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", color: "var(--text-secondary)" }}>
-                    <span>{formatTime(playback.progress)}</span>
-                    <span>{formatTime(playback.duration)}</span>
+                    {playbackStale ? (
+                      <span>In attesa del device Spotify…</span>
+                    ) : (
+                      <>
+                        <span>{formatTime(playback.progress)}</span>
+                        <span>{formatTime(playback.duration)}</span>
+                      </>
+                    )}
                   </div>
                 </div>
 

@@ -1,14 +1,20 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  getPlaybackState,
   MOOD_EMOJIS
 } from "../data/mockData";
 import { useRealtimeRequests } from "../hooks/useSongRequests";
+import { supabase } from "../lib/supabaseClient";
 import "./LiveTvScreenWalrusPoster.css";
+
+// Playback is considered stale (staff device offline / Spotify closed) if
+// playback_state hasn't been updated in this many ms — avoids showing a
+// frozen fake percentage.
+const PLAYBACK_STALE_MS = 15000;
 
 export default function LiveTvScreenWalrusPoster() {
   const requests = useRealtimeRequests();
-  const [playback, setPlayback] = useState({ isPlaying: false, progress: 0, duration: 0, currentRequestId: null });
+  const [remotePlayback, setRemotePlayback] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
   const [showTakeover, setShowTakeover] = useState(false);
   const [takeoverRequest, setTakeoverRequest] = useState(null);
 
@@ -28,21 +34,71 @@ export default function LiveTvScreenWalrusPoster() {
   const currentRequest = requests.find((r) => r.status === "playing");
 
   useEffect(() => {
-    setPlayback(getPlaybackState());
     const handleStorage = (e) => {
-      if (e.key && e.key.startsWith("walbox_")) {
-        setPlayback(getPlaybackState());
-        if (e.key === "walbox_tv_reaction" && e.newValue) {
-          try {
-            const data = JSON.parse(e.newValue);
-            if (data && data.type && data.timestamp) setTvReaction(data);
-          } catch (error) { console.error(error); }
-        }
+      if (e.key === "walbox_tv_reaction" && e.newValue) {
+        try {
+          const data = JSON.parse(e.newValue);
+          if (data && data.type && data.timestamp) setTvReaction(data);
+        } catch (error) { console.error(error); }
       }
     };
     window.addEventListener("storage", handleStorage);
     return () => { window.removeEventListener("storage", handleStorage); };
   }, []);
+
+  // Real Spotify playback state, written by the staff device polling (Step 1)
+  // into Supabase playback_state (single row, id=1). Replaces the old
+  // localStorage-based simulated progress.
+  useEffect(() => {
+    let channel;
+    let cancelled = false;
+
+    async function init() {
+      const { data, error } = await supabase
+        .from('playback_state')
+        .select('*')
+        .eq('id', 1)
+        .maybeSingle();
+
+      if (error) console.error('[playback_state] SELECT failed:', error);
+      else if (data && !cancelled) setRemotePlayback(data);
+
+      if (cancelled) return;
+
+      channel = supabase
+        .channel('realtime:playback_state:tv')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'playback_state' },
+          (payload) => {
+            if (payload.new && payload.new.id === 1) setRemotePlayback(payload.new);
+          }
+        )
+        .subscribe();
+    }
+
+    init();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Re-check staleness periodically even if no new payload arrives
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  const playbackStale = !remotePlayback || (now - new Date(remotePlayback.updated_at).getTime() > PLAYBACK_STALE_MS);
+  const playback = playbackStale
+    ? { isPlaying: false, progress: 0, duration: 0 }
+    : {
+        isPlaying: !!remotePlayback.is_playing,
+        progress: Math.round((remotePlayback.progress_ms || 0) / 1000),
+        duration: Math.round((remotePlayback.duration_ms || 0) / 1000),
+      };
 
   useEffect(() => {
     if (!tvReaction) return;
@@ -225,12 +281,18 @@ export default function LiveTvScreenWalrusPoster() {
             <div className="wlp-progress-track">
               <div
                 className="wlp-progress-fill"
-                style={{ width: `${(playback.progress / playback.duration) * 100}%` }}
+                style={{ width: `${playback.duration > 0 ? (playback.progress / playback.duration) * 100 : 0}%` }}
               />
             </div>
             <div className="wlp-time-row">
-              <span>{formatTime(playback.progress)}</span>
-              <span>{formatTime(playback.duration)}</span>
+              {playbackStale ? (
+                <span>In attesa del brano…</span>
+              ) : (
+                <>
+                  <span>{formatTime(playback.progress)}</span>
+                  <span>{formatTime(playback.duration)}</span>
+                </>
+              )}
             </div>
           </div>
         )}

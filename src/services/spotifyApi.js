@@ -294,3 +294,19 @@ export async function playTrack(trackUri, deviceId = null) {
 export async function getCurrentPlayback() {
   return spotifyFetch('https://api.spotify.com/v1/me/player');
 }
+
+export async function pauseTrack(deviceId = null) {
+  let url = 'https://api.spotify.com/v1/me/player/pause';
+  if (deviceId) {
+    url += `?device_id=${encodeURIComponent(deviceId)}`;
+  }
+  return spotifyFetch(url, { method: 'PUT' });
+}
+
+export async function resumeTrack(deviceId = null) {
+  let url = 'https://api.spotify.com/v1/me/player/play';
+  if (deviceId) {
+    url += `?device_id=${encodeURIComponent(deviceId)}`;
+  }
+  return spotifyFetch(url, { method: 'PUT' });
+}
