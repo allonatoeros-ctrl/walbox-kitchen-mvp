@@ -7,10 +7,9 @@ import {
   prioritizeRequest,
   skipToNext,
   resetToDemoState,
-  saveRequests,
   MOOD_EMOJIS
 } from "../data/mockData";
-import { useRealtimeRequests, updateStatus, setPlaying } from "../hooks/useSongRequests";
+import { useRealtimeRequests, updateStatus, setPlaying, closeAllActiveRequests } from "../hooks/useSongRequests";
 import { playTrack, getStoredToken } from "../services/spotifyApi";
 
 export default function StaffDashboard() {
@@ -142,9 +141,13 @@ export default function StaffDashboard() {
   };
 
   // Clear all queue / reset
-  const handleClearQueue = () => {
+  const handleClearQueue = async () => {
     if (window.confirm("Sei sicuro di voler svuotare tutta la coda e resettare la sessione?")) {
-      saveRequests([]);
+      try {
+        await closeAllActiveRequests();
+      } catch (err) {
+        console.error('closeAllActiveRequests failed:', err);
+      }
       savePlaybackState({ isPlaying: false, progress: 0, duration: 0, currentRequestId: null });
     }
   };

@@ -54,6 +54,14 @@ export async function setPlaying(id) {
   if (error) throw error;
 }
 
+export async function closeAllActiveRequests() {
+  const { error } = await supabase
+    .from('song_requests')
+    .update({ status: 'closed' })
+    .in('status', ['pending', 'approved', 'playing']);
+  if (error) throw error;
+}
+
 export function useRealtimeRequests() {
   const [requests, setRequests] = useState([]);
 
