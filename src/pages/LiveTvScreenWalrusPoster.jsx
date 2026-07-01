@@ -30,6 +30,7 @@ export default function LiveTvScreenWalrusPoster() {
   });
 
   const prevSongIdRef = useRef(null);
+  const songSwitchTimeRef = useRef(0);
 
   const currentRequest = requests.find((r) => r.status === "playing");
 
@@ -91,7 +92,11 @@ export default function LiveTvScreenWalrusPoster() {
     return () => clearInterval(t);
   }, []);
 
-  const playbackStale = !remotePlayback || (now - new Date(remotePlayback.updated_at).getTime() > PLAYBACK_STALE_MS);
+  // Ignore playback_state readings older than the last song switch — avoids
+  // briefly showing the previous track's progress/duration right after
+  // auto-advance, before the staff device's next poll tick overwrites it.
+  const playbackReady = !remotePlayback || new Date(remotePlayback.updated_at).getTime() >= songSwitchTimeRef.current;
+  const playbackStale = !remotePlayback || !playbackReady || (now - new Date(remotePlayback.updated_at).getTime() > PLAYBACK_STALE_MS);
   const playback = playbackStale
     ? { isPlaying: false, progress: 0, duration: 0 }
     : {
@@ -116,6 +121,7 @@ export default function LiveTvScreenWalrusPoster() {
       return;
     }
     if (prevSongIdRef.current === currentRequest.id) return;
+    if (prevSongIdRef.current !== null) songSwitchTimeRef.current = Date.now();
     prevSongIdRef.current = currentRequest.id;
     setTakeoverRequest(currentRequest);
     setShowTakeover(true);
