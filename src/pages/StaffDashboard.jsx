@@ -5,12 +5,12 @@ import {
   savePlaybackState,
   saveVenueSettings,
   prioritizeRequest,
-  skipToNext,
   resetToDemoState,
   MOOD_EMOJIS
 } from "../data/mockData";
 import { useRealtimeRequests, updateStatus, setPlaying, closeAllActiveRequests } from "../hooks/useSongRequests";
-import { playTrack, getStoredToken } from "../services/spotifyApi";
+import { playTrack, getStoredToken, getCurrentPlayback } from "../services/spotifyApi";
+import { supabase } from "../lib/supabaseClient";
 
 export default function StaffDashboard() {
   const requests = useRealtimeRequests();
@@ -68,28 +68,61 @@ export default function StaffDashboard() {
     };
   }, []);
 
-  // Playback timer simulation: advances progress by 1s if playing
+  // DISABLED (Step 1 — real Spotify polling): questo timer simulava
+  // l'avanzamento del progress in localStorage, scollegato da cosa
+  // Spotify riproduce davvero. Sostituito dal polling reale su
+  // getCurrentPlayback() -> tabella Supabase playback_state qui sotto.
+  // Lasciato commentato (non cancellato) per tracciabilità, in attesa
+  // che lo Step 2 (TV Poster che legge playback_state) sia verificato.
+  //
+  // useEffect(() => {
+  //   if (!playback.isPlaying || !playback.currentRequestId) return;
+  //
+  //   const interval = setInterval(() => {
+  //     const freshPlayback = getPlaybackState();
+  //     if (!freshPlayback.isPlaying || !freshPlayback.currentRequestId) return;
+  //
+  //     const nextProgress = freshPlayback.progress + 1;
+  //     if (nextProgress >= freshPlayback.duration) {
+  //       // Track completed -> trigger next
+  //       skipToNext();
+  //     } else {
+  //       savePlaybackState({
+  //         ...freshPlayback,
+  //         progress: nextProgress
+  //       });
+  //     }
+  //   }, 1000);
+  //
+  //   return () => clearInterval(interval);
+  // }, [playback.isPlaying, playback.currentRequestId]);
+
+  // Poll real Spotify playback state and persist it to Supabase (playback_state, id=1)
+  // so the TV Poster (Step 2) can read the real progress/duration/is_playing.
   useEffect(() => {
-    if (!playback.isPlaying || !playback.currentRequestId) return;
+    const pollPlayback = async () => {
+      try {
+        const pb = await getCurrentPlayback();
+        // No active device / nothing playing / stale token -> don't overwrite
+        // real data with false zeros, just skip this tick.
+        if (!pb || !pb.item) return;
 
-    const interval = setInterval(() => {
-      const freshPlayback = getPlaybackState();
-      if (!freshPlayback.isPlaying || !freshPlayback.currentRequestId) return;
-
-      const nextProgress = freshPlayback.progress + 1;
-      if (nextProgress >= freshPlayback.duration) {
-        // Track completed -> trigger next
-        skipToNext();
-      } else {
-        savePlaybackState({
-          ...freshPlayback,
-          progress: nextProgress
+        const { error } = await supabase.from('playback_state').upsert({
+          id: 1,
+          progress_ms: pb.progress_ms,
+          duration_ms: pb.item.duration_ms,
+          is_playing: pb.is_playing,
+          updated_at: new Date().toISOString(),
         });
+        if (error) console.error('[playback_state] upsert failed:', error);
+      } catch (err) {
+        console.error('[playback_state] Spotify poll failed:', err);
       }
-    }, 1000);
+    };
 
-    return () => clearInterval(interval);
-  }, [playback.isPlaying, playback.currentRequestId]);
+    const intervalId = setInterval(pollPlayback, 4000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Derived state lists
   const pendingRequests = requests.filter((r) => r.status === "pending");
@@ -297,19 +330,21 @@ export default function StaffDashboard() {
 
                 {/* Queue Control Buttons */}
                 <div style={{ display: "flex", gap: "6px" }}>
-                  <button 
+                  <button
                     onClick={() => prioritizeRequest(req.id, -1)}
-                    disabled={idx === 0}
+                    disabled
+                    style={{ opacity: 0.35, cursor: "not-allowed" }}
                     className="icon-btn-queue"
-                    title="Sposta Su"
+                    title="Riordino coda non ancora collegato a Supabase — in arrivo"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
                   </button>
-                  <button 
+                  <button
                     onClick={() => prioritizeRequest(req.id, 1)}
-                    disabled={idx === approvedQueue.length - 1}
+                    disabled
+                    style={{ opacity: 0.35, cursor: "not-allowed" }}
                     className="icon-btn-queue"
-                    title="Sposta Giù"
+                    title="Riordino coda non ancora collegato a Supabase — in arrivo"
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </button>
