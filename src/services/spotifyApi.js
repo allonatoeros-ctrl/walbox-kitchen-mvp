@@ -310,3 +310,11 @@ export async function resumeTrack(deviceId = null) {
   }
   return spotifyFetch(url, { method: 'PUT' });
 }
+
+export async function skipToNext(deviceId = null) {
+  let url = 'https://api.spotify.com/v1/me/player/next';
+  if (deviceId) {
+    url += `?device_id=${encodeURIComponent(deviceId)}`;
+  }
+  return spotifyFetch(url, { method: 'POST' });
+}
