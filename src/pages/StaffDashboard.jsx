@@ -155,24 +155,76 @@ export default function StaffDashboard() {
   //   return () => clearInterval(interval);
   // }, [playback.isPlaying, playback.currentRequestId]);
 
+  // Last tick where Spotify returned a real, valid item (regardless of
+  // is_playing) — used below to detect a genuine "track ended naturally"
+  // transition when Spotify later returns nothing (204/no item), without
+  // ever inventing progress/duration numbers.
+  const lastValidPlaybackRef = useRef(null);
+  // Guards against writing the is_playing:false "stop" transition more than
+  // once for the same finished track (avoids a write-loop while Spotify
+  // keeps returning null every subsequent poll tick).
+  const stopSignalSentRef = useRef(false);
+
   // Poll real Spotify playback state and persist it to Supabase (playback_state, id=1)
   // so the TV Poster (Step 2) can read the real progress/duration/is_playing.
   useEffect(() => {
     const pollPlayback = async () => {
       try {
         const pb = await getCurrentPlayback();
-        // No active device / nothing playing / stale token -> don't overwrite
-        // real data with false zeros, just skip this tick.
-        if (!pb || !pb.item) return;
 
-        const { error } = await supabase.from('playback_state').upsert({
-          id: 1,
-          progress_ms: pb.progress_ms,
-          duration_ms: pb.item.duration_ms,
-          is_playing: pb.is_playing,
-          updated_at: new Date().toISOString(),
-        });
-        if (error) console.error('[playback_state] upsert failed:', error);
+        if (pb && pb.item) {
+          // Real, current data point — write it as-is and re-arm the stop guard
+          // (a legitimate new reading means we're no longer in the "just ended,
+          // nothing to report" limbo).
+          lastValidPlaybackRef.current = {
+            progress_ms: pb.progress_ms,
+            duration_ms: pb.item.duration_ms,
+            is_playing: pb.is_playing,
+            capturedAt: Date.now(),
+          };
+          stopSignalSentRef.current = false;
+
+          const { error } = await supabase.from('playback_state').upsert({
+            id: 1,
+            progress_ms: pb.progress_ms,
+            duration_ms: pb.item.duration_ms,
+            is_playing: pb.is_playing,
+            updated_at: new Date().toISOString(),
+          });
+          if (error) console.error('[playback_state] upsert failed:', error);
+          return;
+        }
+
+        // No active device / nothing playing right now (pb === null or no item).
+        const last = lastValidPlaybackRef.current;
+        // Never had a real reading before -> nothing reliable to report, don't
+        // invent zeros (Step 1 rule).
+        if (!last) return;
+        // Already signalled the stop for this track -> avoid re-writing every
+        // subsequent tick while Spotify keeps returning null.
+        if (stopSignalSentRef.current) return;
+
+        const elapsedSinceLastTick = Date.now() - last.capturedAt;
+        const estimatedProgressNow = last.progress_ms + (last.is_playing ? elapsedSinceLastTick : 0);
+        const wasNearEnd = last.duration_ms > 0 && (last.duration_ms - last.progress_ms) <= 3000;
+        const expectedEndPassed = last.duration_ms > 0 && estimatedProgressNow >= last.duration_ms;
+
+        // Only treat "Spotify returned nothing" as a natural end if the last
+        // known real state was actually playing AND was at/near the end of
+        // the track. Otherwise (token expired mid-track, device dropped
+        // early, etc.) this is not a reliable end-of-track signal — don't
+        // write anything, per Step 1's "don't invent state" rule.
+        if (last.is_playing && (wasNearEnd || expectedEndPassed)) {
+          const { error } = await supabase.from('playback_state').upsert({
+            id: 1,
+            progress_ms: last.progress_ms,
+            duration_ms: last.duration_ms,
+            is_playing: false,
+            updated_at: new Date().toISOString(),
+          });
+          if (error) console.error('[playback_state] upsert failed:', error);
+          else stopSignalSentRef.current = true;
+        }
       } catch (err) {
         console.error('[playback_state] Spotify poll failed:', err);
       }
