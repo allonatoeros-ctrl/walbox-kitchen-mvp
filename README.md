@@ -14,3 +14,8 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Spotify OAuth Setup
+For Spotify integration to work properly, you must configure the following Redirect URIs in your Spotify Developer Dashboard:
+* **Local Development:** `http://127.0.0.1:5174/spotify-test`
+* **Production:** `https://<your-vercel-domain>/spotify-test`
