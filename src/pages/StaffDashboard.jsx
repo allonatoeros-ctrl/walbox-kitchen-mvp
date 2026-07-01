@@ -8,7 +8,7 @@ import {
   MOOD_EMOJIS
 } from "../data/mockData";
 import { useRealtimeRequests, updateStatus, setPlaying, closeAllActiveRequests } from "../hooks/useSongRequests";
-import { playTrack, getStoredToken, getCurrentPlayback, pauseTrack, resumeTrack } from "../services/spotifyApi";
+import { playTrack, addToQueue, skipToNext, getStoredToken, getCurrentPlayback, pauseTrack, resumeTrack } from "../services/spotifyApi";
 import { supabase } from "../lib/supabaseClient";
 
 // Playback is considered stale (staff device offline / Spotify closed) if
@@ -153,6 +153,18 @@ export default function StaffDashboard() {
         duration: Math.round((remotePlayback.duration_ms || 0) / 1000),
       };
 
+  // Native Queue Mode (Step 2): Now Playing must reflect the real Spotify
+  // track (title/artist/cover), not song_requests.status === 'playing' —
+  // this is true even when Spotify is playing a manually-started song that
+  // has no matching Walbox request at all.
+  const nowPlayingTrack = !playbackStale && remotePlayback?.track_name
+    ? {
+        title: remotePlayback.track_name,
+        artist: remotePlayback.artist_name,
+        cover: remotePlayback.cover_url,
+      }
+    : null;
+
   // DISABLED (Step 1 — real Spotify polling): questo timer simulava
   // l'avanzamento del progress in localStorage, scollegato da cosa
   // Spotify riproduce davvero. Sostituito dal polling reale su
@@ -205,10 +217,17 @@ export default function StaffDashboard() {
         // Real, current data point — write it as-is and re-arm the stop guard
         // (a legitimate new reading means we're no longer in the "just ended,
         // nothing to report" limbo).
+        // Native Queue Mode (Step 2): also capture track identity so
+        // Staff/TV can render the real Spotify now-playing track instead of
+        // relying on song_requests.status === 'playing'.
         lastValidPlaybackRef.current = {
           progress_ms: pb.progress_ms,
           duration_ms: pb.item.duration_ms,
           is_playing: pb.is_playing,
+          track_name: pb.item.name,
+          artist_name: pb.item.artists?.[0]?.name || '',
+          cover_url: pb.item.album?.images?.[0]?.url || null,
+          spotify_track_uri: pb.item.uri,
           capturedAt: Date.now(),
         };
         stopSignalSentRef.current = false;
@@ -218,6 +237,10 @@ export default function StaffDashboard() {
           progress_ms: pb.progress_ms,
           duration_ms: pb.item.duration_ms,
           is_playing: pb.is_playing,
+          track_name: pb.item.name,
+          artist_name: pb.item.artists?.[0]?.name || '',
+          cover_url: pb.item.album?.images?.[0]?.url || null,
+          spotify_track_uri: pb.item.uri,
           updated_at: new Date().toISOString(),
         };
         const { error } = await supabase.from('playback_state').upsert(row);
@@ -256,6 +279,13 @@ export default function StaffDashboard() {
           progress_ms: last.progress_ms,
           duration_ms: last.duration_ms,
           is_playing: false,
+          // Carry forward the last known real track identity instead of
+          // blanking it — this is just a "stopped" reading for the same
+          // track, not proof a different track is now playing.
+          track_name: last.track_name,
+          artist_name: last.artist_name,
+          cover_url: last.cover_url,
+          spotify_track_uri: last.spotify_track_uri,
           updated_at: new Date().toISOString(),
         };
         const { error } = await supabase.from('playback_state').upsert(row);
@@ -309,48 +339,86 @@ export default function StaffDashboard() {
   // Find current request info — source of truth is Supabase status='playing'
   const currentRequest = requests.find((r) => r.status === "playing");
 
+  // Native Queue Mode (Step 2): approving a request queues it on Spotify's
+  // real native queue — it must never interrupt whatever is currently
+  // playing. Supabase approval always succeeds even if the Spotify queue
+  // call fails (staff can retry or use "Avvia subito"); failure only shows
+  // the existing non-blocking warning banner.
+  const handleApprove = async (req) => {
+    await updateStatus(req.id, 'approved');
+
+    const uri = req.song?.spotify_uri;
+    if (!uri) return;
+    if (!getStoredToken()) {
+      setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
+      return;
+    }
+    try {
+      await addToQueue(uri);
+    } catch (err) {
+      console.warn('Spotify addToQueue failed:', err);
+      setSpotifyWarning('⚠️ Impossibile aggiungere alla coda Spotify. Avvia il brano manualmente.');
+    }
+  };
+
+  // Native Queue Mode (Step 2): SALTA now tells Spotify to advance its own
+  // native queue (populated by handleApprove's addToQueue below) instead of
+  // forcing a specific Walbox request via playTrack. Which Supabase request
+  // (if any) corresponds to the resulting track is handled separately by
+  // the status-sync effect further down — SALTA itself never picks a
+  // Supabase row.
   const handleSkipToNext = async () => {
-    const nextApproved = approvedQueue[0];
-    if (!nextApproved) return;
     // Fix A: guard against repeated taps while a skip is already in flight.
     if (skipPending) return;
     setSkipPending(true);
 
     try {
-      const uri = nextApproved.song?.spotify_uri;
       const hasToken = !!getStoredToken();
-
-      if (!uri) {
-        setSpotifyWarning('⚠️ Brano senza link Spotify. Avvialo manualmente.');
-      } else if (!hasToken) {
+      if (!hasToken) {
         setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
-      } else {
-        try {
-          await playTrack(uri);
-        } catch (err) {
-          console.warn('Spotify playTrack failed:', err);
-          setSpotifyWarning('⚠️ Spotify non raggiunto. Avvia il brano manualmente.');
-        }
+        return;
       }
-
-      try { await setPlaying(nextApproved.id); } catch (err) { console.error('setPlaying failed:', err); }
+      try {
+        await skipToNext();
+      } catch (err) {
+        console.warn('Spotify skipToNext failed:', err);
+        setSpotifyWarning('⚠️ Spotify non raggiunto. Salta manualmente dal device.');
+        return;
+      }
+      // Refresh immediately instead of waiting up to 4s for the next tick.
+      await pollPlayback();
     } finally {
       setSkipPending(false);
     }
   };
 
-  // Keep a live ref to handleSkipToNext so the auto-skip effect below can
-  // call the latest version without needing it in its dependency array
-  // (it's a new function reference every render).
-  const handleSkipToNextRef = useRef(handleSkipToNext);
-  useEffect(() => {
-    handleSkipToNextRef.current = handleSkipToNext;
-  });
+  // Native Queue Mode (Step 2): "Avvia subito" is the only normal place
+  // where playTrack (force-interrupt) is allowed. It is a deliberate manual
+  // override, separate from approve (which only queues, see handleApprove)
+  // and from SALTA (which uses Spotify's native skip, see handleSkipToNext).
+  const handlePlayNow = async (req) => {
+    const uri = req.song?.spotify_uri;
+    if (!uri) {
+      setSpotifyWarning('⚠️ Brano senza link Spotify. Avvialo manualmente.');
+      return;
+    }
+    if (!getStoredToken()) {
+      setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
+      return;
+    }
+    try {
+      await playTrack(uri);
+      await pollPlayback();
+    } catch (err) {
+      console.warn('Spotify playTrack failed:', err);
+      setSpotifyWarning('⚠️ Spotify non raggiunto. Avvia il brano manualmente.');
+    }
+  };
 
-  // Auto-advance to the next approved song when the current one ends
-  // naturally (real Spotify progress reaching real duration), reusing the
-  // same handleSkipToNext used by the manual "SALTA" button — no separate
-  // skip logic. Detection is based only on remotePlayback (progress_ms/
+  // Native Queue Mode (Step 2): natural-end detection is kept only as a
+  // "refresh sooner than 4s" signal — Spotify's own native queue (populated
+  // by handleApprove) decides what plays next, Walbox no longer forces a
+  // track here. Detection is based only on remotePlayback (progress_ms/
   // duration_ms/is_playing), the raw Supabase row, not the stale-adjusted
   // `playback` derived above.
   const prevRemotePlaybackRef = useRef(null);
@@ -367,7 +435,7 @@ export default function StaffDashboard() {
     const progress = remotePlayback.progress_ms;
 
     // Once clearly mid-track again (playing, well before the end), re-arm
-    // the guard so a future natural end can trigger another auto-skip.
+    // the guard so a future natural end can trigger another immediate poll.
     if (remotePlayback.is_playing && duration > 0 && (duration - progress) > 3000) {
       autoSkipTriggeredRef.current = false;
       return;
@@ -381,8 +449,8 @@ export default function StaffDashboard() {
       prev.duration_ms > 0 &&
       (prev.duration_ms - prev.progress_ms) <= 3000;
 
-    // Natural end: either playback stopped (no next-up on Spotify's own
-    // queue) or progress reset to a lower value (a new track started).
+    // Natural end: either playback stopped or progress reset to a lower
+    // value (Spotify's native queue moved on to a new track by itself).
     // A manual pause mid-track never satisfies prevWasNearEnd, so it never
     // triggers this branch.
     const trackEndedNaturally =
@@ -390,9 +458,41 @@ export default function StaffDashboard() {
 
     if (trackEndedNaturally) {
       autoSkipTriggeredRef.current = true;
-      handleSkipToNextRef.current();
+      pollPlayback();
     }
-  }, [remotePlayback]);
+  }, [remotePlayback, pollPlayback]);
+
+  // Native Queue Mode (Step 2) — status sync: Supabase status is a
+  // reflection of Spotify reality, never the other way round. Whenever the
+  // real playing track's URI changes, look for a matching Walbox request
+  // (approved or already playing) and mark it 'playing' with the existing
+  // setPlaying (which also flips the previous 'playing' row to 'played').
+  // If the real track doesn't match any Walbox request (manually started
+  // Spotify song), just close out whatever Supabase still thinks is
+  // 'playing' — Staff Now Playing keeps showing the real Spotify data
+  // regardless (see nowPlayingTrack above), it does not fake a request.
+  // Gated on a ref (not just the effect dependency) so the same URI is
+  // never re-processed twice, avoiding any sync loop.
+  const lastSyncedUriRef = useRef(null);
+
+  useEffect(() => {
+    const uri = remotePlayback?.spotify_track_uri;
+    if (!uri || uri === lastSyncedUriRef.current) return;
+    lastSyncedUriRef.current = uri;
+
+    const match = requests.find(
+      (r) => (r.status === 'approved' || r.status === 'playing') && r.song?.spotify_uri === uri
+    );
+
+    if (match) {
+      setPlaying(match.id).catch((err) => console.error('[status-sync] setPlaying failed:', err));
+    } else {
+      const stalePlaying = requests.find((r) => r.status === 'playing');
+      if (stalePlaying) {
+        updateStatus(stalePlaying.id, 'played').catch((err) => console.error('[status-sync] updateStatus failed:', err));
+      }
+    }
+  }, [remotePlayback?.spotify_track_uri, requests]);
 
   // Format seconds to mm:ss
   const formatTime = (secs) => {
@@ -492,6 +592,11 @@ export default function StaffDashboard() {
     }
   };
 
+  // Native Queue Mode (Step 2): color the deck by the matching Walbox
+  // request's mood when there is one; fall back to a neutral accent when
+  // Spotify is playing a track with no matching Walbox request.
+  const moodColor = currentRequest ? getMoodColor(currentRequest.mood) : "var(--accent-glow)";
+
   return (
     <>
     {spotifyWarning && (
@@ -556,7 +661,7 @@ export default function StaffDashboard() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "4px" }}>
                   <button
-                    onClick={() => withPendingGuard(req.id, () => updateStatus(req.id, 'approved'))}
+                    onClick={() => withPendingGuard(req.id, () => handleApprove(req))}
                     disabled={pendingRequestIds.has(req.id)}
                     className="btn-approve"
                     style={{ opacity: pendingRequestIds.has(req.id) ? 0.6 : 1, cursor: pendingRequestIds.has(req.id) ? "not-allowed" : "pointer" }}
@@ -626,6 +731,14 @@ export default function StaffDashboard() {
                 {/* Queue Control Buttons */}
                 <div style={{ display: "flex", gap: "6px" }}>
                   <button
+                    onClick={() => withPendingGuard(req.id, () => handlePlayNow(req))}
+                    disabled={pendingRequestIds.has(req.id)}
+                    className="icon-btn-queue"
+                    title="Avvia subito (interrompe la riproduzione attuale)"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  </button>
+                  <button
                     onClick={() => prioritizeRequest(req.id, -1)}
                     disabled
                     style={{ opacity: 0.35, cursor: "not-allowed" }}
@@ -667,21 +780,21 @@ export default function StaffDashboard() {
         <div className="dashboard-col-content" style={{ overflowY: "auto", gap: "20px" }}>
           
           {/* DJ DECK CONTAINER */}
-          <div className="dj-deck" style={{ 
-            borderColor: currentRequest ? getMoodColor(currentRequest.mood) : "var(--glass-border)",
-            boxShadow: currentRequest ? `0 15px 40px rgba(0,0,0,0.6), 0 0 25px ${getMoodColor(currentRequest.mood)}15` : "none"
+          <div className="dj-deck" style={{
+            borderColor: nowPlayingTrack ? moodColor : "var(--glass-border)",
+            boxShadow: nowPlayingTrack ? `0 15px 40px rgba(0,0,0,0.6), 0 0 25px ${moodColor}15` : "none"
           }}>
-            {currentRequest ? (
+            {nowPlayingTrack ? (
               <>
                 <span style={{ fontSize: "10px", color: "var(--accent-glow)", fontWeight: "800", letterSpacing: "3px", textTransform: "uppercase" }}>
                   LIVE STREAM FEED 📻
                 </span>
-                
+
                 {/* Vinyl Spinner */}
                 <div className={`dj-deck-vinyl ${playback.isPlaying ? "vinyl-spin" : ""}`}>
-                  <img 
-                    src={currentRequest.song.cover} 
-                    alt={currentRequest.song.title} 
+                  <img
+                    src={nowPlayingTrack.cover}
+                    alt={nowPlayingTrack.title}
                     className="dj-deck-cover"
                   />
                   {/* Vinyl center pin */}
@@ -698,26 +811,31 @@ export default function StaffDashboard() {
 
                 <div style={{ width: "100%", textAlign: "center" }}>
                   <h3 style={{ fontSize: "16px", fontWeight: "800", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", margin: "0" }}>
-                    {currentRequest.song.title}
+                    {nowPlayingTrack.title}
                   </h3>
                   <p style={{ fontSize: "13px", color: "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: "2px", marginBottom: "0" }}>
-                    {currentRequest.song.artist}
+                    {nowPlayingTrack.artist}
                   </p>
                 </div>
 
-                <div style={{ display: "flex", gap: "8px", justifyContent: "center", width: "100%" }}>
-                  <span className="table-badge" style={{ padding: "4px 10px", fontSize: "11px" }}>
-                    Tavolo {currentRequest.table}
-                  </span>
-                  <span className="table-badge" style={{ 
-                    padding: "4px 10px", 
-                    fontSize: "11px",
-                    color: getMoodColor(currentRequest.mood),
-                    borderColor: getMoodColor(currentRequest.mood)
-                  }}>
-                    {MOOD_EMOJIS[currentRequest.mood]} {currentRequest.mood.toUpperCase()}
-                  </span>
-                </div>
+                {/* Walbox-specific chrome (table/mood) only when the real
+                    Spotify track matches a Walbox request — otherwise this
+                    is a manually-started Spotify song, shown plainly. */}
+                {currentRequest && (
+                  <div style={{ display: "flex", gap: "8px", justifyContent: "center", width: "100%" }}>
+                    <span className="table-badge" style={{ padding: "4px 10px", fontSize: "11px" }}>
+                      Tavolo {currentRequest.table}
+                    </span>
+                    <span className="table-badge" style={{
+                      padding: "4px 10px",
+                      fontSize: "11px",
+                      color: moodColor,
+                      borderColor: moodColor
+                    }}>
+                      {MOOD_EMOJIS[currentRequest.mood]} {currentRequest.mood.toUpperCase()}
+                    </span>
+                  </div>
+                )}
 
                 {/* Progress Bar */}
                 <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "6px", marginTop: "5px" }}>
@@ -726,7 +844,7 @@ export default function StaffDashboard() {
                       className="progress-bar-fill"
                       style={{
                         width: `${playback.duration > 0 ? (playback.progress / playback.duration) * 100 : 0}%`,
-                        background: getMoodColor(currentRequest.mood)
+                        background: moodColor
                       }}
                     ></div>
                   </div>
@@ -749,9 +867,9 @@ export default function StaffDashboard() {
                     disabled={playPausePending}
                     className="btn-play-pause"
                     style={{
-                      background: getMoodColor(currentRequest.mood),
-                      boxShadow: `0 0 15px ${getMoodColor(currentRequest.mood)}50`,
-                      color: currentRequest.mood === "chill" || currentRequest.mood === "romantic" ? "white" : "#05070e",
+                      background: moodColor,
+                      boxShadow: `0 0 15px ${moodColor}50`,
+                      color: currentRequest && (currentRequest.mood === "chill" || currentRequest.mood === "romantic") ? "white" : "#05070e",
                       opacity: playPausePending ? 0.6 : 1,
                       cursor: playPausePending ? "not-allowed" : "pointer"
                     }}
@@ -791,12 +909,12 @@ export default function StaffDashboard() {
                 </p>
                 {approvedQueue.length > 0 && (
                   <button
-                    onClick={handleSkipToNext}
-                    disabled={skipPending}
+                    onClick={() => withPendingGuard(approvedQueue[0].id, () => handlePlayNow(approvedQueue[0]))}
+                    disabled={pendingRequestIds.has(approvedQueue[0].id)}
                     className="btn-primary"
-                    style={{ alignSelf: "center", marginTop: "10px", opacity: skipPending ? 0.6 : 1, cursor: skipPending ? "not-allowed" : "pointer" }}
+                    style={{ alignSelf: "center", marginTop: "10px", opacity: pendingRequestIds.has(approvedQueue[0].id) ? 0.6 : 1, cursor: pendingRequestIds.has(approvedQueue[0].id) ? "not-allowed" : "pointer" }}
                   >
-                    {skipPending ? "..." : "Avvia Riproduzione 🚀"}
+                    {pendingRequestIds.has(approvedQueue[0].id) ? "..." : "Avvia Riproduzione 🚀"}
                   </button>
                 )}
               </div>
