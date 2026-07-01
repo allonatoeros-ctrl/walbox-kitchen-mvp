@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   getVenueSettings,
   savePlaybackState,
@@ -23,6 +23,33 @@ export default function StaffDashboard() {
   const [settings, setSettings] = useState({ queuePaused: false });
   const [cooldown, setCooldown] = useState(0);
   const [spotifyWarning, setSpotifyWarning] = useState(null);
+
+  // Fix A: request ids currently mid-action (approve/reject/remove) — used
+  // to disable their buttons and avoid duplicate taps while waiting for the
+  // Supabase round-trip.
+  const [pendingRequestIds, setPendingRequestIds] = useState(() => new Set());
+  // Fix A: SALTA button pending guard.
+  const [skipPending, setSkipPending] = useState(false);
+  // Fix B: PLAY/PAUSA pending guard + which is_playing value we're waiting
+  // to see confirmed on playback_state.
+  const [playPausePending, setPlayPausePending] = useState(false);
+  const pendingPlayStateRef = useRef(null);
+  const pendingTimeoutRef = useRef(null);
+
+  const withPendingGuard = async (id, action) => {
+    setPendingRequestIds((prev) => new Set(prev).add(id));
+    try {
+      await action();
+    } catch (err) {
+      console.error('[StaffDashboard] action failed for request', id, err);
+    } finally {
+      setPendingRequestIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  };
 
   // Reaction triggering
   const handleTriggerReaction = (type) => {
@@ -167,71 +194,112 @@ export default function StaffDashboard() {
 
   // Poll real Spotify playback state and persist it to Supabase (playback_state, id=1)
   // so the TV Poster (Step 2) can read the real progress/duration/is_playing.
-  useEffect(() => {
-    const pollPlayback = async () => {
-      try {
-        const pb = await getCurrentPlayback();
+  // Extracted as a stable callback (Fix B/C) so it can also be triggered
+  // on-demand right after a PLAY/PAUSA command and when the tab regains
+  // focus/visibility, instead of only every 4s.
+  const pollPlayback = useCallback(async () => {
+    try {
+      const pb = await getCurrentPlayback();
 
-        if (pb && pb.item) {
-          // Real, current data point — write it as-is and re-arm the stop guard
-          // (a legitimate new reading means we're no longer in the "just ended,
-          // nothing to report" limbo).
-          lastValidPlaybackRef.current = {
-            progress_ms: pb.progress_ms,
-            duration_ms: pb.item.duration_ms,
-            is_playing: pb.is_playing,
-            capturedAt: Date.now(),
-          };
-          stopSignalSentRef.current = false;
+      if (pb && pb.item) {
+        // Real, current data point — write it as-is and re-arm the stop guard
+        // (a legitimate new reading means we're no longer in the "just ended,
+        // nothing to report" limbo).
+        lastValidPlaybackRef.current = {
+          progress_ms: pb.progress_ms,
+          duration_ms: pb.item.duration_ms,
+          is_playing: pb.is_playing,
+          capturedAt: Date.now(),
+        };
+        stopSignalSentRef.current = false;
 
-          const { error } = await supabase.from('playback_state').upsert({
-            id: 1,
-            progress_ms: pb.progress_ms,
-            duration_ms: pb.item.duration_ms,
-            is_playing: pb.is_playing,
-            updated_at: new Date().toISOString(),
-          });
-          if (error) console.error('[playback_state] upsert failed:', error);
-          return;
+        const row = {
+          id: 1,
+          progress_ms: pb.progress_ms,
+          duration_ms: pb.item.duration_ms,
+          is_playing: pb.is_playing,
+          updated_at: new Date().toISOString(),
+        };
+        const { error } = await supabase.from('playback_state').upsert(row);
+        if (error) {
+          console.error('[playback_state] upsert failed:', error);
+        } else {
+          // Reflect locally right away instead of waiting for the Realtime
+          // round-trip back to this same device (Fix B).
+          setRemotePlayback(row);
         }
-
-        // No active device / nothing playing right now (pb === null or no item).
-        const last = lastValidPlaybackRef.current;
-        // Never had a real reading before -> nothing reliable to report, don't
-        // invent zeros (Step 1 rule).
-        if (!last) return;
-        // Already signalled the stop for this track -> avoid re-writing every
-        // subsequent tick while Spotify keeps returning null.
-        if (stopSignalSentRef.current) return;
-
-        const elapsedSinceLastTick = Date.now() - last.capturedAt;
-        const estimatedProgressNow = last.progress_ms + (last.is_playing ? elapsedSinceLastTick : 0);
-        const wasNearEnd = last.duration_ms > 0 && (last.duration_ms - last.progress_ms) <= 3000;
-        const expectedEndPassed = last.duration_ms > 0 && estimatedProgressNow >= last.duration_ms;
-
-        // Only treat "Spotify returned nothing" as a natural end if the last
-        // known real state was actually playing AND was at/near the end of
-        // the track. Otherwise (token expired mid-track, device dropped
-        // early, etc.) this is not a reliable end-of-track signal — don't
-        // write anything, per Step 1's "don't invent state" rule.
-        if (last.is_playing && (wasNearEnd || expectedEndPassed)) {
-          const { error } = await supabase.from('playback_state').upsert({
-            id: 1,
-            progress_ms: last.progress_ms,
-            duration_ms: last.duration_ms,
-            is_playing: false,
-            updated_at: new Date().toISOString(),
-          });
-          if (error) console.error('[playback_state] upsert failed:', error);
-          else stopSignalSentRef.current = true;
-        }
-      } catch (err) {
-        console.error('[playback_state] Spotify poll failed:', err);
+        return;
       }
-    };
 
+      // No active device / nothing playing right now (pb === null or no item).
+      const last = lastValidPlaybackRef.current;
+      // Never had a real reading before -> nothing reliable to report, don't
+      // invent zeros (Step 1 rule).
+      if (!last) return;
+      // Already signalled the stop for this track -> avoid re-writing every
+      // subsequent tick while Spotify keeps returning null.
+      if (stopSignalSentRef.current) return;
+
+      const elapsedSinceLastTick = Date.now() - last.capturedAt;
+      const estimatedProgressNow = last.progress_ms + (last.is_playing ? elapsedSinceLastTick : 0);
+      const wasNearEnd = last.duration_ms > 0 && (last.duration_ms - last.progress_ms) <= 3000;
+      const expectedEndPassed = last.duration_ms > 0 && estimatedProgressNow >= last.duration_ms;
+
+      // Only treat "Spotify returned nothing" as a natural end if the last
+      // known real state was actually playing AND was at/near the end of
+      // the track. Otherwise (token expired mid-track, device dropped
+      // early, etc.) this is not a reliable end-of-track signal — don't
+      // write anything, per Step 1's "don't invent state" rule.
+      if (last.is_playing && (wasNearEnd || expectedEndPassed)) {
+        const row = {
+          id: 1,
+          progress_ms: last.progress_ms,
+          duration_ms: last.duration_ms,
+          is_playing: false,
+          updated_at: new Date().toISOString(),
+        };
+        const { error } = await supabase.from('playback_state').upsert(row);
+        if (error) {
+          console.error('[playback_state] upsert failed:', error);
+        } else {
+          stopSignalSentRef.current = true;
+          setRemotePlayback(row);
+        }
+      }
+    } catch (err) {
+      console.error('[playback_state] Spotify poll failed:', err);
+    }
+  }, []);
+
+  useEffect(() => {
     const intervalId = setInterval(pollPlayback, 4000);
     return () => clearInterval(intervalId);
+  }, [pollPlayback]);
+
+  // Fix C: browsers throttle setInterval timers in background tabs, so the
+  // staff device can silently stop refreshing playback_state while the tab
+  // is unfocused (e.g. screen locked behind the bar). Force one immediate
+  // poll as soon as the tab becomes visible/focused again, so the UI
+  // re-aligns without needing a manual page refresh.
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') pollPlayback();
+    };
+    const handleFocus = () => pollPlayback();
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [pollPlayback]);
+
+  // Cleanup any pending PLAY/PAUSA confirmation timeout on unmount.
+  useEffect(() => {
+    return () => {
+      if (pendingTimeoutRef.current) clearTimeout(pendingTimeoutRef.current);
+    };
   }, []);
 
   // Derived state lists
@@ -244,24 +312,31 @@ export default function StaffDashboard() {
   const handleSkipToNext = async () => {
     const nextApproved = approvedQueue[0];
     if (!nextApproved) return;
+    // Fix A: guard against repeated taps while a skip is already in flight.
+    if (skipPending) return;
+    setSkipPending(true);
 
-    const uri = nextApproved.song?.spotify_uri;
-    const hasToken = !!getStoredToken();
+    try {
+      const uri = nextApproved.song?.spotify_uri;
+      const hasToken = !!getStoredToken();
 
-    if (!uri) {
-      setSpotifyWarning('⚠️ Brano senza link Spotify. Avvialo manualmente.');
-    } else if (!hasToken) {
-      setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
-    } else {
-      try {
-        await playTrack(uri);
-      } catch (err) {
-        console.warn('Spotify playTrack failed:', err);
-        setSpotifyWarning('⚠️ Spotify non raggiunto. Avvia il brano manualmente.');
+      if (!uri) {
+        setSpotifyWarning('⚠️ Brano senza link Spotify. Avvialo manualmente.');
+      } else if (!hasToken) {
+        setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
+      } else {
+        try {
+          await playTrack(uri);
+        } catch (err) {
+          console.warn('Spotify playTrack failed:', err);
+          setSpotifyWarning('⚠️ Spotify non raggiunto. Avvia il brano manualmente.');
+        }
       }
-    }
 
-    try { await setPlaying(nextApproved.id); } catch (err) { console.error('setPlaying failed:', err); }
+      try { await setPlaying(nextApproved.id); } catch (err) { console.error('setPlaying failed:', err); }
+    } finally {
+      setSkipPending(false);
+    }
   };
 
   // Keep a live ref to handleSkipToNext so the auto-skip effect below can
@@ -326,25 +401,62 @@ export default function StaffDashboard() {
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Play / Pause toggle — commands real Spotify playback; playback_state
-  // (Supabase) will reflect the change on the next staff-device poll tick.
+  // Play / Pause toggle — commands real Spotify playback. Fix B: shows a
+  // pending state immediately (button disabled + "Comando inviato…"),
+  // forces an immediate poll instead of waiting up to 4s for the next
+  // interval tick, and clears the pending state once playback_state
+  // confirms the new is_playing value (see effect below) or after a short
+  // timeout if no confirmation arrives.
   const togglePlay = async () => {
     const hasToken = !!getStoredToken();
     if (!hasToken) {
       setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
       return;
     }
+    if (playPausePending) return;
+
+    const wantPlaying = !playback.isPlaying;
+    setPlayPausePending(true);
+    pendingPlayStateRef.current = wantPlaying;
+
     try {
       if (playback.isPlaying) {
         await pauseTrack();
       } else {
         await resumeTrack();
       }
+      await pollPlayback();
     } catch (err) {
       console.error('togglePlay failed:', err);
       setSpotifyWarning('⚠️ Spotify non raggiunto. Controlla il device.');
+      setPlayPausePending(false);
+      pendingPlayStateRef.current = null;
+      return;
     }
+
+    if (pendingTimeoutRef.current) clearTimeout(pendingTimeoutRef.current);
+    pendingTimeoutRef.current = setTimeout(() => {
+      console.warn('[togglePlay] Nessuna conferma da playback_state entro il timeout.');
+      setSpotifyWarning('⚠️ Spotify non conferma il comando. Riprova.');
+      setPlayPausePending(false);
+      pendingPlayStateRef.current = null;
+      pendingTimeoutRef.current = null;
+    }, 6000);
   };
+
+  // Fix B: clear the PLAY/PAUSA pending state as soon as playback_state
+  // confirms the is_playing value we're waiting for.
+  useEffect(() => {
+    if (!playPausePending || pendingPlayStateRef.current === null || !remotePlayback) return;
+    if (!!remotePlayback.is_playing === pendingPlayStateRef.current) {
+      setPlayPausePending(false);
+      pendingPlayStateRef.current = null;
+      if (pendingTimeoutRef.current) {
+        clearTimeout(pendingTimeoutRef.current);
+        pendingTimeoutRef.current = null;
+      }
+    }
+  }, [remotePlayback, playPausePending]);
 
   // Toggle submission pause
   const togglePauseSubmissions = () => {
@@ -444,16 +556,20 @@ export default function StaffDashboard() {
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "4px" }}>
                   <button
-                    onClick={() => updateStatus(req.id, 'approved')}
+                    onClick={() => withPendingGuard(req.id, () => updateStatus(req.id, 'approved'))}
+                    disabled={pendingRequestIds.has(req.id)}
                     className="btn-approve"
+                    style={{ opacity: pendingRequestIds.has(req.id) ? 0.6 : 1, cursor: pendingRequestIds.has(req.id) ? "not-allowed" : "pointer" }}
                   >
-                    Metti in scaletta
+                    {pendingRequestIds.has(req.id) ? "..." : "Metti in scaletta"}
                   </button>
                   <button
-                    onClick={() => updateStatus(req.id, 'rejected')}
+                    onClick={() => withPendingGuard(req.id, () => updateStatus(req.id, 'rejected'))}
+                    disabled={pendingRequestIds.has(req.id)}
                     className="btn-reject"
+                    style={{ opacity: pendingRequestIds.has(req.id) ? 0.6 : 1, cursor: pendingRequestIds.has(req.id) ? "not-allowed" : "pointer" }}
                   >
-                    Scarta
+                    {pendingRequestIds.has(req.id) ? "..." : "Scarta"}
                   </button>
                 </div>
               </div>
@@ -528,7 +644,8 @@ export default function StaffDashboard() {
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </button>
                   <button
-                    onClick={() => updateStatus(req.id, 'rejected')}
+                    onClick={() => withPendingGuard(req.id, () => updateStatus(req.id, 'rejected'))}
+                    disabled={pendingRequestIds.has(req.id)}
                     className="icon-btn-queue remove"
                     title="Rimuovi"
                   >
@@ -627,16 +744,21 @@ export default function StaffDashboard() {
 
                 {/* Control Panel buttons */}
                 <div style={{ display: "flex", gap: "10px", alignItems: "center", marginTop: "5px", width: "100%", justifyContent: "center" }}>
-                  <button 
+                  <button
                     onClick={togglePlay}
+                    disabled={playPausePending}
                     className="btn-play-pause"
                     style={{
                       background: getMoodColor(currentRequest.mood),
                       boxShadow: `0 0 15px ${getMoodColor(currentRequest.mood)}50`,
-                      color: currentRequest.mood === "chill" || currentRequest.mood === "romantic" ? "white" : "#05070e"
+                      color: currentRequest.mood === "chill" || currentRequest.mood === "romantic" ? "white" : "#05070e",
+                      opacity: playPausePending ? 0.6 : 1,
+                      cursor: playPausePending ? "not-allowed" : "pointer"
                     }}
                   >
-                    {playback.isPlaying ? (
+                    {playPausePending ? (
+                      <>Comando inviato…</>
+                    ) : playback.isPlaying ? (
                       <>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
                         PAUSA
@@ -648,13 +770,15 @@ export default function StaffDashboard() {
                       </>
                     )}
                   </button>
-                  
+
                   <button
                     onClick={handleSkipToNext}
+                    disabled={skipPending}
                     className="btn-skip-next"
+                    style={{ opacity: skipPending ? 0.6 : 1, cursor: skipPending ? "not-allowed" : "pointer" }}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
-                    SALTA
+                    {skipPending ? "..." : "SALTA"}
                   </button>
                 </div>
               </>
@@ -668,10 +792,11 @@ export default function StaffDashboard() {
                 {approvedQueue.length > 0 && (
                   <button
                     onClick={handleSkipToNext}
+                    disabled={skipPending}
                     className="btn-primary"
-                    style={{ alignSelf: "center", marginTop: "10px" }}
+                    style={{ alignSelf: "center", marginTop: "10px", opacity: skipPending ? 0.6 : 1, cursor: skipPending ? "not-allowed" : "pointer" }}
                   >
-                    Avvia Riproduzione 🚀
+                    {skipPending ? "..." : "Avvia Riproduzione 🚀"}
                   </button>
                 )}
               </div>
