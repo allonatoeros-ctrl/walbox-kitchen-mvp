@@ -328,6 +328,8 @@ non prima di aver chiuso Jukebox e Kitchen MVP.
 
 ## 5. Priorità a 12 mesi
 
+> **Nota di stato — 2026-07-03:** l'ordine reale è stato invertito rispetto al piano. Kitchen (Mese 3-4: menu digitale, ordini Supabase, staff dashboard cucina, flusso banco/ritiro) è già **completo e stabile** dal 2026-06-23 (S1→S10d, V1-Competitive-Gap, V1-P6). Il Jukebox (Mese 1-2) è invece **in corso ora** (24/6→3/7): integrazione Spotify reale, auto-avanzamento coda, TV sync, in preparazione della Shuffle Night pilota. Vedi `CHECKPOINT.md` per lo stato aggiornato.
+
 ### Mese 1 — Jukebox Poster demo-ready
 
 Obiettivo:

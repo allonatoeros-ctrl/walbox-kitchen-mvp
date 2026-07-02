@@ -16,6 +16,25 @@ Poi creiamo il ponte.
 
 ---
 
+## 1.5 Nota di stato — 2026-07-03
+
+Questo piano è stato scritto il 2026-06-15 assumendo l'ordine "Poster prima, Kitchen dopo". La realtà lo ha superato:
+
+```text
+Kitchen MVP è già completo e stabile (S1→S10d Supabase, Cleanup Sprint,
+V1-Competitive-Gap, V1-P6 flusso banco/ritiro — chiuso il 2026-06-23).
+
+Dal 2026-06-24 il lavoro è tornato sul Jukebox: integrazione Spotify reale
+(playback reale, TV sync, auto-avanzamento coda a fine canzone naturale,
+ricerca Spotify) in preparazione della "Walrus Shuffle Night" pilota.
+```
+
+Le Priorità 1-2 (Jukebox Poster demo-ready, flusso stabilizzato) restano valide come obiettivo, ma vanno lette come "in corso ora con dati reali Spotify", non come step teorico prima di Kitchen. La Priorità 3 (piano Kitchen) è superata: Kitchen esiste già.
+
+Vedi `CHECKPOINT.md` per lo stato aggiornato e il prossimo sprint (piano `walbox-dev` da `docs/PILOT_NIGHT_CHECKLIST.md`).
+
+---
+
 ## 2. Contesto attuale
 
 La V2 è il progetto corretto:
