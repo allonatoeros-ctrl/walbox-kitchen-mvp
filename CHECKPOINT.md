@@ -1,5 +1,5 @@
 # CHECKPOINT — Walbox
-Aggiornato: 2026-07-03 
+Aggiornato: 2026-07-05
 Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle Night.
 
 ---
@@ -15,6 +15,8 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
   - TV mostra now-playing reale da Spotify (non più mock)
   - Miglior reattività azioni staff dashboard
   - Subagent Claude Code per workflow prodotto (walbox-hardening, walbox-idea-lab, walbox-product-owner) + doc ricerca Shuffle Night
+  - Implemented, but not yet verified with real E2E/QA flow — see OPEN ISSUES.
+- CLAUDE.md aligned to current-state source of truth + agent routing — commit f077276, 2026-07-04.
 
 ## STABLE — non toccare senza approvazione
 - src/hooks/useKitchenOrders.js, useKitchenMenu.js — dual-write Supabase+localStorage
@@ -33,7 +35,11 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - Fix "Sposta Su/Giù" in coda staff rimandato (menzionato in commit 553a86e, da verificare stato)
 - Nessun test E2E reale sul flusso Jukebox/Spotify (i 17+4 Playwright coprono solo Kitchen)
 - S11 Supabase: localStorage writes ancora attivi — deferred per cross-tab sync
-- CHECKPOINT era fermo al 23/6, disallineato dai 39 commit successivi — ora risolto con questo update
+- CHECKPOINT era fermo al 3/7, disallineato dal commit CLAUDE.md f077276 del 4/7 — risolto con questo update (2026-07-05)
+
+## REFERENCES
+- Sub-agent routing: see CLAUDE.md section 2. Shuffle Night cascade: see feedback_shuffle_night_pipeline.md.
+- Kitchen-era memories are archived; see MEMORY.md. Do not use them for the active Jukebox/Shuffle Night track.
 
 ## NEXT STEP
 walbox-dev legge docs/PILOT_NIGHT_CHECKLIST.md + stato attuale Jukebox/Spotify e propone piano di micro-task per arrivare a demo-stabile per la Shuffle Night (fix coda, E2E reali, verifica auto-advance sotto stress).
