@@ -26,6 +26,8 @@ Understand
 
 If any step is skipped, the task is not done.
 
+CHECKPOINT.md is the primary source of truth for current project state (active phase, done, stable, open issues, next step). Claude must read CHECKPOINT.md before starting any non-trivial task. CLAUDE.md defines the rules; CHECKPOINT.md defines what is currently true.
+
 ---
 
 ## 1. Project Identity
@@ -140,6 +142,23 @@ Prefer Claude Code / terminal for:
 Claude Chat should be used only for reasoning, explanations, planning or review.
 
 Claude Chat must not be treated as the main execution environment for repo modifications unless Eros explicitly asks.
+
+### Custom Subagents
+
+Route work to the matching subagent instead of doing it inline when the task fits its description:
+
+```text
+walbox-idea-lab        → raw lateral ideation for Shuffle Night (no specs, no code)
+rd-shuffle-night        → filters/validates ideas into an implementable spec
+shuffle-night-locale    → reality-checks a spec against the actual venue/night constraints
+walbox-dev              → implements an approved spec/plan as real code
+walbox-hardening        → read-only security/anti-abuse audit before public deploy
+walbox-qa-serata        → runs the app end-to-end to verify a flow before demo/pilot
+walbox-pitch            → communication/pitch materials for the venue, not code
+walbox-product-owner    → compares reality vs strategy docs, proposes next sprint
+```
+
+Default cascade order for a new Shuffle Night idea: `walbox-idea-lab → rd-shuffle-night → shuffle-night-locale` (see memory `feedback_shuffle_night_pipeline.md` for the full rationale). If the input is already research/benchmark rather than a raw idea, it is correct to start directly from `rd-shuffle-night`.
 
 ---
 
@@ -437,21 +456,17 @@ When uncertain, Claude should inspect the smallest relevant file set first.
 
 ## 7. Walbox Current Priorities
 
-The current working priority is:
+The current working priority is not hardcoded here because it changes as the project progresses.
+
+Claude must check CHECKPOINT.md → `NEXT STEP` section for the current priority before starting a task.
+
+General standing rule (may already be satisfied — verify in CHECKPOINT.md):
 
 ```text
-1. Finish Jukebox Poster.
-2. Stabilize customer → staff → TV flow.
-3. Plan Kitchen MVP separately.
-4. Build Kitchen only after Poster is stable.
-5. Connect modules later.
-```
-
-Do not start Kitchen while working on Poster unless Eros explicitly approves.
-
 Do not mix Jukebox and Kitchen data structures prematurely.
-
 Do not create the future Core/points/promo bridge before both modules are stable.
+Do not resume Kitchen work unless CHECKPOINT.md or Eros explicitly reopens that track.
+```
 
 ---
 
@@ -705,6 +720,8 @@ Approval needed:
 
 ## 13. Quality Gates
 
+This checklist is also maintained as the `quality-gate-verifier` skill — prefer invoking it when available. The list below is the fallback reference if the skill is not accessible.
+
 Before saying a task is complete, Claude must run this checklist.
 
 ### Scope Gate
@@ -757,6 +774,8 @@ For demo-critical tasks:
 ---
 
 ## 14. Diff Risk Review
+
+This review is also maintained as the `diff-risk-reviewer` skill — prefer invoking it when available. The format below is the fallback reference if the skill is not accessible.
 
 After any modification, Claude must review the diff.
 
@@ -840,6 +859,9 @@ Nessun rischio residuo noto.
 - diff
 - commit
 - next step
+
+10. CHECKPOINT.md da aggiornare
+sì/no — se sì, indicare quale sezione (DONE / STABLE / OPEN ISSUES / NEXT STEP)
 ```
 
 Never write only:
@@ -951,7 +973,9 @@ Then propose:
 
 ## 20. Poster TV Immediate Operating Rule
 
-For the next phase, the safest default is:
+Kitchen is complete as of 2026-06-23 (see CHECKPOINT.md). Before applying this section, verify in CHECKPOINT.md → `NEXT STEP` that Poster TV is still the active target — the current track may instead be Jukebox/Spotify stabilization or Shuffle Night pilot work.
+
+For the next phase, the safest default (when Poster TV is confirmed active) is:
 
 ```text
 Poster first.
