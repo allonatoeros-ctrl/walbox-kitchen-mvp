@@ -17,6 +17,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
   - Subagent Claude Code per workflow prodotto (walbox-hardening, walbox-idea-lab, walbox-product-owner) + doc ricerca Shuffle Night
   - Implemented, but not yet verified with real E2E/QA flow — see OPEN ISSUES.
 - CLAUDE.md aligned to current-state source of truth + agent routing — commit f077276, 2026-07-04.
+- **QA serata walbox-qa-serata (2026-07-05): PASS WITH RISKS.** Flusso QR→richiesta→staff→coda verificato in locale con 2 client concorrenti su Supabase reale, nessun bug bloccante sul percorso principale. Non verificato: add-to-queue/now-playing con account Spotify Premium reale e device fisico. Bug trovato e fixato lo stesso giorno: approvazione di un brano senza `spotify_uri` (fallback MOCK_SONGS) non avvisava lo staff — vedi OPEN ISSUES per il fix.
 
 ## STABLE — non toccare senza approvazione
 - src/hooks/useKitchenOrders.js, useKitchenMenu.js — dual-write Supabase+localStorage
@@ -33,7 +34,8 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 
 ## OPEN ISSUES
 - Fix "Sposta Su/Giù" in coda staff rimandato (menzionato in commit 553a86e, da verificare stato)
-- Nessun test E2E reale sul flusso Jukebox/Spotify (i 17+4 Playwright coprono solo Kitchen)
+- Copertura E2E Jukebox parziale: oltre ai 17+4 Playwright Kitchen esistono `smoke.spec.js` e `spotify-search-ui.spec.js` (entry + ricerca/UI Jukebox, 25/25 PASS totali), ma manca ancora E2E reale su approvazione/coda/now-playing con Spotify Premium reale
+- FIX APPLICATO (2026-07-05): `StaffDashboard.jsx` → `handleApprove` ora mostra warning esplicito quando il brano approvato non ha `spotify_uri` (non entrerà mai in coda Spotify automaticamente)
 - S11 Supabase: localStorage writes ancora attivi — deferred per cross-tab sync
 - CHECKPOINT era fermo al 3/7, disallineato dal commit CLAUDE.md f077276 del 4/7 — risolto con questo update (2026-07-05)
 

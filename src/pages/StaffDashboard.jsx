@@ -348,7 +348,10 @@ export default function StaffDashboard() {
     await updateStatus(req.id, 'approved');
 
     const uri = req.song?.spotify_uri;
-    if (!uri) return;
+    if (!uri) {
+      setSpotifyWarning('⚠️ Brano approvato ma senza link Spotify: NON entrerà in coda automaticamente. Gestiscilo manualmente.');
+      return;
+    }
     if (!getStoredToken()) {
       setSpotifyWarning('⚠️ Spotify non collegato. Apri /spotify-test e fai login.');
       return;
