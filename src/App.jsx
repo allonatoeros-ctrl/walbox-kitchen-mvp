@@ -89,8 +89,8 @@ export default function App() {
 
   return (
     <>
-      {/* Dev Quick Link Bar - Helps switch between screens easily in the same tab */}
-      {currentPath === "/staff" && (
+      {/* P1.4 — Dev Quick Link Bar: visibile SOLO in sviluppo (Vite lo rimuove in prod) */}
+      {import.meta.env.DEV && currentPath === "/staff" && (
         <nav className="dev-navigation">
           <strong style={{ color: "white", marginRight: "10px" }}>⚡ DEV ROUTING:</strong>
           <NavLink to="/entry" activePath={currentPath}>Entry (Cliente)</NavLink>

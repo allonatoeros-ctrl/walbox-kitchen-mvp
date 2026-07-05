@@ -36,7 +36,8 @@
   height: 90%;
   z-index: 2;
   pointer-events: none;
-  opacity: 0.42;
+  /* P1 — alzata da 0.42: abbastanza da essere personaggio, non texture fantasma */
+  opacity: 0.60;
   background: transparent;
 }
 
@@ -395,14 +396,49 @@
   margin-top: 3px;
 }
 
+/* P1.1 — Idle state: opacity piena, headline in giallo Impact */
 .wlp-idle {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  opacity: 0.55;
-  gap: clamp(8px, 1.5vh, 22px);
+  /* P1: opacity piena — deve essere VISIBILE, non un errore tecnico */
+  opacity: 1;
+  gap: clamp(10px, 1.8vh, 28px);
+}
+
+/* P1.1 — Animazione fadeIn al cambio headline */
+.wlp-idle-headline {
+  animation: wlpIdleFade 0.7s ease-in forwards;
+}
+
+@keyframes wlpIdleFade {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* P1.1 — Sub-headline idle: Courier bianco */
+.wlp-idle-sub {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: clamp(18px, 3vh, 40px);
+  font-weight: 700;
+  color: #f5f0e8;
+  text-align: center;
+  text-shadow: 2px 2px 0 #000;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+/* P1.1 — CTA "PUNTA · SCANSIONA · SCEGLI" in arancio */
+.wlp-idle-cta {
+  font-family: 'Impact', 'Arial Black', sans-serif;
+  font-size: clamp(13px, 1.8vh, 24px);
+  color: #ff6600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 #000;
+  margin-top: clamp(4px, 0.8vh, 12px);
 }
 
 .wlp-qr-card {
@@ -411,9 +447,23 @@
   background: transparent;
   display: block;
   flex-shrink: 0;
-  max-height: clamp(85px, 21vh, 175px);
+  /* P1.2 — leggermente più grande per leggibilità a 4m */
+  max-height: clamp(100px, 25vh, 200px);
   transform: rotate(1deg);
   box-shadow: 5px 5px 0 rgba(0,0,0,0.55);
+}
+
+/* P1.2 — Label QR leggibile a distanza in Impact giallo */
+.wlp-qr-label {
+  font-family: 'Impact', 'Arial Black', sans-serif;
+  font-size: clamp(10px, 1.4vh, 16px);
+  color: #FFD700;
+  text-align: center;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  text-shadow: 1px 1px 0 #000;
+  margin-top: -2px;
+  flex-shrink: 0;
 }
 
 .wlp-krom-card {
@@ -625,6 +675,33 @@
   padding: clamp(4px, 0.7vh, 9px) clamp(10px, 1.6vw, 22px);
   border: 3px solid #000; margin-top: 18px;
   box-shadow: 4px 4px 0 #000;
+}
+
+/* P1.6 — Dedica visibile nel takeover fullscreen */
+.wlp-takeover-dedic {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(14px, 2.2vh, 28px);
+  font-style: italic;
+  color: #f5f0e8;
+  text-align: center;
+  max-width: 70vw;
+  text-shadow: 1px 1px 0 #000;
+  margin-top: clamp(10px, 1.6vh, 20px);
+  line-height: 1.3;
+  padding: 0 clamp(12px, 2vw, 28px);
+}
+
+/* P1.6 — Brand footer nel takeover */
+.wlp-takeover-brand {
+  font-family: 'Courier New', monospace;
+  font-size: clamp(12px, 1.6vh, 20px);
+  font-weight: 900;
+  color: #FFD700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-top: clamp(8px, 1.2vh, 16px);
+  text-shadow: 1px 1px 0 #000;
+  opacity: 0.85;
 }
 
 .wlp-reaction {

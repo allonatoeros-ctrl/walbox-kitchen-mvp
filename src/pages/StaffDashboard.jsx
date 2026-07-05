@@ -626,7 +626,8 @@ export default function StaffDashboard() {
         <div className="dashboard-col-content">
           {pendingRequests.length === 0 ? (
             <div className="glass-panel" style={{ padding: "40px 20px", textAlign: "center", color: "var(--text-secondary)", fontSize: "14px" }}>
-              Nessuna richiesta in attesa. ☕
+              {/* P1.5 — copy Walrus invece di generico */}
+              Silenzio al bancone. ☕
             </div>
           ) : (
             pendingRequests.map((req) => (
@@ -789,8 +790,9 @@ export default function StaffDashboard() {
           }}>
             {nowPlayingTrack ? (
               <>
+                {/* P1.5 — copy IT Walrus */}
                 <span style={{ fontSize: "10px", color: "var(--accent-glow)", fontWeight: "800", letterSpacing: "3px", textTransform: "uppercase" }}>
-                  LIVE STREAM FEED 📻
+                  ORA IN SALA 📻
                 </span>
 
                 {/* Vinyl Spinner */}
@@ -906,7 +908,8 @@ export default function StaffDashboard() {
             ) : (
               <div style={{ padding: "40px 10px", display: "flex", flexDirection: "column", gap: "12px", textAlign: "center", alignItems: "center" }}>
                 <span style={{ fontSize: "40px" }}>🎵</span>
-                <h3 style={{ margin: "0" }}>Nessun brano attivo</h3>
+                {/* P1.5 — copy IT */}
+                <h3 style={{ margin: "0", color: "#ff6600", fontFamily: "var(--font-display)" }}>Nessun brano in sala</h3>
                 <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: "0" }}>
                   Approva un brano nella colonna a sinistra, oppure clicca sul bottone sotto per caricare la coda dimostrativa.
                 </p>

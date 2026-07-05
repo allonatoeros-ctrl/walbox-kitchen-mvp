@@ -534,6 +534,7 @@ input, textarea, select {
 }
 
 /* --- STAFF DASHBOARD GRID --- */
+/* P1.3 — Background warm Walrus brown: addio sfondo SaaS nero asettico */
 .dashboard-container {
   display: grid;
   grid-template-columns: 350px 1fr 400px;
@@ -542,6 +543,8 @@ input, textarea, select {
   height: calc(100vh - 45px);
   overflow: hidden;
   width: 100%;
+  background: linear-gradient(160deg, #1a0800 0%, #0c0400 100%);
+  min-height: 100vh;
 }
 
 @media (max-width: 1200px) {
@@ -580,19 +583,20 @@ input, textarea, select {
   text-transform: uppercase;
   letter-spacing: 1px;
   color: var(--text-primary);
-  border-left: 3px solid var(--accent-secondary);
+  /* P1.3 — border arancio Walrus per tutti i header colonna */
+  border-left: 3px solid #ff6600;
   padding-left: 10px;
   margin: 0;
 }
 
 .dashboard-col-header.pending h2 {
-  border-left-color: var(--accent-primary);
+  border-left-color: #ff6600;
 }
 .dashboard-col-header.queue h2 {
-  border-left-color: var(--accent-glow);
+  border-left-color: #FFD700;
 }
 .dashboard-col-header.player h2 {
-  border-left-color: var(--accent-secondary);
+  border-left-color: #ff6600;
 }
 
 .dashboard-col-content {
@@ -604,10 +608,23 @@ input, textarea, select {
   padding-right: 4px;
 }
 
-/* --- STAFF PREMIUM CARDS & DJ DECK --- */
+/* P1.3 — Override glass-panel dentro dashboard: bordo e background Walrus warm */
+.dashboard-container .glass-panel {
+  background: rgba(28, 10, 0, 0.80);
+  border-color: rgba(255, 102, 0, 0.18);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dashboard-container .glass-panel:hover {
+  border-color: rgba(255, 102, 0, 0.35);
+}
+
+/* --- STAFF CARDS & DJ DECK — P1.3 Walrus reskin --- */
 .staff-card {
-  background: rgba(13, 17, 28, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  /* P1.3 — warm dark invece di cyber-glassmorphism */
+  background: rgba(30, 10, 0, 0.85);
+  border: 1px solid rgba(255, 102, 0, 0.2);
   border-radius: var(--radius-md);
   padding: 16px;
   display: flex;
@@ -616,13 +633,13 @@ input, textarea, select {
   transition: var(--transition-smooth);
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.4);
 }
 
 .staff-card:hover {
-  background: rgba(18, 24, 40, 0.7);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.35);
+  background: rgba(40, 14, 0, 0.9);
+  border-color: rgba(255, 102, 0, 0.4);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.55);
 }
 
 .staff-card-header {
@@ -770,8 +787,9 @@ input, textarea, select {
 }
 
 .dj-deck {
-  background: radial-gradient(circle at top, rgba(20, 25, 45, 0.65), rgba(8, 10, 18, 0.95));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* P1.3 — warm dark Walrus invece di cyber-glassmorphism blu */
+  background: radial-gradient(circle at top, rgba(40, 15, 0, 0.90), rgba(12, 4, 0, 0.98));
+  border: 1px solid rgba(255, 102, 0, 0.25);
   border-radius: var(--radius-lg);
   padding: 30px 25px;
   display: flex;

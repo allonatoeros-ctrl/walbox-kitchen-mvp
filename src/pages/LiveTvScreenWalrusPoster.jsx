@@ -1,10 +1,17 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   MOOD_EMOJIS
 } from "../data/mockData";
 import { useRealtimeRequests } from "../hooks/useSongRequests";
 import { supabase } from "../lib/supabaseClient";
 import "./LiveTvScreenWalrusPoster.css";
+
+// P1.1 — Idle headline rotation copy (tutto italiano)
+const IDLE_HEADLINES = [
+  { main: "STASERA COMANDI TU", sub: "Scansiona il QR al tuo tavolo" },
+  { main: "LA MUSICA LA FAI TU", sub: "Punta il telefono e scegli" },
+  { main: "IL BANCONE ASCOLTA", sub: "Fai la tua richiesta dal tavolo" },
+];
 
 // Playback is considered stale (staff device offline / Spotify closed) if
 // playback_state hasn't been updated in this many ms — avoids showing a
@@ -17,6 +24,8 @@ export default function LiveTvScreenWalrusPoster() {
   const [now, setNow] = useState(() => Date.now());
   const [showTakeover, setShowTakeover] = useState(false);
   const [takeoverRequest, setTakeoverRequest] = useState(null);
+  // P1.1 — Idle headline rotation
+  const [idleHeadlineIdx, setIdleHeadlineIdx] = useState(0);
 
   const [tvReaction, setTvReaction] = useState(() => {
     try {
@@ -155,9 +164,18 @@ export default function LiveTvScreenWalrusPoster() {
     prevSongIdRef.current = uri;
     setTakeoverRequest(currentRequest || null);
     setShowTakeover(true);
-    const timer = setTimeout(() => setShowTakeover(false), 4000);
+    // P1.6 — Takeover durata estesa a 7s per leggibilità in locale rumoroso
+    const timer = setTimeout(() => setShowTakeover(false), 7000);
     return () => clearTimeout(timer);
   }, [remotePlayback?.spotify_track_uri, currentRequest]);
+
+  // P1.1 — Idle headline rotation: cambia ogni 6s
+  useEffect(() => {
+    const t = setInterval(() => {
+      setIdleHeadlineIdx((prev) => (prev + 1) % IDLE_HEADLINES.length);
+    }, 6000);
+    return () => clearInterval(t);
+  }, []);
   const approvedQueue = requests.filter((r) => r.status === "approved");
 
   const fallbackQueue = [
@@ -179,7 +197,8 @@ export default function LiveTvScreenWalrusPoster() {
 
   const tickerText = tickerDedications.length > 0
     ? tickerDedications.map((r) => `TAVOLO ${r.table} dedica "${r.song.title}" : "${r.dedication}"`).join("  •  ")
-    : "Scegli la musica! Scansiona il QR code al tavolo e richiedi la tua traccia preferita.  •  Benvenuto al Walrus.";
+    // P1.5 — Ticker default in italiano
+    : "Hai fame di musica? Scansiona il QR al tuo tavolo e fai la tua richiesta  •  Benvenuto al Walrus 🦭";
 
   const tableLabel = (t) => isNaN(t) ? String(t) : `TAVOLO ${t}`;
 
@@ -190,9 +209,10 @@ export default function LiveTvScreenWalrusPoster() {
         {tvReaction && (
           <div className="wlp-reaction">
             <div className="wlp-reaction-text">
-              {tvReaction.type === "hype" && "HYPE!"}
-              {tvReaction.type === "party" && "PARTY!"}
-              {tvReaction.type === "cheers" && "CHEERS!"}
+              {/* P1.5 — Reaction copy in italiano / Walrus brand */}
+              {tvReaction.type === "hype" && "STA SALENDO MALE"}
+              {tvReaction.type === "party" && "MI DISSOCIO"}
+              {tvReaction.type === "cheers" && "BRINDISI DEI TRICHECHI"}
             </div>
           </div>
         )}
@@ -203,6 +223,13 @@ export default function LiveTvScreenWalrusPoster() {
             <h1 className="wlp-takeover-title">{takeoverRequest.song.title}</h1>
             <p className="wlp-takeover-artist">{takeoverRequest.song.artist}</p>
             <div className="wlp-takeover-table">TAVOLO {takeoverRequest.table}</div>
+            {/* P1.6 — Dedica visibile nel takeover fullscreen */}
+            {takeoverRequest.dedication && (
+              <div className="wlp-takeover-dedic">
+                &ldquo;{takeoverRequest.dedication}&rdquo;
+              </div>
+            )}
+            <div className="wlp-takeover-brand">DAL BANCONE CON AMORE 🦭</div>
           </div>
         )}
 
@@ -277,13 +304,19 @@ export default function LiveTvScreenWalrusPoster() {
                 </div>
               </div>
             ) : (
+              // P1.1 — Idle con headline rotation in italiano e opacity piena
               <div className="wlp-idle">
-                <h1 className="wlp-title" style={{ fontSize: "clamp(56px,9.5vh,125px)", textAlign: "center" }}>
-                  NO SIGNAL
+                <h1
+                  key={idleHeadlineIdx}
+                  className="wlp-title wlp-idle-headline"
+                  style={{ fontSize: "clamp(48px,8.5vh,120px)", textAlign: "center", color: "#FFD700" }}
+                >
+                  {IDLE_HEADLINES[idleHeadlineIdx].main}
                 </h1>
-                <h2 className="wlp-artist" style={{ fontSize: "clamp(20px,3.2vh,42px)" }}>
-                  SCAN THE QR TO PLAY
+                <h2 className="wlp-idle-sub">
+                  {IDLE_HEADLINES[idleHeadlineIdx].sub}
                 </h2>
+                <div className="wlp-idle-cta">PUNTA · SCANSIONA · SCEGLI</div>
               </div>
             )}
           </div>
@@ -294,6 +327,8 @@ export default function LiveTvScreenWalrusPoster() {
               alt="Scan QR"
               className="wlp-qr-card"
             />
+            {/* P1.2 — Label QR leggibile in Impact giallo, sempre visibile */}
+            <div className="wlp-qr-label">PUNTA · SCANSIONA · SCEGLI</div>
             <img
               src="/assets/tv-poster/03-sidebar/krombacher-card.png"
               alt="Krombacher"
@@ -327,7 +362,8 @@ export default function LiveTvScreenWalrusPoster() {
             </div>
             <div className="wlp-time-row">
               {playbackStale ? (
-                <span>In attesa del brano…</span>
+                // P1.5 — Copy stale in italiano
+                <span>Il bancone sta scegliendo...</span>
               ) : (
                 <>
                   <span>{formatTime(playback.progress)}</span>

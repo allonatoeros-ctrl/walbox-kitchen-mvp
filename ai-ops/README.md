@@ -2,6 +2,10 @@
 
 > Questo è il bus operativo del progetto. Tutto lo stato dei task passa da qui.
 > Repo: walbox-from-zero-v2 · Stack: React/Vite
+>
+> `ai-ops/` è la cartella ufficiale della AI Business Factory di Walbox — non crearne un'altra (es. `factory/`) altrove nel repo.
+> `ai-ops/tickets/` è il factory run log: ogni ticket è il record completo di un run (Research→Audit→Plan→Gate 1→Act→Verify→Quality Gate→Diff Risk→Gate 2).
+> Il routing degli agenti/subagenti **non va duplicato qui**: vive in `CLAUDE.md` §2 (unica fonte di verità).
 
 ---
 
@@ -84,3 +88,10 @@ Riassunto: default read-only · solo file in scope · no auth/db/env/deploy · o
 - **Gate 2 — Commit:** Eros legge Verify + Diff Risk e spunta `[ ] Pronto al commit`.
 
 Niente va in produzione senza questi due gate.
+
+---
+
+## Nota — Security Policy
+
+Una `SECURITY_POLICY.md` dedicata (audit sicurezza/anti-abuso pre-deploy pubblico) non esiste ancora qui.
+Sarà un micro-task separato, condotto con l'agente `walbox-hardening` (vedi CLAUDE.md §2), non un'estensione di questo README.
