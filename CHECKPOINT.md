@@ -20,6 +20,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - **QA serata walbox-qa-serata (2026-07-05): PASS WITH RISKS.** Flusso QR→richiesta→staff→coda verificato in locale con 2 client concorrenti su Supabase reale, nessun bug bloccante sul percorso principale. Non verificato: add-to-queue/now-playing con account Spotify Premium reale e device fisico. Bug trovato e fixato lo stesso giorno: approvazione di un brano senza `spotify_uri` (fallback MOCK_SONGS) non avvisava lo staff — vedi OPEN ISSUES per il fix.
 
 ## STABLE — non toccare senza approvazione
+- **Checkpoint locale salvato (2026-07-05): commit `2f06353` "chore: save ai-ops factory and walbox visual updates"** — contiene ai-ops AI Factory alignment, SECURITY_POLICY.md, reports/knowledge placeholders, modifiche visual/app Walbox, FABLE_WALBOX_CREATIVE_DIRECTION_PACK. Non pushato (vedi OPEN ISSUES).
 - src/hooks/useKitchenOrders.js, useKitchenMenu.js — dual-write Supabase+localStorage
 - src/lib/supabaseClient.js / supabaseAuth.js
 - src/pages/KitchenStaffDashboard.jsx, CustomerKitchenMenu.jsx, CustomerOrderStatus.jsx
@@ -33,6 +34,8 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - Kitchen (dashboard, hooks, e2e sopra) — stabile, fuori scope track Jukebox attuale
 
 ## OPEN ISSUES
+- **RISK (2026-07-05): branch `main` è 9 commit avanti rispetto a `origin/main`, push non ancora eseguito.** Serve approvazione esplicita di Eros prima di fare push.
+- FABLE_WALBOX_CREATIVE_DIRECTION_PACK (introdotto nel commit `2f06353`): tracked but not active — non è la priorità corrente, non cambia il NEXT STEP finché Eros non lo attiva esplicitamente.
 - Fix "Sposta Su/Giù" in coda staff rimandato (menzionato in commit 553a86e, da verificare stato)
 - Copertura E2E Jukebox parziale: oltre ai 17+4 Playwright Kitchen esistono `smoke.spec.js` e `spotify-search-ui.spec.js` (entry + ricerca/UI Jukebox, 25/25 PASS totali), ma manca ancora E2E reale su approvazione/coda/now-playing con Spotify Premium reale
 - FIX APPLICATO (2026-07-05): `StaffDashboard.jsx` → `handleApprove` ora mostra warning esplicito quando il brano approvato non ha `spotify_uri` (non entrerà mai in coda Spotify automaticamente)
