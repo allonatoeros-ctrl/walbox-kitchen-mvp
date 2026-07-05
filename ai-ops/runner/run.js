@@ -9,6 +9,7 @@
  *
  * Uso:
  *   node ai-ops/runner/run.js "Verifica TV Poster sync"
+ *   node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run
  *
  * Fonti di verità (referenziate, mai duplicate):
  *   - CLAUDE.md §2 (routing agenti), §5 (aree protette), §15 (report)
@@ -22,6 +23,11 @@
  * sintetico (STABLE / DONE / OPEN ISSUES / NEXT STEP) nel ticket generato.
  * Non scrive mai su CHECKPOINT.md (SECURITY_POLICY.md regola 8). Se il file
  * non esiste, il ticket riporta "CHECKPOINT.md not found" invece di crashare.
+ *
+ * V1.2-F: aggiunto flag --dry-run (nessuna scrittura in ai-ops/tickets/, solo
+ * riepilogo a console) e corretta la precedenza dell'executor: coding /
+ * coding-plan / design vincono su qa quando entrambe le categorie sono
+ * presenti nello stesso task (prima vinceva sempre qa).
  */
 
 import fs from 'node:fs';
@@ -50,7 +56,14 @@ const CATEGORY_RULES = {
   ],
   product: [
     'roadmap', 'priorità', 'priorita', 'monetizzazione', 'prodotto',
-    'strategia', 'sprint', 'backlog', 'vision', 'pricing',
+    'strategia', 'sprint', 'backlog', 'vision', 'pricing', 'shuffle night',
+    'checklist', 'pilota',
+  ],
+  'coding-plan': [
+    'piano', 'plan', 'prepara piano', 'micro-task', 'spec',
+  ],
+  checkpoint: [
+    'checkpoint',
   ],
   coding: [
     'fix', 'fixa', 'bug', 'implementa', 'codice', 'refactor', 'hook',
@@ -59,10 +72,20 @@ const CATEGORY_RULES = {
   qa: [
     'verifica', 'verificare', 'test', 'testa', 'qa', 'stabile', 'controlla',
     'collauda', 'e2e', 'regressione', 'smoke', 'sync', 'stress',
+    'shuffle night', 'checklist', 'pilota',
   ],
   design: [
     'visual', 'layout', 'ui', 'poster', 'design', 'grafica', 'stile',
     'css', 'estetica', 'tv', 'schermo', 'mobile',
+  ],
+  tv: [
+    'tv', 'poster', 'tv-poster', 'live tv', 'schermo',
+  ],
+  spotify: [
+    'spotify',
+  ],
+  supabase: [
+    'supabase',
   ],
   docs: [
     'readme', 'documenta', 'documentazione', 'fonte', 'fonti', 'markdown',
@@ -86,11 +109,44 @@ const HIGH_RISK_KEYWORDS = [
   'produzione', 'package.json', 'migrazione', 'rls',
 ];
 
+// Sottoinsieme di HIGH_RISK_KEYWORDS che resta sempre high a prescindere dal
+// verbo: sono azioni intrinsecamente di scrittura/rilascio, non hanno una
+// forma "di sola lettura" sensata.
+const ALWAYS_HIGH_KEYWORDS = [
+  'deploy', 'vercel', 'produzione', 'package.json', 'migrazione',
+];
+
+// Verbi che indicano un'azione di scrittura sul task. Se compaiono insieme a
+// una keyword di area protetta, l'escalation resta high; altrimenti (sola
+// lettura/verifica) scende a medium + warning (vedi assessRisk).
+const WRITE_VERBS = [
+  'aggiorna', 'scrivi', 'crea', 'modifica', 'cambia', 'elimina', 'cancella',
+  'installa', 'sovrascrivi', 'sposta', 'rinomina', 'implementa', 'fix',
+  'fixa', 'aggiungi', 'rimuovi',
+];
+
+// Nomi di subagente citabili esplicitamente nel task raw. Se uno solo compare
+// nel testo, vince sull'esecutore calcolato dalla cascata (tranne risk
+// high/deploy). Lista sincronizzata a mano con CLAUDE.md §2.
+const EXPLICIT_AGENTS = [
+  'walbox-dev', 'walbox-qa-serata', 'walbox-hardening', 'walbox-product-owner',
+];
+
+// Categorie che indicano un dominio protetto (TV/Spotify/Supabase) senza
+// dire di per sé cosa farci: usate solo per il warning "dominio senza azione".
+const DOMAIN_ONLY_CATEGORIES = ['tv', 'spotify', 'supabase'];
+const ACTION_CATEGORIES = ['coding', 'coding-plan', 'qa', 'security', 'deploy'];
+
 const RISK_BY_CATEGORY = {
   research: 'low',
   product: 'low',
   design: 'low',
   docs: 'low',
+  'coding-plan': 'low',
+  checkpoint: 'low',
+  tv: 'low',
+  spotify: 'low',
+  supabase: 'low',
   coding: 'medium',
   qa: 'medium',
   deploy: 'high',
@@ -133,6 +189,57 @@ function matchesKeyword(normalizedText, keyword) {
   return re.test(normalizedText);
 }
 
+// Trigger che precedono un riferimento a docs/ o .md nel task raw.
+// docs-as-source: il file è materiale di partenza (non assegna categoria docs).
+// docs-as-target: il file è ciò che va scritto/modificato.
+const DOC_SOURCE_TRIGGERS = ['basato su', 'leggendo', 'da', 'secondo', 'usando'];
+const DOC_TARGET_TRIGGERS = ['aggiorna', 'scrivi', 'crea', 'documenta', 'modifica'];
+const DOC_PATH_PATTERN = /(docs\/|\.md\b)/;
+
+function findLastTriggerIndex(text, triggers) {
+  let best = -1;
+  for (const trigger of triggers) {
+    const kw = normalize(trigger);
+    let idx;
+    if (kw.includes(' ')) {
+      idx = text.lastIndexOf(kw);
+    } else {
+      const re = new RegExp(`(^|[^a-z0-9])${kw}([^a-z0-9]|$)`, 'g');
+      let m;
+      idx = -1;
+      while ((m = re.exec(text)) !== null) {
+        idx = m.index;
+      }
+    }
+    if (idx > best) best = idx;
+  }
+  return best;
+}
+
+// Determina se un riferimento a docs/*.md nel task è materiale di partenza
+// (docs-as-source) o l'oggetto da scrivere (docs-as-target), guardando le
+// parole che lo precedono. Ritorna null se non c'è nessun riferimento a doc.
+function detectDocRole(rawText) {
+  const text = normalize(rawText);
+  const pathMatch = text.match(DOC_PATH_PATTERN);
+  if (!pathMatch) return null;
+
+  const before = text.slice(0, pathMatch.index);
+  const targetIdx = findLastTriggerIndex(before, DOC_TARGET_TRIGGERS);
+  const sourceIdx = findLastTriggerIndex(before, DOC_SOURCE_TRIGGERS);
+
+  if (targetIdx === -1 && sourceIdx === -1) return null;
+  return targetIdx >= sourceIdx ? 'docs-as-target' : 'docs-as-source';
+}
+
+// Ritorna la lista di nomi di agente citati esplicitamente nel task raw
+// (può essere 0, 1 o più — l'override in recommendExecutor si applica solo
+// se è esattamente 1).
+function detectExplicitAgents(rawTask) {
+  const text = normalize(rawTask);
+  return EXPLICIT_AGENTS.filter((agent) => matchesKeyword(text, agent));
+}
+
 function classify(rawTask) {
   const text = normalize(rawTask);
   const categories = [];
@@ -164,8 +271,17 @@ function assessRisk(rawTask, categories) {
 
   const protectedHits = HIGH_RISK_KEYWORDS.filter((kw) => matchesKeyword(text, kw));
   if (protectedHits.length > 0) {
-    risk = 'high';
-    reasons.push(`keyword area protetta: ${protectedHits.join(', ')} (CLAUDE.md §5)`);
+    const alwaysHigh = protectedHits.some((kw) => ALWAYS_HIGH_KEYWORDS.includes(kw));
+    const hasWriteVerb = WRITE_VERBS.some((v) => matchesKeyword(text, v));
+    if (alwaysHigh || hasWriteVerb) {
+      risk = 'high';
+      reasons.push(`keyword area protetta con azione di scrittura: ${protectedHits.join(', ')} (CLAUDE.md §5)`);
+    } else if (RISK_ORDER.medium > RISK_ORDER[risk]) {
+      risk = 'medium';
+      reasons.push(`keyword area protetta in sola lettura: ${protectedHits.join(', ')} → medium + warning, nessun verbo di scrittura rilevato (CLAUDE.md §5)`);
+    } else {
+      reasons.push(`keyword area protetta in sola lettura: ${protectedHits.join(', ')} → warning, categoria già a rischio ${risk} (CLAUDE.md §5)`);
+    }
   }
 
   if (categories.length === 0) {
@@ -176,7 +292,7 @@ function assessRisk(rawTask, categories) {
   return { risk, reasons };
 }
 
-function recommendExecutor(categories, risk) {
+function recommendExecutor(categories, risk, explicitAgents, docRole) {
   const has = (c) => categories.includes(c);
 
   if (risk === 'high' || has('deploy')) {
@@ -185,22 +301,34 @@ function recommendExecutor(categories, risk) {
       why: 'Rischio high o deploy: nessun esecutore automatico. Eros decide come e se procedere (SECURITY_POLICY.md regole 3, 4, 5, 6).',
     };
   }
+  if (explicitAgents.length === 1) {
+    return {
+      executor: explicitAgents[0],
+      why: `Agente citato esplicitamente nel task → ${explicitAgents[0]}, vedi CLAUDE.md §2.`,
+    };
+  }
   if (has('security')) {
     return {
-      executor: 'Claude QA/hardening',
+      executor: 'walbox-hardening',
       why: 'Task di sicurezza → agente walbox-hardening (read-only), vedi CLAUDE.md §2.',
+    };
+  }
+  if (has('coding') || has('coding-plan') || has('design')) {
+    return {
+      executor: 'walbox-dev',
+      why: 'Task di implementazione/piano/visual sul repo → agente walbox-dev (o Antigravity se visual-browser, vedi CLAUDE.md §2), sempre dopo Gate 1. Vince su qa quando entrambe le categorie sono presenti nello stesso task (V1.2-F).',
     };
   }
   if (has('qa')) {
     return {
-      executor: 'Claude QA/hardening',
-      why: 'Task di verifica/collaudo → agente walbox-qa-serata o QA read-only, vedi CLAUDE.md §2.',
+      executor: 'walbox-qa-serata',
+      why: 'Task di verifica/collaudo → agente walbox-qa-serata, vedi CLAUDE.md §2. Si applica solo se non è presente anche coding/coding-plan/design, che vince (V1.2-F).',
     };
   }
-  if (has('coding') || has('design')) {
+  if (has('checkpoint') || docRole === 'docs-as-target') {
     return {
-      executor: 'Claude Code execution',
-      why: 'Task di implementazione/visual sul repo → Claude Code (o Antigravity se visual-browser, vedi CLAUDE.md §2), sempre dopo Gate 1.',
+      executor: 'docs/checkpoint operator',
+      why: 'Aggiornamento CHECKPOINT.md o documento da scrivere → operatore docs/checkpoint, patch suggerita non diretta (SECURITY_POLICY.md regola 8).',
     };
   }
   if (has('research') || has('product') || has('docs')) {
@@ -213,6 +341,51 @@ function recommendExecutor(categories, risk) {
     executor: 'manual approval required',
     why: 'Categoria non riconosciuta dal classificatore V1: serve triage umano di Eros.',
   };
+}
+
+// Confidence e warning[] sono deterministici: nessun punteggio "morbido",
+// solo condizioni esplicite (V1.2-B).
+function buildWarnings({ categories, docRole, explicitAgents, executor }) {
+  const warnings = [];
+
+  if (categories.length > 1) {
+    warnings.push(
+      `segnali misti: più categorie rilevate insieme (${categories.join(', ')}) — verificare che il classificatore non abbia sovrastimato`,
+    );
+  }
+  if (docRole === 'docs-as-source') {
+    warnings.push(
+      'riferimento a doc rilevato come docs-as-source (materiale di partenza, non oggetto della modifica)',
+    );
+  }
+  if (explicitAgents.length === 1 && executor !== explicitAgents[0]) {
+    warnings.push(
+      `agente esplicito "${explicitAgents[0]}" citato nel task ma executor calcolato è "${executor}" (probabile override per risk high/deploy)`,
+    );
+  }
+  if (explicitAgents.length > 1) {
+    warnings.push(
+      `più agenti espliciti citati nel task (${explicitAgents.join(', ')}): nessun override automatico, serve triage umano`,
+    );
+  }
+  const hasDomainOnly =
+    categories.some((c) => DOMAIN_ONLY_CATEGORIES.includes(c)) &&
+    !categories.some((c) => ACTION_CATEGORIES.includes(c));
+  if (hasDomainOnly) {
+    warnings.push(
+      'dominio protetto citato (tv/spotify/supabase) senza categoria di azione chiara — verificare intento del task',
+    );
+  }
+
+  return warnings;
+}
+
+function computeConfidence(categories, warnings) {
+  let level = categories.length === 0 ? 'low' : categories.length === 1 ? 'high' : 'medium';
+  if (warnings.length > 0 && RISK_ORDER[level] > RISK_ORDER.medium) {
+    level = 'medium';
+  }
+  return level;
 }
 
 function requiresApproval(categories, risk) {
@@ -235,12 +408,12 @@ function buildScope(categories) {
   ];
   const outOfScope = [];
 
-  if (has('research') || has('product') || has('docs')) {
+  if (has('research') || has('product') || has('docs') || has('checkpoint')) {
     allowed.push('ai-ops/ (ticket, report, knowledge)');
     allowed.push('docs/ solo se esplicitamente approvato nel plan');
     outOfScope.push('codice app (src/)');
   }
-  if (has('coding') || has('design')) {
+  if (has('coding') || has('coding-plan') || has('design')) {
     allowed.push('SOLO i file src/ elencati e approvati nel Plan (Gate 1) — preferire 1 file');
     outOfScope.push('refactor non richiesti, file non elencati nel Plan');
   }
@@ -265,11 +438,11 @@ function buildQualityGate(categories) {
   const has = (c) => categories.includes(c);
   const checks = [];
 
-  if (has('research') || has('product') || has('docs') || categories.length === 0) {
+  if (has('research') || has('product') || has('docs') || has('checkpoint') || categories.length === 0) {
     checks.push('git diff --stat ai-ops/   # run docs/ai-ops only');
     checks.push('git status --short ai-ops/   # include file nuovi non tracciati');
   }
-  if (has('coding') || has('design')) {
+  if (has('coding') || has('coding-plan') || has('design')) {
     checks.push('npm run build   # solo se il run tocca davvero codice app');
     checks.push('git diff --stat   # verificare che compaiano SOLO i file approvati');
   }
@@ -371,19 +544,32 @@ function uniqueTicketPath(date, slug) {
 // ---------------------------------------------------------------------------
 
 function main() {
-  const rawTask = process.argv.slice(2).join(' ').trim();
+  const argv = process.argv.slice(2);
+  const dryRun = argv.includes('--dry-run');
+  const rawTask = argv.filter((a) => a !== '--dry-run').join(' ').trim();
 
   if (!rawTask) {
-    console.error('Uso: node ai-ops/runner/run.js "<task raw>"');
-    console.error('Esempio: node ai-ops/runner/run.js "Verifica TV Poster sync"');
+    console.error('Uso: node ai-ops/runner/run.js "<task raw>" [--dry-run]');
+    console.error('Esempio: node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run');
     process.exit(1);
   }
 
   const date = todayISO();
   const slug = slugify(rawTask);
   const { categories, matchedKeywords } = classify(rawTask);
+  const docRole = detectDocRole(rawTask);
+  if (docRole === 'docs-as-source') {
+    const docsIdx = categories.indexOf('docs');
+    if (docsIdx !== -1) {
+      categories.splice(docsIdx, 1);
+      delete matchedKeywords.docs;
+    }
+  }
   const { risk, reasons: riskReasons } = assessRisk(rawTask, categories);
-  const { executor, why: routingWhy } = recommendExecutor(categories, risk);
+  const explicitAgents = detectExplicitAgents(rawTask);
+  const { executor, why: routingWhy } = recommendExecutor(categories, risk, explicitAgents, docRole);
+  const warnings = buildWarnings({ categories, docRole, explicitAgents, executor });
+  const confidence = computeConfidence(categories, warnings);
   const approval = requiresApproval(categories, risk);
   const scope = buildScope(categories);
   const qualityGate = buildQualityGate(categories);
@@ -404,6 +590,9 @@ function main() {
     QUALITY_GATE: bulletList(qualityGate),
   });
 
+  const warningsBlock = warnings.length > 0 ? `- Warnings:\n${bulletList(warnings, '  ')}` : '';
+  const docRoleLine = docRole ? `- Doc role: ${docRole}` : '';
+
   const ticket = renderTemplate(path.join(TEMPLATES_DIR, 'ticket_template.md'), {
     TITLE: rawTask,
     RAW_TASK: rawTask,
@@ -414,6 +603,9 @@ function main() {
     RISK: risk,
     RISK_REASONS: bulletList(riskReasons),
     EXECUTOR: executor,
+    CONFIDENCE: confidence,
+    WARNINGS_BLOCK: warningsBlock,
+    DOC_ROLE_LINE: docRoleLine,
     ROUTING_WHY: routingWhy,
     REQUIRES_APPROVAL: approval,
     SCOPE_ALLOWED: bulletList(scope.allowed),
@@ -427,20 +619,35 @@ function main() {
     CHECKPOINT_NEXT_STEP: indentLines(checkpointSnapshot.nextStep, '  '),
   });
 
-  if (!fs.existsSync(TICKETS_DIR)) {
-    fs.mkdirSync(TICKETS_DIR, { recursive: true });
+  let relPath = null;
+  if (!dryRun) {
+    if (!fs.existsSync(TICKETS_DIR)) {
+      fs.mkdirSync(TICKETS_DIR, { recursive: true });
+    }
+    const ticketPath = uniqueTicketPath(date, slug);
+    fs.writeFileSync(ticketPath, ticket, 'utf8');
+    relPath = path.relative(process.cwd(), ticketPath);
   }
 
-  const ticketPath = uniqueTicketPath(date, slug);
-  fs.writeFileSync(ticketPath, ticket, 'utf8');
-
-  const relPath = path.relative(process.cwd(), ticketPath);
-  console.log('AI FACTORY RUNNER V1 — ticket generato');
+  console.log(
+    dryRun
+      ? 'AI FACTORY RUNNER V1.2 — dry-run (nessun ticket scritto su disco)'
+      : 'AI FACTORY RUNNER V1.2 — ticket generato',
+  );
   console.log(`  Task:       ${rawTask}`);
   console.log(`  Categorie:  ${categoriesLabel}`);
   console.log(`  Rischio:    ${risk}`);
   console.log(`  Executor:   ${executor}`);
-  console.log(`  Ticket:     ${relPath}`);
+  console.log(`  Confidence: ${confidence}`);
+  if (warnings.length > 0) {
+    console.log(`  Warnings:   ${warnings.length}`);
+  }
+  if (docRole) {
+    console.log(`  Doc role:   ${docRole}`);
+  }
+  if (!dryRun) {
+    console.log(`  Ticket:     ${relPath}`);
+  }
 }
 
 main();

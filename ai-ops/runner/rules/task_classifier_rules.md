@@ -90,8 +90,8 @@ V1.2 introduce un'**escalation condizionale** (in precedenza sempre `high`):
 1. rischio `high` **o** categoria `deploy` → **manual approval required** (nessun esecutore automatico, SECURITY_POLICY.md regole 3-6)
 2. esattamente **un** agente citato esplicitamente nel task (`EXPLICIT_AGENTS`: `walbox-dev`, `walbox-qa-serata`, `walbox-hardening`, `walbox-product-owner`) → **quell'agente**, a meno che il punto 1 non l'abbia già deciso
 3. `security` → **walbox-hardening**
-4. `qa` → **walbox-qa-serata** — **vince su `coding`/`coding-plan`/`design` se presenti insieme** (l'ordine dei controlli in `recommendExecutor` valuta `qa` prima; un task con categorie `coding, qa` va comunque a walbox-qa-serata, non a walbox-dev)
-5. `coding` o `coding-plan` o `design` (e nessuna `qa`) → **walbox-dev**
+4. `coding` o `coding-plan` o `design` → **walbox-dev** — **vince su `qa` se presenti insieme** (V1.2-F: l'ordine dei controlli in `recommendExecutor` valuta coding/coding-plan/design prima di qa; un task con categorie `coding, qa` va a walbox-dev, non a walbox-qa-serata. Prima di V1.2-F valeva il contrario — vedi Caso F nel golden set)
+5. `qa` (e nessuna delle categorie sopra) → **walbox-qa-serata**
 6. `checkpoint` **o** doc role `docs-as-target` → **docs/checkpoint operator** (patch suggerita, mai scrittura diretta su CHECKPOINT.md — SECURITY_POLICY.md regola 8)
 7. `research` / `product` / `docs` (nessuna delle categorie sopra) → **ChatGPT research/product/review**
 8. nessuna categoria riconosciuta (`unclassified`) → **manual approval required**, triage umano
@@ -116,21 +116,36 @@ Ogni run calcola due campi aggiuntivi, riportati nel ticket sezione 2:
 
 ## Dry-run mode
 
-**Non implementato.** `run.js` non ha nessun flag `--dry-run` (verificato via grep su `run.js`/README/questo file): ogni esecuzione scrive sempre un ticket in `ai-ops/tickets/`. È stato richiesto da Eros dopo i test di V1.2-A per evitare di dover cancellare manualmente i ticket dei golden case, ma resta fuori scope per ogni fase V1.2-A→E già approvata (tutte limitavano le modifiche a file che non includono questa feature in `run.js`). Se Eros vuole aggiungerlo, serve un ticket dedicato che tocchi `run.js` (fuori scope per questo fix documentale, che modifica solo `rules/task_classifier_rules.md`).
+**Implementato in V1.2-F.** Flag `--dry-run` (in qualsiasi posizione tra gli argomenti):
+`run.js` esegue l'intera classificazione/routing come sempre, ma **non crea la
+cartella `ai-ops/tickets/` né scrive alcun file** — stampa solo il riepilogo a
+console (task, categorie, rischio, executor, confidence, warnings, doc role).
+Il flag viene rimosso dagli argomenti prima di ricostruire `rawTask`, quindi
+non entra nel testo classificato né nello slug. Uso:
 
-## Golden set regressione (V1.2-C)
+```bash
+node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run
+```
 
-5 task di riferimento eseguiti manualmente il 2026-07-05 con `node ai-ops/runner/run.js "<task>"` dopo V1.2-A/B, per verificare che l'hardening non abbia rotto i casi noti. Tutti PASS.
+Richiesto da Eros dopo i test di V1.2-A per validare il classificatore
+(inclusi i golden case) senza dover cancellare manualmente i ticket generati.
+
+## Golden set regressione (V1.2-C, esteso in V1.2-F)
+
+6 task di riferimento, tutti rieseguiti in `--dry-run` il 2026-07-05 dopo il
+fix di precedenza executor V1.2-F (coding/coding-plan/design vince su qa).
+Tutti PASS, nessuna regressione sui Casi A-E rispetto a V1.2-C.
 
 | Caso | Task raw | Categorie | Risk | Executor | Confidence | Note |
 |---|---|---|---|---|---|---|
-| A | Prepara piano walbox-dev basato su docs/PILOT_NIGHT_CHECKLIST.md | product, coding-plan, qa | medium | walbox-dev | medium (2 warning) | doc role docs-as-source; fix del bug V1.1 (prima classificato solo `docs`) |
+| A | Prepara piano walbox-dev basato su docs/PILOT_NIGHT_CHECKLIST.md | product, coding-plan, qa | medium | walbox-dev | medium (2 warning) | doc role docs-as-source; invariato: già vinceva walbox-dev per agente esplicito citato nel testo |
 | B | Fix TV Poster preview | coding, design, tv | medium | walbox-dev | medium (1 warning) | categorie multiple attese (design+tv si sovrappongono di proposito) |
 | C | Aggiorna CHECKPOINT dopo S1 | checkpoint | low | docs/checkpoint operator | high (0 warning) | categoria singola, nessuna ambiguità |
-| D | Verifica Supabase realtime con 2 client | qa, supabase | medium | walbox-qa-serata | medium (1 warning) | escalation condizionale V1.2-A: sola lettura → medium, non high |
+| D | Verifica Supabase realtime con 2 client | qa, supabase | medium | walbox-qa-serata | medium (1 warning) | escalation condizionale V1.2-A: sola lettura → medium, non high; nessuna categoria coding presente → qa vince correttamente |
 | E | Studia benchmark social jukebox | research | low | ChatGPT research/product/review | high (0 warning) | invariato rispetto al V1.1 |
+| F | Fix e verifica TV Poster preview bloccata dopo cambio traccia | coding, qa, design, tv | medium | walbox-dev | medium (1 warning) | **caso di regressione mirato per V1.2-F**: coding+qa senza agente esplicito — prima del fix vinceva walbox-qa-serata, ora vince walbox-dev |
 
-Se un futuro run su questi 5 task raw produce un output diverso, è una regressione: fermarsi e riportare, non correggere inline il classificatore senza revisione.
+Se un futuro run su questi 6 task raw produce un output diverso, è una regressione: fermarsi e riportare, non correggere inline il classificatore senza revisione.
 
 ## Limiti noti del V1
 

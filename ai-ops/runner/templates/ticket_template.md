@@ -13,6 +13,9 @@
 - Risk level: {{RISK}}
 {{RISK_REASONS}}
 - Recommended executor: {{EXECUTOR}}
+- Confidence: {{CONFIDENCE}}
+{{WARNINGS_BLOCK}}
+{{DOC_ROLE_LINE}}
 - Requires approval: {{REQUIRES_APPROVAL}}
 
 ## 3. Project state snapshot from CHECKPOINT.md
