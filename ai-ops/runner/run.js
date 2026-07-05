@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * ai-factory-runner V1 — Walbox AI Business Factory
+ * ai-factory-runner V1.1 — Walbox AI Business Factory
  *
  * Genera un ticket/run log in ai-ops/tickets/ a partire da un task raw.
  * Locale, zero dipendenze esterne, nessuna API, nessun LLM.
@@ -17,6 +17,11 @@
  *
  * Le regole di classificazione sono documentate in rules/task_classifier_rules.md.
  * Se modifichi le keyword qui sotto, aggiorna anche quel file (e viceversa).
+ *
+ * V1.1: legge CHECKPOINT.md in modalità read-only ed estrae uno snapshot
+ * sintetico (STABLE / DONE / OPEN ISSUES / NEXT STEP) nel ticket generato.
+ * Non scrive mai su CHECKPOINT.md (SECURITY_POLICY.md regola 8). Se il file
+ * non esiste, il ticket riporta "CHECKPOINT.md not found" invece di crashare.
  */
 
 import fs from 'node:fs';
@@ -26,8 +31,11 @@ import { fileURLToPath } from 'node:url';
 // Il repo ha "type": "module" in package.json: questo file è ESM.
 const RUNNER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const AI_OPS_DIR = path.resolve(RUNNER_DIR, '..');
+const REPO_ROOT = path.resolve(AI_OPS_DIR, '..');
 const TICKETS_DIR = path.join(AI_OPS_DIR, 'tickets');
 const TEMPLATES_DIR = path.join(RUNNER_DIR, 'templates');
+const CHECKPOINT_PATH = path.join(REPO_ROOT, 'CHECKPOINT.md');
+const CHECKPOINT_SECTION_MAX_LINES = 6;
 
 // ---------------------------------------------------------------------------
 // Regole di classificazione (keyword locali, match per parola intera;
@@ -287,6 +295,67 @@ function bulletList(items, indent = '') {
   return items.map((i) => `${indent}- ${i}`).join('\n');
 }
 
+// Le righe estratte da CHECKPOINT.md hanno spesso già un "- " proprio (bullet
+// markdown originali): le indentiamo senza aggiungerne un secondo.
+function indentLines(items, indent = '') {
+  return items.map((i) => `${indent}${i}`).join('\n');
+}
+
+// ---------------------------------------------------------------------------
+// CHECKPOINT.md snapshot (read-only, parsing semplice, no dipendenze)
+// ---------------------------------------------------------------------------
+
+function extractMarkdownSections(content) {
+  const headingRegex = /^##\s+(.+)$/;
+  const sections = [];
+  let current = null;
+  for (const line of content.split('\n')) {
+    const match = line.match(headingRegex);
+    if (match) {
+      current = { title: match[1].trim(), body: [] };
+      sections.push(current);
+    } else if (current) {
+      current.body.push(line);
+    }
+  }
+  return sections;
+}
+
+function findSectionByKeyword(sections, keyword) {
+  const kw = keyword.toLowerCase();
+  return sections.find((s) => s.title.toLowerCase().startsWith(kw));
+}
+
+function summarizeSection(section, maxLines = CHECKPOINT_SECTION_MAX_LINES) {
+  if (!section) return ['(sezione non trovata in CHECKPOINT.md)'];
+  const nonEmpty = section.body.map((l) => l.trim()).filter((l) => l.length > 0);
+  if (nonEmpty.length === 0) return ['(sezione vuota in CHECKPOINT.md)'];
+  const truncated = nonEmpty.slice(0, maxLines);
+  if (nonEmpty.length > maxLines) {
+    truncated.push(`... (${nonEmpty.length - maxLines} righe omesse, vedi CHECKPOINT.md)`);
+  }
+  return truncated;
+}
+
+// Lettura read-only: nessuna scrittura, nessun crash se il file manca
+// (SECURITY_POLICY.md regola 8 — CHECKPOINT.md mai modificato dal router).
+function readCheckpointSnapshot() {
+  let content;
+  try {
+    content = fs.readFileSync(CHECKPOINT_PATH, 'utf8');
+  } catch {
+    const notFound = ['CHECKPOINT.md not found'];
+    return { stable: notFound, done: notFound, openIssues: notFound, nextStep: notFound };
+  }
+  const sections = extractMarkdownSections(content);
+  return {
+    stable: summarizeSection(findSectionByKeyword(sections, 'STABLE')),
+    done: summarizeSection(findSectionByKeyword(sections, 'DONE')),
+    openIssues: summarizeSection(findSectionByKeyword(sections, 'OPEN ISSUES')),
+    nextStep: summarizeSection(findSectionByKeyword(sections, 'NEXT STEP')),
+  };
+}
+
 function uniqueTicketPath(date, slug) {
   let candidate = path.join(TICKETS_DIR, `${date}_${slug}.md`);
   let n = 2;
@@ -318,6 +387,7 @@ function main() {
   const approval = requiresApproval(categories, risk);
   const scope = buildScope(categories);
   const qualityGate = buildQualityGate(categories);
+  const checkpointSnapshot = readCheckpointSnapshot();
 
   const categoriesLabel = categories.length > 0 ? categories.join(', ') : 'unclassified (triage umano)';
   const keywordsLabel =
@@ -351,6 +421,10 @@ function main() {
     SCOPE_OUT: bulletList(scope.outOfScope),
     QUALITY_GATE: bulletList(qualityGate),
     CLAUDE_PROMPT: claudePrompt.trim(),
+    CHECKPOINT_STABLE: indentLines(checkpointSnapshot.stable, '  '),
+    CHECKPOINT_DONE: indentLines(checkpointSnapshot.done, '  '),
+    CHECKPOINT_OPEN_ISSUES: indentLines(checkpointSnapshot.openIssues, '  '),
+    CHECKPOINT_NEXT_STEP: indentLines(checkpointSnapshot.nextStep, '  '),
   });
 
   if (!fs.existsSync(TICKETS_DIR)) {
