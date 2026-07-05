@@ -22,6 +22,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - **Push su origin/main completato (2026-07-05):** 12 commit pendenti pushati con successo (`778e55e..ba55992`) dopo push readiness audit (PUSH OK WITH RISKS) e micro-patch pre-push (build PASS, rename file Fable, nota checkpoint stabilizzata). Branch `main` allineato a `origin/main`, working tree clean.
 - **ai-factory-runner V1.1 (2026-07-05):** aggiunta lettura read-only di `CHECKPOINT.md` con snapshot sintetico (`STABLE` / `DONE` / `OPEN ISSUES` / `NEXT STEP`) incluso in ogni ticket generato nella nuova sezione 3. Zero scritture su `CHECKPOINT.md`, fallback sicuro se il file manca. Demo PASS su task nuovo e su `"Verifica TV Poster sync"`; retrocompatibile con V1.
 - **Shuffle Night Jukebox pilot checklist S1 (2026-07-05):** creato `docs/PILOT_NIGHT_CHECKLIST_JUKEBOX.md` come checklist go/no-go dedicata a Jukebox / Shuffle Night. Copre QR cliente, richiesta brano, Staff Dashboard, Spotify reale, TV Poster, Supabase realtime, fallback staff, test manuale venue e template report finale. Commit locale `7a65193`.
+- **Fix TV Poster preview/takeover bloccata dopo cambio traccia (2026-07-05):** risolta causa root in `LiveTvScreenWalrusPoster.jsx`: l'effect del takeover dipendeva da `currentRequest`, riferimento instabile con update Supabase Realtime, cancellando il timer di ritorno alla live screen. Patch con `currentRequestRef` e dipendenza solo da `remotePlayback?.spotify_track_uri`. `npm run build` PASS. Confermato manualmente da Eros.
 
 ## STABLE — non toccare senza approvazione
 - **Checkpoint locale salvato (2026-07-05): commit `2f06353` "chore: save ai-ops factory and walbox visual updates"** — contiene ai-ops AI Factory alignment, SECURITY_POLICY.md, reports/knowledge placeholders, modifiche visual/app Walbox, FABLE_WALBOX_CREATIVE_DIRECTION_PACK. Non pushato (vedi OPEN ISSUES).
@@ -50,7 +51,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - Kitchen-era memories are archived; see MEMORY.md. Do not use them for the active Jukebox/Shuffle Night track.
 
 ## NEXT STEP
-S3 — eseguire test manuale reale Spotify Premium + device fisico al venue, usando la sezione 11 di `docs/PILOT_NIGHT_CHECKLIST_JUKEBOX.md`, per verificare coda Spotify reale end-to-end, Staff Dashboard e TV Poster.
+S3 core flow reale: confermato funzionante (incluso TV Poster con fix takeover). Prossimo step: completare l'eventuale report finale S3 con la sezione 11 di `docs/PILOT_NIGHT_CHECKLIST_JUKEBOX.md`, oppure decidere se passare a S4 (warning persistente / altro item aperto).
 
 ## RESTART PROMPT
 "Walbox — Kitchen stabile e completa (V1-P6). Track attivo: Jukebox/Spotify reale per Shuffle Night (auto-advance, TV sync, ricerca), 39 commit dal 24/6 al 3/7. Prossimo step: walbox-dev fa piano da PILOT_NIGHT_CHECKLIST.md per chiudere fino a demo-stabile."

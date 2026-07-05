@@ -137,6 +137,12 @@ export default function LiveTvScreenWalrusPoster() {
       )
     : null;
 
+  // Keep a live ref to currentRequest so the takeover effect below can read
+  // its latest value without re-running (and cancelling its hide-timer)
+  // every time `requests` gets an unrelated Realtime update.
+  const currentRequestRef = useRef(currentRequest);
+  useEffect(() => { currentRequestRef.current = currentRequest; }, [currentRequest]);
+
   useEffect(() => {
     if (!tvReaction) return;
     const elapsed = Date.now() - tvReaction.timestamp;
@@ -162,12 +168,12 @@ export default function LiveTvScreenWalrusPoster() {
     if (prevSongIdRef.current === uri) return;
     if (prevSongIdRef.current !== null) songSwitchTimeRef.current = Date.now();
     prevSongIdRef.current = uri;
-    setTakeoverRequest(currentRequest || null);
+    setTakeoverRequest(currentRequestRef.current || null);
     setShowTakeover(true);
     // P1.6 — Takeover durata estesa a 7s per leggibilità in locale rumoroso
     const timer = setTimeout(() => setShowTakeover(false), 7000);
     return () => clearTimeout(timer);
-  }, [remotePlayback?.spotify_track_uri, currentRequest]);
+  }, [remotePlayback?.spotify_track_uri]);
 
   // P1.1 — Idle headline rotation: cambia ogni 6s
   useEffect(() => {
