@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * ai-factory-runner V1.1 — Walbox AI Business Factory
+ * ai-factory-runner V1.3 — Walbox AI Business Factory
  *
  * Genera un ticket/run log in ai-ops/tickets/ a partire da un task raw.
  * Locale, zero dipendenze esterne, nessuna API, nessun LLM.
@@ -28,6 +28,13 @@
  * riepilogo a console) e corretta la precedenza dell'executor: coding /
  * coding-plan / design vincono su qa quando entrambe le categorie sono
  * presenti nello stesso task (prima vinceva sempre qa).
+ *
+ * V1.3-A: nuova funzione pura recommendSkillAndMode() — aggiunge al run i
+ * campi recommended_skill e prompt_mode con cascata a precedenza esplicita
+ * (trigger lessicali diff/context/approval, poi condizioni su categorie,
+ * rischio, docRole e confidence). I campi sono passati al template ticket
+ * (placeholder aggiunti in V1.3-B) e stampati a console. Non tocca
+ * classificazione, rischio o executor esistenti.
  */
 
 import fs from 'node:fs';
@@ -130,6 +137,31 @@ const WRITE_VERBS = [
 // high/deploy). Lista sincronizzata a mano con CLAUDE.md §2.
 const EXPLICIT_AGENTS = [
   'walbox-dev', 'walbox-qa-serata', 'walbox-hardening', 'walbox-product-owner',
+];
+
+// Trigger lessicali V1.3 per recommended_skill / prompt_mode
+// (recommendSkillAndMode). Come le altre keyword: match per parola intera,
+// frasi con spazi cercate come frase contenuta, accenti normalizzati.
+const SKILL_DIFF_TRIGGERS = [
+  'diff', 'review diff', 'rivedi diff', 'diff risk', 'rischi prima del commit',
+  'pre-commit', 'prima del commit', 'valuta rischi', 'git diff',
+];
+const SKILL_CONTEXT_TRIGGERS = [
+  'clear conversation', 'nuova chat', 'ripartiamo puliti', 'contesto sporco',
+  'fonti stale', 'fonti non aggiornate', 'handoff', 'riallinea contesto',
+  'context reset',
+];
+const SKILL_APPROVAL_TRIGGERS = [
+  'approvato', 'già approvato', 'piano approvato', 'procedi con il piano',
+  'procedi con', 'vai con', 'continua da', 'implementa il piano',
+  'fase già approvata',
+];
+const MICRO_FIX_TRIGGERS = [
+  'typo', 'testo', 'label', 'titolo', 'copy', 'micro-fix', 'piccolo fix',
+  'fix piccolo', 'classe css', 'spacing', 'margin', 'padding', 'colore',
+];
+const MICRO_FIX_EXCLUDERS = [
+  'refactor', 'feature', 'implementa', 'piano', 'più file', 'multipli file',
 ];
 
 // Categorie che indicano un dominio protetto (TV/Spotify/Supabase) senza
@@ -340,6 +372,93 @@ function recommendExecutor(categories, risk, explicitAgents, docRole) {
   return {
     executor: 'manual approval required',
     why: 'Categoria non riconosciuta dal classificatore V1: serve triage umano di Eros.',
+  };
+}
+
+// Cascata recommended_skill / prompt_mode (V1.3-A), precedenza dall'alto:
+// prima i trigger lessicali (regole 1-3), poi le condizioni su rischio,
+// categorie, docRole e confidence (regole 4-11). Assunzione approvata sulla
+// regola 5: coding-plan esclude qa/security come coding, coerente con la
+// precedenza executor V1.2-F (un task di piano non è un audit read-only).
+function recommendSkillAndMode(categories, risk, docRole, confidence, rawTask) {
+  const text = normalize(rawTask);
+  const has = (c) => categories.includes(c);
+  const hit = (triggers) => triggers.some((kw) => matchesKeyword(text, kw));
+
+  if (hit(SKILL_DIFF_TRIGGERS)) {
+    return {
+      skill: 'diff-risk-reviewer',
+      promptMode: 'review_prompt',
+      why: 'Trigger diff/rischio/pre-commit nel task → revisione del diff prima del commit (cascata V1.3 regola 1).',
+    };
+  }
+  if (hit(SKILL_CONTEXT_TRIGGERS)) {
+    return {
+      skill: 'context-health-reset',
+      promptMode: 'handoff_prompt',
+      why: 'Trigger di context reset/handoff/fonti stale nel task (cascata V1.3 regola 2).',
+    };
+  }
+  if (hit(SKILL_APPROVAL_TRIGGERS)) {
+    return {
+      skill: 'none',
+      promptMode: 'approval_prompt',
+      why: 'Il task dichiara un piano già approvato: nessuna skill aggiuntiva, si procede su scope approvato (cascata V1.3 regola 3).',
+    };
+  }
+  if (risk === 'high' || has('deploy')) {
+    return {
+      skill: 'none',
+      promptMode: 'approval_prompt',
+      why: 'Rischio high o deploy: serve approvazione esplicita di Eros, nessuna skill automatica (cascata V1.3 regola 4).',
+    };
+  }
+  if ((has('qa') || has('security')) && !has('coding') && !has('coding-plan')) {
+    return {
+      skill: 'quality-gate-verifier',
+      promptMode: 'review_prompt',
+      why: 'QA/audit read-only senza coding/coding-plan → verifica quality gate (cascata V1.3 regola 5).',
+    };
+  }
+  if (has('checkpoint') || docRole === 'docs-as-target') {
+    return {
+      skill: 'none',
+      promptMode: 'checkpoint_prompt',
+      why: 'Aggiornamento checkpoint o doc target → prompt checkpoint, patch suggerita (cascata V1.3 regola 6).',
+    };
+  }
+  if (hit(MICRO_FIX_TRIGGERS) && !hit(MICRO_FIX_EXCLUDERS)) {
+    return {
+      skill: 'none',
+      promptMode: 'micro_fix_prompt',
+      why: 'Trigger di micro-fix localizzato senza segnali multi-file/refactor (cascata V1.3 regola 7).',
+    };
+  }
+  if (has('coding-plan') || (has('coding') && (categories.length > 1 || confidence !== 'high'))) {
+    return {
+      skill: '/phase-plan',
+      promptMode: 'phase_plan_prompt',
+      why: 'Piano esplicito o coding multi-segnale/incerto → spezzare in micro-fasi con /phase-plan (cascata V1.3 regola 8).',
+    };
+  }
+  if (has('coding')) {
+    return {
+      skill: 'none',
+      promptMode: 'micro_fix_prompt',
+      why: 'Coding a categoria singola con confidence high → micro-fix diretto (cascata V1.3 regola 9).',
+    };
+  }
+  if (categories.length === 0) {
+    return {
+      skill: 'context-health-reset',
+      promptMode: 'handoff_prompt',
+      why: 'Task non classificato: contesto incerto, reset/handoff e triage umano (cascata V1.3 regola 10).',
+    };
+  }
+  return {
+    skill: 'none',
+    promptMode: 'handoff_prompt',
+    why: 'Task research/product/docs/design puro: handoff standard, nessuna skill dedicata (cascata V1.3 regola 11).',
   };
 }
 
@@ -570,6 +689,11 @@ function main() {
   const { executor, why: routingWhy } = recommendExecutor(categories, risk, explicitAgents, docRole);
   const warnings = buildWarnings({ categories, docRole, explicitAgents, executor });
   const confidence = computeConfidence(categories, warnings);
+  const {
+    skill: recommendedSkill,
+    promptMode,
+    why: skillWhy,
+  } = recommendSkillAndMode(categories, risk, docRole, confidence, rawTask);
   const approval = requiresApproval(categories, risk);
   const scope = buildScope(categories);
   const qualityGate = buildQualityGate(categories);
@@ -604,6 +728,9 @@ function main() {
     RISK_REASONS: bulletList(riskReasons),
     EXECUTOR: executor,
     CONFIDENCE: confidence,
+    RECOMMENDED_SKILL: recommendedSkill,
+    PROMPT_MODE: promptMode,
+    RECOMMENDED_SKILL_WHY: skillWhy,
     WARNINGS_BLOCK: warningsBlock,
     DOC_ROLE_LINE: docRoleLine,
     ROUTING_WHY: routingWhy,
@@ -631,14 +758,17 @@ function main() {
 
   console.log(
     dryRun
-      ? 'AI FACTORY RUNNER V1.2 — dry-run (nessun ticket scritto su disco)'
-      : 'AI FACTORY RUNNER V1.2 — ticket generato',
+      ? 'AI FACTORY RUNNER V1.3 — dry-run (nessun ticket scritto su disco)'
+      : 'AI FACTORY RUNNER V1.3 — ticket generato',
   );
   console.log(`  Task:       ${rawTask}`);
   console.log(`  Categorie:  ${categoriesLabel}`);
   console.log(`  Rischio:    ${risk}`);
   console.log(`  Executor:   ${executor}`);
   console.log(`  Confidence: ${confidence}`);
+  console.log(`  Recommended skill: ${recommendedSkill}`);
+  console.log(`  Prompt mode:       ${promptMode}`);
+  console.log(`  Skill/mode reason: ${skillWhy}`);
   if (warnings.length > 0) {
     console.log(`  Warnings:   ${warnings.length}`);
   }

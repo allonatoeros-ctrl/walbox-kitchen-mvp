@@ -14,6 +14,9 @@
 {{RISK_REASONS}}
 - Recommended executor: {{EXECUTOR}}
 - Confidence: {{CONFIDENCE}}
+- Recommended skill: {{RECOMMENDED_SKILL}}
+- Prompt mode: {{PROMPT_MODE}}
+- Skill/mode reason: {{RECOMMENDED_SKILL_WHY}}
 {{WARNINGS_BLOCK}}
 {{DOC_ROLE_LINE}}
 - Requires approval: {{REQUIRES_APPROVAL}}

@@ -1,8 +1,10 @@
-# Task Classifier Rules — ai-factory-runner V1.2
+# Task Classifier Rules — ai-factory-runner V1.3
 
 > Documentazione umana delle regole di classificazione implementate in `../run.js`.
 > **Fonte eseguibile: `run.js`** (costanti `CATEGORY_RULES`, `HIGH_RISK_KEYWORDS`,
-> `ALWAYS_HIGH_KEYWORDS`, `WRITE_VERBS`, `RISK_BY_CATEGORY`, funzione `detectDocRole`).
+> `ALWAYS_HIGH_KEYWORDS`, `WRITE_VERBS`, `RISK_BY_CATEGORY`, funzione `detectDocRole`;
+> V1.3: `SKILL_DIFF_TRIGGERS`, `SKILL_CONTEXT_TRIGGERS`, `SKILL_APPROVAL_TRIGGERS`,
+> `MICRO_FIX_TRIGGERS`, `MICRO_FIX_EXCLUDERS`, funzione `recommendSkillAndMode`).
 > Se modifichi le keyword in un posto, aggiorna anche l'altro — la sincronizzazione resta manuale.
 
 ## Come funziona il match
@@ -114,6 +116,92 @@ Ogni run calcola due campi aggiuntivi, riportati nel ticket sezione 2:
   3. **agente esplicito ignorato**: nel task è citato esattamente un agente (`EXPLICIT_AGENTS`) ma l'executor calcolato è diverso (tipicamente perché il rischio è `high`/`deploy` e il punto 1 della cascata ha vinto);
   4. **dominio senza azione**: è presente una categoria di dominio protetto (`tv`, `spotify`, `supabase`) ma nessuna categoria di azione (`coding`, `coding-plan`, `qa`, `security`, `deploy`) — il task nomina un'area sensibile senza dire cosa farci.
 
+## Recommended skill e prompt mode (V1.3, `recommendSkillAndMode` in `run.js`)
+
+Dal V1.3 ogni run calcola due campi aggiuntivi, riportati nel ticket sezione 2
+e a console: **Recommended skill** e **Prompt mode**, con motivazione
+(`Skill/mode reason`). Questi campi sono **puramente additivi**: non influenzano
+categorie, rischio, executor, confidence o warnings — la classificazione V1.2
+resta identica (verificato sul golden set A–F, zero regressioni).
+
+Valori possibili:
+
+- `recommended_skill`: `/phase-plan`, `quality-gate-verifier`, `diff-risk-reviewer`,
+  `context-health-reset`, `none`
+- `prompt_mode`: `handoff_prompt`, `approval_prompt`, `phase_plan_prompt`,
+  `micro_fix_prompt`, `checkpoint_prompt`, `review_prompt`
+
+### Trigger lessicali (stesso match delle altre keyword: parola intera, frasi contenute, accenti normalizzati)
+
+| Costante | Trigger |
+|---|---|
+| `SKILL_DIFF_TRIGGERS` | diff, review diff, rivedi diff, diff risk, rischi prima del commit, pre-commit, prima del commit, valuta rischi, git diff |
+| `SKILL_CONTEXT_TRIGGERS` | clear conversation, nuova chat, ripartiamo puliti, contesto sporco, fonti stale, fonti non aggiornate, handoff, riallinea contesto, context reset |
+| `SKILL_APPROVAL_TRIGGERS` | approvato, già approvato, piano approvato, procedi con il piano, procedi con, vai con, continua da, implementa il piano, fase già approvata |
+| `MICRO_FIX_TRIGGERS` | typo, testo, label, titolo, copy, micro-fix, piccolo fix, fix piccolo, classe css, spacing, margin, padding, colore |
+| `MICRO_FIX_EXCLUDERS` | refactor, feature, implementa, piano, più file, multipli file |
+
+### Cascata (precedenza dall'alto — la prima regola che matcha vince)
+
+| # | Condizione | recommended_skill | prompt_mode |
+|---|---|---|---|
+| 1 | trigger `SKILL_DIFF_TRIGGERS` | diff-risk-reviewer | review_prompt |
+| 2 | trigger `SKILL_CONTEXT_TRIGGERS` | context-health-reset | handoff_prompt |
+| 3 | trigger `SKILL_APPROVAL_TRIGGERS` | none | approval_prompt |
+| 4 | rischio `high` **o** categoria `deploy` | none | approval_prompt |
+| 5 | `qa` o `security`, **senza `coding` e senza `coding-plan`** | quality-gate-verifier | review_prompt |
+| 6 | `checkpoint` **o** doc role `docs-as-target` | none | checkpoint_prompt |
+| 7 | trigger `MICRO_FIX_TRIGGERS` **e nessun** `MICRO_FIX_EXCLUDERS` | none | micro_fix_prompt |
+| 8 | `coding-plan` **oppure** `coding` + (più categorie **o** confidence ≠ high) | /phase-plan | phase_plan_prompt |
+| 9 | `coding` a categoria singola con confidence high | none | micro_fix_prompt |
+| 10 | 0 categorie (`unclassified`) | context-health-reset | handoff_prompt |
+| 11 | fallback (research/product/docs/design puri) | none | handoff_prompt |
+
+### Assunzione approvata sulla regola 5 (Gate 2, 2026-07-05)
+
+La regola 5 esclude **anche `coding-plan`**, non solo `coding`: un task di piano
+che cita anche "verifica" (es. Caso A del golden set) deve andare a
+`/phase-plan` + `phase_plan_prompt` (regola 8), non a `review_prompt`.
+È la stessa logica della precedenza executor V1.2-F, dove
+coding/coding-plan/design vincono su qa.
+
+### Limite noto: trigger frasali rigidi
+
+I trigger con spazi sono cercati come **frase contenuta letterale** (dopo
+normalizzazione): l'ordine delle parole e le parole intermedie contano.
+Esempio reale (Caso K del golden set): "le fonti **sono** stale" **non** matcha
+il trigger `fonti stale` — il caso ha funzionato solo grazie al trigger
+parallelo `handoff` presente nella stessa frase. Se la frase riformula il
+concetto senza nessun trigger esatto, la regola non scatta: la cascata
+prosegue e il campo va corretto a mano da Eros nel ticket, come per le
+categorie. Nessun tentativo di fuzzy matching: coerente con il resto del
+classificatore V1, prevedibile e deterministico.
+
+### Golden set V1.3 — skill/mode attesi (rieseguiti in `--dry-run` il 2026-07-05)
+
+Casi A–F: campi V1.2 (categorie/risk/executor/confidence) **invariati**, vedi
+la tabella "Golden set regressione" più sotto. Skill/mode attesi per tutti i 13 casi:
+
+| Caso | Task raw | recommended_skill | prompt_mode | Regola |
+|---|---|---|---|---|
+| A | Prepara piano walbox-dev basato su docs/PILOT_NIGHT_CHECKLIST.md | /phase-plan | phase_plan_prompt | 8 |
+| B | Fix TV Poster preview | /phase-plan | phase_plan_prompt | 8 |
+| C | Aggiorna CHECKPOINT dopo S1 | none | checkpoint_prompt | 6 |
+| D | Verifica Supabase realtime con 2 client | quality-gate-verifier | review_prompt | 5 |
+| E | Studia benchmark social jukebox | none | handoff_prompt | 11 |
+| F | Fix e verifica TV Poster preview bloccata dopo cambio traccia | /phase-plan | phase_plan_prompt | 8 |
+| G | Prepara piano refactor coda staff su più file | /phase-plan | phase_plan_prompt | 8 |
+| H | Fixa il typo nel titolo della TV Poster | none | micro_fix_prompt | 7 (trigger typo/titolo vince sul multi-categoria) |
+| I | Verifica regressione smoke E2E senza modificare file | quality-gate-verifier | review_prompt | 5 |
+| J | Rivedi il diff V1.3 e valuta rischi prima del commit | diff-risk-reviewer | review_prompt | 1 (categorie `unclassified`: skill corretta ma serve comunque triage umano) |
+| K | Ripartiamo puliti da handoff perché le fonti sono stale | context-health-reset | handoff_prompt | 2 (matcha solo `handoff`, non `fonti stale` — vedi limite trigger frasali) |
+| L | Procedi con il piano V1.3-B già approvato | none | approval_prompt | 3 (vince su coding-plan/regola 8) |
+| M | xyzabc task senza senso | context-health-reset | handoff_prompt | 10 |
+
+Se un futuro run su questi 13 task raw produce skill/mode diversi (o campi
+V1.2 diversi sui casi A–F), è una regressione: fermarsi e riportare, non
+correggere inline il classificatore senza revisione.
+
 ## Dry-run mode
 
 **Implementato in V1.2-F.** Flag `--dry-run` (in qualsiasi posizione tra gli argomenti):
@@ -130,11 +218,14 @@ node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run
 Richiesto da Eros dopo i test di V1.2-A per validare il classificatore
 (inclusi i golden case) senza dover cancellare manualmente i ticket generati.
 
-## Golden set regressione (V1.2-C, esteso in V1.2-F)
+## Golden set regressione (V1.2-C, esteso in V1.2-F; skill/mode V1.3 nella sezione dedicata sopra)
 
 6 task di riferimento, tutti rieseguiti in `--dry-run` il 2026-07-05 dopo il
-fix di precedenza executor V1.2-F (coding/coding-plan/design vince su qa).
-Tutti PASS, nessuna regressione sui Casi A-E rispetto a V1.2-C.
+fix di precedenza executor V1.2-F (coding/coding-plan/design vince su qa) e
+di nuovo dopo V1.3-A (recommendSkillAndMode): tutti PASS, nessuna regressione
+sui campi di questa tabella. I casi G–M e i valori attesi di
+recommended_skill/prompt_mode per tutti i 13 casi sono nella sezione
+"Golden set V1.3" sopra.
 
 | Caso | Task raw | Categorie | Risk | Executor | Confidence | Note |
 |---|---|---|---|---|---|---|

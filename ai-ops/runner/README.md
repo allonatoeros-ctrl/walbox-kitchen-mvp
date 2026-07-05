@@ -1,4 +1,4 @@
-# ai-factory-runner V1.2 — Walbox AI Business Factory
+# ai-factory-runner V1.3 — Walbox AI Business Factory
 
 Runner locale che trasforma un task raw in un **ticket/run log** dentro `ai-ops/tickets/`.
 Zero dipendenze esterne, zero API, zero LLM: solo Node.js e keyword locali.
@@ -67,6 +67,30 @@ progetto al momento del run, senza dover aprire CHECKPOINT.md a parte.
   e `rules/task_classifier_rules.md`, ormai obsoleta — i due file sono verificati allineati
   al 2026-07-05.
 
+## Novità V1.3
+
+- **Due campi nuovi nel ticket (sezione 2) e a console**: `Recommended skill` e
+  `Prompt mode`, con motivazione (`Skill/mode reason`). Calcolati dalla nuova funzione
+  pura `recommendSkillAndMode` in `run.js` con una **cascata a 11 regole a precedenza
+  esplicita**: prima i trigger lessicali (diff/pre-commit → `diff-risk-reviewer` +
+  `review_prompt`; context reset/handoff → `context-health-reset` + `handoff_prompt`;
+  piano già approvato → `approval_prompt`), poi le condizioni su rischio, categorie,
+  doc role e confidence (high/deploy → `approval_prompt`; qa/security puri →
+  `quality-gate-verifier` + `review_prompt`; checkpoint/docs-target →
+  `checkpoint_prompt`; micro-fix lessicale → `micro_fix_prompt`; coding-plan o coding
+  multi-segnale → `/phase-plan` + `phase_plan_prompt`; coding singolo high-confidence →
+  `micro_fix_prompt`; unclassified → `context-health-reset` + `handoff_prompt`;
+  fallback → `handoff_prompt`). Tabella completa, trigger, assunzione approvata sulla
+  regola 5 e limiti dei trigger frasali in `rules/task_classifier_rules.md`.
+- **Puramente additivo**: categorie, rischio, executor, confidence e warnings V1.2
+  restano identici — verificato sul golden set A–F, zero regressioni.
+- **Golden set esteso a 13 casi** (A–M): i nuovi casi G–M coprono phase-plan,
+  micro-fix, QA read-only, diff review, context reset, approval e unclassified —
+  valori attesi in `rules/task_classifier_rules.md`.
+- I due campi sono **informativi**: il ticket non genera ancora prompt diversi per
+  modo (il `claude_prompt_template.md` è invariato) — eventuale materia di una
+  futura V1.4. Eros valida skill/mode nel ticket come già fa per categorie/executor.
+
 ## Uso
 
 ```bash
@@ -88,7 +112,7 @@ node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run
 ## Cosa genera il ticket
 
 1. Task raw
-2. Metadata: data, slug, categorie, rischio, executor consigliato, confidence, warnings (se presenti), doc role (se rilevato), requires approval
+2. Metadata: data, slug, categorie, rischio, executor consigliato, confidence, recommended skill + prompt mode con reason (V1.3), warnings (se presenti), doc role (se rilevato), requires approval
 3. Project state snapshot da CHECKPOINT.md (STABLE/DONE/OPEN ISSUES/NEXT STEP, letto read-only — V1.1)
 4. Fonti di stato da leggere (CHECKPOINT.md, CLAUDE.md, ai-ops/README.md, SECURITY_POLICY.md)
 5. Routing decision (perché quel esecutore — dettaglio agenti: CLAUDE.md §2, non duplicato)
@@ -119,7 +143,7 @@ runner/
 - Routing agenti: fonte unica **CLAUDE.md §2** — qui solo referenziato.
 - Regole di sicurezza: fonte unica **`../SECURITY_POLICY.md`** — qui solo richiamata.
 
-## Limiti V1.2 (manuale per ora)
+## Limiti V1.3 (manuale per ora)
 
 - La classificazione resta **rule-based su keyword locali**: nessun LLM, nessuna comprensione
   del contesto ("non toccare Spotify" matcha comunque `spotify`). Eros deve validare
