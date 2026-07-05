@@ -18,6 +18,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
   - Implemented, but not yet verified with real E2E/QA flow — see OPEN ISSUES.
 - CLAUDE.md aligned to current-state source of truth + agent routing — commit f077276, 2026-07-04.
 - **QA serata walbox-qa-serata (2026-07-05): PASS WITH RISKS.** Flusso QR→richiesta→staff→coda verificato in locale con 2 client concorrenti su Supabase reale, nessun bug bloccante sul percorso principale. Non verificato: add-to-queue/now-playing con account Spotify Premium reale e device fisico. Bug trovato e fixato lo stesso giorno: approvazione di un brano senza `spotify_uri` (fallback MOCK_SONGS) non avvisava lo staff — vedi OPEN ISSUES per il fix.
+- **ai-factory-runner V1 (2026-07-05):** primo router locale della AI Factory in `ai-ops/runner/` (Node ESM, zero dipendenze). Genera ticket/run log in `ai-ops/tickets/` con classificazione keyword, risk level, routing, scope, security reminders e prompt Claude Code pronto. Demo PASS con task `"Verifica TV Poster sync"`. V1 non esegue Claude, non chiama API, non modifica codice app e resta manuale nell'esecuzione.
 
 ## STABLE — non toccare senza approvazione
 - **Checkpoint locale salvato (2026-07-05): commit `2f06353` "chore: save ai-ops factory and walbox visual updates"** — contiene ai-ops AI Factory alignment, SECURITY_POLICY.md, reports/knowledge placeholders, modifiche visual/app Walbox, FABLE_WALBOX_CREATIVE_DIRECTION_PACK. Non pushato (vedi OPEN ISSUES).
