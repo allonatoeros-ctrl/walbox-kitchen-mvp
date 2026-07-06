@@ -35,6 +35,16 @@
  * rischio, docRole e confidence). I campi sono passati al template ticket
  * (placeholder aggiunti in V1.3-B) e stampati a console. Non tocca
  * classificazione, rischio o executor esistenti.
+ *
+ * V1.4.1-C: nuova funzione pura detectQaDomain() — dentro la categoria qa,
+ * distingue dominio tooling interno (ai-ops/runner) da dominio app/Jukebox
+ * via keyword (TOOLING_QA_KEYWORDS/APP_QA_KEYWORDS). Se il dominio è
+ * 'tooling' puro, recommendExecutor() instrada su una label descrittiva
+ * invece di walbox-qa-serata (nessun subagente dedicato in CLAUDE.md §2).
+ * Dominio 'app'/'mixed'/non rilevato → comportamento invariato. 'mixed'
+ * aggiunge un warning invece di cambiare executor. Non tocca categorie,
+ * rischio, confidence, recommendSkillAndMode o gli altri rami di
+ * recommendExecutor.
  */
 
 import fs from 'node:fs';
@@ -167,6 +177,20 @@ const MICRO_FIX_EXCLUDERS = [
   'refactor', 'feature', 'implementa', 'piano', 'più file', 'multipli file',
 ];
 
+// V1.4.1-C: keyword per distinguere, dentro la categoria qa, se il task
+// riguarda il tooling interno (ai-ops/runner stesso) o l'app Walbox/Jukebox.
+// Usate solo da detectQaDomain, nessun effetto su CATEGORY_RULES/assessRisk.
+const TOOLING_QA_KEYWORDS = [
+  'runner', 'ai-ops', 'ai-factory-runner', 'ai-factory', 'classificatore',
+  'golden set', 'run.js', 'task_classifier', 'ticket', 'origin/main',
+  'push', 'branch', 'repo', 'commit',
+];
+const APP_QA_KEYWORDS = [
+  'jukebox', 'cliente', 'customer', 'staff', 'pub', 'locale', 'tavolo',
+  'richiesta', 'dedica', 'nickname', 'coda', 'queue',
+];
+const APP_QA_CATEGORIES = ['tv', 'spotify', 'supabase', 'design'];
+
 // Categorie che indicano un dominio protetto (TV/Spotify/Supabase) senza
 // dire di per sé cosa farci: usate solo per il warning "dominio senza azione".
 const DOMAIN_ONLY_CATEGORIES = ['tv', 'spotify', 'supabase'];
@@ -275,6 +299,24 @@ function detectExplicitAgents(rawTask) {
   return EXPLICIT_AGENTS.filter((agent) => matchesKeyword(text, agent));
 }
 
+// V1.4.1-C: dentro la categoria qa, distingue se il task riguarda il tooling
+// interno (ai-ops/runner) o l'app Walbox/Jukebox, per scegliere l'executor
+// corretto in recommendExecutor. Puramente additivo: non tocca categorie,
+// rischio o le altre funzioni di classificazione. Ritorna 'tooling' | 'app' |
+// 'mixed' | null (nessun segnale di dominio in nessuna delle due liste).
+function detectQaDomain(rawTask, categories) {
+  const text = normalize(rawTask);
+  const hasAppCategory = categories.some((c) => APP_QA_CATEGORIES.includes(c));
+  const hasAppKeyword = APP_QA_KEYWORDS.some((kw) => matchesKeyword(text, kw));
+  const hasToolingKeyword = TOOLING_QA_KEYWORDS.some((kw) => matchesKeyword(text, kw));
+  const isApp = hasAppCategory || hasAppKeyword;
+
+  if (isApp && hasToolingKeyword) return 'mixed';
+  if (hasToolingKeyword) return 'tooling';
+  if (isApp) return 'app';
+  return null;
+}
+
 // V1.4.1-B: negazione mirata, SOLO per la keyword 'codice' della categoria
 // 'coding' (es. "aggiorna CHECKPOINT.md senza toccare codice" non deve
 // assegnare 'coding'). Non generalizzato ad altre keyword/categorie, e non
@@ -363,7 +405,7 @@ function assessRisk(rawTask, categories) {
   return { risk, reasons };
 }
 
-function recommendExecutor(categories, risk, explicitAgents, docRole) {
+function recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain) {
   const has = (c) => categories.includes(c);
 
   if (risk === 'high' || has('deploy')) {
@@ -391,9 +433,15 @@ function recommendExecutor(categories, risk, explicitAgents, docRole) {
     };
   }
   if (has('qa')) {
+    if (qaDomain === 'tooling') {
+      return {
+        executor: 'Claude Code (verifica manuale ai-ops/runner, nessun subagente dedicato)',
+        why: 'Task QA su dominio tooling/runner interno (ai-ops), non app/Jukebox: walbox-qa-serata è pensato per il collaudo runtime della app (QR/staff/TV/Spotify), non per validare ai-ops/run.js. Nessun subagente dedicato oggi in CLAUDE.md §2 (V1.4.1-C).',
+      };
+    }
     return {
       executor: 'walbox-qa-serata',
-      why: 'Task di verifica/collaudo → agente walbox-qa-serata, vedi CLAUDE.md §2. Si applica solo se non è presente anche coding/coding-plan/design, che vince (V1.2-F).',
+      why: 'Task di verifica/collaudo → agente walbox-qa-serata, vedi CLAUDE.md §2. Si applica solo se non è presente anche coding/coding-plan/design, che vince (V1.2-F). Dominio app/Jukebox, misto o non rilevato → default prudente (V1.4.1-C).',
     };
   }
   if (has('checkpoint') || docRole === 'docs-as-target') {
@@ -503,7 +551,7 @@ function recommendSkillAndMode(categories, risk, docRole, confidence, rawTask) {
 
 // Confidence e warning[] sono deterministici: nessun punteggio "morbido",
 // solo condizioni esplicite (V1.2-B).
-function buildWarnings({ categories, docRole, explicitAgents, executor }) {
+function buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain }) {
   const warnings = [];
 
   if (categories.length > 1) {
@@ -533,6 +581,9 @@ function buildWarnings({ categories, docRole, explicitAgents, executor }) {
     warnings.push(
       'dominio protetto citato (tv/spotify/supabase) senza categoria di azione chiara — verificare intento del task',
     );
+  }
+  if (qaDomain === 'mixed') {
+    warnings.push('dominio qa misto app+tooling: verificare a mano l\'executor nel ticket');
   }
 
   return warnings;
@@ -742,8 +793,9 @@ function main() {
   }
   const { risk, reasons: riskReasons } = assessRisk(rawTask, categories);
   const explicitAgents = detectExplicitAgents(rawTask);
-  const { executor, why: routingWhy } = recommendExecutor(categories, risk, explicitAgents, docRole);
-  const warnings = buildWarnings({ categories, docRole, explicitAgents, executor });
+  const qaDomain = detectQaDomain(rawTask, categories);
+  const { executor, why: routingWhy } = recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain);
+  const warnings = buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain });
   const confidence = computeConfidence(categories, warnings);
   const {
     skill: recommendedSkill,

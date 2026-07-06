@@ -125,6 +125,41 @@ progetto al momento del run, senza dover aprire CHECKPOINT.md a parte.
   sezione 9 in Claude Code resta un passo manuale del workflow umano
   (Gate 1 / Gate 2, vedi `ai-ops/README.md`).
 
+## Novità V1.4.1-C — dominio QA: tooling interno vs app
+
+- **Problema**: fino a V1.4.1-B, ogni task con categoria `qa` finiva sempre
+  su `walbox-qa-serata` — pensato per il collaudo runtime della app
+  Walbox/Jukebox (QR/staff/TV/Spotify), non per validare un tool Node/CLI
+  interno come `ai-ops/runner` stesso. Esempio reale: "Verifica se V1.4 è
+  pronta per push su origin/main." otteneva giustamente `review_prompt`, ma
+  un executor non adatto.
+- **Fix**: nuova funzione pura `detectQaDomain(rawTask, categories)` in
+  `run.js`, calcolata in `main()` e passata a `recommendExecutor`/
+  `buildWarnings`. Guarda due liste di keyword (`TOOLING_QA_KEYWORDS`,
+  `APP_QA_KEYWORDS`) più le categorie già assegnate (`tv`/`spotify`/
+  `supabase`/`design` contano come segnale app) per distinguere dominio
+  `'tooling'` / `'app'` / `'mixed'` / nessun segnale (`null`).
+- **Effetto**: solo quando il dominio è `'tooling'` puro (nessun segnale
+  app), l'executor diventa
+  `Claude Code (verifica manuale ai-ops/runner, nessun subagente dedicato)`
+  invece di `walbox-qa-serata` — perché oggi non esiste un subagente
+  dedicato alla QA del tooling interno in CLAUDE.md §2. In ogni altro caso
+  (`'app'`, `'mixed'`, nessun segnale) l'executor resta invariato
+  (`walbox-qa-serata`, default prudente). `'mixed'` aggiunge solo un
+  warning ("dominio qa misto app+tooling: verificare a mano l'executor").
+- **Puramente additivo**: non tocca `CATEGORY_RULES`, `assessRisk`,
+  `HIGH_RISK_KEYWORDS`, `EXPLICIT_AGENTS` né `recommendSkillAndMode` —
+  skill/prompt_mode restano identici. Nuovo Caso P nel golden set (vedi
+  `rules/task_classifier_rules.md`), golden set A–O rieseguiti in
+  `--dry-run`: 15/15 PASS, zero regressioni.
+- **Limite noto**: euristica keyword-based, nessuna comprensione del
+  contesto. Un task QA sull'app che nomina per caso parole come
+  "push"/"branch"/"commit" senza nessuna `APP_QA_KEYWORDS` (né categorie
+  tv/spotify/supabase/design) risulterebbe classificato come dominio
+  `tooling` anche se in realtà riguarda la app — Eros deve validare
+  l'executor nel ticket prima del Gate 1, come per gli altri limiti già
+  noti (vedi "Limiti V1.4" sotto).
+
 ## Uso
 
 ```bash

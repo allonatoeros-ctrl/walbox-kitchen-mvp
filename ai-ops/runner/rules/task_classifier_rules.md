@@ -62,6 +62,62 @@ negazione:
   queste frasi, la keyword conta normalmente (nessun rischio di sopprimere
   un match legittimo in un task con più menzioni miste).
 
+## Dominio QA: tooling interno vs app (`detectQaDomain`, V1.4.1-C)
+
+Fino a V1.4.1-B, qualunque task con categoria `qa` finiva sempre su
+`walbox-qa-serata` — un subagente pensato per il collaudo runtime della app
+Walbox/Jukebox (QR cliente → staff → TV/Spotify), non per validare un tool
+Node/CLI interno come `ai-ops/runner`. Esempio reale che ha motivato il fix:
+"Verifica se V1.4 è pronta per push su origin/main." otteneva correttamente
+`review_prompt`, ma un executor non adatto (Caso P).
+
+`detectQaDomain(rawTask, categories)` guarda due liste di keyword (stesso
+match di `matchesKeyword`: parola intera per singole, frase contenuta per
+keyword con spazi) più le categorie già assegnate, e ritorna `'tooling'` /
+`'app'` / `'mixed'` / `null`:
+
+| Costante | Keyword |
+|---|---|
+| `TOOLING_QA_KEYWORDS` | runner, ai-ops, ai-factory-runner, ai-factory, classificatore, golden set, run.js, task_classifier, ticket, origin/main, push, branch, repo, commit |
+| `APP_QA_KEYWORDS` | jukebox, cliente, customer, staff, pub, locale, tavolo, richiesta, dedica, nickname, coda, queue |
+| `APP_QA_CATEGORIES` | tv, spotify, supabase, design (se già assegnate dal classificatore, contano come segnale app) |
+
+Logica (`isApp = hasAppCategory || hasAppKeyword`):
+
+- keyword tooling presente **e nessun** segnale app → `'tooling'`
+- segnale app **e** keyword tooling presenti insieme → `'mixed'`
+- solo segnale app → `'app'`
+- nessuno dei due → `null`
+
+`qaDomain` viene calcolato in `main()` (non dentro `recommendExecutor`) subito
+dopo `detectExplicitAgents`, e passato sia a `recommendExecutor` che a
+`buildWarnings`.
+
+Effetto sull'executor (solo dentro il ramo `qa` di `recommendExecutor`,
+vedi cascata executor sotto):
+
+- `qaDomain === 'tooling'` → executor diventa
+  `Claude Code (verifica manuale ai-ops/runner, nessun subagente dedicato)`
+  (nessun subagente in CLAUDE.md §2 è pensato per QA di tooling interno).
+- `'app'`, `'mixed'` o `null` → **invariato**, resta `walbox-qa-serata`
+  (default prudente: si cambia executor solo quando il segnale tooling è
+  netto e non ambiguo).
+- `qaDomain === 'mixed'` aggiunge in più un warning: "dominio qa misto
+  app+tooling: verificare a mano l'executor nel ticket" (`buildWarnings`).
+
+Puramente additivo: non tocca `CATEGORY_RULES`, `assessRisk`,
+`HIGH_RISK_KEYWORDS`, `EXPLICIT_AGENTS` né `recommendSkillAndMode` — skill e
+prompt_mode restano identici a prima del fix (verificato: Caso P ottiene
+`quality-gate-verifier` + `review_prompt`, invariati rispetto a un ipotetico
+run pre-V1.4.1-C).
+
+Limite noto: euristica **keyword-based**, non comprende il contesto. Un task
+QA sull'app che nomina per caso solo parole come "branch"/"commit"/"push"
+senza nessuna delle `APP_QA_KEYWORDS` (né categorie tv/spotify/supabase/
+design) risulterebbe classificato come dominio `tooling` anche se in realtà
+riguarda la app — Eros deve validare l'executor nel ticket prima del Gate 1,
+come per gli altri limiti già noti del classificatore.
+
 ## Ruolo dei riferimenti a documenti (`detectDocRole`, V1.2)
 
 Se il task menziona un percorso `docs/` o un file `.md`, la funzione guarda le
@@ -116,7 +172,11 @@ V1.2 introduce un'**escalation condizionale** (in precedenza sempre `high`):
 2. esattamente **un** agente citato esplicitamente nel task (`EXPLICIT_AGENTS`: `walbox-dev`, `walbox-qa-serata`, `walbox-hardening`, `walbox-product-owner`) → **quell'agente**, a meno che il punto 1 non l'abbia già deciso
 3. `security` → **walbox-hardening**
 4. `coding` o `coding-plan` o `design` → **walbox-dev** — **vince su `qa` se presenti insieme** (V1.2-F: l'ordine dei controlli in `recommendExecutor` valuta coding/coding-plan/design prima di qa; un task con categorie `coding, qa` va a walbox-dev, non a walbox-qa-serata. Prima di V1.2-F valeva il contrario — vedi Caso F nel golden set)
-5. `qa` (e nessuna delle categorie sopra) → **walbox-qa-serata**
+5. `qa` (e nessuna delle categorie sopra) → **walbox-qa-serata**, tranne quando
+   `detectQaDomain` ritorna `'tooling'` (dominio ai-ops/runner interno, nessun
+   segnale app): in quel caso l'executor è
+   `Claude Code (verifica manuale ai-ops/runner, nessun subagente dedicato)`
+   — vedi sezione dedicata "Dominio QA: tooling interno vs app" sopra (V1.4.1-C)
 6. `checkpoint` **o** doc role `docs-as-target` → **docs/checkpoint operator** (patch suggerita, mai scrittura diretta su CHECKPOINT.md — SECURITY_POLICY.md regola 8)
 7. `research` / `product` / `docs` (nessuna delle categorie sopra) → **ChatGPT research/product/review**
 8. nessuna categoria riconosciuta (`unclassified`) → **manual approval required**, triage umano
@@ -203,7 +263,7 @@ classificatore V1, prevedibile e deterministico.
 ### Golden set V1.3 — skill/mode attesi (rieseguiti in `--dry-run` il 2026-07-05)
 
 Casi A–F: campi V1.2 (categorie/risk/executor/confidence) **invariati**, vedi
-la tabella "Golden set regressione" più sotto. Skill/mode attesi per tutti i 13 casi:
+la tabella "Golden set regressione" più sotto. Skill/mode attesi per tutti i 16 casi:
 
 | Caso | Task raw | recommended_skill | prompt_mode | prompt_template (V1.4) | Regola |
 |---|---|---|---|---|---|
@@ -222,8 +282,9 @@ la tabella "Golden set regressione" più sotto. Skill/mode attesi per tutti i 13
 | M | xyzabc task senza senso | context-health-reset | handoff_prompt | handoff | 10 |
 | N | Progetta il prossimo step per migliorare il Runner dopo V1.4, senza implementare. | /phase-plan | phase_plan_prompt | phase_plan | 8 (V1.4.1-A: `coding-plan` riconosce ora "progetta"/"prossimo step") |
 | O | Aggiorna CHECKPOINT.md dopo il push V1.4, senza toccare codice. | none | checkpoint_prompt | checkpoint | 6 (V1.4.1-B: "senza toccare codice" non assegna più `coding` — vedi `isNegatedCodice` in `run.js`) |
+| P | Verifica se V1.4 è pronta per push su origin/main. | quality-gate-verifier | review_prompt | review | 5 (V1.4.1-C: skill/mode invariati — cambia solo l'**executor**, da `walbox-qa-serata` a `Claude Code (verifica manuale ai-ops/runner, nessun subagente dedicato)`, perché `detectQaDomain` rileva dominio `tooling` puro via keyword `push`/`origin/main`, nessun segnale app) |
 
-Se un futuro run su questi 15 task raw produce skill/mode diversi (o campi
+Se un futuro run su questi 16 task raw produce skill/mode diversi (o campi
 V1.2 diversi sui casi A–F), è una regressione: fermarsi e riportare, non
 correggere inline il classificatore senza revisione. Il campo `prompt_template`
 (colonna aggiunta in V1.4-C3, puramente documentale) non fa parte della
