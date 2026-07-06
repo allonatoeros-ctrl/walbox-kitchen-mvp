@@ -41,6 +41,27 @@ keyword protette (`HIGH_RISK_KEYWORDS`, sempre attive) o dentro `design`
 `tv`): non è un conflitto. L'executor per queste 3 categorie non è ancora
 definito (`recommendExecutor` resta invariato) — arriva con V1.2-B.
 
+## Negazione mirata sulla keyword "codice" (`isNegatedCodice`, V1.4.1-B)
+
+La keyword `codice` (categoria `coding`) viene ignorata se **ogni** sua
+occorrenza nel task è preceduta a breve distanza (~30 caratteri) da una di
+queste frasi di negazione: `senza toccare`, `senza modificare`,
+`senza cambiare`, `non toccare`, `non modificare`. Esempio: "Aggiorna
+CHECKPOINT.md dopo il push V1.4, senza toccare codice." non assegna più
+`coding` (Caso O).
+
+Questo è **scoped al minimo indispensabile**, non un meccanismo generale di
+negazione:
+- vale solo per la keyword `codice` della categoria `coding`, nessun'altra
+  keyword o categoria è interessata;
+- **non tocca `HIGH_RISK_KEYWORDS`/`assessRisk`**: "non toccare Spotify" deve
+  continuare a segnalare rischio/area protetta a prescindere dalla negazione
+  — è una scelta di sicurezza deliberata (meglio sovrastimare il rischio),
+  non un bug da correggere insieme a questo.
+- se compare anche una sola occorrenza di "codice" non preceduta da una di
+  queste frasi, la keyword conta normalmente (nessun rischio di sopprimere
+  un match legittimo in un task con più menzioni miste).
+
 ## Ruolo dei riferimenti a documenti (`detectDocRole`, V1.2)
 
 Se il task menziona un percorso `docs/` o un file `.md`, la funzione guarda le
@@ -200,8 +221,9 @@ la tabella "Golden set regressione" più sotto. Skill/mode attesi per tutti i 13
 | L | Procedi con il piano V1.3-B già approvato | none | approval_prompt | approval | 3 (vince su coding-plan/regola 8) |
 | M | xyzabc task senza senso | context-health-reset | handoff_prompt | handoff | 10 |
 | N | Progetta il prossimo step per migliorare il Runner dopo V1.4, senza implementare. | /phase-plan | phase_plan_prompt | phase_plan | 8 (V1.4.1-A: `coding-plan` riconosce ora "progetta"/"prossimo step") |
+| O | Aggiorna CHECKPOINT.md dopo il push V1.4, senza toccare codice. | none | checkpoint_prompt | checkpoint | 6 (V1.4.1-B: "senza toccare codice" non assegna più `coding` — vedi `isNegatedCodice` in `run.js`) |
 
-Se un futuro run su questi 14 task raw produce skill/mode diversi (o campi
+Se un futuro run su questi 15 task raw produce skill/mode diversi (o campi
 V1.2 diversi sui casi A–F), è una regressione: fermarsi e riportare, non
 correggere inline il classificatore senza revisione. Il campo `prompt_template`
 (colonna aggiunta in V1.4-C3, puramente documentale) non fa parte della

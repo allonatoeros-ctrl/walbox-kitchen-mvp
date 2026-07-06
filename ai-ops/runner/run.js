@@ -275,13 +275,49 @@ function detectExplicitAgents(rawTask) {
   return EXPLICIT_AGENTS.filter((agent) => matchesKeyword(text, agent));
 }
 
+// V1.4.1-B: negazione mirata, SOLO per la keyword 'codice' della categoria
+// 'coding' (es. "aggiorna CHECKPOINT.md senza toccare codice" non deve
+// assegnare 'coding'). Non generalizzato ad altre keyword/categorie, e non
+// tocca HIGH_RISK_KEYWORDS/assessRisk: "non toccare Spotify" deve restare un
+// segnale protetto a prescindere dalla negazione (scelta di sicurezza,
+// vedi CLAUDE.md §5 e commento su HIGH_RISK_KEYWORDS più sotto).
+const NEGATED_CODICE_TRIGGERS = [
+  'senza toccare', 'senza modificare', 'senza cambiare',
+  'non toccare', 'non modificare',
+];
+const CODICE_RE = /(^|[^a-z0-9])codice($|[^a-z0-9])/g;
+
+// True solo se OGNI occorrenza di "codice" nel testo è preceduta a breve
+// distanza da una delle frasi di negazione sopra. Se anche una sola
+// occorrenza non è negata, la keyword conta normalmente.
+function isNegatedCodice(text) {
+  let sawMatch = false;
+  let sawUnnegated = false;
+  let m;
+  CODICE_RE.lastIndex = 0;
+  while ((m = CODICE_RE.exec(text)) !== null) {
+    sawMatch = true;
+    const start = m.index + m[1].length;
+    const before = text.slice(Math.max(0, start - 30), start);
+    if (!NEGATED_CODICE_TRIGGERS.some((trig) => before.includes(trig))) {
+      sawUnnegated = true;
+    }
+  }
+  return sawMatch && !sawUnnegated;
+}
+
 function classify(rawTask) {
   const text = normalize(rawTask);
   const categories = [];
   const matchedKeywords = {};
 
   for (const [category, keywords] of Object.entries(CATEGORY_RULES)) {
-    const hits = keywords.filter((kw) => matchesKeyword(text, kw));
+    const hits = keywords.filter((kw) => {
+      if (category === 'coding' && kw === 'codice' && isNegatedCodice(text)) {
+        return false;
+      }
+      return matchesKeyword(text, kw);
+    });
     if (hits.length > 0) {
       categories.push(category);
       matchedKeywords[category] = hits;
