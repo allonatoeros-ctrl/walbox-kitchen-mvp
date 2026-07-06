@@ -1,10 +1,12 @@
-# Task Classifier Rules — ai-factory-runner V1.3
+# Task Classifier Rules — ai-factory-runner V1.3 (+ template V1.4)
 
 > Documentazione umana delle regole di classificazione implementate in `../run.js`.
 > **Fonte eseguibile: `run.js`** (costanti `CATEGORY_RULES`, `HIGH_RISK_KEYWORDS`,
 > `ALWAYS_HIGH_KEYWORDS`, `WRITE_VERBS`, `RISK_BY_CATEGORY`, funzione `detectDocRole`;
 > V1.3: `SKILL_DIFF_TRIGGERS`, `SKILL_CONTEXT_TRIGGERS`, `SKILL_APPROVAL_TRIGGERS`,
-> `MICRO_FIX_TRIGGERS`, `MICRO_FIX_EXCLUDERS`, funzione `recommendSkillAndMode`).
+> `MICRO_FIX_TRIGGERS`, `MICRO_FIX_EXCLUDERS`, funzione `recommendSkillAndMode`;
+> V1.4: `resolvePromptTemplate` — sceglie il template del prompt in base a
+> `prompt_mode`, non cambia nessuna delle costanti di classificazione sopra).
 > Se modifichi le keyword in un posto, aggiorna anche l'altro — la sincronizzazione resta manuale.
 
 ## Come funziona il match
@@ -182,25 +184,51 @@ classificatore V1, prevedibile e deterministico.
 Casi A–F: campi V1.2 (categorie/risk/executor/confidence) **invariati**, vedi
 la tabella "Golden set regressione" più sotto. Skill/mode attesi per tutti i 13 casi:
 
-| Caso | Task raw | recommended_skill | prompt_mode | Regola |
-|---|---|---|---|---|
-| A | Prepara piano walbox-dev basato su docs/PILOT_NIGHT_CHECKLIST.md | /phase-plan | phase_plan_prompt | 8 |
-| B | Fix TV Poster preview | /phase-plan | phase_plan_prompt | 8 |
-| C | Aggiorna CHECKPOINT dopo S1 | none | checkpoint_prompt | 6 |
-| D | Verifica Supabase realtime con 2 client | quality-gate-verifier | review_prompt | 5 |
-| E | Studia benchmark social jukebox | none | handoff_prompt | 11 |
-| F | Fix e verifica TV Poster preview bloccata dopo cambio traccia | /phase-plan | phase_plan_prompt | 8 |
-| G | Prepara piano refactor coda staff su più file | /phase-plan | phase_plan_prompt | 8 |
-| H | Fixa il typo nel titolo della TV Poster | none | micro_fix_prompt | 7 (trigger typo/titolo vince sul multi-categoria) |
-| I | Verifica regressione smoke E2E senza modificare file | quality-gate-verifier | review_prompt | 5 |
-| J | Rivedi il diff V1.3 e valuta rischi prima del commit | diff-risk-reviewer | review_prompt | 1 (categorie `unclassified`: skill corretta ma serve comunque triage umano) |
-| K | Ripartiamo puliti da handoff perché le fonti sono stale | context-health-reset | handoff_prompt | 2 (matcha solo `handoff`, non `fonti stale` — vedi limite trigger frasali) |
-| L | Procedi con il piano V1.3-B già approvato | none | approval_prompt | 3 (vince su coding-plan/regola 8) |
-| M | xyzabc task senza senso | context-health-reset | handoff_prompt | 10 |
+| Caso | Task raw | recommended_skill | prompt_mode | prompt_template (V1.4) | Regola |
+|---|---|---|---|---|---|
+| A | Prepara piano walbox-dev basato su docs/PILOT_NIGHT_CHECKLIST.md | /phase-plan | phase_plan_prompt | phase_plan | 8 |
+| B | Fix TV Poster preview | /phase-plan | phase_plan_prompt | phase_plan | 8 |
+| C | Aggiorna CHECKPOINT dopo S1 | none | checkpoint_prompt | checkpoint | 6 |
+| D | Verifica Supabase realtime con 2 client | quality-gate-verifier | review_prompt | review | 5 |
+| E | Studia benchmark social jukebox | none | handoff_prompt | handoff | 11 |
+| F | Fix e verifica TV Poster preview bloccata dopo cambio traccia | /phase-plan | phase_plan_prompt | phase_plan | 8 |
+| G | Prepara piano refactor coda staff su più file | /phase-plan | phase_plan_prompt | phase_plan | 8 |
+| H | Fixa il typo nel titolo della TV Poster | none | micro_fix_prompt | micro_fix | 7 (trigger typo/titolo vince sul multi-categoria) |
+| I | Verifica regressione smoke E2E senza modificare file | quality-gate-verifier | review_prompt | review | 5 |
+| J | Rivedi il diff V1.3 e valuta rischi prima del commit | diff-risk-reviewer | review_prompt | review | 1 (categorie `unclassified`: skill corretta ma serve comunque triage umano) |
+| K | Ripartiamo puliti da handoff perché le fonti sono stale | context-health-reset | handoff_prompt | handoff | 2 (matcha solo `handoff`, non `fonti stale` — vedi limite trigger frasali) |
+| L | Procedi con il piano V1.3-B già approvato | none | approval_prompt | approval | 3 (vince su coding-plan/regola 8) |
+| M | xyzabc task senza senso | context-health-reset | handoff_prompt | handoff | 10 |
 
 Se un futuro run su questi 13 task raw produce skill/mode diversi (o campi
 V1.2 diversi sui casi A–F), è una regressione: fermarsi e riportare, non
-correggere inline il classificatore senza revisione.
+correggere inline il classificatore senza revisione. Il campo `prompt_template`
+(colonna aggiunta in V1.4-C3, puramente documentale) non fa parte della
+classificazione: è solo l'esito di `resolvePromptTemplate(promptMode)` — se
+uno dei 6 template in `templates/prompts/` venisse rimosso, quella riga
+tornerebbe a `base (fallback)` senza che sia una regressione del classificatore.
+
+## Template dei prompt Claude per prompt_mode (V1.4, `resolvePromptTemplate` in `run.js`)
+
+Dal V1.4 il prompt Claude embeddato nel ticket (sezione 9) non è più sempre lo
+stesso file: `resolvePromptTemplate(promptMode)` cerca
+`templates/prompts/claude_prompt_<mode>.md` (dove `<mode>` è `prompt_mode`
+senza il suffisso `_prompt`); se il file esiste lo usa, altrimenti fallback
+totale a `templates/claude_prompt_template.md`. Tutti e 6 i modi hanno oggi un
+template dedicato — nessun fallback residuo nel golden set A–M.
+
+| prompt_mode | Template | Quando si usa |
+|---|---|---|
+| `micro_fix_prompt` | `claude_prompt_micro_fix.md` | fix diretto e localizzato: 1-2 file chiari, niente refactor/redesign, si ferma se lo scope si allarga |
+| `phase_plan_prompt` | `claude_prompt_phase_plan.md` | solo piano/audit read-only, nessuna modifica; usa `/phase-plan` se disponibile, propone micro-fasi A/B/C |
+| `review_prompt` | `claude_prompt_review.md` | QA/diff-risk/audit read-only: usa `diff-risk-reviewer` o `quality-gate-verifier`, chiude con verdetto accept/needs changes/split into next phase |
+| `checkpoint_prompt` | `claude_prompt_checkpoint.md` | aggiornamento documentale (tipicamente CHECKPOINT.md): scrive solo se lo scope lo autorizza esplicitamente, altrimenti solo patch suggerita |
+| `approval_prompt` | `claude_prompt_approval.md` | corto: un piano/audit è già stato prodotto nella sessione corrente, il task è il delta/via libera da applicare — si ferma se il piano non è in contesto |
+| `handoff_prompt` | `claude_prompt_handoff.md` | lungo: nuova sessione o contesto non affidabile, ricostruisce lo stato da CHECKPOINT.md/CLAUDE.md prima di proporre qualsiasi azione |
+
+Nota operativa: il Runner **non esegue Claude**. Genera solo il ticket con il
+prompt già pronto (sezione 9) — copiare/incollare in Claude Code resta un
+passo manuale del workflow umano (`ai-ops/README.md`, Gate 1/Gate 2).
 
 ## Dry-run mode
 

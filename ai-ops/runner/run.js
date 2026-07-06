@@ -47,6 +47,8 @@ const AI_OPS_DIR = path.resolve(RUNNER_DIR, '..');
 const REPO_ROOT = path.resolve(AI_OPS_DIR, '..');
 const TICKETS_DIR = path.join(AI_OPS_DIR, 'tickets');
 const TEMPLATES_DIR = path.join(RUNNER_DIR, 'templates');
+const PROMPTS_DIR = path.join(TEMPLATES_DIR, 'prompts');
+const BASE_PROMPT_TEMPLATE = path.join(TEMPLATES_DIR, 'claude_prompt_template.md');
 const CHECKPOINT_PATH = path.join(REPO_ROOT, 'CHECKPOINT.md');
 const CHECKPOINT_SECTION_MAX_LINES = 6;
 
@@ -575,6 +577,23 @@ function buildQualityGate(categories) {
   return checks;
 }
 
+// V1.4-A: risolve il template del prompt Claude in base al prompt_mode.
+// Cerca templates/prompts/claude_prompt_<mode>.md (dove <mode> è il
+// promptMode senza il suffisso "_prompt"); se non esiste, fallback totale
+// al template base claude_prompt_template.md — finché non esistono template
+// per-modo (V1.4-B/C), l'output resta identico a V1.3. Stessi placeholder,
+// renderTemplate invariato.
+function resolvePromptTemplate(promptMode) {
+  const mode = String(promptMode || '').replace(/_prompt$/, '');
+  if (mode) {
+    const candidate = path.join(PROMPTS_DIR, `claude_prompt_${mode}.md`);
+    if (fs.existsSync(candidate)) {
+      return { templatePath: candidate, templateLabel: mode };
+    }
+  }
+  return { templatePath: BASE_PROMPT_TEMPLATE, templateLabel: 'base (fallback)' };
+}
+
 function renderTemplate(templatePath, vars) {
   let out = fs.readFileSync(templatePath, 'utf8');
   for (const [key, value] of Object.entries(vars)) {
@@ -705,7 +724,9 @@ function main() {
       .map(([cat, kws]) => `${cat}: ${kws.join(', ')}`)
       .join(' · ') || 'nessuna keyword riconosciuta';
 
-  const claudePrompt = renderTemplate(path.join(TEMPLATES_DIR, 'claude_prompt_template.md'), {
+  const { templatePath: promptTemplatePath, templateLabel: promptTemplateLabel } =
+    resolvePromptTemplate(promptMode);
+  const claudePrompt = renderTemplate(promptTemplatePath, {
     RAW_TASK: rawTask,
     CATEGORIES: categoriesLabel,
     RISK: risk,
@@ -768,6 +789,7 @@ function main() {
   console.log(`  Confidence: ${confidence}`);
   console.log(`  Recommended skill: ${recommendedSkill}`);
   console.log(`  Prompt mode:       ${promptMode}`);
+  console.log(`  Prompt template:   ${promptTemplateLabel}`);
   console.log(`  Skill/mode reason: ${skillWhy}`);
   if (warnings.length > 0) {
     console.log(`  Warnings:   ${warnings.length}`);

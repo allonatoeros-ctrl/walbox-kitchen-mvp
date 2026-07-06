@@ -1,4 +1,4 @@
-# ai-factory-runner V1.3 — Walbox AI Business Factory
+# ai-factory-runner V1.4 — Walbox AI Business Factory
 
 Runner locale che trasforma un task raw in un **ticket/run log** dentro `ai-ops/tickets/`.
 Zero dipendenze esterne, zero API, zero LLM: solo Node.js e keyword locali.
@@ -87,9 +87,43 @@ progetto al momento del run, senza dover aprire CHECKPOINT.md a parte.
 - **Golden set esteso a 13 casi** (A–M): i nuovi casi G–M coprono phase-plan,
   micro-fix, QA read-only, diff review, context reset, approval e unclassified —
   valori attesi in `rules/task_classifier_rules.md`.
-- I due campi sono **informativi**: il ticket non genera ancora prompt diversi per
-  modo (il `claude_prompt_template.md` è invariato) — eventuale materia di una
-  futura V1.4. Eros valida skill/mode nel ticket come già fa per categorie/executor.
+- I due campi restavano **informativi**: fino a V1.3 il ticket non generava
+  ancora prompt diversi per modo (il `claude_prompt_template.md` era usato
+  sempre e solo lui) — risolto in V1.4, vedi sotto.
+
+## Novità V1.4 — prompt differenziati per `prompt_mode`
+
+- **Il prompt Claude ora dipende dal modo**: `resolvePromptTemplate(promptMode)`
+  in `run.js` sceglie il template da usare per generare il prompt Claude
+  (sezione 9 del ticket) invece di usare sempre lo stesso file.
+- **Directory dei template per-modo**: `ai-ops/runner/templates/prompts/`.
+  Convenzione di naming: `claude_prompt_<mode>.md`, dove `<mode>` è
+  `prompt_mode` senza il suffisso `_prompt` (es. `micro_fix_prompt` →
+  `claude_prompt_micro_fix.md`).
+- **Fallback totale**: se il file specifico per un modo non esiste,
+  `resolvePromptTemplate` ritorna `templates/claude_prompt_template.md`
+  (lo stesso template usato da V1.1 a V1.3) — nessun crash, nessun
+  comportamento diverso finché un template dedicato non viene creato.
+- **Tutti e 6 i `prompt_mode` hanno oggi un template dedicato**, nessun
+  fallback residuo sul golden set A–M:
+
+  | prompt_mode | Template | Quando si usa |
+  |---|---|---|
+  | `micro_fix_prompt` | `claude_prompt_micro_fix.md` | fix diretto e localizzato, niente refactor/redesign/cleanup opportunistico |
+  | `phase_plan_prompt` | `claude_prompt_phase_plan.md` | solo piano/audit read-only, nessuna modifica al codice in questo run |
+  | `review_prompt` | `claude_prompt_review.md` | QA/diff-risk/audit read-only, verdetto accept / needs changes / split into next phase |
+  | `checkpoint_prompt` | `claude_prompt_checkpoint.md` | aggiornamento documentale (tipicamente CHECKPOINT.md), scrittura diretta solo se lo scope la autorizza esplicitamente |
+  | `approval_prompt` | `claude_prompt_approval.md` | corto: un piano è già stato discusso in sessione, il task è l'approvazione/delta da applicare |
+  | `handoff_prompt` | `claude_prompt_handoff.md` | lungo: nuova sessione o contesto non affidabile, ricostruisce lo stato prima di agire |
+
+- **Puramente additivo, come V1.3**: classificazione, rischio, executor,
+  confidence, warnings, recommended_skill e prompt_mode restano identici —
+  cambia solo *quale file* genera il testo del prompt nella sezione 9 del
+  ticket. Verificato sul golden set A–M, 13/13 PASS, zero regressioni.
+- **Il Runner resta un generatore di ticket, non un esecutore**: non chiama
+  Claude, non installa niente, non fa API call. Copiare il prompt della
+  sezione 9 in Claude Code resta un passo manuale del workflow umano
+  (Gate 1 / Gate 2, vedi `ai-ops/README.md`).
 
 ## Uso
 
@@ -119,7 +153,7 @@ node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run
 6. Scope consigliato (allowed / forbidden / out of scope)
 7. Security reminders (richiami alle regole 1-10 di SECURITY_POLICY.md, non duplicata)
 8. Quality gate coerente con le categorie
-9. Prompt Claude Code pronto da copiare
+9. Prompt Claude Code pronto da copiare (il template usato dipende da `prompt_mode`, vedi V1.4 sopra)
 10. Checkpoint decision (solo patch suggerita, mai update automatico)
 11. Next step per Eros
 
@@ -131,9 +165,16 @@ runner/
 ├── run.js                             ← runner (Node, zero deps)
 ├── templates/
 │   ├── ticket_template.md             ← struttura del ticket generato
-│   └── claude_prompt_template.md      ← prompt Claude Code embeddato nel ticket
+│   ├── claude_prompt_template.md      ← prompt Claude Code, fallback base (V1.1-V1.3)
+│   └── prompts/                       ← template per-modo (V1.4), uno per prompt_mode
+│       ├── claude_prompt_micro_fix.md
+│       ├── claude_prompt_phase_plan.md
+│       ├── claude_prompt_review.md
+│       ├── claude_prompt_checkpoint.md
+│       ├── claude_prompt_approval.md
+│       └── claude_prompt_handoff.md
 └── rules/
-    └── task_classifier_rules.md       ← documentazione keyword/rischio/routing
+    └── task_classifier_rules.md       ← documentazione keyword/rischio/routing/template
 ```
 
 ## Rapporto con il resto di ai-ops/
@@ -143,7 +184,7 @@ runner/
 - Routing agenti: fonte unica **CLAUDE.md §2** — qui solo referenziato.
 - Regole di sicurezza: fonte unica **`../SECURITY_POLICY.md`** — qui solo richiamata.
 
-## Limiti V1.3 (manuale per ora)
+## Limiti V1.4 (manuale per ora)
 
 - La classificazione resta **rule-based su keyword locali**: nessun LLM, nessuna comprensione
   del contesto ("non toccare Spotify" matcha comunque `spotify`). Eros deve validare
@@ -162,7 +203,12 @@ runner/
 - Lo snapshot di CHECKPOINT.md è un'estrazione per heading (`## `), non un parser Markdown
   robusto: se una sezione viene rinominata o ristrutturata in modo molto diverso, il match
   `startsWith` sul titolo potrebbe non trovarla (il ticket riporterà "sezione non trovata").
-- Nessuna esecuzione automatica del prompt: copia/incolla manuale.
+- Nessuna esecuzione automatica del prompt: copia/incolla manuale, anche con template per-modo (V1.4).
+- I 6 template per-modo sono testo statico da tenere manualmente coerente con
+  `CLAUDE.md` §3/§5/§15 e con `ai-ops/SECURITY_POLICY.md`: se quelle regole
+  cambiano, i template in `templates/prompts/` vanno rivisti a mano, uno per
+  uno — nessuna generazione automatica dei template stessi.
 - Sync manuale tra `run.js` e `rules/task_classifier_rules.md`: verificati allineati al
-  2026-07-05 (V1.2-F, inclusa la precedenza executor e il golden set a 6 casi) — va
-  ri-verificato manualmente ad ogni futura modifica al classificatore.
+  2026-07-06 (V1.4-C3, inclusa la tabella `prompt_template` per i 13 golden case e il
+  mapping dei 6 template) — va ri-verificato manualmente ad ogni futura modifica al
+  classificatore o ai template.
