@@ -23,7 +23,7 @@
 |---|---|
 | research | studia, ricerca, ricerche, benchmark, analizza mercato, analisi mercato, competitor, research, esplora, indaga |
 | product | roadmap, priorità, priorita, monetizzazione, prodotto, strategia, sprint, backlog, vision, pricing, shuffle night, checklist, pilota |
-| coding-plan | piano, plan, prepara piano, micro-task, spec |
+| coding-plan | piano, plan, prepara piano, micro-task, spec, progetta, prossimo step |
 | checkpoint | checkpoint |
 | coding | fix, fixa, bug, implementa, codice, refactor, hook, componente, feature, funzione, errore, crash, code |
 | qa | verifica, verificare, test, testa, qa, stabile, controlla, collauda, e2e, regressione, smoke, sync, stress, shuffle night, checklist, pilota |
@@ -199,8 +199,9 @@ la tabella "Golden set regressione" più sotto. Skill/mode attesi per tutti i 13
 | K | Ripartiamo puliti da handoff perché le fonti sono stale | context-health-reset | handoff_prompt | handoff | 2 (matcha solo `handoff`, non `fonti stale` — vedi limite trigger frasali) |
 | L | Procedi con il piano V1.3-B già approvato | none | approval_prompt | approval | 3 (vince su coding-plan/regola 8) |
 | M | xyzabc task senza senso | context-health-reset | handoff_prompt | handoff | 10 |
+| N | Progetta il prossimo step per migliorare il Runner dopo V1.4, senza implementare. | /phase-plan | phase_plan_prompt | phase_plan | 8 (V1.4.1-A: `coding-plan` riconosce ora "progetta"/"prossimo step") |
 
-Se un futuro run su questi 13 task raw produce skill/mode diversi (o campi
+Se un futuro run su questi 14 task raw produce skill/mode diversi (o campi
 V1.2 diversi sui casi A–F), è una regressione: fermarsi e riportare, non
 correggere inline il classificatore senza revisione. Il campo `prompt_template`
 (colonna aggiunta in V1.4-C3, puramente documentale) non fa parte della

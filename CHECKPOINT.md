@@ -1,5 +1,5 @@
 # CHECKPOINT — Walbox
-Aggiornato: 2026-07-06
+Aggiornato: 2026-07-07
 Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle Night.
 
 ---
@@ -36,6 +36,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
   - REVIEW: task "verifica se V1.4 è pronta per push" ottiene giustamente `review_prompt`, ma executor `walbox-qa-serata` — pensato per il collaudo runtime della app Jukebox (QR/staff/TV) — non è adatto a validare un runner Node/CLI interno come ai-ops.
   - CHECKPOINT: task "aggiorna CHECKPOINT.md **senza toccare codice**" matcha comunque la keyword `codice` (presente in `coding`, `run.js:78`) per negazione non gestita, aggiungendo la categoria `coding` che nella cascata executor (`run.js:350` prima di `362`) vince su `checkpoint` → executor risultante `walbox-dev` invece di operatore doc/checkpoint.
   - Decisione presa: serve una micro-release V1.4.1 di fix routing (non nuovi template, non nuove feature) prima di progettare V1.5. Nessun file di prodotto toccato durante il test.
+- **ai-factory-runner V1.4.1-A (completata 2026-07-07):** aggiunte le keyword `progetta` e `prossimo step` a `CATEGORY_RULES['coding-plan']` in `run.js`, e allineata la tabella keyword in `task_classifier_rules.md`. Aggiunto Caso N al golden set ("Progetta il prossimo step per migliorare il Runner dopo V1.4, senza implementare." → categorie `coding-plan`, executor `walbox-dev`, confidence high, `/phase-plan` + `phase_plan_prompt`). Golden set A–M: 13/13 PASS, zero regressioni. Caso N: PASS. Nessun ticket creato durante i test (`--dry-run`). Prossimo step: V1.4.1-B, gestire la negazione su "codice" per evitare falsi positivi tipo "senza toccare codice" (che oggi assegna comunque la categoria `coding`).
 
 ## STABLE — non toccare senza approvazione
 - **Checkpoint locale salvato (2026-07-05): commit `2f06353` "chore: save ai-ops factory and walbox visual updates"** — contiene ai-ops AI Factory alignment, SECURITY_POLICY.md, reports/knowledge placeholders, modifiche visual/app Walbox, FABLE_WALBOX_CREATIVE_DIRECTION_PACK. Non pushato (vedi OPEN ISSUES).
@@ -64,7 +65,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - Kitchen-era memories are archived; see MEMORY.md. Do not use them for the active Jukebox/Shuffle Night track.
 
 ## NEXT STEP
-ai-factory-runner V1.4 completa, pushata su origin/main (2026-07-06, `e0462e0..26031d4`) e validata con 6 dry-run manuali sui `prompt_mode`. Prossimo micro-step runner: **V1.4.1 routing fix** — 3 fix mirati nel classificatore (`run.js`), non nuovi template: (1) estendere i trigger di `coding-plan` a verbi come "progetta"/"prossimo step"; (2) gestire la negazione base ("senza toccare codice") prima di assegnare la categoria `coding`; (3) distinguere l'executor `qa` per dominio Runner/tooling interno vs app Jukebox, invece di mandare sempre a `walbox-qa-serata`. Solo dopo V1.4.1, progettare V1.5. In parallelo restano aperti: completare il report finale S3 con la sezione 11 di `docs/PILOT_NIGHT_CHECKLIST_JUKEBOX.md`, passare a S4, oppure riprendere le modifiche pendenti su CustomerEntry.jsx/CustomerRequest.jsx.
+ai-factory-runner V1.4.1-A completata (2026-07-07): fix trigger `coding-plan` ("progetta"/"prossimo step"), golden set esteso a 14 casi (A–N), 14/14 PASS. Prossimo micro-step runner: **V1.4.1-B** — gestire la negazione su "codice" (task tipo "aggiorna CHECKPOINT.md senza toccare codice" non deve più matchare la categoria `coding`). Dopo V1.4.1-B resta **V1.4.1-C**: distinguere l'executor `qa` per dominio Runner/tooling interno vs app Jukebox, invece di mandare sempre a `walbox-qa-serata`. Solo dopo V1.4.1 completo, progettare V1.5. In parallelo restano aperti: completare il report finale S3 con la sezione 11 di `docs/PILOT_NIGHT_CHECKLIST_JUKEBOX.md`, passare a S4, oppure riprendere le modifiche pendenti su CustomerEntry.jsx/CustomerRequest.jsx (attualmente stashed).
 
 ## RESTART PROMPT
 "Walbox — Kitchen stabile e completa (V1-P6). Track attivo: Jukebox/Spotify reale per Shuffle Night (auto-advance, TV sync, ricerca), 39 commit dal 24/6 al 3/7. Prossimo step: walbox-dev fa piano da PILOT_NIGHT_CHECKLIST.md per chiudere fino a demo-stabile."

@@ -69,7 +69,8 @@ const CATEGORY_RULES = {
     'checklist', 'pilota',
   ],
   'coding-plan': [
-    'piano', 'plan', 'prepara piano', 'micro-task', 'spec',
+    'piano', 'plan', 'prepara piano', 'micro-task', 'spec', 'progetta',
+    'prossimo step',
   ],
   checkpoint: [
     'checkpoint',
