@@ -738,7 +738,7 @@ function buildScope(categories, profile, readOnlyOverride) {
   return { allowed, forbidden, outOfScope };
 }
 
-function buildQualityGate(categories, profile, readOnlyOverride) {
+function buildQualityGate(categories, profile, readOnlyOverride, sst) {
   const has = (c) => categories.includes(c);
   const checks = [];
 
@@ -749,10 +749,17 @@ function buildQualityGate(categories, profile, readOnlyOverride) {
   // V1.5-B: i check build/test non sono più hardcoded, vengono dal profilo
   // (profile.quality_gates) — spinti una sola volta anche se un task matcha
   // sia coding/design che qa/security, per evitare righe duplicate.
-  if (has('coding') || has('coding-plan') || has('design') || has('qa') || has('security')) {
+  // V1.5-D: se SST + readOnlyOverride, il run è dichiarato read-only: i gate
+  // build/test del profilo (npm run build, playwright, ecc.) non sono
+  // pertinenti a un audit che non tocca file, quindi si saltano.
+  const skipProfileGates = sst && readOnlyOverride;
+  if (!skipProfileGates && (has('coding') || has('coding-plan') || has('design') || has('qa') || has('security'))) {
     for (const check of profile.quality_gates) {
       checks.push(check);
     }
+  }
+  if (readOnlyOverride) {
+    checks.push('git status --short   # deve restare pulito, nessuna modifica ai file');
   }
   if (has('coding') || has('coding-plan') || has('design')) {
     checks.push(
@@ -1129,7 +1136,7 @@ function main() {
   }
   const approval = requiresApproval(categories, risk);
   const scope = buildScope(categories, profile, readOnlyOverride);
-  const qualityGate = buildQualityGate(categories, profile, readOnlyOverride);
+  const qualityGate = buildQualityGate(categories, profile, readOnlyOverride, flags.sst);
   const checkpointSnapshot = readCheckpointSnapshot();
 
   const categoriesLabel = categories.length > 0 ? categories.join(', ') : 'unclassified (triage umano)';

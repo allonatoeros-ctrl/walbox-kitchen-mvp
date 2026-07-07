@@ -17,6 +17,15 @@ REGOLE SST (obbligatorie, non derogabili in questo run):
   run diretto, fermati e dillo invece di produrre un piano lungo.
 - Se il task è ambiguo su cosa leggere o modificare: FERMATI o fai UNA
   domanda mirata. Non esplorare il repo per risolvere l'ambiguità da solo.
+- Non scrivere spiegazioni intermedie: nessun commento tra un'azione e
+  l'altra, il report finale è l'unico output testuale.
+- Usa grep/rg per localizzare prima di leggere: non aprire un file se una
+  ricerca mirata basta a rispondere.
+- Non leggere file interi se basta un range di righe: usa offset/limit o
+  sed -n sulla porzione rilevante.
+- Max 200 righe lette per file, salvo approvazione esplicita di Eros per
+  quel file.
+- Il report va scritto SOLO alla fine del run, non a step intermedi.
 
 SCOPE CONSENTITO:
 {{SCOPE_ALLOWED}}
