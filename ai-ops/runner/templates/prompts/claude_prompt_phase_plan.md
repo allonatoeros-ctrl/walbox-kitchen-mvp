@@ -41,4 +41,7 @@ Termina il piano chiedendo esplicitamente l'approvazione di Eros prima di
 implementare qualsiasi fase. Non procedere all'implementazione in questo
 run, nemmeno per la prima micro-fase.
 
+Se stai lavorando da una run folder ai-ops/runs/<run>/ e result.md esiste,
+compila result.md con il report finale seguendo CLAUDE.md §15.
+
 Non fare commit. Non fare push. Stop dopo aver presentato il piano.

@@ -45,4 +45,7 @@ FINAL REPORT (obbligatorio, in italiano):
 - Test/build eseguiti e non eseguiti (con motivo)
 - CHECKPOINT.md da aggiornare: sì/no (solo patch suggerita, mai scrittura diretta)
 
+Se stai lavorando da una run folder ai-ops/runs/<run>/ e result.md esiste,
+compila result.md con il report finale seguendo CLAUDE.md §15.
+
 Non fare commit. Non fare push. Stop dopo il final report.

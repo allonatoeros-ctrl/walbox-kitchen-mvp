@@ -33,3 +33,6 @@ QUALITY GATE PER QUESTO RUN:
 FINAL REPORT:
 Usa il formato REPORT FINALE di CLAUDE.md §15 (in italiano), inclusa la voce
 "CHECKPOINT.md da aggiornare: sì/no" con eventuale patch suggerita.
+
+Se stai lavorando da una run folder ai-ops/runs/<run>/ e result.md esiste,
+compila result.md con il report finale seguendo CLAUDE.md §15.

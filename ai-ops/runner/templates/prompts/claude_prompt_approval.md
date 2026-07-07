@@ -40,4 +40,7 @@ FINAL REPORT (breve, in italiano):
 - Rischi
 - CHECKPOINT.md da aggiornare: sì/no (solo patch suggerita se non autorizzata)
 
+Se stai lavorando da una run folder ai-ops/runs/<run>/ e result.md esiste,
+compila result.md con il report finale seguendo CLAUDE.md §15.
+
 Tono: breve, operativo, zero spiegoni. Non fare commit. Non fare push.

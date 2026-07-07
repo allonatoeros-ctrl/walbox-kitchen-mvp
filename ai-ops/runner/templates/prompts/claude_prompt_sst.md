@@ -21,4 +21,8 @@ QUALITY GATE:
 {{QUALITY_GATE}}
 
 REPORT FINALE (max 10 righe): cosa letto, cosa fatto, rischi, cosa approva Eros.
+
+Se stai lavorando da una run folder ai-ops/runs/<run>/ e result.md esiste,
+compila result.md con il report finale seguendo CLAUDE.md §15.
+
 Nessun commit. Nessun push.

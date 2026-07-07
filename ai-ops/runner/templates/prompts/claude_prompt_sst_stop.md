@@ -22,4 +22,7 @@ REPORT FINALE — MASSIMO 10 RIGHE:
 2. Motivo (ambiguità rilevata)
 3. Domanda mirata (se una sola è sufficiente) oppure cosa manca
 
+Se stai lavorando da una run folder ai-ops/runs/<run>/ e result.md esiste,
+compila result.md con il report finale seguendo CLAUDE.md §15.
+
 Non fare commit. Non fare push. Non esplorare il repo.
