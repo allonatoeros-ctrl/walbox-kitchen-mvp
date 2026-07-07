@@ -1,5 +1,21 @@
-# Task Classifier Rules — ai-factory-runner V1.3 (+ template V1.4, CLI V1.5-A, project profiles V1.5-B)
+# Task Classifier Rules — ai-factory-runner V1.3 (+ template V1.4, CLI V1.5-A, project profiles V1.5-B, read-only override V1.6)
 
+> **V1.6 (read-only/audit override):** Reality Sprint 2026-07-07 ha trovato
+> task con intento esplicito di sola lettura ("audit read-only", "solo
+> report", "non fare fix") che venivano comunque instradati su
+> `micro_fix_prompt`/`phase_plan_prompt` con executor `walbox-dev`, perché
+> keyword generiche come `fix` (categoria `coding`) matchano anche dentro
+> "non fare fix" e non esiste per `fix` una negazione mirata come
+> `isNegatedCodice` per `codice`. `detectReadOnlyOverride()` aggiunge un
+> controllo lessicale separato (`READ_ONLY_OVERRIDE_TRIGGERS`) che non tocca
+> `CATEGORY_RULES`/`classify()`: quando matcha, forza `prompt_mode:
+> 'audit_prompt'` in cima alla cascata skill (dopo risk-high, prima di
+> qa/security) e impedisce a `recommendExecutor()` di risolvere `walbox-dev`
+> (sostituito da un executor esplicitamente non implementativo). `buildScope`/
+> `buildWarnings` aggiungono un messaggio esplicito "NON modificare alcun
+> file". Golden set A–P rieseguito in `--dry-run --json`: 16/16 PASS, zero
+> regressioni.
+>
 > **V1.5-A (CLI flags & output safety):** non tocca nessuna regola di
 > classificazione qui descritta. Aggiunge solo gestione argomenti (`--dry-run`,
 > `--show-prompt`, `--json`, `--help`/`-h`, `--`), rifiuto dei flag sconosciuti,
@@ -136,6 +152,50 @@ senza nessuna delle `APP_QA_KEYWORDS` (né categorie tv/spotify/supabase/
 design) risulterebbe classificato come dominio `tooling` anche se in realtà
 riguarda la app — Eros deve validare l'executor nel ticket prima del Gate 1,
 come per gli altri limiti già noti del classificatore.
+
+## Override read-only/audit (`detectReadOnlyOverride`, V1.6)
+
+Segnali lessicali forti che dichiarano il task come audit/verifica di sola
+lettura, indipendenti da `CATEGORY_RULES` (stesso match: parola intera per
+singole, frase contenuta per multi-parola):
+
+```
+READ_ONLY_OVERRIDE_TRIGGERS = read-only, audit read-only, solo report,
+solo audit, non modificare nulla, non fare fix, no fix, nessuna modifica,
+sola lettura
+```
+
+Scelta deliberata di frasi multi-parola/esplicite invece della singola
+`non modificare`: quest'ultima è troppo generica e rischierebbe di declassare
+un task di coding legittimo che esclude solo un dettaglio (es. "implementa X
+ma non modificare Y"). `senza toccare`/`senza modificare` restano fuori da
+questa lista: sono già gestite dalla negazione mirata `isNegatedCodice` per
+la sola keyword `codice` (V1.4.1-B) e non attivano l'override V1.6.
+
+Effetto quando `detectReadOnlyOverride(rawTask)` è `true`:
+
+- **Executor** (`recommendExecutor`): se la cascata risolverebbe `walbox-dev`
+  (branch `coding`/`coding-plan`/`design`), viene sostituito con
+  `Claude Code (audit read-only — nessuna implementazione)`. Non tocca gli
+  altri branch (security, qa, checkpoint, research/product/docs, risk-high) —
+  quelli non suggeriscono mai implementazione.
+- **Skill/mode** (`recommendSkillAndMode`): nuova regola in cascata, subito
+  dopo risk-high/deploy (regola 4) e prima di qa/security (vecchia regola 5,
+  ora 6) → `recommended_skill: quality-gate-verifier`,
+  `prompt_mode: 'audit_prompt'`.
+- **Template** (`resolvePromptTemplate`): non esiste ancora
+  `claude_prompt_audit.md` → fallback a `claude_prompt_phase_plan.md`,
+  etichettato `phase_plan (fallback audit)` (non il fallback generico
+  `base (fallback)`) per non confondere il log con un vero
+  `phase_plan_prompt` di implementazione.
+- **Scope/Warnings** (`buildScope`/`buildWarnings`): aggiungono in cima a
+  `forbidden` la voce "QUALSIASI modifica o scrittura di file" e un warning
+  dedicato, visibili in sezione 2 e nel campo `scope` del ticket.
+
+Limite noto: come il resto del classificatore, è lessicale — un task che
+dichiara "read-only" ma non usa nessuna delle frasi sopra non attiva
+l'override (fallback: la cascata pre-V1.6 resta invariata, Eros corregge a
+mano nel ticket).
 
 ## Ruolo dei riferimenti a documenti (`detectDocRole`, V1.2)
 

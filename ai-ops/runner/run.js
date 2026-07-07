@@ -210,6 +210,26 @@ const MICRO_FIX_EXCLUDERS = [
   'refactor', 'feature', 'implementa', 'piano', 'più file', 'multipli file',
 ];
 
+// V1.6: segnali forti che dichiarano il task come audit/verifica di sola
+// lettura (Reality Sprint 2026-07-07). Prima di questo fix, task con queste
+// frasi potevano comunque finire su micro_fix_prompt/phase_plan_prompt con
+// executor walbox-dev, perché keyword generiche come "fix" (categoria
+// coding) matchano anche dentro "non fare fix" — non esiste per "fix" una
+// negazione mirata come isNegatedCodice per "codice". Frasi scelte
+// deliberatamente multi-parola/esplicite (non la singola "non modificare",
+// troppo generica: rischierebbe di declassare un task di coding legittimo
+// che esclude solo un dettaglio, es. "implementa X ma non modificare Y").
+const READ_ONLY_OVERRIDE_TRIGGERS = [
+  'read-only', 'audit read-only', 'solo report', 'solo audit',
+  'non modificare nulla', 'non fare fix', 'no fix', 'nessuna modifica',
+  'sola lettura',
+];
+
+function detectReadOnlyOverride(rawTask) {
+  const text = normalize(rawTask);
+  return READ_ONLY_OVERRIDE_TRIGGERS.some((kw) => matchesKeyword(text, kw));
+}
+
 // V1.4.1-C: keyword per distinguere, dentro la categoria qa, se il task
 // riguarda il tooling interno (ai-ops/runner stesso) o l'app Walbox/Jukebox.
 // Usate solo da detectQaDomain, nessun effetto su CATEGORY_RULES/assessRisk.
@@ -438,7 +458,7 @@ function assessRisk(rawTask, categories) {
   return { risk, reasons };
 }
 
-function recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain) {
+function recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain, readOnlyOverride) {
   const has = (c) => categories.includes(c);
 
   if (risk === 'high' || has('deploy')) {
@@ -460,6 +480,12 @@ function recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain) 
     };
   }
   if (has('coding') || has('coding-plan') || has('design')) {
+    if (readOnlyOverride) {
+      return {
+        executor: 'Claude Code (audit read-only — nessuna implementazione)',
+        why: 'Il task dichiara esplicitamente audit/read-only (V1.6): la cascata avrebbe instradato su walbox-dev per keyword tipo "fix"/"piano", ma nessun esecutore deve implementare o modificare file. Override di sicurezza.',
+      };
+    }
     return {
       executor: 'walbox-dev',
       why: 'Task di implementazione/piano/visual sul repo → agente walbox-dev (o Antigravity se visual-browser, vedi CLAUDE.md §2), sempre dopo Gate 1. Vince su qa quando entrambe le categorie sono presenti nello stesso task (V1.2-F).',
@@ -533,6 +559,13 @@ function recommendSkillAndMode(categories, risk, docRole, confidence, rawTask) {
       why: 'Rischio high o deploy: serve approvazione esplicita di Eros, nessuna skill automatica (cascata V1.3 regola 4).',
     };
   }
+  if (hit(READ_ONLY_OVERRIDE_TRIGGERS)) {
+    return {
+      skill: 'quality-gate-verifier',
+      promptMode: 'audit_prompt',
+      why: 'Il task dichiara esplicitamente audit/read-only (es. "solo report", "non fare fix"): nessuna implementazione, solo verifica — vince su qa/coding/coding-plan sottostanti (cascata V1.6 regola 4b).',
+    };
+  }
   if ((has('qa') || has('security')) && !has('coding') && !has('coding-plan')) {
     return {
       skill: 'quality-gate-verifier',
@@ -584,9 +617,14 @@ function recommendSkillAndMode(categories, risk, docRole, confidence, rawTask) {
 
 // Confidence e warning[] sono deterministici: nessun punteggio "morbido",
 // solo condizioni esplicite (V1.2-B).
-function buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain }) {
+function buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain, readOnlyOverride }) {
   const warnings = [];
 
+  if (readOnlyOverride) {
+    warnings.push(
+      'task dichiara esplicitamente audit/read-only: NON modificare alcun file, executor non deve implementare (V1.6)',
+    );
+  }
   if (categories.length > 1) {
     warnings.push(
       `segnali misti: più categorie rilevate insieme (${categories.join(', ')}) — verificare che il classificatore non abbia sovrastimato`,
@@ -639,7 +677,7 @@ function requiresApproval(categories, risk) {
   return readOnlyOnly ? 'yes (Gate 1 comunque, run atteso read-only)' : 'yes';
 }
 
-function buildScope(categories, profile) {
+function buildScope(categories, profile, readOnlyOverride) {
   const has = (c) => categories.includes(c);
   const allowed = [];
   const forbidden = [
@@ -650,13 +688,24 @@ function buildScope(categories, profile) {
   ];
   const outOfScope = [];
 
+  if (readOnlyOverride) {
+    forbidden.unshift(
+      'QUALSIASI modifica o scrittura di file: il task dichiara esplicitamente audit/read-only — nessun fix va applicato, anche se una keyword nel testo (es. "fix" in "non fare fix") suggerirebbe altrimenti (V1.6)',
+    );
+    outOfScope.push('qualsiasi implementazione o fix, anche minimo: questo run produce solo un report/audit');
+  }
+
   if (has('research') || has('product') || has('docs') || has('checkpoint')) {
     allowed.push('ai-ops/ (ticket, report, knowledge)');
     allowed.push('docs/ solo se esplicitamente approvato nel plan');
     outOfScope.push(`codice app (${profile.code_dir})`);
   }
   if (has('coding') || has('coding-plan') || has('design')) {
-    allowed.push(`SOLO i file ${profile.code_dir} elencati e approvati nel Plan (Gate 1) — preferire 1 file`);
+    allowed.push(
+      readOnlyOverride
+        ? 'lettura repo (nessuna scrittura consentita): il task dichiara esplicitamente audit/read-only'
+        : `SOLO i file ${profile.code_dir} elencati e approvati nel Plan (Gate 1) — preferire 1 file`,
+    );
     outOfScope.push('refactor non richiesti, file non elencati nel Plan');
   }
   if (has('qa') || has('security')) {
@@ -676,7 +725,7 @@ function buildScope(categories, profile) {
   return { allowed, forbidden, outOfScope };
 }
 
-function buildQualityGate(categories, profile) {
+function buildQualityGate(categories, profile, readOnlyOverride) {
   const has = (c) => categories.includes(c);
   const checks = [];
 
@@ -693,7 +742,11 @@ function buildQualityGate(categories, profile) {
     }
   }
   if (has('coding') || has('coding-plan') || has('design')) {
-    checks.push('git diff --stat   # verificare che compaiano SOLO i file approvati');
+    checks.push(
+      readOnlyOverride
+        ? `nessuna scrittura di file: git status deve restare pulito su ${profile.code_dir} (audit read-only, V1.6)`
+        : 'git diff --stat   # verificare che compaiano SOLO i file approvati',
+    );
   }
   if (has('qa') || has('security')) {
     checks.push(`nessuna scrittura su codice di prodotto: git status deve restare pulito su ${profile.code_dir}`);
@@ -716,6 +769,15 @@ function resolvePromptTemplate(promptMode) {
     const candidate = path.join(PROMPTS_DIR, `claude_prompt_${mode}.md`);
     if (fs.existsSync(candidate)) {
       return { templatePath: candidate, templateLabel: mode };
+    }
+    // V1.6: "audit" non ha ancora un template dedicato — fallback a
+    // phase_plan (stessa struttura "solo piano/audit, nessuna modifica"),
+    // ma etichettato per non confonderlo con un vero phase_plan_prompt.
+    if (mode === 'audit') {
+      const phasePlanCandidate = path.join(PROMPTS_DIR, 'claude_prompt_phase_plan.md');
+      if (fs.existsSync(phasePlanCandidate)) {
+        return { templatePath: phasePlanCandidate, templateLabel: 'phase_plan (fallback audit)' };
+      }
     }
   }
   return { templatePath: BASE_PROMPT_TEMPLATE, templateLabel: 'base (fallback)' };
@@ -1012,8 +1074,9 @@ function main() {
   } else {
     qaDomain = detectQaDomain(rawTask, categories);
   }
-  const { executor, why: routingWhy } = recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain);
-  const warnings = buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain });
+  const readOnlyOverride = detectReadOnlyOverride(rawTask);
+  const { executor, why: routingWhy } = recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain, readOnlyOverride);
+  const warnings = buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain, readOnlyOverride });
   const confidence = computeConfidence(categories, warnings);
   const {
     skill: recommendedSkill,
@@ -1021,8 +1084,8 @@ function main() {
     why: skillWhy,
   } = recommendSkillAndMode(categories, risk, docRole, confidence, rawTask);
   const approval = requiresApproval(categories, risk);
-  const scope = buildScope(categories, profile);
-  const qualityGate = buildQualityGate(categories, profile);
+  const scope = buildScope(categories, profile, readOnlyOverride);
+  const qualityGate = buildQualityGate(categories, profile, readOnlyOverride);
   const checkpointSnapshot = readCheckpointSnapshot();
 
   const categoriesLabel = categories.length > 0 ? categories.join(', ') : 'unclassified (triage umano)';
@@ -1106,6 +1169,7 @@ function main() {
       warnings,
       doc_role: docRole,
       qa_domain: qaDomain,
+      read_only_override: readOnlyOverride,
       requires_approval: approval,
       scope,
       quality_gate: qualityGate,
