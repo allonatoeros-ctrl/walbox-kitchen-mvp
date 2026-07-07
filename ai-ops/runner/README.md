@@ -228,6 +228,42 @@ toccare la classificazione testuale.
 node ai-ops/runner/run.js "Verifica il golden set del runner" --project=ai-factory --dry-run --json
 ```
 
+## Novità V1.6 — Run Pack V0
+
+Il ticket singolo in `ai-ops/tickets/` funzionava, ma il prompt Claude pronto da
+incollare viveva solo dentro la sezione 9 di un file più grande — per usarlo
+bisognava aprire il ticket ed estrarre il blocco, oppure `--show-prompt` e
+copiare dal terminale.
+
+- **`--write-run-pack`**: invece del ticket singolo, scrive una cartella
+  `ai-ops/runs/YYYY-MM-DD_<project>_<slug>/` con 4 file:
+  - `runner.json` — payload strutturato, stessi campi di `--json`, più
+    puntatori ai file di testo (`run_log_file`, `claude_prompt_file`,
+    `context_file`). Nessun testo libero duplicato dentro.
+  - `claude_prompt.md` — solo il prompt Claude Code pronto da incollare.
+  - `run_log.md` — equivalente del ticket attuale meno il project state
+    (spostato in `context.md`) e meno il corpo del prompt (spostato in
+    `claude_prompt.md`, qui resta solo un rimando).
+  - `context.md` — snapshot CHECKPOINT.md (STABLE/DONE/OPEN ISSUES/NEXT STEP)
+    + elenco delle fonti di stato da leggere.
+- **Assente il flag**: comportamento identico a V1.5-E, ticket singolo in
+  `ai-ops/tickets/`, nessuna cartella `runs/` creata.
+- **`--dry-run` vince su entrambi**: nessuna scrittura, né ticket né run pack.
+- **`--json` con `--write-run-pack`**: il payload riporta `run_pack_dir` (path
+  della cartella creata) al posto di `ticket_path` (che resta `null`).
+- **Puramente additivo**: `classify`/`assessRisk`/`recommendExecutor`/
+  `recommendSkillAndMode`/profili/template per-modo esistenti non sono
+  toccati — cambia solo come viene scritto l'output, non cosa viene
+  calcolato. Golden set A–P invariato.
+- **Limite noto**: `templates/run_log_template.md` è un fork manuale di
+  `templates/ticket_template.md` — stesso limite di sync manuale già
+  documentato per i 6 template per-modo in "Limiti V1.4" sotto.
+
+```bash
+node ai-ops/runner/run.js "Fixa il bug della coda" --write-run-pack
+node ai-ops/runner/run.js "Verifica golden set" --project=ai-factory --write-run-pack --json
+```
+
 ## Uso
 
 ```bash
@@ -270,11 +306,19 @@ ai-ops/
 ├── profiles/                          ← project profiles (V1.5-B)
 │   ├── walbox.json
 │   └── ai-factory.json
+├── runs/                              ← run pack V0 (V1.6), uno per run con --write-run-pack
+│   └── YYYY-MM-DD_<project>_<slug>/
+│       ├── runner.json
+│       ├── claude_prompt.md
+│       ├── run_log.md
+│       └── context.md
 └── runner/
     ├── README.md                          ← sei qui
     ├── run.js                             ← runner (Node, zero deps)
     ├── templates/
-    │   ├── ticket_template.md             ← struttura del ticket generato
+    │   ├── ticket_template.md             ← struttura del ticket generato (default, senza --write-run-pack)
+    │   ├── run_log_template.md            ← struttura di run_log.md nel run pack (V1.6)
+    │   ├── context_template.md            ← struttura di context.md nel run pack (V1.6)
     │   ├── claude_prompt_template.md      ← prompt Claude Code, fallback base (V1.1-V1.3)
     │   └── prompts/                       ← template per-modo (V1.4), uno per prompt_mode
     │       ├── claude_prompt_micro_fix.md

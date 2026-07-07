@@ -98,6 +98,21 @@
  * dichiarato read-only). Non tocca classify/assessRisk/recommendExecutor/
  * recommendSkillAndMode: categorie, rischio, executor, skill e prompt_mode
  * restano identici al golden set A–P.
+ *
+ * V1.6: Run Pack V0. Nuovo flag --write-run-pack: invece del ticket singolo in
+ * ai-ops/tickets/, scrive una cartella ai-ops/runs/YYYY-MM-DD_<project>_<slug>/
+ * con 4 file — runner.json (payload strutturato, stessi campi di --json, più
+ * puntatori ai file di testo), claude_prompt.md (solo il prompt pronto da
+ * incollare, senza dover aprire un ticket più grande), run_log.md (ticket
+ * attuale meno project snapshot e corpo del prompt, spostati altrove) e
+ * context.md (snapshot CHECKPOINT.md + state sources). Assente il flag,
+ * comportamento identico a V1.5-E (ticket singolo in ai-ops/tickets/, nessuna
+ * cartella runs/ creata). --dry-run continua a vincere su tutto: nessuna
+ * scrittura, né ticket né run pack. --json riporta run_pack_dir al posto di
+ * ticket_path quando --write-run-pack è attivo. Non tocca classify/assessRisk/
+ * recommendExecutor/recommendSkillAndMode/profili/template per-modo esistenti:
+ * cambia solo come viene scritto l'output, non cosa viene calcolato — golden
+ * set A–P invariato.
  */
 
 import fs from 'node:fs';
@@ -109,6 +124,7 @@ const RUNNER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const AI_OPS_DIR = path.resolve(RUNNER_DIR, '..');
 const REPO_ROOT = path.resolve(AI_OPS_DIR, '..');
 const TICKETS_DIR = path.join(AI_OPS_DIR, 'tickets');
+const RUNS_DIR = path.join(AI_OPS_DIR, 'runs');
 const PROFILES_DIR = path.join(AI_OPS_DIR, 'profiles');
 const DEFAULT_PROJECT = 'walbox';
 const TEMPLATES_DIR = path.join(RUNNER_DIR, 'templates');
@@ -121,7 +137,7 @@ const CHECKPOINT_SECTION_MAX_LINES = 6;
 // e nel campo "version" dell'output --json. Prima era hardcodata come "V1.3"
 // nelle stringhe di console pur essendo il codice a V1.4.1 — disallineamento
 // risolto centralizzandola qui.
-const RUNNER_VERSION = 'V1.5-E';
+const RUNNER_VERSION = 'V1.6';
 
 // ---------------------------------------------------------------------------
 // Regole di classificazione (keyword locali, match per parola intera;
@@ -907,6 +923,18 @@ function uniqueTicketPath(date, slug) {
   return candidate;
 }
 
+// V1.6: stessa logica anti-collisione di uniqueTicketPath, su una cartella
+// invece che su un file singolo.
+function uniqueRunPackDir(date, project, slug) {
+  let candidate = path.join(RUNS_DIR, `${date}_${project}_${slug}`);
+  let n = 2;
+  while (fs.existsSync(candidate)) {
+    candidate = path.join(RUNS_DIR, `${date}_${project}_${slug}-${n}`);
+    n += 1;
+  }
+  return candidate;
+}
+
 // ---------------------------------------------------------------------------
 // CLI: parsing argomenti, help, exit code (V1.5-A)
 // ---------------------------------------------------------------------------
@@ -920,7 +948,7 @@ const EXIT_USAGE = 2;
 // fallire il run con exit code EXIT_USAGE, invece di finire silenziosamente
 // concatenato nel task raw come accadeva fino a V1.4.1.
 function parseArgs(argv) {
-  const flags = { dryRun: false, showPrompt: false, json: false, help: false, project: undefined, sst: false };
+  const flags = { dryRun: false, showPrompt: false, json: false, help: false, project: undefined, sst: false, writeRunPack: false };
   const taskParts = [];
   let endOfFlags = false;
   for (const arg of argv) {
@@ -938,6 +966,7 @@ function parseArgs(argv) {
         case '--show-prompt': flags.showPrompt = true; break;
         case '--json': flags.json = true; break;
         case '--sst': flags.sst = true; break;
+        case '--write-run-pack': flags.writeRunPack = true; break;
         case '--help':
         case '-h': flags.help = true; break;
         default: {
@@ -1000,6 +1029,11 @@ OPZIONI:
                     indicati", niente /phase-plan, niente audit non richiesto,
                     report max 10 righe, task ambiguo → STOP (V1.5-D). Non
                     cambia categorie/rischio/executor, solo skill/prompt_mode.
+  --write-run-pack Scrive una cartella ai-ops/runs/YYYY-MM-DD_<project>_<slug>/
+                    con 4 file (runner.json, claude_prompt.md, run_log.md,
+                    context.md) invece del ticket singolo in ai-ops/tickets/
+                    (V1.6). Assente: comportamento invariato (ticket singolo).
+                    Con --dry-run non scrive nulla, né ticket né run pack.
   --help, -h       Mostra questo aiuto ed esce.
   --               Fine dei flag: tutto ciò che segue è trattato come task raw.
 
@@ -1009,6 +1043,7 @@ ESEMPI:
   node ai-ops/runner/run.js "Fixa il bug della coda" --dry-run --show-prompt
   node ai-ops/runner/run.js "Prepara piano V1.6" --dry-run --json
   node ai-ops/runner/run.js "Verifica golden set" --project=ai-factory --dry-run --json
+  node ai-ops/runner/run.js "Fixa il bug della coda" --write-run-pack
 
 EXIT CODE:
   0  ok
@@ -1209,14 +1244,97 @@ function main() {
     CHECKPOINT_NEXT_STEP: indentLines(checkpointSnapshot.nextStep, '  '),
   });
 
+  // V1.6: Run Pack V0. --write-run-pack scrive una cartella con 4 file al
+  // posto del ticket singolo; senza il flag il comportamento resta quello di
+  // V1.5-E (ticket singolo in ai-ops/tickets/). --dry-run vince su entrambi:
+  // nessuna scrittura in nessuno dei due casi.
   let relPath = null;
+  let runPackRelDir = null;
   if (!dryRun) {
-    if (!fs.existsSync(TICKETS_DIR)) {
-      fs.mkdirSync(TICKETS_DIR, { recursive: true });
+    if (flags.writeRunPack) {
+      const runPackDir = uniqueRunPackDir(date, profile.project, slug);
+      fs.mkdirSync(runPackDir, { recursive: true });
+
+      const runLog = renderTemplate(path.join(TEMPLATES_DIR, 'run_log_template.md'), {
+        TITLE: rawTask,
+        RAW_TASK: rawTask,
+        DATE: date,
+        SLUG: slug,
+        CATEGORIES: categoriesLabel,
+        MATCHED_KEYWORDS: keywordsLabel,
+        RISK: risk,
+        RISK_REASONS: bulletList(riskReasons),
+        EXECUTOR: executor,
+        CONFIDENCE: confidence,
+        RECOMMENDED_SKILL: recommendedSkill,
+        PROMPT_MODE: promptMode,
+        RECOMMENDED_SKILL_WHY: skillWhy,
+        WARNINGS_BLOCK: warningsBlock,
+        DOC_ROLE_LINE: docRoleLine,
+        ROUTING_WHY: routingWhy,
+        REQUIRES_APPROVAL: approval,
+        SCOPE_ALLOWED: bulletList(scope.allowed),
+        SCOPE_FORBIDDEN: bulletList(scope.forbidden),
+        SCOPE_OUT: bulletList(scope.outOfScope),
+        QUALITY_GATE: bulletList(qualityGate),
+      });
+
+      const context = renderTemplate(path.join(TEMPLATES_DIR, 'context_template.md'), {
+        TITLE: rawTask,
+        CHECKPOINT_STABLE: indentLines(checkpointSnapshot.stable, '  '),
+        CHECKPOINT_DONE: indentLines(checkpointSnapshot.done, '  '),
+        CHECKPOINT_OPEN_ISSUES: indentLines(checkpointSnapshot.openIssues, '  '),
+        CHECKPOINT_NEXT_STEP: indentLines(checkpointSnapshot.nextStep, '  '),
+      });
+
+      // Payload strutturato: stessi campi del payload --json, senza testo
+      // libero (prompt/checkpoint) duplicato — solo puntatori ai file di
+      // testo della run pack, per restare single-source-of-truth.
+      const runnerJson = {
+        version: RUNNER_VERSION,
+        project: profile.project,
+        dry_run: dryRun,
+        sst: flags.sst,
+        task: rawTask,
+        date,
+        slug,
+        categories,
+        matched_keywords: matchedKeywords,
+        risk,
+        risk_reasons: riskReasons,
+        executor,
+        routing_why: routingWhy,
+        confidence,
+        recommended_skill: recommendedSkill,
+        prompt_mode: promptMode,
+        prompt_template: promptTemplateLabel,
+        skill_why: skillWhy,
+        warnings,
+        doc_role: docRole,
+        qa_domain: qaDomain,
+        read_only_override: readOnlyOverride,
+        requires_approval: approval,
+        scope,
+        quality_gate: qualityGate,
+        run_log_file: 'run_log.md',
+        claude_prompt_file: 'claude_prompt.md',
+        context_file: 'context.md',
+      };
+
+      fs.writeFileSync(path.join(runPackDir, 'runner.json'), `${JSON.stringify(runnerJson, null, 2)}\n`, 'utf8');
+      fs.writeFileSync(path.join(runPackDir, 'claude_prompt.md'), `${claudePrompt.trim()}\n`, 'utf8');
+      fs.writeFileSync(path.join(runPackDir, 'run_log.md'), runLog, 'utf8');
+      fs.writeFileSync(path.join(runPackDir, 'context.md'), context, 'utf8');
+
+      runPackRelDir = path.relative(process.cwd(), runPackDir);
+    } else {
+      if (!fs.existsSync(TICKETS_DIR)) {
+        fs.mkdirSync(TICKETS_DIR, { recursive: true });
+      }
+      const ticketPath = uniqueTicketPath(date, slug);
+      fs.writeFileSync(ticketPath, ticket, 'utf8');
+      relPath = path.relative(process.cwd(), ticketPath);
     }
-    const ticketPath = uniqueTicketPath(date, slug);
-    fs.writeFileSync(ticketPath, ticket, 'utf8');
-    relPath = path.relative(process.cwd(), ticketPath);
   }
 
   if (json) {
@@ -1247,6 +1365,7 @@ function main() {
       scope,
       quality_gate: qualityGate,
       ticket_path: relPath,
+      run_pack_dir: runPackRelDir,
       prompt: showPrompt ? claudePrompt.trim() : null,
     };
     process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
@@ -1269,15 +1388,17 @@ function main() {
       console.log(`  Warnings:  ${warnings.length} (vedi --json per il dettaglio)`);
     }
     if (!dryRun) {
-      console.log(`  Ticket:    ${relPath}`);
+      console.log(flags.writeRunPack ? `  Run pack:  ${runPackRelDir}` : `  Ticket:    ${relPath}`);
     }
     return EXIT_OK;
   }
 
   console.log(
     dryRun
-      ? `AI FACTORY RUNNER ${RUNNER_VERSION} — dry-run (nessun ticket scritto su disco)`
-      : `AI FACTORY RUNNER ${RUNNER_VERSION} — ticket generato`,
+      ? `AI FACTORY RUNNER ${RUNNER_VERSION} — dry-run (nessun output scritto su disco)`
+      : flags.writeRunPack
+        ? `AI FACTORY RUNNER ${RUNNER_VERSION} — run pack generato`
+        : `AI FACTORY RUNNER ${RUNNER_VERSION} — ticket generato`,
   );
   if (profile.project !== DEFAULT_PROJECT) {
     console.log(`  Progetto:   ${profile.project}`);
@@ -1304,7 +1425,7 @@ function main() {
     console.log(`  Doc role:   ${docRole}`);
   }
   if (!dryRun) {
-    console.log(`  Ticket:     ${relPath}`);
+    console.log(flags.writeRunPack ? `  Run pack:   ${runPackRelDir}` : `  Ticket:     ${relPath}`);
   }
   if (showPrompt) {
     console.log('');
