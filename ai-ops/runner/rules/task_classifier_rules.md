@@ -1,4 +1,4 @@
-# Task Classifier Rules — ai-factory-runner V1.3 (+ template V1.4, CLI V1.5-A)
+# Task Classifier Rules — ai-factory-runner V1.3 (+ template V1.4, CLI V1.5-A, project profiles V1.5-B)
 
 > **V1.5-A (CLI flags & output safety):** non tocca nessuna regola di
 > classificazione qui descritta. Aggiunge solo gestione argomenti (`--dry-run`,
@@ -6,6 +6,18 @@
 > `RUNNER_VERSION` unica, warning testuali a console ed exit code espliciti.
 > Golden set A–P rieseguito in `--dry-run --json`: 16/16 PASS, zero regressioni
 > su categorie/rischio/executor/confidence/skill/prompt_mode.
+>
+> **V1.5-B (project profiles):** non tocca nessuna regola di classificazione
+> qui descritta (`CATEGORY_RULES`, `assessRisk`, `recommendExecutor`,
+> `recommendSkillAndMode`, `detectQaDomain` invariati). Aggiunge solo
+> `--project=<nome>` + `loadProfile()`, che parametrizza `buildScope()`,
+> `buildQualityGate()` e `detectExplicitAgents()` da
+> `ai-ops/profiles/<nome>.json` (`code_dir`, `quality_gates`,
+> `explicit_agents` — quest'ultimo sostituisce la vecchia costante top-level
+> `EXPLICIT_AGENTS`, ora in `ai-ops/profiles/walbox.json`). Unica eccezione:
+> con `--project=ai-factory`, `qaDomain` è forzato a `'tooling'` invece che
+> dedotto dal testo (decisione esplicita con Eros, non un'assunzione). Golden
+> set A–P rieseguito senza `--project`: 16/16 PASS, zero regressioni.
 >
 > Documentazione umana delle regole di classificazione implementate in `../run.js`.
 > **Fonte eseguibile: `run.js`** (costanti `CATEGORY_RULES`, `HIGH_RISK_KEYWORDS`,
@@ -176,7 +188,7 @@ V1.2 introduce un'**escalation condizionale** (in precedenza sempre `high`):
 ## Executor consigliato (precedenza dall'alto, `recommendExecutor` in `run.js`)
 
 1. rischio `high` **o** categoria `deploy` → **manual approval required** (nessun esecutore automatico, SECURITY_POLICY.md regole 3-6)
-2. esattamente **un** agente citato esplicitamente nel task (`EXPLICIT_AGENTS`: `walbox-dev`, `walbox-qa-serata`, `walbox-hardening`, `walbox-product-owner`) → **quell'agente**, a meno che il punto 1 non l'abbia già deciso
+2. esattamente **un** agente citato esplicitamente nel task (`profile.explicit_agents` — per il profilo `walbox`: `walbox-dev`, `walbox-qa-serata`, `walbox-hardening`, `walbox-product-owner`; vuoto per `ai-factory`, quindi nessun override possibile) → **quell'agente**, a meno che il punto 1 non l'abbia già deciso
 3. `security` → **walbox-hardening**
 4. `coding` o `coding-plan` o `design` → **walbox-dev** — **vince su `qa` se presenti insieme** (V1.2-F: l'ordine dei controlli in `recommendExecutor` valuta coding/coding-plan/design prima di qa; un task con categorie `coding, qa` va a walbox-dev, non a walbox-qa-serata. Prima di V1.2-F valeva il contrario — vedi Caso F nel golden set)
 5. `qa` (e nessuna delle categorie sopra) → **walbox-qa-serata**, tranne quando
@@ -189,7 +201,10 @@ V1.2 introduce un'**escalation condizionale** (in precedenza sempre `high`):
 8. nessuna categoria riconosciuta (`unclassified`) → **manual approval required**, triage umano
 
 Il routing dettagliato agenti/subagenti **non è duplicato qui**: fonte unica CLAUDE.md §2.
-La lista `EXPLICIT_AGENTS` in `run.js` va tenuta manualmente in sync con quella di CLAUDE.md §2: un subagente nuovo non presente lì non attiva mai l'override, anche se il suo nome compare nel task raw.
+La lista `explicit_agents` in `ai-ops/profiles/walbox.json` (V1.5-B; prima era la costante
+`EXPLICIT_AGENTS` in `run.js`) va tenuta manualmente in sync con quella di CLAUDE.md §2: un
+subagente nuovo non presente lì non attiva mai l'override, anche se il suo nome compare nel
+task raw.
 
 ## Confidence e Warnings (V1.2-B, `computeConfidence`/`buildWarnings` in `run.js`)
 
@@ -203,7 +218,7 @@ Ogni run calcola due campi aggiuntivi, riportati nel ticket sezione 2:
 - **Warnings** (array, vuoto di default — nel ticket compare solo se non vuoto), popolato quando:
   1. **segnali misti**: più di una categoria è stata assegnata allo stesso task;
   2. **docs-as-source**: il riferimento a doc rilevato da `detectDocRole` è materiale di partenza, non l'oggetto della modifica;
-  3. **agente esplicito ignorato**: nel task è citato esattamente un agente (`EXPLICIT_AGENTS`) ma l'executor calcolato è diverso (tipicamente perché il rischio è `high`/`deploy` e il punto 1 della cascata ha vinto);
+  3. **agente esplicito ignorato**: nel task è citato esattamente un agente (`profile.explicit_agents`) ma l'executor calcolato è diverso (tipicamente perché il rischio è `high`/`deploy` e il punto 1 della cascata ha vinto);
   4. **dominio senza azione**: è presente una categoria di dominio protetto (`tv`, `spotify`, `supabase`) ma nessuna categoria di azione (`coding`, `coding-plan`, `qa`, `security`, `deploy`) — il task nomina un'area sensibile senza dire cosa farci.
 
 ## Recommended skill e prompt mode (V1.3, `recommendSkillAndMode` in `run.js`)

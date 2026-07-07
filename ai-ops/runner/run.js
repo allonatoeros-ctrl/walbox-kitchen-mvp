@@ -57,6 +57,20 @@
  * try/catch con exit code espliciti. Puramente additivo: classificazione,
  * rischio, executor, confidence, warnings, skill e prompt_mode INVARIATI —
  * golden set A–P non toccato.
+ *
+ * V1.5-B: project profiles. Nuovo flag --project=<nome> + loadProfile() legge
+ * ai-ops/profiles/<nome>.json (default 'walbox', retrocompatibile). Il
+ * profilo parametrizza SOLO buildScope()/buildQualityGate() (code_dir,
+ * quality_gates) e detectExplicitAgents() (explicit_agents, ex costante
+ * EXPLICIT_AGENTS ora dentro walbox.json) — non tocca CATEGORY_RULES,
+ * assessRisk, recommendExecutor (cascata), recommendSkillAndMode o
+ * detectQaDomain. Unica eccezione concordata con Eros: con
+ * --project=ai-factory, qaDomain è forzato a 'tooling' invece che dedotto dal
+ * testo, perché un task lanciato con quel profilo riguarda per definizione il
+ * runner stesso. --project con nome esplicito ma file profilo mancante/JSON
+ * malformato fallisce con exit code 2, mai fallback silenzioso. Golden set
+ * A–P rieseguito senza --project: 16/16 PASS, zero regressioni su
+ * categorie/rischio/executor/confidence/skill/prompt_mode.
  */
 
 import fs from 'node:fs';
@@ -68,6 +82,8 @@ const RUNNER_DIR = path.dirname(fileURLToPath(import.meta.url));
 const AI_OPS_DIR = path.resolve(RUNNER_DIR, '..');
 const REPO_ROOT = path.resolve(AI_OPS_DIR, '..');
 const TICKETS_DIR = path.join(AI_OPS_DIR, 'tickets');
+const PROFILES_DIR = path.join(AI_OPS_DIR, 'profiles');
+const DEFAULT_PROJECT = 'walbox';
 const TEMPLATES_DIR = path.join(RUNNER_DIR, 'templates');
 const PROMPTS_DIR = path.join(TEMPLATES_DIR, 'prompts');
 const BASE_PROMPT_TEMPLATE = path.join(TEMPLATES_DIR, 'claude_prompt_template.md');
@@ -78,7 +94,7 @@ const CHECKPOINT_SECTION_MAX_LINES = 6;
 // e nel campo "version" dell'output --json. Prima era hardcodata come "V1.3"
 // nelle stringhe di console pur essendo il codice a V1.4.1 — disallineamento
 // risolto centralizzandola qui.
-const RUNNER_VERSION = 'V1.5-A';
+const RUNNER_VERSION = 'V1.5-B';
 
 // ---------------------------------------------------------------------------
 // Regole di classificazione (keyword locali, match per parola intera;
@@ -165,10 +181,9 @@ const WRITE_VERBS = [
 
 // Nomi di subagente citabili esplicitamente nel task raw. Se uno solo compare
 // nel testo, vince sull'esecutore calcolato dalla cascata (tranne risk
-// high/deploy). Lista sincronizzata a mano con CLAUDE.md §2.
-const EXPLICIT_AGENTS = [
-  'walbox-dev', 'walbox-qa-serata', 'walbox-hardening', 'walbox-product-owner',
-];
+// high/deploy). V1.5-B: la lista non è più hardcoded qui, vive in
+// profile.explicit_agents (vedi ai-ops/profiles/*.json), sincronizzata a mano
+// con CLAUDE.md §2.
 
 // Trigger lessicali V1.3 per recommended_skill / prompt_mode
 // (recommendSkillAndMode). Come le altre keyword: match per parola intera,
@@ -312,9 +327,9 @@ function detectDocRole(rawText) {
 // Ritorna la lista di nomi di agente citati esplicitamente nel task raw
 // (può essere 0, 1 o più — l'override in recommendExecutor si applica solo
 // se è esattamente 1).
-function detectExplicitAgents(rawTask) {
+function detectExplicitAgents(rawTask, profile) {
   const text = normalize(rawTask);
-  return EXPLICIT_AGENTS.filter((agent) => matchesKeyword(text, agent));
+  return profile.explicit_agents.filter((agent) => matchesKeyword(text, agent));
 }
 
 // V1.4.1-C: dentro la categoria qa, distingue se il task riguarda il tooling
@@ -624,7 +639,7 @@ function requiresApproval(categories, risk) {
   return readOnlyOnly ? 'yes (Gate 1 comunque, run atteso read-only)' : 'yes';
 }
 
-function buildScope(categories) {
+function buildScope(categories, profile) {
   const has = (c) => categories.includes(c);
   const allowed = [];
   const forbidden = [
@@ -638,10 +653,10 @@ function buildScope(categories) {
   if (has('research') || has('product') || has('docs') || has('checkpoint')) {
     allowed.push('ai-ops/ (ticket, report, knowledge)');
     allowed.push('docs/ solo se esplicitamente approvato nel plan');
-    outOfScope.push('codice app (src/)');
+    outOfScope.push(`codice app (${profile.code_dir})`);
   }
   if (has('coding') || has('coding-plan') || has('design')) {
-    allowed.push('SOLO i file src/ elencati e approvati nel Plan (Gate 1) — preferire 1 file');
+    allowed.push(`SOLO i file ${profile.code_dir} elencati e approvati nel Plan (Gate 1) — preferire 1 file`);
     outOfScope.push('refactor non richiesti, file non elencati nel Plan');
   }
   if (has('qa') || has('security')) {
@@ -661,7 +676,7 @@ function buildScope(categories) {
   return { allowed, forbidden, outOfScope };
 }
 
-function buildQualityGate(categories) {
+function buildQualityGate(categories, profile) {
   const has = (c) => categories.includes(c);
   const checks = [];
 
@@ -669,13 +684,19 @@ function buildQualityGate(categories) {
     checks.push('git diff --stat ai-ops/   # run docs/ai-ops only');
     checks.push('git status --short ai-ops/   # include file nuovi non tracciati');
   }
+  // V1.5-B: i check build/test non sono più hardcoded, vengono dal profilo
+  // (profile.quality_gates) — spinti una sola volta anche se un task matcha
+  // sia coding/design che qa/security, per evitare righe duplicate.
+  if (has('coding') || has('coding-plan') || has('design') || has('qa') || has('security')) {
+    for (const check of profile.quality_gates) {
+      checks.push(check);
+    }
+  }
   if (has('coding') || has('coding-plan') || has('design')) {
-    checks.push('npm run build   # solo se il run tocca davvero codice app');
     checks.push('git diff --stat   # verificare che compaiano SOLO i file approvati');
   }
   if (has('qa') || has('security')) {
-    checks.push('test pertinenti con scope dichiarato (es. npx playwright test <spec in scope>)');
-    checks.push('nessuna scrittura su codice di prodotto: git status deve restare pulito su src/');
+    checks.push(`nessuna scrittura su codice di prodotto: git status deve restare pulito su ${profile.code_dir}`);
   }
   if (has('deploy')) {
     checks.push('NESSUN comando automatico: checklist manuale di Eros prima di qualsiasi deploy');
@@ -796,7 +817,7 @@ const EXIT_USAGE = 2;
 // fallire il run con exit code EXIT_USAGE, invece di finire silenziosamente
 // concatenato nel task raw come accadeva fino a V1.4.1.
 function parseArgs(argv) {
-  const flags = { dryRun: false, showPrompt: false, json: false, help: false };
+  const flags = { dryRun: false, showPrompt: false, json: false, help: false, project: undefined };
   const taskParts = [];
   let endOfFlags = false;
   for (const arg of argv) {
@@ -805,6 +826,10 @@ function parseArgs(argv) {
       continue;
     }
     if (!endOfFlags && arg.startsWith('-') && arg !== '-') {
+      if (arg.startsWith('--project=')) {
+        flags.project = arg.slice('--project='.length);
+        continue;
+      }
       switch (arg) {
         case '--dry-run': flags.dryRun = true; break;
         case '--show-prompt': flags.showPrompt = true; break;
@@ -824,6 +849,33 @@ function parseArgs(argv) {
   return { flags, rawTask: taskParts.join(' ').trim() };
 }
 
+// V1.5-B: carica il profilo di progetto da ai-ops/profiles/<name>.json.
+// Default 'walbox' se --project non è specificato (retrocompatibile con
+// V1.5-A). Se il nome è esplicito ma il file manca o il JSON è malformato,
+// fallisce con EXIT_USAGE — MAI fallback silenzioso su walbox in quel caso,
+// per non far girare un run con lo scope/quality-gate sbagliato senza che
+// nessuno se ne accorga.
+function loadProfile(name) {
+  const explicit = Boolean(name);
+  const projectName = name || DEFAULT_PROJECT;
+  const profilePath = path.join(PROFILES_DIR, `${projectName}.json`);
+  let raw;
+  try {
+    raw = fs.readFileSync(profilePath, 'utf8');
+  } catch (err) {
+    const e = new Error(`Profilo "${projectName}" non trovato: ${profilePath}`);
+    e.exitCode = explicit ? EXIT_USAGE : EXIT_RUNTIME;
+    throw e;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (err) {
+    const e = new Error(`Profilo "${projectName}" non è JSON valido: ${err.message}`);
+    e.exitCode = EXIT_USAGE;
+    throw e;
+  }
+}
+
 const HELP_TEXT = `ai-factory-runner ${RUNNER_VERSION} — Walbox AI Business Factory
 
 Genera un ticket/run log in ai-ops/tickets/ a partire da un task raw.
@@ -836,6 +888,10 @@ OPZIONI:
   --dry-run        Classifica e stampa il riepilogo senza scrivere alcun ticket.
   --show-prompt    Stampa anche il prompt Claude Code generato (sezione 9 del ticket).
   --json           Output machine-readable su stdout (nessun riepilogo umano).
+  --project=<nome> Profilo di progetto da ai-ops/profiles/<nome>.json (default: walbox).
+                    Cambia solo scope/quality_gate/explicit_agents, non la
+                    classificazione testuale (categorie/rischio/skill/prompt_mode
+                    restano identici a prescindere dal profilo).
   --help, -h       Mostra questo aiuto ed esce.
   --               Fine dei flag: tutto ciò che segue è trattato come task raw.
 
@@ -844,11 +900,13 @@ ESEMPI:
   node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run
   node ai-ops/runner/run.js "Fixa il bug della coda" --dry-run --show-prompt
   node ai-ops/runner/run.js "Prepara piano V1.6" --dry-run --json
+  node ai-ops/runner/run.js "Verifica golden set" --project=ai-factory --dry-run --json
 
 EXIT CODE:
   0  ok
   1  errore a runtime (es. template mancante, scrittura ticket fallita)
-  2  errore d'uso (flag sconosciuto o task mancante)
+  2  errore d'uso (flag sconosciuto, task mancante, o --project=<nome> con
+     profilo mancante/malformato)
 `;
 
 function printHelp() {
@@ -916,6 +974,19 @@ function main() {
     return EXIT_USAGE;
   }
 
+  let profile;
+  try {
+    profile = loadProfile(flags.project);
+  } catch (err) {
+    const exitCode = err.exitCode || EXIT_RUNTIME;
+    if (json) {
+      emitJsonError(err.message, exitCode);
+    } else {
+      console.error(err.message);
+    }
+    return exitCode;
+  }
+
   try {
   const date = todayISO();
   const slug = slugify(rawTask);
@@ -929,8 +1000,18 @@ function main() {
     }
   }
   const { risk, reasons: riskReasons } = assessRisk(rawTask, categories);
-  const explicitAgents = detectExplicitAgents(rawTask);
-  const qaDomain = detectQaDomain(rawTask, categories);
+  const explicitAgents = detectExplicitAgents(rawTask, profile);
+  // V1.5-B: il profilo ai-factory forza il dominio qa a 'tooling' (un task
+  // lanciato con questo profilo riguarda per definizione il runner stesso,
+  // non l'app Walbox) — decisione presa con Eros, vedi
+  // project_v15b_project_profiles.md. Per ogni altro profilo la detection
+  // testuale di detectQaDomain() resta invariata.
+  let qaDomain;
+  if (profile.project === 'ai-factory') {
+    qaDomain = 'tooling';
+  } else {
+    qaDomain = detectQaDomain(rawTask, categories);
+  }
   const { executor, why: routingWhy } = recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain);
   const warnings = buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain });
   const confidence = computeConfidence(categories, warnings);
@@ -940,8 +1021,8 @@ function main() {
     why: skillWhy,
   } = recommendSkillAndMode(categories, risk, docRole, confidence, rawTask);
   const approval = requiresApproval(categories, risk);
-  const scope = buildScope(categories);
-  const qualityGate = buildQualityGate(categories);
+  const scope = buildScope(categories, profile);
+  const qualityGate = buildQualityGate(categories, profile);
   const checkpointSnapshot = readCheckpointSnapshot();
 
   const categoriesLabel = categories.length > 0 ? categories.join(', ') : 'unclassified (triage umano)';
@@ -1006,6 +1087,7 @@ function main() {
   if (json) {
     const payload = {
       version: RUNNER_VERSION,
+      project: profile.project,
       dry_run: dryRun,
       task: rawTask,
       date,
@@ -1039,6 +1121,9 @@ function main() {
       ? `AI FACTORY RUNNER ${RUNNER_VERSION} — dry-run (nessun ticket scritto su disco)`
       : `AI FACTORY RUNNER ${RUNNER_VERSION} — ticket generato`,
   );
+  if (profile.project !== DEFAULT_PROJECT) {
+    console.log(`  Progetto:   ${profile.project}`);
+  }
   console.log(`  Task:       ${rawTask}`);
   console.log(`  Categorie:  ${categoriesLabel}`);
   console.log(`  Rischio:    ${risk}`);

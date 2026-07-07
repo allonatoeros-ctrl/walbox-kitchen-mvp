@@ -1,0 +1,10 @@
+{
+  "project": "walbox",
+  "description": "Walbox / Walrus Pub product app (React/Vite)",
+  "checkpoint_path": "CHECKPOINT.md",
+  "sources": ["CLAUDE.md", "CHECKPOINT.md", "ai-ops/README.md", "ai-ops/SECURITY_POLICY.md"],
+  "code_dir": "src/",
+  "protected_areas": ["Supabase", "Spotify", ".env/.env.local", "App.jsx routing", "package.json"],
+  "quality_gates": ["npm run build", "npx playwright test"],
+  "explicit_agents": ["walbox-dev", "walbox-qa-serata", "walbox-hardening", "walbox-product-owner"]
+}

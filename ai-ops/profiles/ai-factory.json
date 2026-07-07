@@ -1,0 +1,10 @@
+{
+  "project": "ai-factory",
+  "description": "ai-ops/runner tooling — Node CLI, nessuna UI app",
+  "checkpoint_path": "CHECKPOINT.md",
+  "sources": ["CLAUDE.md", "CHECKPOINT.md", "ai-ops/README.md", "ai-ops/SECURITY_POLICY.md", "ai-ops/runner/README.md", "ai-ops/runner/rules/task_classifier_rules.md"],
+  "code_dir": "ai-ops/runner/",
+  "protected_areas": ["ai-ops/runner/run.js (golden set behavior)", "ai-ops/SECURITY_POLICY.md"],
+  "quality_gates": ["node ai-ops/runner/run.js \"<golden case>\" --dry-run --json  # golden set A-P regression"],
+  "explicit_agents": []
+}

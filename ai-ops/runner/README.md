@@ -1,4 +1,4 @@
-# ai-factory-runner V1.5-A — Walbox AI Business Factory
+# ai-factory-runner V1.5-B — Walbox AI Business Factory
 
 Runner locale che trasforma un task raw in un **ticket/run log** dentro `ai-ops/tickets/`.
 Zero dipendenze esterne, zero API, zero LLM: solo Node.js e keyword locali.
@@ -187,6 +187,47 @@ warnings, recommended_skill, prompt_mode restano identici — golden set A–P: 
   (flag sconosciuto o task mancante). `main()` ritorna un codice e l'invocazione
   è avvolta in `try/catch`.
 
+## Novità V1.5-B — Project profiles
+
+Il runner era hardcoded su Walbox (`code_dir` sempre `src/`, quality gate sempre
+`npm run build`/`npx playwright test`, agenti espliciti sempre i 4 subagenti
+Walbox). V1.5-B rende questi tre aspetti **parametrici per progetto**, senza
+toccare la classificazione testuale.
+
+- **`ai-ops/profiles/<nome>.json`**: un profilo statico per progetto —
+  `project`, `description`, `checkpoint_path`, `sources`, `code_dir`,
+  `protected_areas`, `quality_gates`, `explicit_agents`. Oggi esistono
+  `walbox.json` (app React/Vite, `code_dir: src/`) e `ai-factory.json`
+  (tooling del runner stesso, `code_dir: ai-ops/runner/`).
+- **`--project=<nome>`**: nuovo flag CLI. Default `walbox` se omesso —
+  **retrocompatibile**: nessun flag produce lo stesso output di V1.5-A per
+  categorie/rischio/executor/confidence/skill/prompt_mode. Se il nome è
+  esplicito ma il file profilo manca o è JSON malformato, il runner esce con
+  codice `2` — mai fallback silenzioso su `walbox`.
+- **Cosa cambia con il profilo**: `buildScope()` e `buildQualityGate()` usano
+  `profile.code_dir` e `profile.quality_gates` invece dei valori hardcoded
+  `src/` / `npm run build` / `npx playwright test`. `detectExplicitAgents()`
+  usa `profile.explicit_agents` invece della vecchia costante top-level
+  `EXPLICIT_AGENTS` (rimossa, ora vive in `ai-ops/profiles/walbox.json`).
+- **Cosa NON cambia**: `CATEGORY_RULES`, `assessRisk`, `recommendExecutor`
+  (la cascata), `recommendSkillAndMode`, `detectQaDomain` — categorie,
+  rischio, skill e prompt_mode restano identici a prescindere dal profilo.
+- **Unica eccezione, decisa esplicitamente con Eros**: con
+  `--project=ai-factory`, `qaDomain` è **forzato** a `'tooling'` invece che
+  dedotto dal testo del task (`detectQaDomain`) — un task lanciato con quel
+  profilo riguarda per definizione `ai-ops/runner` stesso, non l'app
+  Walbox/Jukebox. Per ogni altro profilo la detection testuale resta
+  invariata.
+- **Verificato**: golden set A–P rieseguito senza `--project`: 16/16 PASS,
+  zero regressioni. Run manuali con `--project=ai-factory --dry-run --json`
+  confermano `scope`/`quality_gate`/`explicit_agents` diversi (code_dir
+  `ai-ops/runner/`, quality gate golden-set invece di npm build, nessun
+  override da nome-agente) a parità di categorie/rischio/skill/prompt_mode.
+
+```bash
+node ai-ops/runner/run.js "Verifica il golden set del runner" --project=ai-factory --dry-run --json
+```
+
 ## Uso
 
 ```bash
@@ -225,21 +266,25 @@ node ai-ops/runner/run.js --help
 ## Struttura
 
 ```
-runner/
-├── README.md                          ← sei qui
-├── run.js                             ← runner (Node, zero deps)
-├── templates/
-│   ├── ticket_template.md             ← struttura del ticket generato
-│   ├── claude_prompt_template.md      ← prompt Claude Code, fallback base (V1.1-V1.3)
-│   └── prompts/                       ← template per-modo (V1.4), uno per prompt_mode
-│       ├── claude_prompt_micro_fix.md
-│       ├── claude_prompt_phase_plan.md
-│       ├── claude_prompt_review.md
-│       ├── claude_prompt_checkpoint.md
-│       ├── claude_prompt_approval.md
-│       └── claude_prompt_handoff.md
-└── rules/
-    └── task_classifier_rules.md       ← documentazione keyword/rischio/routing/template
+ai-ops/
+├── profiles/                          ← project profiles (V1.5-B)
+│   ├── walbox.json
+│   └── ai-factory.json
+└── runner/
+    ├── README.md                          ← sei qui
+    ├── run.js                             ← runner (Node, zero deps)
+    ├── templates/
+    │   ├── ticket_template.md             ← struttura del ticket generato
+    │   ├── claude_prompt_template.md      ← prompt Claude Code, fallback base (V1.1-V1.3)
+    │   └── prompts/                       ← template per-modo (V1.4), uno per prompt_mode
+    │       ├── claude_prompt_micro_fix.md
+    │       ├── claude_prompt_phase_plan.md
+    │       ├── claude_prompt_review.md
+    │       ├── claude_prompt_checkpoint.md
+    │       ├── claude_prompt_approval.md
+    │       └── claude_prompt_handoff.md
+    └── rules/
+        └── task_classifier_rules.md       ← documentazione keyword/rischio/routing/template
 ```
 
 ## Rapporto con il resto di ai-ops/
@@ -256,12 +301,13 @@ runner/
   categorie/rischio/executor nel ticket prima del Gate 1.
   Lo snapshot da CHECKPOINT.md non influenza la classificazione/rischio: è solo contesto
   informativo aggiunto al ticket.
-- Le keyword e le categorie sono **overfittate su Walbox** (nomi agente, gergo del progetto
-  tipo "shuffle night"/"pilota"/"tv-poster"): il classificatore non generalizza ad altri
-  progetti senza riscrivere `CATEGORY_RULES`/`EXPLICIT_AGENTS`.
-- La lista `EXPLICIT_AGENTS` in `run.js` va tenuta manualmente in sync con gli agenti
-  elencati in **CLAUDE.md §2**: un nuovo subagente non citato lì non viene mai riconosciuto
-  come override, anche se il nome compare nel task.
+- Le keyword e le categorie restano **overfittate su Walbox** (nomi agente, gergo del
+  progetto tipo "shuffle night"/"pilota"/"tv-poster"): `CATEGORY_RULES` è ancora globale e
+  condiviso tra profili — V1.5-B parametrizza solo scope/quality-gate/agenti espliciti,
+  non la classificazione testuale.
+- La lista `explicit_agents` in `ai-ops/profiles/walbox.json` va tenuta manualmente in sync
+  con gli agenti elencati in **CLAUDE.md §2**: un nuovo subagente non citato lì non viene
+  mai riconosciuto come override, anche se il nome compare nel task.
 - Confidence e warnings sono euristiche deterministiche su segnali noti (categorie multiple,
   doc role, agente esplicito, dominio senza azione): non coprono ogni caso ambiguo possibile,
   solo quelli osservati finora.
