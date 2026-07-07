@@ -71,6 +71,19 @@
  * malformato fallisce con exit code 2, mai fallback silenzioso. Golden set
  * A–P rieseguito senza --project: 16/16 PASS, zero regressioni su
  * categorie/rischio/executor/confidence/skill/prompt_mode.
+ *
+ * V1.5-C: nuovo flag --sst (Save Token Strict Mode). Post-processing puro
+ * dopo recommendSkillAndMode(): se il task non ha categorie riconosciute →
+ * promptMode 'sst_stop_prompt' (STOP, nessuna esplorazione, 1 domanda);
+ * se il prompt_mode calcolato è phase_plan_prompt E il task si dichiara
+ * read-only (stesso trigger di V1.6, readOnlyOverride) → promptMode
+ * 'sst_prompt' (niente /phase-plan, prompt diretto corto, report max 10
+ * righe). Due nuovi template in templates/prompts/ (claude_prompt_sst.md,
+ * claude_prompt_sst_stop.md), risolti da resolvePromptTemplate() con la
+ * stessa convenzione <mode>_prompt → claude_prompt_<mode>.md già esistente,
+ * nessun nuovo meccanismo di fallback. Non tocca classify/assessRisk/
+ * recommendExecutor: categorie, rischio ed executor restano identici al
+ * golden set A–P eseguito senza --sst.
  */
 
 import fs from 'node:fs';
@@ -94,7 +107,7 @@ const CHECKPOINT_SECTION_MAX_LINES = 6;
 // e nel campo "version" dell'output --json. Prima era hardcodata come "V1.3"
 // nelle stringhe di console pur essendo il codice a V1.4.1 — disallineamento
 // risolto centralizzandola qui.
-const RUNNER_VERSION = 'V1.5-B';
+const RUNNER_VERSION = 'V1.5-C';
 
 // ---------------------------------------------------------------------------
 // Regole di classificazione (keyword locali, match per parola intera;
@@ -879,7 +892,7 @@ const EXIT_USAGE = 2;
 // fallire il run con exit code EXIT_USAGE, invece di finire silenziosamente
 // concatenato nel task raw come accadeva fino a V1.4.1.
 function parseArgs(argv) {
-  const flags = { dryRun: false, showPrompt: false, json: false, help: false, project: undefined };
+  const flags = { dryRun: false, showPrompt: false, json: false, help: false, project: undefined, sst: false };
   const taskParts = [];
   let endOfFlags = false;
   for (const arg of argv) {
@@ -896,6 +909,7 @@ function parseArgs(argv) {
         case '--dry-run': flags.dryRun = true; break;
         case '--show-prompt': flags.showPrompt = true; break;
         case '--json': flags.json = true; break;
+        case '--sst': flags.sst = true; break;
         case '--help':
         case '-h': flags.help = true; break;
         default: {
@@ -954,6 +968,10 @@ OPZIONI:
                     Cambia solo scope/quality_gate/explicit_agents, non la
                     classificazione testuale (categorie/rischio/skill/prompt_mode
                     restano identici a prescindere dal profilo).
+  --sst            Save Token Strict Mode: prompt corto, "leggi solo i file
+                    indicati", niente /phase-plan, niente audit non richiesto,
+                    report max 10 righe, task ambiguo → STOP (V1.5-C). Non
+                    cambia categorie/rischio/executor, solo skill/prompt_mode.
   --help, -h       Mostra questo aiuto ed esce.
   --               Fine dei flag: tutto ciò che segue è trattato come task raw.
 
@@ -1078,11 +1096,37 @@ function main() {
   const { executor, why: routingWhy } = recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain, readOnlyOverride);
   const warnings = buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain, readOnlyOverride });
   const confidence = computeConfidence(categories, warnings);
-  const {
+  let {
     skill: recommendedSkill,
     promptMode,
     why: skillWhy,
   } = recommendSkillAndMode(categories, risk, docRole, confidence, rawTask);
+
+  // V1.5-C: SST (Save Token Strict Mode). Post-processing puro sull'output
+  // già calcolato da recommendSkillAndMode — non tocca classify/assessRisk/
+  // recommendExecutor. Due override, entrambi condizionati a flags.sst:
+  // 1) task non classificato (ambiguo) → STOP invece di handoff/esplorazione;
+  // 2) /phase-plan su un task che il task stesso dichiara read-only → prompt
+  //    diretto corto invece di un piano a fasi (che presuppone poi un'azione).
+  // Ogni altro prompt_mode resta invariato: SST non è una modalità che
+  // sostituisce sempre e comunque, solo dove il piano/esplorazione sarebbe
+  // sproporzionato rispetto al task dichiarato.
+  if (flags.sst) {
+    if (categories.length === 0) {
+      recommendedSkill = 'none';
+      promptMode = 'sst_stop_prompt';
+      skillWhy = 'SST: task non classificato/ambiguo → STOP, nessuna esplorazione del repo, serve 1 domanda mirata a Eros (V1.5-C).';
+    } else if (readOnlyOverride && (promptMode === 'phase_plan_prompt' || promptMode === 'audit_prompt')) {
+      // Senza SST, sia phase_plan_prompt sia audit_prompt (che oggi cade in
+      // fallback sul template phase_plan, vedi resolvePromptTemplate) finiscono
+      // sul prompt lungo "piano a fasi" anche quando il task dichiara
+      // esplicitamente di essere un audit read-only mini: SST corregge questo
+      // caso con il prompt corto dedicato.
+      recommendedSkill = 'none';
+      promptMode = 'sst_prompt';
+      skillWhy = 'SST: task dichiarato read-only → evitato /phase-plan (anche via fallback audit_prompt), prompt diretto corto (V1.5-C).';
+    }
+  }
   const approval = requiresApproval(categories, risk);
   const scope = buildScope(categories, profile, readOnlyOverride);
   const qualityGate = buildQualityGate(categories, profile, readOnlyOverride);
@@ -1152,6 +1196,7 @@ function main() {
       version: RUNNER_VERSION,
       project: profile.project,
       dry_run: dryRun,
+      sst: flags.sst,
       task: rawTask,
       date,
       slug,
@@ -1187,6 +1232,9 @@ function main() {
   );
   if (profile.project !== DEFAULT_PROJECT) {
     console.log(`  Progetto:   ${profile.project}`);
+  }
+  if (flags.sst) {
+    console.log('  SST mode:   ON (V1.5-C)');
   }
   console.log(`  Task:       ${rawTask}`);
   console.log(`  Categorie:  ${categoriesLabel}`);
