@@ -15,11 +15,10 @@ import walrusLogo from "../../references/original_rebrand_pack/assets/walrus-log
 import {
   MOCK_SONGS,
   MOOD_EMOJIS,
-  subscribeState,
-  getVenueSettings,
   MOOD_LABELS
 } from "../data/mockData";
 import { insertRequest, useRealtimeRequests } from "../hooks/useSongRequests";
+import { useVenueSettings } from "../hooks/useVenueSettings";
 
 export default function CustomerRequest() {
   const realtimeRequests = useRealtimeRequests();
@@ -32,7 +31,7 @@ export default function CustomerRequest() {
   const [dedication, setDedication] = useState("");
   const [submittedRequests, setSubmittedRequests] = useState([]);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
-  const [venueSettings, setVenueSettings] = useState({ queuePaused: false });
+  const venueSettings = useVenueSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [spotifyResults, setSpotifyResults] = useState([]);
@@ -80,11 +79,6 @@ export default function CustomerRequest() {
     setTable(tableParam);
     setNickname(params.get("nickname") || "");
 
-    // Sync initial state and register listener for real-time updates
-    const syncVenueSettings = () => {
-      setVenueSettings(getVenueSettings());
-    };
-
     // Check for active kitchen order for this table (read-only)
     try {
       const kitchenOrders = JSON.parse(localStorage.getItem('walbox_kitchen_orders_demo') || '[]');
@@ -94,22 +88,6 @@ export default function CustomerRequest() {
       );
       setHasActiveKitchenOrder(active);
     } catch { }
-
-    syncVenueSettings();
-    const unsubscribe = subscribeState(syncVenueSettings);
-
-    // Cross-tab storage listener
-    const handleStorage = (e) => {
-      if (e.key && e.key.startsWith("walbox_")) {
-        syncVenueSettings();
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      unsubscribe();
-      window.removeEventListener("storage", handleStorage);
-    };
   }, [table]);
 
   // Real Supabase/Realtime song requests for this table (replaces the old

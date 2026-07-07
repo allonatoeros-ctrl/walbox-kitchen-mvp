@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  getVenueSettings,
   savePlaybackState,
-  saveVenueSettings,
   prioritizeRequest,
   resetToDemoState,
   MOOD_EMOJIS
 } from "../data/mockData";
 import { useRealtimeRequests, updateStatus, setPlaying, closeAllActiveRequests } from "../hooks/useSongRequests";
+import { useVenueSettings, setQueuePaused } from "../hooks/useVenueSettings";
 import { playTrack, addToQueue, skipToNext, getStoredToken, getCurrentPlayback, pauseTrack, resumeTrack } from "../services/spotifyApi";
 import { supabase } from "../lib/supabaseClient";
 
@@ -20,7 +19,7 @@ export default function StaffDashboard() {
   const requests = useRealtimeRequests();
   const [remotePlayback, setRemotePlayback] = useState(null);
   const [now, setNow] = useState(() => Date.now());
-  const [settings, setSettings] = useState({ queuePaused: false });
+  const settings = useVenueSettings();
   const [cooldown, setCooldown] = useState(0);
   const [spotifyWarning, setSpotifyWarning] = useState(null);
 
@@ -78,26 +77,6 @@ export default function StaffDashboard() {
     }, 1000);
     return () => clearInterval(interval);
   }, [cooldown]);
-
-  // Sync venue settings (queue pause) from localStorage — unrelated to playback
-  const syncState = () => {
-    setSettings(getVenueSettings());
-  };
-
-  useEffect(() => {
-    syncState();
-
-    const handleStorage = (e) => {
-      if (e.key && e.key.startsWith("walbox_")) {
-        syncState();
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
 
   // Real Spotify playback state, written by this same device's polling (Step 1)
   // into Supabase playback_state (single row, id=1). Replaces the old
@@ -565,8 +544,9 @@ export default function StaffDashboard() {
 
   // Toggle submission pause
   const togglePauseSubmissions = () => {
-    const updated = { ...settings, queuePaused: !settings.queuePaused };
-    saveVenueSettings(updated);
+    setQueuePaused(!settings.queuePaused).catch((err) =>
+      console.error('setQueuePaused failed:', err)
+    );
   };
 
   // Clear all queue / reset

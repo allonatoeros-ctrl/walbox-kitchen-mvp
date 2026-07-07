@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-async function ensureSession() {
+export async function ensureSession() {
   let { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     const { data, error } = await supabase.auth.signInAnonymously();
