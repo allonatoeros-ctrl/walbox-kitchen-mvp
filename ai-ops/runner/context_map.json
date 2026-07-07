@@ -1,0 +1,20 @@
+{
+  "_comment": "Context Pack Lite V0 — mapping statico keyword -> path noto, no RAG/embedding. Entry senza 'project' matchano su qualsiasi progetto; entry con 'project' matchano solo se profile.project e' uguale. Fonte Walbox: CLAUDE.md §9.",
+  "entries": [
+    { "project": "walbox", "keywords": ["poster tv", "tv-poster", "livetvscreenwalrusposter"], "path": "src/pages/LiveTvScreenWalrusPoster.jsx" },
+    { "project": "walbox", "keywords": ["live tv screen", "livetvscreen"], "path": "src/pages/LiveTvScreen.jsx" },
+    { "project": "walbox", "keywords": ["manager dashboard", "managerdashboard"], "path": "src/pages/ManagerDashboard.jsx" },
+    { "project": "walbox", "keywords": ["staff dashboard", "staffdashboard"], "path": "src/pages/StaffDashboard.jsx" },
+    { "project": "walbox", "keywords": ["customerjukeboxoldorange", "old orange"], "path": "src/pages/CustomerJukeboxOldOrange.jsx" },
+    { "project": "walbox", "keywords": ["customerentrywalrusupgrade", "entry screen"], "path": "src/pages/CustomerEntryWalrusUpgrade.jsx" },
+    { "project": "walbox", "keywords": ["routing", "app.jsx"], "path": "src/App.jsx" },
+    { "project": "walbox", "keywords": ["mockdata", "mock data", "demo data"], "path": "src/data/mockData.js" },
+    { "project": "walbox", "keywords": ["assets"], "path": "public/assets/" },
+    { "project": "walbox", "keywords": ["poster tv", "tv-poster"], "path": "public/assets/tv-poster/" },
+    { "project": "walbox", "keywords": ["visual ref", "live_tv_visual_refs"], "path": "public/live_tv_visual_refs/" },
+    { "project": "ai-factory", "keywords": ["context.md", "context pack"], "path": "ai-ops/runner/templates/context_template.md" },
+    { "project": "ai-factory", "keywords": ["run.js", "runner", "classifier", "classificazione"], "path": "ai-ops/runner/run.js" },
+    { "project": "ai-factory", "keywords": ["profile", "profili", "project profiles"], "path": "ai-ops/profiles/" },
+    { "project": "ai-factory", "keywords": ["golden set"], "path": "ai-ops/runner/rules/task_classifier_rules.md" }
+  ]
+}

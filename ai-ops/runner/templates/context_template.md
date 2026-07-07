@@ -20,3 +20,9 @@ Fonte completa e autorevole: CHECKPOINT.md nella root del repo.
 - CLAUDE.md (§2 routing agenti, §5 aree protette, §15 formato report)
 - ai-ops/README.md (pipeline e gate)
 - ai-ops/SECURITY_POLICY.md (regole 1-10 del router)
+
+## Known files for this task
+
+Mapping statico keyword -> path noto (ai-ops/runner/context_map.json, no RAG/embedding).
+
+{{KNOWN_FILES}}

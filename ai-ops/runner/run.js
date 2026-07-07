@@ -132,6 +132,7 @@ const PROMPTS_DIR = path.join(TEMPLATES_DIR, 'prompts');
 const BASE_PROMPT_TEMPLATE = path.join(TEMPLATES_DIR, 'claude_prompt_template.md');
 const CHECKPOINT_PATH = path.join(REPO_ROOT, 'CHECKPOINT.md');
 const CHECKPOINT_SECTION_MAX_LINES = 6;
+const CONTEXT_MAP_PATH = path.join(RUNNER_DIR, 'context_map.json');
 
 // Etichetta di versione unica del runner (V1.5-A): usata in console, in --help
 // e nel campo "version" dell'output --json. Prima era hardcodata come "V1.3"
@@ -913,6 +914,42 @@ function readCheckpointSnapshot() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Context Pack Lite V0 (Known files for this task) — mapping statico
+// keyword -> path noto, letto da context_map.json. No RAG/embedding/rete:
+// stesso pattern deterministico di readCheckpointSnapshot(). Cache in
+// modulo perche' run.js e' eseguito una volta per invocazione CLI.
+// ---------------------------------------------------------------------------
+let contextMapCache = null;
+
+function loadContextMap() {
+  if (contextMapCache !== null) return contextMapCache;
+  try {
+    const raw = fs.readFileSync(CONTEXT_MAP_PATH, 'utf8');
+    const parsed = JSON.parse(raw);
+    contextMapCache = Array.isArray(parsed.entries) ? parsed.entries : [];
+  } catch {
+    contextMapCache = [];
+  }
+  return contextMapCache;
+}
+
+// Riusa normalize()/matchesKeyword() gia' usate da classify(): stessa logica
+// di match case/accent-insensitive, nessuna nuova euristica.
+function buildKnownFiles(rawTask, projectName) {
+  const text = normalize(rawTask);
+  const entries = loadContextMap();
+  const paths = [];
+  for (const entry of entries) {
+    if (entry.project && entry.project !== projectName) continue;
+    const hit = (entry.keywords || []).some((kw) => matchesKeyword(text, kw));
+    if (hit && !paths.includes(entry.path)) {
+      paths.push(entry.path);
+    }
+  }
+  return paths;
+}
+
 function uniqueTicketPath(date, slug) {
   let candidate = path.join(TICKETS_DIR, `${date}_${slug}.md`);
   let n = 2;
@@ -1279,12 +1316,17 @@ function main() {
         QUALITY_GATE: bulletList(qualityGate),
       });
 
+      const knownFiles = buildKnownFiles(rawTask, profile.project);
       const context = renderTemplate(path.join(TEMPLATES_DIR, 'context_template.md'), {
         TITLE: rawTask,
         CHECKPOINT_STABLE: indentLines(checkpointSnapshot.stable, '  '),
         CHECKPOINT_DONE: indentLines(checkpointSnapshot.done, '  '),
         CHECKPOINT_OPEN_ISSUES: indentLines(checkpointSnapshot.openIssues, '  '),
         CHECKPOINT_NEXT_STEP: indentLines(checkpointSnapshot.nextStep, '  '),
+        KNOWN_FILES:
+          knownFiles.length > 0
+            ? bulletList(knownFiles)
+            : '- (nessun file noto per questa task — nessuna keyword riconosciuta in context_map.json)',
       });
 
       // Result Capture V0: placeholder da completare a fine run dall'esecutore
