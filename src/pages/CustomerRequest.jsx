@@ -15,14 +15,14 @@ import walrusLogo from "../../references/original_rebrand_pack/assets/walrus-log
 import {
   MOCK_SONGS,
   MOOD_EMOJIS,
-  getRequests,
   subscribeState,
   getVenueSettings,
   MOOD_LABELS
 } from "../data/mockData";
-import { insertRequest } from "../hooks/useSongRequests";
+import { insertRequest, useRealtimeRequests } from "../hooks/useSongRequests";
 
 export default function CustomerRequest() {
+  const realtimeRequests = useRealtimeRequests();
   const [table, setTable] = useState("");
   const [nickname, setNickname] = useState("");
   const [activeTab, setActiveTab] = useState("request"); // 'request' | 'my-songs'
@@ -81,12 +81,7 @@ export default function CustomerRequest() {
     setNickname(params.get("nickname") || "");
 
     // Sync initial state and register listener for real-time updates
-    const syncState = () => {
-      const allRequests = getRequests();
-      const myRequests = allRequests.filter(
-        (r) => String(r.table).trim().toLowerCase() === String(tableParam).trim().toLowerCase()
-      );
-      setSubmittedRequests(myRequests.reverse()); // latest first
+    const syncVenueSettings = () => {
       setVenueSettings(getVenueSettings());
     };
 
@@ -100,13 +95,13 @@ export default function CustomerRequest() {
       setHasActiveKitchenOrder(active);
     } catch { }
 
-    syncState();
-    const unsubscribe = subscribeState(syncState);
+    syncVenueSettings();
+    const unsubscribe = subscribeState(syncVenueSettings);
 
     // Cross-tab storage listener
     const handleStorage = (e) => {
       if (e.key && e.key.startsWith("walbox_")) {
-        syncState();
+        syncVenueSettings();
       }
     };
     window.addEventListener("storage", handleStorage);
@@ -116,6 +111,16 @@ export default function CustomerRequest() {
       window.removeEventListener("storage", handleStorage);
     };
   }, [table]);
+
+  // Real Supabase/Realtime song requests for this table (replaces the old
+  // mockData/localStorage-backed list, which never reflected staff/TV state).
+  useEffect(() => {
+    if (!table) return;
+    const myRequests = realtimeRequests.filter(
+      (r) => String(r.table).trim().toLowerCase() === String(table).trim().toLowerCase()
+    );
+    setSubmittedRequests([...myRequests].reverse()); // latest first
+  }, [realtimeRequests, table]);
 
   // Handle song selection
   const handleSelectSong = (song) => {
