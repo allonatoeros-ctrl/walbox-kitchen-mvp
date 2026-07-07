@@ -59,6 +59,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
   File: `ai-ops/runner/run.js`, `ai-ops/runner/README.md`,
   `ai-ops/runner/rules/task_classifier_rules.md`, `ai-ops/profiles/walbox.json`,
   `ai-ops/profiles/ai-factory.json`.
+- **Reality Sprint 01 — fix customer request realtime status sync (2026-07-08, commit `ad56461`):** `CustomerRequest.jsx` legge ora "Le mie richieste" da Supabase Realtime (`useRealtimeRequests()`), non più da mockData/localStorage — corretto il mismatch cliente/staff/TV su approved/playing/played. `npm run build` PASS, pushato su `origin/main`.
 
 ## STABLE — non toccare senza approvazione
 - **Checkpoint locale salvato (2026-07-05): commit `2f06353` "chore: save ai-ops factory and walbox visual updates"** — contiene ai-ops AI Factory alignment, SECURITY_POLICY.md, reports/knowledge placeholders, modifiche visual/app Walbox, FABLE_WALBOX_CREATIVE_DIRECTION_PACK. Non pushato (vedi OPEN ISSUES).
@@ -75,6 +76,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - Kitchen (dashboard, hooks, e2e sopra) — stabile, fuori scope track Jukebox attuale
 
 ## OPEN ISSUES
+- `venueSettings`/pausa coda in `CustomerRequest.jsx` resta su mockData/localStorage, non sincronizzata con Supabase (Reality Sprint 01, non ancora fixata)
 - FABLE_WALBOX_CREATIVE_DIRECTION_PACK (introdotto nel commit `2f06353`): tracked but not active — non è la priorità corrente, non cambia il NEXT STEP finché Eros non lo attiva esplicitamente.
 - Fix "Sposta Su/Giù" in coda staff rimandato (menzionato in commit 553a86e, da verificare stato)
 - Copertura E2E Jukebox parziale: oltre ai 17+4 Playwright Kitchen esistono `smoke.spec.js` e `spotify-search-ui.spec.js` (entry + ricerca/UI Jukebox, 25/25 PASS totali), ma manca ancora E2E reale su approvazione/coda/now-playing con Spotify Premium reale
