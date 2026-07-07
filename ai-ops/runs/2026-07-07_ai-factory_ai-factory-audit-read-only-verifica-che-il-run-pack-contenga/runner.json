@@ -1,0 +1,60 @@
+{
+  "version": "V1.6",
+  "project": "ai-factory",
+  "dry_run": false,
+  "sst": true,
+  "task": "AI Factory audit read-only: verifica che il Run Pack contenga runner.json, claude_prompt.md, context.md, run_log.md e result.md. Non modificare file.",
+  "date": "2026-07-07",
+  "slug": "ai-factory-audit-read-only-verifica-che-il-run-pack-contenga",
+  "categories": [
+    "qa"
+  ],
+  "matched_keywords": {
+    "qa": [
+      "verifica"
+    ]
+  },
+  "risk": "medium",
+  "risk_reasons": [
+    "categoria \"qa\" → medium"
+  ],
+  "executor": "Claude Code (verifica manuale ai-ops/runner, nessun subagente dedicato)",
+  "routing_why": "Task QA su dominio tooling/runner interno (ai-ops), non app/Jukebox: walbox-qa-serata è pensato per il collaudo runtime della app (QR/staff/TV/Spotify), non per validare ai-ops/run.js. Nessun subagente dedicato oggi in CLAUDE.md §2 (V1.4.1-C).",
+  "confidence": "medium",
+  "recommended_skill": "none",
+  "prompt_mode": "sst_prompt",
+  "prompt_template": "sst",
+  "skill_why": "SST: task dichiarato read-only → evitato /phase-plan (anche via fallback audit_prompt), prompt diretto corto (V1.5-D).",
+  "warnings": [
+    "task dichiara esplicitamente audit/read-only: NON modificare alcun file, executor non deve implementare (V1.5-D)"
+  ],
+  "doc_role": null,
+  "qa_domain": "tooling",
+  "read_only_override": true,
+  "requires_approval": "yes",
+  "scope": {
+    "allowed": [
+      "lettura repo + esecuzione test in scope dichiarato (run read-only)",
+      "report di verdetto in ai-ops/reports/ se richiesto"
+    ],
+    "forbidden": [
+      "QUALSIASI modifica o scrittura di file: il task dichiara esplicitamente audit/read-only — nessun fix va applicato, anche se una keyword nel testo (es. \"fix\" in \"non fare fix\") suggerirebbe altrimenti (V1.5-D)",
+      ".env / .env.local / secrets (SECURITY_POLICY.md regola 6)",
+      "package.json / package-lock.json / config deploy (CLAUDE.md §5)",
+      "CHECKPOINT.md (solo patch suggerita, SECURITY_POLICY.md regola 8)",
+      "Supabase / Spotify / auth / routing senza approvazione esplicita (CLAUDE.md §5)"
+    ],
+    "outOfScope": [
+      "qualsiasi implementazione o fix, anche minimo: questo run produce solo un report/audit",
+      "modifiche al codice di prodotto (i fix passano da un ticket separato)"
+    ]
+  },
+  "quality_gate": [
+    "git status --short",
+    "nessuna modifica a ai-ops/runner/"
+  ],
+  "run_log_file": "run_log.md",
+  "claude_prompt_file": "claude_prompt.md",
+  "context_file": "context.md",
+  "result_file": "result.md"
+}

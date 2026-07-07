@@ -1,0 +1,56 @@
+{
+  "version": "V1.6",
+  "project": "ai-factory",
+  "dry_run": false,
+  "sst": true,
+  "task": "Verifica come run.js genera context.md e se serve un context pack",
+  "date": "2026-07-07",
+  "slug": "verifica-come-run-js-genera-context-md-e-se-serve-un-context",
+  "categories": [
+    "qa"
+  ],
+  "matched_keywords": {
+    "qa": [
+      "verifica"
+    ]
+  },
+  "risk": "medium",
+  "risk_reasons": [
+    "categoria \"qa\" → medium"
+  ],
+  "executor": "Claude Code (verifica manuale ai-ops/runner, nessun subagente dedicato)",
+  "routing_why": "Task QA su dominio tooling/runner interno (ai-ops), non app/Jukebox: walbox-qa-serata è pensato per il collaudo runtime della app (QR/staff/TV/Spotify), non per validare ai-ops/run.js. Nessun subagente dedicato oggi in CLAUDE.md §2 (V1.4.1-C).",
+  "confidence": "high",
+  "recommended_skill": "quality-gate-verifier",
+  "prompt_mode": "review_prompt",
+  "prompt_template": "review",
+  "skill_why": "QA/audit read-only senza coding/coding-plan → verifica quality gate (cascata V1.3 regola 5).",
+  "warnings": [],
+  "doc_role": null,
+  "qa_domain": "tooling",
+  "read_only_override": false,
+  "requires_approval": "yes",
+  "scope": {
+    "allowed": [
+      "lettura repo + esecuzione test in scope dichiarato (run read-only)",
+      "report di verdetto in ai-ops/reports/ se richiesto"
+    ],
+    "forbidden": [
+      ".env / .env.local / secrets (SECURITY_POLICY.md regola 6)",
+      "package.json / package-lock.json / config deploy (CLAUDE.md §5)",
+      "CHECKPOINT.md (solo patch suggerita, SECURITY_POLICY.md regola 8)",
+      "Supabase / Spotify / auth / routing senza approvazione esplicita (CLAUDE.md §5)"
+    ],
+    "outOfScope": [
+      "modifiche al codice di prodotto (i fix passano da un ticket separato)"
+    ]
+  },
+  "quality_gate": [
+    "node ai-ops/runner/run.js \"<golden case>\" --dry-run --json  # golden set A-P regression",
+    "nessuna scrittura su codice di prodotto: git status deve restare pulito su ai-ops/runner/"
+  ],
+  "run_log_file": "run_log.md",
+  "claude_prompt_file": "claude_prompt.md",
+  "context_file": "context.md",
+  "result_file": "result.md"
+}

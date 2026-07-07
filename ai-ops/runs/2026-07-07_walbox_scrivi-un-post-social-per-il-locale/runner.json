@@ -1,0 +1,49 @@
+{
+  "version": "V1.6",
+  "project": "walbox",
+  "dry_run": false,
+  "sst": false,
+  "task": "Scrivi un post social per il locale",
+  "date": "2026-07-07",
+  "slug": "scrivi-un-post-social-per-il-locale",
+  "categories": [],
+  "matched_keywords": {},
+  "risk": "medium",
+  "risk_reasons": [
+    "nessuna categoria riconosciuta → rischio minimo medium, richiede revisione umana"
+  ],
+  "executor": "manual approval required",
+  "routing_why": "Categoria non riconosciuta dal classificatore V1: serve triage umano di Eros.",
+  "confidence": "low",
+  "recommended_skill": "context-health-reset",
+  "prompt_mode": "handoff_prompt",
+  "prompt_template": "handoff",
+  "skill_why": "Task non classificato: contesto incerto, reset/handoff e triage umano (cascata V1.3 regola 10).",
+  "warnings": [],
+  "doc_role": null,
+  "qa_domain": "app",
+  "read_only_override": false,
+  "requires_approval": "yes",
+  "scope": {
+    "allowed": [
+      "nessuno finché Eros non definisce lo scope nel Plan"
+    ],
+    "forbidden": [
+      ".env / .env.local / secrets (SECURITY_POLICY.md regola 6)",
+      "package.json / package-lock.json / config deploy (CLAUDE.md §5)",
+      "CHECKPOINT.md (solo patch suggerita, SECURITY_POLICY.md regola 8)",
+      "Supabase / Spotify / auth / routing senza approvazione esplicita (CLAUDE.md §5)"
+    ],
+    "outOfScope": [
+      "tutto, in attesa di triage umano"
+    ]
+  },
+  "quality_gate": [
+    "git diff --stat ai-ops/   # run docs/ai-ops only",
+    "git status --short ai-ops/   # include file nuovi non tracciati"
+  ],
+  "run_log_file": "run_log.md",
+  "claude_prompt_file": "claude_prompt.md",
+  "context_file": "context.md",
+  "result_file": "result.md"
+}

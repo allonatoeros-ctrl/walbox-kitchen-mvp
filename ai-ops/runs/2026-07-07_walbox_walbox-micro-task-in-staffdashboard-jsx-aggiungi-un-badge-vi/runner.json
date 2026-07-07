@@ -1,0 +1,63 @@
+{
+  "version": "V1.6",
+  "project": "walbox",
+  "dry_run": false,
+  "sst": true,
+  "task": "Walbox micro-task: in StaffDashboard.jsx aggiungi un badge visibile che indica se il collegamento TV è aggiornato o fermo da X secondi, usando remotePlayback.updated_at. Modifica solo StaffDashboard.jsx. Mantieni il comportamento esistente.",
+  "date": "2026-07-07",
+  "slug": "walbox-micro-task-in-staffdashboard-jsx-aggiungi-un-badge-vi",
+  "categories": [
+    "coding-plan",
+    "design",
+    "tv"
+  ],
+  "matched_keywords": {
+    "coding-plan": [
+      "micro-task"
+    ],
+    "design": [
+      "tv"
+    ],
+    "tv": [
+      "tv"
+    ]
+  },
+  "risk": "low",
+  "risk_reasons": [],
+  "executor": "walbox-dev",
+  "routing_why": "Task di implementazione/piano/visual sul repo → agente walbox-dev (o Antigravity se visual-browser, vedi CLAUDE.md §2), sempre dopo Gate 1. Vince su qa quando entrambe le categorie sono presenti nello stesso task (V1.2-F).",
+  "confidence": "medium",
+  "recommended_skill": "/phase-plan",
+  "prompt_mode": "phase_plan_prompt",
+  "prompt_template": "phase_plan",
+  "skill_why": "Piano esplicito o coding multi-segnale/incerto → spezzare in micro-fasi con /phase-plan (cascata V1.3 regola 8).",
+  "warnings": [
+    "segnali misti: più categorie rilevate insieme (coding-plan, design, tv) — verificare che il classificatore non abbia sovrastimato"
+  ],
+  "doc_role": null,
+  "qa_domain": "app",
+  "read_only_override": false,
+  "requires_approval": "yes",
+  "scope": {
+    "allowed": [
+      "SOLO i file src/ elencati e approvati nel Plan (Gate 1) — preferire 1 file"
+    ],
+    "forbidden": [
+      ".env / .env.local / secrets (SECURITY_POLICY.md regola 6)",
+      "package.json / package-lock.json / config deploy (CLAUDE.md §5)",
+      "CHECKPOINT.md (solo patch suggerita, SECURITY_POLICY.md regola 8)",
+      "Supabase / Spotify / auth / routing senza approvazione esplicita (CLAUDE.md §5)"
+    ],
+    "outOfScope": [
+      "refactor non richiesti, file non elencati nel Plan"
+    ]
+  },
+  "quality_gate": [
+    "npm run build",
+    "npx playwright test",
+    "git diff --stat   # verificare che compaiano SOLO i file approvati"
+  ],
+  "run_log_file": "run_log.md",
+  "claude_prompt_file": "claude_prompt.md",
+  "context_file": "context.md"
+}
