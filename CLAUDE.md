@@ -30,6 +30,39 @@ CHECKPOINT.md is the primary source of truth for current project state (active p
 
 ---
 
+## 0.5. Default Output Mode — Silent First
+
+This is the permanent default output contract for every task in this repository, including AI Factory Orchestrator runs.
+
+Rule:
+
+```text
+Full reports never go to chat/terminal by default.
+Full reports go to a Markdown file.
+Chat/terminal shows only a short operational summary, max 8 lines.
+```
+
+The full report (Final Report Format, CLAUDE.md §15, or any audit/review/run output) must be written to:
+
+* `result.md` inside the relevant `ai-ops/runs/<run>/` folder, if the task is running from a run pack; or
+* `ai-ops/reports/<slug>.md`, if there is no run pack.
+
+The chat/terminal summary must contain only:
+
+```text
+PASS/FAIL
+File modificati
+Comandi/test eseguiti
+Report path
+Approval needed: sì/no
+```
+
+Claude must not paste the full report in chat/terminal unless Eros explicitly asks with a phrase such as "print full report" or "stampa report completo".
+
+This default applies on top of, not instead of, the Mandatory Workflow (§3) and Final Report Format (§15) — those define *what* the report must contain; this section defines *where* it is shown.
+
+---
+
 ## 1. Project Identity
 
 Technical project:

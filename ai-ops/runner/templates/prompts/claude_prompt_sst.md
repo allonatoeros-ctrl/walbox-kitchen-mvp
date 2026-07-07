@@ -20,7 +20,12 @@ SCOPE VIETATO:
 QUALITY GATE:
 {{QUALITY_GATE}}
 
-REPORT FINALE (max 10 righe): cosa letto, cosa fatto, rischi, cosa approva Eros.
+SILENT REPORT CONTRACT (CLAUDE.md §0.5): full report in result.md o
+ai-ops/reports/<slug>.md, chat max 8 righe, vietato incollare report
+lunghi salvo richiesta esplicita "print full report".
+
+REPORT FINALE (max 8 righe): cosa letto, cosa fatto, rischi, report path,
+cosa approva Eros.
 
 Se stai lavorando da una run folder ai-ops/runs/<run>/ e result.md esiste,
 compila result.md con il report finale seguendo CLAUDE.md §15.

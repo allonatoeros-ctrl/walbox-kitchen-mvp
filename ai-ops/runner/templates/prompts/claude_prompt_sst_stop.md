@@ -17,7 +17,10 @@ AZIONE RICHIESTA:
 - Fai UNA sola domanda mirata a Eros per sbloccare l'ambiguità, oppure
   fermati dichiarando esplicitamente cosa manca per procedere.
 
-REPORT FINALE — MASSIMO 10 RIGHE:
+SILENT REPORT CONTRACT (CLAUDE.md §0.5): chat max 8 righe, nessun report
+lungo da incollare in questa modalità.
+
+REPORT FINALE — MASSIMO 8 RIGHE:
 1. STOP CONDITION TRIGGERED
 2. Motivo (ambiguità rilevata)
 3. Domanda mirata (se una sola è sufficiente) oppure cosa manca

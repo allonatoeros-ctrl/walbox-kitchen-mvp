@@ -42,6 +42,11 @@ SCOPE VIETATO:
 QUALITY GATE PER QUESTO RUN:
 {{QUALITY_GATE}}
 
+SILENT REPORT CONTRACT (CLAUDE.md §0.5):
+- full report in result.md o ai-ops/reports/<slug>.md
+- chat max 8 righe
+- vietato incollare report lunghi salvo richiesta esplicita "print full report"
+
 PRODUCI UN PIANO OPERATIVO con micro-fasi numerate (A, B, C...), ciascuna
 con obiettivo minimo e file coinvolti, e una sezione esplicita "cosa NON
 toccare".

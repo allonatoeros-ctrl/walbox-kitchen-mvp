@@ -36,6 +36,11 @@ SCOPE VIETATO:
 QUALITY GATE PER QUESTO RUN (audit/piano, non implementazione):
 {{QUALITY_GATE}}
 
+SILENT REPORT CONTRACT (CLAUDE.md §0.5):
+- full report in result.md o ai-ops/reports/<slug>.md
+- chat max 8 righe
+- vietato incollare report lunghi salvo richiesta esplicita "print full report"
+
 CHIUSURA OBBLIGATORIA:
 Termina il piano chiedendo esplicitamente l'approvazione di Eros prima di
 implementare qualsiasi fase. Non procedere all'implementazione in questo
