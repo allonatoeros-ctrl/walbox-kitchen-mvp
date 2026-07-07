@@ -146,6 +146,7 @@ export default function StaffDashboard() {
 
   const playbackStale = !remotePlayback || (now - new Date(remotePlayback.updated_at).getTime() > PLAYBACK_STALE_MS);
   const playbackAgeSec = remotePlayback ? Math.max(0, Math.round((now - new Date(remotePlayback.updated_at).getTime()) / 1000)) : null;
+  const playbackAgeLabel = playbackAgeSec === null ? null : (playbackAgeSec < 100 ? `${playbackAgeSec}s` : `${Math.round(playbackAgeSec / 60)}m`);
   const playback = playbackStale
     ? { isPlaying: false, progress: 0, duration: 0 }
     : {
@@ -789,11 +790,13 @@ export default function StaffDashboard() {
               fontWeight: "700",
               color: playbackStale ? "#ff6b6b" : "#4ade80",
               border: `1px solid ${playbackStale ? "#ff6b6b" : "#4ade80"}`,
-              background: "rgba(255,255,255,0.05)"
+              background: "rgba(255,255,255,0.05)",
+              whiteSpace: "nowrap",
+              flexShrink: 0
             }}
           >
             {playbackStale
-              ? (remotePlayback ? `Sync TV interrotta (${playbackAgeSec}s)` : "Sync TV assente")
+              ? (remotePlayback ? `Sync TV interrotta (${playbackAgeLabel})` : "Sync TV assente")
               : "Sync TV OK"}
           </span>
         </div>
