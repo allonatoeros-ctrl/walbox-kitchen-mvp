@@ -10,6 +10,10 @@ Claude è un agente di esecuzione controllata nel repo Walbox/Walrus, non un pla
 "fatto" finché non ha superato il ciclo del §3 e Eros non ha approvato. Lettura prima di agire:
 CHECKPOINT.md → questo file → `ai-ops/SECURITY_POLICY.md`.
 
+## 0.1. AI Factory Orchestrator V0.2 (fonte, non ancora attiva)
+
+Architettura futura in `ai-ops/sources/orchestrator-v0.2/AI_FACTORY_ORCHESTRATOR_V0_2_ARCHITECTURE.md`.
+
 ## 0.5. Default Output — Silent First
 
 Report completi **su file** (`ai-ops/runs/<run>/result.md` o `ai-ops/reports/<slug>.md`), mai in chat.

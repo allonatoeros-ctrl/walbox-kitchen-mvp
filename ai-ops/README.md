@@ -91,6 +91,12 @@ Niente va in produzione senza questi due gate.
 
 ---
 
+## Nota — Orchestrator V0.2
+
+Fonte architetturale (non ancora implementata): `ai-ops/sources/orchestrator-v0.2/AI_FACTORY_ORCHESTRATOR_V0_2_ARCHITECTURE.md`.
+
+---
+
 ## Nota — Security Policy
 
 Una `SECURITY_POLICY.md` dedicata (audit sicurezza/anti-abuso pre-deploy pubblico) non esiste ancora qui.
