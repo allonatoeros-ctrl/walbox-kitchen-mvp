@@ -168,21 +168,42 @@ export default function CustomerEntry() {
         </div>
 
         {/* Intro copy */}
-        <p
-          style={{
-            fontFamily: "var(--font-sans)",
-            fontSize: "14px",
-            color: "#a0a0a0",
-            lineHeight: "1.6",
-            margin: "0"
-          }}
-        >
-          Scegli la musica del locale direttamente dal tuo tavolo.<br />
-          <span style={{ color: "#fffdd0", fontWeight: "600" }}>Senza app, senza registrazione.</span>
-          <span style={{ display: "block", fontSize: "12px", color: "#a0a0a0", fontStyle: "italic", marginTop: "6px" }}>
-            Problemi fuori, birre grandi dentro. 🍺
-          </span>
-        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px", alignItems: "center" }}>
+          <div
+            style={{
+              background: "#ff6600",
+              color: "#000000",
+              fontFamily: "var(--font-display)",
+              fontSize: "11px",
+              fontWeight: "950",
+              padding: "4px 10px",
+              borderRadius: "3px",
+              transform: "rotate(-1.5deg)",
+              boxShadow: "3px 3px 0 #000000",
+              textTransform: "uppercase",
+              letterSpacing: "1px",
+              display: "inline-block",
+              width: "fit-content"
+            }}
+          >
+            WALRUS SHUFFLE NIGHT ⚡
+          </div>
+          <p
+            style={{
+              fontFamily: "var(--font-sans)",
+              fontSize: "14px",
+              color: "#a0a0a0",
+              lineHeight: "1.6",
+              margin: "0"
+            }}
+          >
+            Scegli il pezzo. La regia decide. Se passa, finisce in TV.<br />
+            <span style={{ color: "#fffdd0", fontWeight: "600" }}>Senza app, senza registrazione.</span>
+            <span style={{ display: "block", fontSize: "12px", color: "#a0a0a0", fontStyle: "italic", marginTop: "6px" }}>
+              Problemi fuori, birre grandi dentro. 🍺
+            </span>
+          </p>
+        </div>
 
         {/* Entry Form */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
@@ -329,7 +350,7 @@ export default function CustomerEntry() {
             letterSpacing: "0.5px"
           }}
         >
-          📍 Connesso alla Sala VAR del locale
+          🦭 Cliente propone, Walrus dispone
         </div>
       </div>
     </div>

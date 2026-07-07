@@ -146,7 +146,7 @@ export default function CustomerRequest() {
     submissionTimeoutRef.current = setTimeout(() => {
       setSubmissionSuccess(false);
       setActiveTab("my-songs");
-    }, 4000);
+    }, 6000);
   };
 
   const handleDismissSubmission = () => {
@@ -232,7 +232,7 @@ export default function CustomerRequest() {
     switch (status) {
       case "pending":
         return {
-          text: "IN SALA VAR 🟡",
+          text: "IN REGIA 🟡",
           bg: "#fffdd0",
           border: "#ff6600",
           color: "#ff6600",
@@ -499,11 +499,11 @@ export default function CustomerRequest() {
             <span style={{
               fontSize: "10px",
               color: "#ff6600",
-              fontWeight: "700",
+              fontWeight: "900",
               textTransform: "uppercase",
               letterSpacing: "1px"
             }}>
-              SCEGLI LA PORCHERIA
+              WALRUS SHUFFLE NIGHT ⚡
             </span>
           </div>
         </div>
@@ -648,7 +648,7 @@ export default function CustomerRequest() {
               gap: "15px"
             }}>
               <h3 style={{ fontSize: "16px", fontWeight: "800", fontFamily: "var(--font-display)", color: "#fffdd0", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Cerca una canzone
+                Proponi un brano alla regia Walrus
               </h3>
 
               <div className="form-group" style={{ margin: "0" }}>
@@ -1031,7 +1031,7 @@ export default function CustomerRequest() {
                 className="walbox-submit-btn"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "INVIO IN CORSO..." : "RICONTROLLA 🔎"}
+                {isSubmitting ? "INVIO IN CORSO..." : "ANTEPRIMA E INVIO ⚡"}
               </button>
             </form>
           )}
@@ -1339,15 +1339,17 @@ export default function CustomerRequest() {
               margin: "0 0 12px 0",
               lineHeight: "1.4"
             }}>
-              LA SALA VAR HA PRESO IN CARICO LA PORCHERIA
+              PROPOSTA INVIATA IN REGIA WALRUS
             </h3>
             <p style={{
-              color: "#a0a0a0",
-              fontSize: "13px",
-              fontWeight: "600",
-              margin: "0 0 25px 0"
+              color: "#ff6600",
+              fontSize: "15px",
+              fontWeight: "800",
+              textTransform: "uppercase",
+              margin: "0 0 25px 0",
+              textShadow: "1px 1px 0 #000000"
             }}>
-              Se Rocchi approva, finisce dritta in TV.
+              Se la regia Walrus approva, finisce in TV! 📺
             </p>
             <button
               onClick={handleDismissSubmission}
@@ -1415,7 +1417,7 @@ export default function CustomerRequest() {
               textShadow: "2px 2px 0 #000000",
               margin: "0"
             }}>
-              PREVIEW RICHIESTA
+              CONTROLLA PRIMA DI MANDARE IN REGIA
             </h2>
 
             <div style={{
@@ -1551,7 +1553,7 @@ export default function CustomerRequest() {
                 disabled={isSubmitting}
                 className="walbox-submit-btn"
               >
-                {isSubmitting ? "INVIO IN CORSO..." : "🚀 MANDA IN SALA VAR"}
+                {isSubmitting ? "INVIO IN CORSO..." : "🚀 MANDA IN REGIA"}
               </button>
 
               <button
