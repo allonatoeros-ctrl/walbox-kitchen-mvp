@@ -110,12 +110,12 @@ test('P8.1 — Spotify search: risultati visibili e cliccabili con cover e senza
   await expect(selectedTitleInForm).toBeVisible();
 
   // Clicca "RICONTROLLA" per aprire la preview/modale
-  const ricntrollaBtn = page.getByRole('button', { name: /RICONTROLLA/i });
+  const ricntrollaBtn = page.getByRole('button', { name: /ANTEPRIMA E INVIO/i });
   await expect(ricntrollaBtn).toBeVisible();
   await ricntrollaBtn.click();
 
   // 9. Verifica che si apra la preview modal con il titolo selezionato
-  await expect(page.getByText('PREVIEW RICHIESTA')).toBeVisible();
+  await expect(page.getByText('CONTROLLA PRIMA DI MANDARE IN REGIA')).toBeVisible();
 
   // Il titolo nella preview è mostrato as-is (non toUpperCase) in h4
   const previewTitle = page.locator('[style*="zIndex: 9990"] h4, [style*="z-index: 9990"] h4').first();
@@ -208,10 +208,10 @@ test('P8.2 — Mobile Layout per risultati Spotify Search', async ({ page }) => 
 
   await bohemianCard.click();
 
-  const ricontrollaBtn = page.getByRole('button', { name: /RICONTROLLA/i });
+  const ricontrollaBtn = page.getByRole('button', { name: /ANTEPRIMA E INVIO/i });
   await expect(ricontrollaBtn).toBeVisible();
   await ricontrollaBtn.click();
 
-  await expect(page.getByText('PREVIEW RICHIESTA')).toBeVisible();
+  await expect(page.getByText('CONTROLLA PRIMA DI MANDARE IN REGIA')).toBeVisible();
   await expect(page.getByText('Bohemian Rhapsody').last()).toBeVisible();
 });
