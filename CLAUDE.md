@@ -61,6 +61,16 @@ Claude must not paste the full report in chat/terminal unless Eros explicitly as
 
 This default applies on top of, not instead of, the Mandatory Workflow (§3) and Final Report Format (§15) — those define *what* the report must contain; this section defines *where* it is shown.
 
+### Terminal Silent Mode
+
+Terminal Silent Mode is part of the Silent Report Contract and applies to raw command output, not just final reports:
+
+* Do not print long `bash`/`git`/`rg`/`cat` output in chat.
+* If a command can produce more than 20 lines of output, redirect it or summarize it in the Markdown report instead of printing it in chat.
+* Never paste `git show -p`, long `git diff`, extended `rg`/`grep` results, or the full contents of a file (`cat` of an entire file) into chat.
+* Chat may only show: the command that was run, its outcome, the relevant lines/commit hashes, and the report path.
+* If the full output needs to be preserved, save it in the Markdown report, not in chat.
+
 ---
 
 ## 1. Project Identity

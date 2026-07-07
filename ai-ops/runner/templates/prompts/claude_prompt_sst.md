@@ -23,6 +23,10 @@ QUALITY GATE:
 SILENT REPORT CONTRACT (CLAUDE.md §0.5): full report in result.md o
 ai-ops/reports/<slug>.md, chat max 8 righe, vietato incollare report
 lunghi salvo richiesta esplicita "print full report".
+TERMINAL SILENT MODE: niente output lunghi di bash/git/rg/cat in chat;
+>20 righe → redirigi/riassumi nel report; vietato git show -p, diff
+lunghi, rg estesi, cat di file interi; in chat solo comando, esito,
+righe/commit rilevanti, report path.
 
 REPORT FINALE (max 8 righe): cosa letto, cosa fatto, rischi, report path,
 cosa approva Eros.

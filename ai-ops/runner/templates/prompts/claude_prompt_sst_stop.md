@@ -19,6 +19,10 @@ AZIONE RICHIESTA:
 
 SILENT REPORT CONTRACT (CLAUDE.md §0.5): chat max 8 righe, nessun report
 lungo da incollare in questa modalità.
+TERMINAL SILENT MODE: niente output lunghi di bash/git/rg/cat in chat;
+>20 righe → redirigi/riassumi nel report; vietato git show -p, diff
+lunghi, rg estesi, cat di file interi; in chat solo comando, esito,
+righe/commit rilevanti, report path.
 
 REPORT FINALE — MASSIMO 8 RIGHE:
 1. STOP CONDITION TRIGGERED

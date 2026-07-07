@@ -35,6 +35,7 @@ SILENT REPORT CONTRACT (CLAUDE.md §0.5):
 - full report in result.md o ai-ops/reports/<slug>.md
 - chat max 8 righe
 - vietato incollare report lunghi salvo richiesta esplicita "print full report"
+- TERMINAL SILENT MODE: non stampare in chat output lunghi di bash/git/rg/cat; se un comando produce >20 righe, redirigi/riassumi nel report; vietato incollare git show -p, diff lunghi, rg estesi, cat di file interi; in chat solo comando, esito, righe/commit rilevanti, report path
 
 FINAL REPORT (obbligatorio, in italiano):
 - File toccati (lista esatta)

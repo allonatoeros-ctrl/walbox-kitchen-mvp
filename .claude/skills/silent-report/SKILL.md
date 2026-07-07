@@ -46,7 +46,22 @@ Non aggiungere altro testo prima o dopo questo blocco, a meno che non sia
 uno STOP CONDITION (CLAUDE.md §12), che resta prioritario e va comunque
 tenuto entro poche righe.
 
-## 4. Eccezione
+## 4. Terminal Silent Mode
+
+Vale anche per l'output grezzo dei comandi durante il run, non solo per il
+report finale:
+
+* Non stampare in chat output lunghi di `bash`/`git`/`rg`/`cat`.
+* Se un comando può produrre più di 20 righe, redirigi l'output o
+  riassumilo nel report Markdown invece di incollarlo in chat.
+* Vietato incollare in chat: `git show -p`, `git diff` lunghi, risultati
+  estesi di `rg`/`grep`, `cat` di file interi.
+* In chat mostra solo: comando eseguito, esito, righe/commit rilevanti,
+  report path.
+* Se serve conservare l'output completo, va salvato nel report Markdown,
+  non in chat.
+
+## 5. Eccezione
 
 Se Eros scrive esplicitamente "print full report" o "stampa report
 completo" per quel task, incolla il contenuto del file Markdown in chat
