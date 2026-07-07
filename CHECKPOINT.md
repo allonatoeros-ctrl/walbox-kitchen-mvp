@@ -76,7 +76,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - Kitchen (dashboard, hooks, e2e sopra) — stabile, fuori scope track Jukebox attuale
 
 ## OPEN ISSUES
-- `venueSettings`/pausa coda in `CustomerRequest.jsx` resta su mockData/localStorage, non sincronizzata con Supabase (Reality Sprint 01, non ancora fixata)
+- Reality Sprint 02 ha confermato che queuePaused/venueSettings è ancora localStorage-only: funziona tra tab dello stesso browser, ma non tra dispositivi staff/clienti. Fix futuro richiede venue_settings su Supabase + hook realtime dedicato.
 - FABLE_WALBOX_CREATIVE_DIRECTION_PACK (introdotto nel commit `2f06353`): tracked but not active — non è la priorità corrente, non cambia il NEXT STEP finché Eros non lo attiva esplicitamente.
 - Fix "Sposta Su/Giù" in coda staff rimandato (menzionato in commit 553a86e, da verificare stato)
 - Copertura E2E Jukebox parziale: oltre ai 17+4 Playwright Kitchen esistono `smoke.spec.js` e `spotify-search-ui.spec.js` (entry + ricerca/UI Jukebox, 25/25 PASS totali), ma manca ancora E2E reale su approvazione/coda/now-playing con Spotify Premium reale
