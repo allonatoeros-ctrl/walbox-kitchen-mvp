@@ -27,7 +27,7 @@ export default function CustomerEntry() {
     }
     setError("");
 
-    const cleanTable = table.trim().replace(/^[Tt]/, '');
+    const cleanTable = table.trim().replace(/^[Tt]+/, '');
     const cleanNickname = nickname.trim();
     try {
       localStorage.setItem('walboxCustomerSession', JSON.stringify({ table: cleanTable, nickname: cleanNickname }));

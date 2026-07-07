@@ -27,7 +27,7 @@ export default function CustomerKitchenEntry() {
     }
     setError("");
 
-    const cleanTable = table.trim().replace(/^[Tt]/, "");
+    const cleanTable = table.trim().replace(/^[Tt]+/, "");
     const cleanNickname = nickname.trim() || "Ospite Walrus";
 
     try {

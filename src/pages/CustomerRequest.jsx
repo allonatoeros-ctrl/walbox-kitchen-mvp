@@ -76,7 +76,7 @@ export default function CustomerRequest() {
       window.dispatchEvent(new PopStateEvent("popstate"));
       return;
     }
-    const tableParam = rawTableParam.trim().replace(/^[Tt]/, '');
+    const tableParam = rawTableParam.trim().replace(/^[Tt]+/, '');
     setTable(tableParam);
     setNickname(params.get("nickname") || "");
 
