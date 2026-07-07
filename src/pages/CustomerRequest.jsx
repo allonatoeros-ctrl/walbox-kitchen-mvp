@@ -69,13 +69,14 @@ export default function CustomerRequest() {
   // Load table from URL query param on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const tableParam = params.get("table");
-    if (!tableParam) {
+    const rawTableParam = params.get("table");
+    if (!rawTableParam) {
       // Redirect to entry if no table is set
       window.history.pushState({}, "", "/entry");
       window.dispatchEvent(new PopStateEvent("popstate"));
       return;
     }
+    const tableParam = rawTableParam.trim().replace(/^[Tt]/, '');
     setTable(tableParam);
     setNickname(params.get("nickname") || "");
 
