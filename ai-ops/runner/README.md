@@ -1,4 +1,4 @@
-# ai-factory-runner V1.4 — Walbox AI Business Factory
+# ai-factory-runner V1.5-A — Walbox AI Business Factory
 
 Runner locale che trasforma un task raw in un **ticket/run log** dentro `ai-ops/tickets/`.
 Zero dipendenze esterne, zero API, zero LLM: solo Node.js e keyword locali.
@@ -160,6 +160,33 @@ progetto al momento del run, senza dover aprire CHECKPOINT.md a parte.
   l'executor nel ticket prima del Gate 1, come per gli altri limiti già
   noti (vedi "Limiti V1.4" sotto).
 
+## Novità V1.5-A — CLI flags & output safety
+
+Micro-release che rende la CLI più sicura e più utile per il workflow Claude Code,
+**senza toccare la classificazione** (categorie, rischio, executor, confidence,
+warnings, recommended_skill, prompt_mode restano identici — golden set A–P: 16/16 PASS).
+
+- **`RUNNER_VERSION` unica** (`run.js`): prima le stringhe di console dicevano
+  `V1.3` mentre il codice era a V1.4.1. Ora la versione è centralizzata in una
+  costante e appare in console, in `--help` e nel campo `version` dell'output JSON.
+- **Warning testuali a console**: prima si stampava solo il **conteggio**
+  (`Warnings: N`) e in `--dry-run` (nessun ticket scritto) il testo dei warning
+  spariva di fatto. Ora ogni warning è stampato per esteso.
+- **`--show-prompt`**: stampa a console anche il prompt Claude Code generato
+  (la sezione 9 del ticket), utile per copiarlo senza aprire il file. Funziona
+  anche in `--dry-run`.
+- **`--json`**: output machine-readable su stdout (nessun riepilogo umano), con
+  tutti i campi calcolati. Con `--show-prompt` il campo `prompt` contiene il
+  prompt generato, altrimenti è `null`.
+- **`--help` / `-h`**: aiuto dedicato con opzioni, esempi ed exit code.
+- **Rifiuto flag ignoti (fix)**: prima un flag come `--json` o `--jsn` finiva
+  **concatenato dentro il task raw** (`argv.filter(a => a !== '--dry-run')`); ora
+  `parseArgs()` valida gli argomenti e un flag sconosciuto fa uscire con exit
+  code `2`. `--` segna la fine dei flag (tutto ciò che segue è task verbatim).
+- **Exit code espliciti**: `0` ok · `1` errore a runtime · `2` errore d'uso
+  (flag sconosciuto o task mancante). `main()` ritorna un codice e l'invocazione
+  è avvolta in `try/catch`.
+
 ## Uso
 
 ```bash
@@ -176,6 +203,9 @@ cancellare manualmente i ticket generati:
 
 ```bash
 node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run
+node ai-ops/runner/run.js "Fixa il typo nel titolo" --dry-run --show-prompt
+node ai-ops/runner/run.js "Verifica se V1.4 è pronta" --dry-run --json
+node ai-ops/runner/run.js --help
 ```
 
 ## Cosa genera il ticket

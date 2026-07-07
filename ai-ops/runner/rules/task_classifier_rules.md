@@ -1,5 +1,12 @@
-# Task Classifier Rules — ai-factory-runner V1.3 (+ template V1.4)
+# Task Classifier Rules — ai-factory-runner V1.3 (+ template V1.4, CLI V1.5-A)
 
+> **V1.5-A (CLI flags & output safety):** non tocca nessuna regola di
+> classificazione qui descritta. Aggiunge solo gestione argomenti (`--dry-run`,
+> `--show-prompt`, `--json`, `--help`/`-h`, `--`), rifiuto dei flag sconosciuti,
+> `RUNNER_VERSION` unica, warning testuali a console ed exit code espliciti.
+> Golden set A–P rieseguito in `--dry-run --json`: 16/16 PASS, zero regressioni
+> su categorie/rischio/executor/confidence/skill/prompt_mode.
+>
 > Documentazione umana delle regole di classificazione implementate in `../run.js`.
 > **Fonte eseguibile: `run.js`** (costanti `CATEGORY_RULES`, `HIGH_RISK_KEYWORDS`,
 > `ALWAYS_HIGH_KEYWORDS`, `WRITE_VERBS`, `RISK_BY_CATEGORY`, funzione `detectDocRole`;

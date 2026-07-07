@@ -2,7 +2,7 @@
 'use strict';
 
 /**
- * ai-factory-runner V1.3 — Walbox AI Business Factory
+ * ai-factory-runner V1.5-A — Walbox AI Business Factory
  *
  * Genera un ticket/run log in ai-ops/tickets/ a partire da un task raw.
  * Locale, zero dipendenze esterne, nessuna API, nessun LLM.
@@ -45,6 +45,18 @@
  * aggiunge un warning invece di cambiare executor. Non tocca categorie,
  * rischio, confidence, recommendSkillAndMode o gli altri rami di
  * recommendExecutor.
+ *
+ * V1.5-A: CLI flags & output safety. Nuovo parseArgs() che separa i flag noti
+ * (--dry-run, --show-prompt, --json, --help/-h, e '--' come fine-flag) dal task
+ * raw e RIFIUTA i flag sconosciuti con exit code 2 (prima finivano concatenati
+ * nel task). Version label centralizzata in RUNNER_VERSION (prima "V1.3"
+ * hardcodata in console, disallineata). I warning ora sono stampati per esteso
+ * a console (prima solo il conteggio, invisibili in --dry-run). Nuovi output:
+ * --show-prompt (stampa il prompt Claude generato) e --json (payload
+ * machine-readable). main() ritorna un exit code e l'invocazione è avvolta in
+ * try/catch con exit code espliciti. Puramente additivo: classificazione,
+ * rischio, executor, confidence, warnings, skill e prompt_mode INVARIATI —
+ * golden set A–P non toccato.
  */
 
 import fs from 'node:fs';
@@ -61,6 +73,12 @@ const PROMPTS_DIR = path.join(TEMPLATES_DIR, 'prompts');
 const BASE_PROMPT_TEMPLATE = path.join(TEMPLATES_DIR, 'claude_prompt_template.md');
 const CHECKPOINT_PATH = path.join(REPO_ROOT, 'CHECKPOINT.md');
 const CHECKPOINT_SECTION_MAX_LINES = 6;
+
+// Etichetta di versione unica del runner (V1.5-A): usata in console, in --help
+// e nel campo "version" dell'output --json. Prima era hardcodata come "V1.3"
+// nelle stringhe di console pur essendo il codice a V1.4.1 — disallineamento
+// risolto centralizzandola qui.
+const RUNNER_VERSION = 'V1.5-A';
 
 // ---------------------------------------------------------------------------
 // Regole di classificazione (keyword locali, match per parola intera;
@@ -766,20 +784,139 @@ function uniqueTicketPath(date, slug) {
 }
 
 // ---------------------------------------------------------------------------
+// CLI: parsing argomenti, help, exit code (V1.5-A)
+// ---------------------------------------------------------------------------
+
+const EXIT_OK = 0;
+const EXIT_RUNTIME = 1;
+const EXIT_USAGE = 2;
+
+// Separa i flag conosciuti dal task raw. Tutto ciò che segue '--' è task
+// verbatim. Un token che sembra un flag ('-...') ma non è riconosciuto fa
+// fallire il run con exit code EXIT_USAGE, invece di finire silenziosamente
+// concatenato nel task raw come accadeva fino a V1.4.1.
+function parseArgs(argv) {
+  const flags = { dryRun: false, showPrompt: false, json: false, help: false };
+  const taskParts = [];
+  let endOfFlags = false;
+  for (const arg of argv) {
+    if (!endOfFlags && arg === '--') {
+      endOfFlags = true;
+      continue;
+    }
+    if (!endOfFlags && arg.startsWith('-') && arg !== '-') {
+      switch (arg) {
+        case '--dry-run': flags.dryRun = true; break;
+        case '--show-prompt': flags.showPrompt = true; break;
+        case '--json': flags.json = true; break;
+        case '--help':
+        case '-h': flags.help = true; break;
+        default: {
+          const err = new Error(`Flag sconosciuto: "${arg}"`);
+          err.exitCode = EXIT_USAGE;
+          throw err;
+        }
+      }
+      continue;
+    }
+    taskParts.push(arg);
+  }
+  return { flags, rawTask: taskParts.join(' ').trim() };
+}
+
+const HELP_TEXT = `ai-factory-runner ${RUNNER_VERSION} — Walbox AI Business Factory
+
+Genera un ticket/run log in ai-ops/tickets/ a partire da un task raw.
+Classificazione locale per keyword: zero dipendenze, zero API, zero LLM.
+
+USO:
+  node ai-ops/runner/run.js "<task raw>" [opzioni]
+
+OPZIONI:
+  --dry-run        Classifica e stampa il riepilogo senza scrivere alcun ticket.
+  --show-prompt    Stampa anche il prompt Claude Code generato (sezione 9 del ticket).
+  --json           Output machine-readable su stdout (nessun riepilogo umano).
+  --help, -h       Mostra questo aiuto ed esce.
+  --               Fine dei flag: tutto ciò che segue è trattato come task raw.
+
+ESEMPI:
+  node ai-ops/runner/run.js "Verifica TV Poster sync"
+  node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run
+  node ai-ops/runner/run.js "Fixa il bug della coda" --dry-run --show-prompt
+  node ai-ops/runner/run.js "Prepara piano V1.6" --dry-run --json
+
+EXIT CODE:
+  0  ok
+  1  errore a runtime (es. template mancante, scrittura ticket fallita)
+  2  errore d'uso (flag sconosciuto o task mancante)
+`;
+
+function printHelp() {
+  process.stdout.write(HELP_TEXT);
+}
+
+// Scansione leggera di argv per sapere se l'utente ha richiesto --json anche
+// quando parseArgs fallisce prima di restituire i flag (es. flag sconosciuto):
+// stessa regola di fine-flag di parseArgs ('--' interrompe la scansione), solo
+// per decidere il formato dell'errore, non per validare argomenti.
+function hasJsonIntent(argv) {
+  for (const arg of argv) {
+    if (arg === '--') return false;
+    if (arg === '--json') return true;
+  }
+  return false;
+}
+
+// Errori in formato --json: stesso stream (stdout) e stessa forma del payload
+// di successo, mai mischiato a testo umano. Vedi V1.5-A "JSON error path fix".
+function emitJsonError(message, exitCode) {
+  const payload = { version: RUNNER_VERSION, ok: false, error: message, exit_code: exitCode };
+  process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
 function main() {
   const argv = process.argv.slice(2);
-  const dryRun = argv.includes('--dry-run');
-  const rawTask = argv.filter((a) => a !== '--dry-run').join(' ').trim();
 
-  if (!rawTask) {
-    console.error('Uso: node ai-ops/runner/run.js "<task raw>" [--dry-run]');
-    console.error('Esempio: node ai-ops/runner/run.js "Verifica TV Poster sync" --dry-run');
-    process.exit(1);
+  let flags;
+  let rawTask;
+  try {
+    ({ flags, rawTask } = parseArgs(argv));
+  } catch (err) {
+    const exitCode = err.exitCode || EXIT_USAGE;
+    if (hasJsonIntent(argv)) {
+      emitJsonError(err.message, exitCode);
+    } else {
+      console.error(err.message);
+      console.error("Vedi 'node ai-ops/runner/run.js --help' per l'uso.");
+    }
+    return exitCode;
   }
 
+  const dryRun = flags.dryRun;
+  const showPrompt = flags.showPrompt;
+  const json = flags.json;
+
+  if (flags.help) {
+    printHelp();
+    return EXIT_OK;
+  }
+
+  if (!rawTask) {
+    if (json) {
+      emitJsonError('Nessun task fornito.', EXIT_USAGE);
+    } else {
+      console.error('Errore: nessun task fornito.');
+      console.error('Uso: node ai-ops/runner/run.js "<task raw>" [--dry-run] [--show-prompt] [--json]');
+      console.error("Vedi 'node ai-ops/runner/run.js --help' per i dettagli.");
+    }
+    return EXIT_USAGE;
+  }
+
+  try {
   const date = todayISO();
   const slug = slugify(rawTask);
   const { categories, matchedKeywords } = classify(rawTask);
@@ -866,10 +1003,41 @@ function main() {
     relPath = path.relative(process.cwd(), ticketPath);
   }
 
+  if (json) {
+    const payload = {
+      version: RUNNER_VERSION,
+      dry_run: dryRun,
+      task: rawTask,
+      date,
+      slug,
+      categories,
+      matched_keywords: matchedKeywords,
+      risk,
+      risk_reasons: riskReasons,
+      executor,
+      routing_why: routingWhy,
+      confidence,
+      recommended_skill: recommendedSkill,
+      prompt_mode: promptMode,
+      prompt_template: promptTemplateLabel,
+      skill_why: skillWhy,
+      warnings,
+      doc_role: docRole,
+      qa_domain: qaDomain,
+      requires_approval: approval,
+      scope,
+      quality_gate: qualityGate,
+      ticket_path: relPath,
+      prompt: showPrompt ? claudePrompt.trim() : null,
+    };
+    process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+    return EXIT_OK;
+  }
+
   console.log(
     dryRun
-      ? 'AI FACTORY RUNNER V1.3 — dry-run (nessun ticket scritto su disco)'
-      : 'AI FACTORY RUNNER V1.3 — ticket generato',
+      ? `AI FACTORY RUNNER ${RUNNER_VERSION} — dry-run (nessun ticket scritto su disco)`
+      : `AI FACTORY RUNNER ${RUNNER_VERSION} — ticket generato`,
   );
   console.log(`  Task:       ${rawTask}`);
   console.log(`  Categorie:  ${categoriesLabel}`);
@@ -881,7 +1049,10 @@ function main() {
   console.log(`  Prompt template:   ${promptTemplateLabel}`);
   console.log(`  Skill/mode reason: ${skillWhy}`);
   if (warnings.length > 0) {
-    console.log(`  Warnings:   ${warnings.length}`);
+    console.log(`  Warnings (${warnings.length}):`);
+    for (const w of warnings) {
+      console.log(`    - ${w}`);
+    }
   }
   if (docRole) {
     console.log(`  Doc role:   ${docRole}`);
@@ -889,6 +1060,29 @@ function main() {
   if (!dryRun) {
     console.log(`  Ticket:     ${relPath}`);
   }
+  if (showPrompt) {
+    console.log('');
+    console.log(`  --- Claude prompt (${promptTemplateLabel}) ---`);
+    console.log(claudePrompt.trim());
+  }
+
+  return EXIT_OK;
+  } catch (err) {
+    if (json) {
+      emitJsonError(err.message, EXIT_RUNTIME);
+    } else {
+      console.error(`Errore runner: ${err.message}`);
+    }
+    return EXIT_RUNTIME;
+  }
 }
 
-main();
+// Ultimo fallback, non json-aware: copre solo errori inattesi al di fuori del
+// try/catch interno di main() (es. bug in hasJsonIntent/parseArgs stesse),
+// non un path testato dai quality gate --json.
+try {
+  process.exit(main());
+} catch (err) {
+  console.error(`Errore runner inatteso: ${err.message}`);
+  process.exit(EXIT_RUNTIME);
+}
