@@ -272,6 +272,36 @@ node ai-ops/runner/run.js "Fixa il bug della coda" --write-run-pack
 node ai-ops/runner/run.js "Verifica golden set" --project=ai-factory --write-run-pack --json
 ```
 
+## Novità V1.6.1 — Known files hardening
+
+`context_map.json` è statico e scritto a mano: quando un file elencato viene
+rinominato o cancellato nel repo, l'entry restava "known" senza nessun modo
+per accorgersene finché qualcuno non apriva davvero quel path e lo trovava
+mancante.
+
+- **`buildKnownFiles()` valida contro il filesystem**: ogni path candidato è
+  controllato con `fs.existsSync` (nessuna rete/RAG, stesso pattern
+  deterministico di `readCheckpointSnapshot()`) e la funzione ritorna
+  `{ valid, stale }` invece di un array piatto.
+- **`context.md`**: la sezione "Known files for this task" elenca solo i
+  `valid`; se ci sono `stale`, sotto compare un blocco di warning esplicito
+  che invita a verificare/aggiornare `context_map.json`.
+- **`--json` (anche con `--dry-run`, anche senza `--write-run-pack`)**: il
+  payload riporta sempre `known_files` (valid) e `stale_known_files`, perché
+  il calcolo è stato spostato fuori dal ramo `--write-run-pack` — prima era
+  invisibile finché non si scriveva davvero una run pack.
+- **Pulizia dati**: rimosse da `context_map.json` le 4 entry che puntavano a
+  path ormai inesistenti (`LiveTvScreen.jsx`, `ManagerDashboard.jsx`,
+  `CustomerJukeboxOldOrange.jsx`, `CustomerEntryWalrusUpgrade.jsx`) — nessuna
+  aveva un rinominato ovvio in git history, quindi rimosse invece che
+  corrette.
+- **Puramente additivo**: `classify`/`assessRisk`/`recommendExecutor`/
+  `recommendSkillAndMode` non toccati. Golden set A–P invariato.
+
+```bash
+node ai-ops/runner/run.js "Verifica layout ManagerDashboard" --dry-run --json
+```
+
 ## Uso
 
 ```bash

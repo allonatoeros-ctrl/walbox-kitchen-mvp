@@ -138,7 +138,7 @@ const CONTEXT_MAP_PATH = path.join(RUNNER_DIR, 'context_map.json');
 // e nel campo "version" dell'output --json. Prima era hardcodata come "V1.3"
 // nelle stringhe di console pur essendo il codice a V1.4.1 — disallineamento
 // risolto centralizzandola qui.
-const RUNNER_VERSION = 'V1.6';
+const RUNNER_VERSION = 'V1.6.1';
 
 // ---------------------------------------------------------------------------
 // Regole di classificazione (keyword locali, match per parola intera;
@@ -936,18 +936,28 @@ function loadContextMap() {
 
 // Riusa normalize()/matchesKeyword() gia' usate da classify(): stessa logica
 // di match case/accent-insensitive, nessuna nuova euristica.
+// V1.6.1: valida ogni path candidato contro il filesystem reale (fs.existsSync,
+// nessuna rete/RAG) e separa valid da stale — un'entry di context_map.json che
+// punta a un file rinominato/cancellato non deve più essere presentata come
+// "known file" affidabile senza avviso.
 function buildKnownFiles(rawTask, projectName) {
   const text = normalize(rawTask);
   const entries = loadContextMap();
-  const paths = [];
+  const seen = new Set();
+  const valid = [];
+  const stale = [];
   for (const entry of entries) {
     if (entry.project && entry.project !== projectName) continue;
     const hit = (entry.keywords || []).some((kw) => matchesKeyword(text, kw));
-    if (hit && !paths.includes(entry.path)) {
-      paths.push(entry.path);
+    if (!hit || seen.has(entry.path)) continue;
+    seen.add(entry.path);
+    if (fs.existsSync(path.join(REPO_ROOT, entry.path))) {
+      valid.push(entry.path);
+    } else {
+      stale.push(entry.path);
     }
   }
-  return paths;
+  return { valid, stale };
 }
 
 function uniqueTicketPath(date, slug) {
@@ -1231,6 +1241,10 @@ function main() {
   const scope = buildScope(categories, profile, readOnlyOverride);
   const qualityGate = buildQualityGate(categories, profile, readOnlyOverride, flags.sst);
   const checkpointSnapshot = readCheckpointSnapshot();
+  // V1.6.1: calcolato sempre (anche --dry-run, anche senza --write-run-pack)
+  // cosi' known_files/stale_known_files sono visibili in --json senza dover
+  // scrivere una run pack solo per validarli.
+  const knownFiles = buildKnownFiles(rawTask, profile.project);
 
   const categoriesLabel = categories.length > 0 ? categories.join(', ') : 'unclassified (triage umano)';
   const keywordsLabel =
@@ -1316,17 +1330,21 @@ function main() {
         QUALITY_GATE: bulletList(qualityGate),
       });
 
-      const knownFiles = buildKnownFiles(rawTask, profile.project);
+      const knownFilesBlock =
+        knownFiles.valid.length > 0
+          ? bulletList(knownFiles.valid)
+          : '- (nessun file noto per questa task — nessuna keyword riconosciuta in context_map.json)';
+      const staleWarningBlock =
+        knownFiles.stale.length > 0
+          ? `\n\n⚠️ Known files stale (path non trovato sul filesystem — verificare/aggiornare ai-ops/runner/context_map.json):\n${bulletList(knownFiles.stale)}`
+          : '';
       const context = renderTemplate(path.join(TEMPLATES_DIR, 'context_template.md'), {
         TITLE: rawTask,
         CHECKPOINT_STABLE: indentLines(checkpointSnapshot.stable, '  '),
         CHECKPOINT_DONE: indentLines(checkpointSnapshot.done, '  '),
         CHECKPOINT_OPEN_ISSUES: indentLines(checkpointSnapshot.openIssues, '  '),
         CHECKPOINT_NEXT_STEP: indentLines(checkpointSnapshot.nextStep, '  '),
-        KNOWN_FILES:
-          knownFiles.length > 0
-            ? bulletList(knownFiles)
-            : '- (nessun file noto per questa task — nessuna keyword riconosciuta in context_map.json)',
+        KNOWN_FILES: `${knownFilesBlock}${staleWarningBlock}`,
       });
 
       // Result Capture V0: placeholder da completare a fine run dall'esecutore
@@ -1366,6 +1384,8 @@ function main() {
         requires_approval: approval,
         scope,
         quality_gate: qualityGate,
+        known_files: knownFiles.valid,
+        stale_known_files: knownFiles.stale,
         run_log_file: 'run_log.md',
         claude_prompt_file: 'claude_prompt.md',
         context_file: 'context.md',
@@ -1416,6 +1436,8 @@ function main() {
       requires_approval: approval,
       scope,
       quality_gate: qualityGate,
+      known_files: knownFiles.valid,
+      stale_known_files: knownFiles.stale,
       ticket_path: relPath,
       run_pack_dir: runPackRelDir,
       prompt: showPrompt ? claudePrompt.trim() : null,
