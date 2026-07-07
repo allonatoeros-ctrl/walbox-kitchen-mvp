@@ -236,21 +236,29 @@ bisognava aprire il ticket ed estrarre il blocco, oppure `--show-prompt` e
 copiare dal terminale.
 
 - **`--write-run-pack`**: invece del ticket singolo, scrive una cartella
-  `ai-ops/runs/YYYY-MM-DD_<project>_<slug>/` con 4 file:
+  `ai-ops/runs/YYYY-MM-DD_<project>_<slug>/` con 5 file:
   - `runner.json` — payload strutturato, stessi campi di `--json`, più
     puntatori ai file di testo (`run_log_file`, `claude_prompt_file`,
-    `context_file`). Nessun testo libero duplicato dentro.
+    `context_file`, `result_file`). Nessun testo libero duplicato dentro.
   - `claude_prompt.md` — solo il prompt Claude Code pronto da incollare.
   - `run_log.md` — equivalente del ticket attuale meno il project state
     (spostato in `context.md`) e meno il corpo del prompt (spostato in
     `claude_prompt.md`, qui resta solo un rimando).
   - `context.md` — snapshot CHECKPOINT.md (STABLE/DONE/OPEN ISSUES/NEXT STEP)
     + elenco delle fonti di stato da leggere.
+  - `result.md` — **Result Capture V0**: placeholder da compilare
+    dall'esecutore a fine run, seguendo il Final Report Format di
+    CLAUDE.md §15. `run.js` scrive solo il placeholder (TITLE/DATE/SLUG
+    valorizzati, il resto `TBD`) al momento della creazione della run
+    pack — non contiene mai un esito reale finché l'esecutore non lo
+    completa a mano.
 - **Assente il flag**: comportamento identico a V1.5-E, ticket singolo in
   `ai-ops/tickets/`, nessuna cartella `runs/` creata.
-- **`--dry-run` vince su entrambi**: nessuna scrittura, né ticket né run pack.
+- **`--dry-run` vince su entrambi**: nessuna scrittura, né ticket né run pack
+  (incluso `result.md`).
 - **`--json` con `--write-run-pack`**: il payload riporta `run_pack_dir` (path
-  della cartella creata) al posto di `ticket_path` (che resta `null`).
+  della cartella creata) al posto di `ticket_path` (che resta `null`);
+  `result_file` è visibile aprendo `runner.json` nella cartella generata.
 - **Puramente additivo**: `classify`/`assessRisk`/`recommendExecutor`/
   `recommendSkillAndMode`/profili/template per-modo esistenti non sono
   toccati — cambia solo come viene scritto l'output, non cosa viene
@@ -311,7 +319,8 @@ ai-ops/
 │       ├── runner.json
 │       ├── claude_prompt.md
 │       ├── run_log.md
-│       └── context.md
+│       ├── context.md
+│       └── result.md                  ← placeholder Result Capture V0 (V1.6), da completare a fine run
 └── runner/
     ├── README.md                          ← sei qui
     ├── run.js                             ← runner (Node, zero deps)
@@ -319,6 +328,7 @@ ai-ops/
     │   ├── ticket_template.md             ← struttura del ticket generato (default, senza --write-run-pack)
     │   ├── run_log_template.md            ← struttura di run_log.md nel run pack (V1.6)
     │   ├── context_template.md            ← struttura di context.md nel run pack (V1.6)
+    │   ├── result_template.md             ← struttura di result.md nel run pack, Final Report §15 (V1.6)
     │   ├── claude_prompt_template.md      ← prompt Claude Code, fallback base (V1.1-V1.3)
     │   └── prompts/                       ← template per-modo (V1.4), uno per prompt_mode
     │       ├── claude_prompt_micro_fix.md

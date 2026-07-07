@@ -1287,6 +1287,14 @@ function main() {
         CHECKPOINT_NEXT_STEP: indentLines(checkpointSnapshot.nextStep, '  '),
       });
 
+      // Result Capture V0: placeholder da completare a fine run dall'esecutore
+      // (Final Report Format, CLAUDE.md §15). Non è output di run.js stesso.
+      const result = renderTemplate(path.join(TEMPLATES_DIR, 'result_template.md'), {
+        TITLE: rawTask,
+        DATE: date,
+        SLUG: slug,
+      });
+
       // Payload strutturato: stessi campi del payload --json, senza testo
       // libero (prompt/checkpoint) duplicato — solo puntatori ai file di
       // testo della run pack, per restare single-source-of-truth.
@@ -1319,12 +1327,14 @@ function main() {
         run_log_file: 'run_log.md',
         claude_prompt_file: 'claude_prompt.md',
         context_file: 'context.md',
+        result_file: 'result.md',
       };
 
       fs.writeFileSync(path.join(runPackDir, 'runner.json'), `${JSON.stringify(runnerJson, null, 2)}\n`, 'utf8');
       fs.writeFileSync(path.join(runPackDir, 'claude_prompt.md'), `${claudePrompt.trim()}\n`, 'utf8');
       fs.writeFileSync(path.join(runPackDir, 'run_log.md'), runLog, 'utf8');
       fs.writeFileSync(path.join(runPackDir, 'context.md'), context, 'utf8');
+      fs.writeFileSync(path.join(runPackDir, 'result.md'), result, 'utf8');
 
       runPackRelDir = path.relative(process.cwd(), runPackDir);
     } else {
