@@ -84,6 +84,20 @@
  * nessun nuovo meccanismo di fallback. Non tocca classify/assessRisk/
  * recommendExecutor: categorie, rischio ed executor restano identici al
  * golden set A–P eseguito senza --sst.
+ *
+ * V1.5-E: SST reso davvero "silent". claude_prompt_sst.md ridotto a ~80
+ * parole (era troppo lungo per uso token-saving), con "Non scrivere testo
+ * tra i tool call. Solo report finale." come prima riga. Console: con --sst
+ * senza --show-prompt, output ridotto a max 8 righe (prima stampava lo
+ * stesso riepilogo esteso della modalità normale, vanificando il risparmio
+ * token); con --sst e --show-prompt, il dump del prompt è etichettato
+ * "[DEBUG]" per marcarlo come uso di debug, non normale. buildQualityGate:
+ * con sst + readOnlyOverride il gate è ora solo ['git status --short',
+ * 'nessuna modifica a <code_dir>'] invece della cascata generica
+ * (build/test del profilo, diff ai-ops/, ecc. non pertinenti a un audit
+ * dichiarato read-only). Non tocca classify/assessRisk/recommendExecutor/
+ * recommendSkillAndMode: categorie, rischio, executor, skill e prompt_mode
+ * restano identici al golden set A–P.
  */
 
 import fs from 'node:fs';
@@ -107,7 +121,7 @@ const CHECKPOINT_SECTION_MAX_LINES = 6;
 // e nel campo "version" dell'output --json. Prima era hardcodata come "V1.3"
 // nelle stringhe di console pur essendo il codice a V1.4.1 — disallineamento
 // risolto centralizzandola qui.
-const RUNNER_VERSION = 'V1.5-D';
+const RUNNER_VERSION = 'V1.5-E';
 
 // ---------------------------------------------------------------------------
 // Regole di classificazione (keyword locali, match per parola intera;
@@ -742,6 +756,13 @@ function buildQualityGate(categories, profile, readOnlyOverride, sst) {
   const has = (c) => categories.includes(c);
   const checks = [];
 
+  // V1.5-D (SST hardening): con --sst + task dichiarato read-only, il gate
+  // è ridotto al minimo indispensabile — nessun gate generico (build/test,
+  // ai-ops/ diff, ecc.) ha senso su un run che non deve scrivere nulla.
+  if (sst && readOnlyOverride) {
+    return ['git status --short', `nessuna modifica a ${profile.code_dir}`];
+  }
+
   if (has('research') || has('product') || has('docs') || has('checkpoint') || categories.length === 0) {
     checks.push('git diff --stat ai-ops/   # run docs/ai-ops only');
     checks.push('git status --short ai-ops/   # include file nuovi non tracciati');
@@ -1232,6 +1253,27 @@ function main() {
     return EXIT_OK;
   }
 
+  // V1.5-D (SST hardening): con --sst e senza --show-prompt, la console deve
+  // restare "silent" — massimo 8 righe totali, nessuna spiegazione estesa.
+  // Con --show-prompt, il dump del prompt è debug esplicito, non uso normale:
+  // va etichettato "DEBUG" per non farlo passare come output standard.
+  if (flags.sst && !showPrompt) {
+    console.log(
+      `AI FACTORY RUNNER ${RUNNER_VERSION} — SST${dryRun ? ' (dry-run)' : ''}`,
+    );
+    console.log(`  Task:      ${rawTask}`);
+    console.log(`  Cat/Risk:  ${categoriesLabel} / ${risk}`);
+    console.log(`  Executor:  ${executor}`);
+    console.log(`  Mode:      ${promptMode} (skill: ${recommendedSkill}, confidence: ${confidence})`);
+    if (warnings.length > 0) {
+      console.log(`  Warnings:  ${warnings.length} (vedi --json per il dettaglio)`);
+    }
+    if (!dryRun) {
+      console.log(`  Ticket:    ${relPath}`);
+    }
+    return EXIT_OK;
+  }
+
   console.log(
     dryRun
       ? `AI FACTORY RUNNER ${RUNNER_VERSION} — dry-run (nessun ticket scritto su disco)`
@@ -1266,7 +1308,11 @@ function main() {
   }
   if (showPrompt) {
     console.log('');
-    console.log(`  --- Claude prompt (${promptTemplateLabel}) ---`);
+    console.log(
+      flags.sst
+        ? `  --- [DEBUG] Claude prompt (${promptTemplateLabel}) — --show-prompt è debug, non uso normale ---`
+        : `  --- Claude prompt (${promptTemplateLabel}) ---`,
+    );
     console.log(claudePrompt.trim());
   }
 
