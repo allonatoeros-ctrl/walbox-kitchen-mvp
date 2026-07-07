@@ -145,6 +145,7 @@ export default function StaffDashboard() {
   }, []);
 
   const playbackStale = !remotePlayback || (now - new Date(remotePlayback.updated_at).getTime() > PLAYBACK_STALE_MS);
+  const playbackAgeSec = remotePlayback ? Math.max(0, Math.round((now - new Date(remotePlayback.updated_at).getTime()) / 1000)) : null;
   const playback = playbackStale
     ? { isPlaying: false, progress: 0, duration: 0 }
     : {
@@ -779,6 +780,22 @@ export default function StaffDashboard() {
       <div className="dashboard-col">
         <div className="dashboard-col-header player">
           <h2>Sul piatto ora</h2>
+          <span
+            className="glass-panel"
+            title={remotePlayback ? `Ultimo aggiornamento TV: ${playbackAgeSec}s fa` : "Nessun segnale ricevuto dalla TV"}
+            style={{
+              padding: "2px 8px",
+              fontSize: "11px",
+              fontWeight: "700",
+              color: playbackStale ? "#ff6b6b" : "#4ade80",
+              border: `1px solid ${playbackStale ? "#ff6b6b" : "#4ade80"}`,
+              background: "rgba(255,255,255,0.05)"
+            }}
+          >
+            {playbackStale
+              ? (remotePlayback ? `Sync TV interrotta (${playbackAgeSec}s)` : "Sync TV assente")
+              : "Sync TV OK"}
+          </span>
         </div>
 
         <div className="dashboard-col-content" style={{ overflowY: "auto", gap: "20px" }}>
