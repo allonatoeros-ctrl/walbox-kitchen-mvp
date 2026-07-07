@@ -107,7 +107,7 @@ const CHECKPOINT_SECTION_MAX_LINES = 6;
 // e nel campo "version" dell'output --json. Prima era hardcodata come "V1.3"
 // nelle stringhe di console pur essendo il codice a V1.4.1 — disallineamento
 // risolto centralizzandola qui.
-const RUNNER_VERSION = 'V1.5-C';
+const RUNNER_VERSION = 'V1.5-D';
 
 // ---------------------------------------------------------------------------
 // Regole di classificazione (keyword locali, match per parola intera;
@@ -496,7 +496,7 @@ function recommendExecutor(categories, risk, explicitAgents, docRole, qaDomain, 
     if (readOnlyOverride) {
       return {
         executor: 'Claude Code (audit read-only — nessuna implementazione)',
-        why: 'Il task dichiara esplicitamente audit/read-only (V1.6): la cascata avrebbe instradato su walbox-dev per keyword tipo "fix"/"piano", ma nessun esecutore deve implementare o modificare file. Override di sicurezza.',
+        why: 'Il task dichiara esplicitamente audit/read-only (V1.5-D): la cascata avrebbe instradato su walbox-dev per keyword tipo "fix"/"piano", ma nessun esecutore deve implementare o modificare file. Override di sicurezza.',
       };
     }
     return {
@@ -576,7 +576,7 @@ function recommendSkillAndMode(categories, risk, docRole, confidence, rawTask) {
     return {
       skill: 'quality-gate-verifier',
       promptMode: 'audit_prompt',
-      why: 'Il task dichiara esplicitamente audit/read-only (es. "solo report", "non fare fix"): nessuna implementazione, solo verifica — vince su qa/coding/coding-plan sottostanti (cascata V1.6 regola 4b).',
+      why: 'Il task dichiara esplicitamente audit/read-only (es. "solo report", "non fare fix"): nessuna implementazione, solo verifica — vince su qa/coding/coding-plan sottostanti (cascata V1.5-D regola 4b).',
     };
   }
   if ((has('qa') || has('security')) && !has('coding') && !has('coding-plan')) {
@@ -635,7 +635,7 @@ function buildWarnings({ categories, docRole, explicitAgents, executor, qaDomain
 
   if (readOnlyOverride) {
     warnings.push(
-      'task dichiara esplicitamente audit/read-only: NON modificare alcun file, executor non deve implementare (V1.6)',
+      'task dichiara esplicitamente audit/read-only: NON modificare alcun file, executor non deve implementare (V1.5-D)',
     );
   }
   if (categories.length > 1) {
@@ -703,7 +703,7 @@ function buildScope(categories, profile, readOnlyOverride) {
 
   if (readOnlyOverride) {
     forbidden.unshift(
-      'QUALSIASI modifica o scrittura di file: il task dichiara esplicitamente audit/read-only — nessun fix va applicato, anche se una keyword nel testo (es. "fix" in "non fare fix") suggerirebbe altrimenti (V1.6)',
+      'QUALSIASI modifica o scrittura di file: il task dichiara esplicitamente audit/read-only — nessun fix va applicato, anche se una keyword nel testo (es. "fix" in "non fare fix") suggerirebbe altrimenti (V1.5-D)',
     );
     outOfScope.push('qualsiasi implementazione o fix, anche minimo: questo run produce solo un report/audit');
   }
@@ -764,7 +764,7 @@ function buildQualityGate(categories, profile, readOnlyOverride, sst) {
   if (has('coding') || has('coding-plan') || has('design')) {
     checks.push(
       readOnlyOverride
-        ? `nessuna scrittura di file: git status deve restare pulito su ${profile.code_dir} (audit read-only, V1.6)`
+        ? `nessuna scrittura di file: git status deve restare pulito su ${profile.code_dir} (audit read-only, V1.5-D)`
         : 'git diff --stat   # verificare che compaiano SOLO i file approvati',
     );
   }
@@ -977,7 +977,7 @@ OPZIONI:
                     restano identici a prescindere dal profilo).
   --sst            Save Token Strict Mode: prompt corto, "leggi solo i file
                     indicati", niente /phase-plan, niente audit non richiesto,
-                    report max 10 righe, task ambiguo → STOP (V1.5-C). Non
+                    report max 10 righe, task ambiguo → STOP (V1.5-D). Non
                     cambia categorie/rischio/executor, solo skill/prompt_mode.
   --help, -h       Mostra questo aiuto ed esce.
   --               Fine dei flag: tutto ciò che segue è trattato come task raw.
@@ -1122,7 +1122,7 @@ function main() {
     if (categories.length === 0) {
       recommendedSkill = 'none';
       promptMode = 'sst_stop_prompt';
-      skillWhy = 'SST: task non classificato/ambiguo → STOP, nessuna esplorazione del repo, serve 1 domanda mirata a Eros (V1.5-C).';
+      skillWhy = 'SST: task non classificato/ambiguo → STOP, nessuna esplorazione del repo, serve 1 domanda mirata a Eros (V1.5-D).';
     } else if (readOnlyOverride && (promptMode === 'phase_plan_prompt' || promptMode === 'audit_prompt')) {
       // Senza SST, sia phase_plan_prompt sia audit_prompt (che oggi cade in
       // fallback sul template phase_plan, vedi resolvePromptTemplate) finiscono
@@ -1131,7 +1131,7 @@ function main() {
       // caso con il prompt corto dedicato.
       recommendedSkill = 'none';
       promptMode = 'sst_prompt';
-      skillWhy = 'SST: task dichiarato read-only → evitato /phase-plan (anche via fallback audit_prompt), prompt diretto corto (V1.5-C).';
+      skillWhy = 'SST: task dichiarato read-only → evitato /phase-plan (anche via fallback audit_prompt), prompt diretto corto (V1.5-D).';
     }
   }
   const approval = requiresApproval(categories, risk);
@@ -1241,7 +1241,7 @@ function main() {
     console.log(`  Progetto:   ${profile.project}`);
   }
   if (flags.sst) {
-    console.log('  SST mode:   ON (V1.5-C)');
+    console.log('  SST mode:   ON (V1.5-D)');
   }
   console.log(`  Task:       ${rawTask}`);
   console.log(`  Categorie:  ${categoriesLabel}`);
