@@ -34,7 +34,7 @@ export default function CustomerEntry() {
     } catch { }
 
     // Custom Router navigation
-    const qs = new URLSearchParams({ table: table.trim() });
+    const qs = new URLSearchParams({ table: cleanTable });
     if (nickname.trim()) qs.set("nickname", nickname.trim());
     window.history.pushState({}, "", `/request?${qs.toString()}`);
     window.dispatchEvent(new PopStateEvent("popstate"));
