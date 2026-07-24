@@ -1,5 +1,5 @@
 # CHECKPOINT — Walbox
-Aggiornato: 2026-07-07 (push V1.4.1)
+Aggiornato: 2026-07-25 (push V1.5-B + V1.6.1, runner a V1.6.1)
 Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle Night.
 
 ---
@@ -56,6 +56,8 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
   come intenzione esplicita dell'operatore; `detectQaDomain()` resta fallback/affinamento per gli altri casi.
   Classificazione testuale invariata su categorie/rischio/executor/skill/prompt_mode:
   golden set A–P 16/16 PASS. Nessuna modifica a `src/`, env, package, Supabase, Spotify o deploy.
+- **ai-factory-runner V1.6 (SST + Run Pack, 2026-07-07, commit `1d9bc41`..`db16be6`):** aggiunti SST mode (Save Token Strict) e Run Pack V0 (`--write-run-pack` → `ai-ops/runs/<slug>/` con runner.json/context.md/claude_prompt.md/run_log.md). Git: pushato su origin/main.
+- **ai-factory-runner V1.6.1 (silent + hardening, 2026-07-07, commit `ba55192`..`d674478`):** Terminal Silent Mode (CLAUDE.md §0.5), Silent Report Contract, known-files hardening. RUNNER_VERSION='V1.6.1' (run.js:141). Golden set A–P 16/16. Git: pushato su origin/main.
   File: `ai-ops/runner/run.js`, `ai-ops/runner/README.md`,
   `ai-ops/runner/rules/task_classifier_rules.md`, `ai-ops/profiles/walbox.json`,
   `ai-ops/profiles/ai-factory.json`.
@@ -89,7 +91,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - Kitchen-era memories are archived; see MEMORY.md. Do not use them for the active Jukebox/Shuffle Night track.
 
 ## NEXT STEP
-ai-factory-runner V1.5-B (project profiles) completata (2026-07-07): diff review approvata, golden set A–P 16/16 PASS. Prossimo step: **commit/push V1.5-B**; poi scegliere tra **mini-hardening schema profili** (validazione campi `ai-ops/profiles/*.json`) oppure **tornare a un task reale Walbox/Reality Sprint**. In parallelo restano aperti: completare il report finale S3 con la sezione 11 di `docs/PILOT_NIGHT_CHECKLIST_JUKEBOX.md`, passare a S4, oppure riprendere le modifiche pendenti su CustomerEntry.jsx/CustomerRequest.jsx (attualmente stashed).
+ai-factory-runner V1.5-B e V1.6.1 completate e **già pushati** su origin/main (RUNNER_VERSION='V1.6.1', run.js:141). NEXT STEP reale: scegliere tra **(a) mini-hardening validazione schema `ai-ops/profiles/*.json` in `loadProfile()`** oppure **(b) tornare a un task reale Walbox** (PILOT_NIGHT_CHECKLIST Jukebox / riprendere stash `CustomerEntry.jsx`/`CustomerRequest.jsx`). In parallelo restano aperti: completare il report finale S3 con la sezione 11 di `docs/PILOT_NIGHT_CHECKLIST_JUKEBOX.md`, passare a S4.
 
 ## RESTART PROMPT
 "Walbox — Kitchen stabile e completa (V1-P6). Track attivo: Jukebox/Spotify reale per Shuffle Night (auto-advance, TV sync, ricerca), 39 commit dal 24/6 al 3/7. Prossimo step: walbox-dev fa piano da PILOT_NIGHT_CHECKLIST.md per chiudere fino a demo-stabile."
