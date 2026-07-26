@@ -31,6 +31,7 @@ export default function CustomerRequest() {
   const [dedication, setDedication] = useState("");
   const [submittedRequests, setSubmittedRequests] = useState([]);
   const [submissionSuccess, setSubmissionSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const venueSettings = useVenueSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -113,24 +114,35 @@ export default function CustomerRequest() {
     if (!selectedSong) return;
     if (venueSettings.queuePaused) return;
 
+    // pulizia timer pendente all'inizio di ogni tentativo
+    if (submissionTimeoutRef.current) {
+      clearTimeout(submissionTimeoutRef.current);
+      submissionTimeoutRef.current = null;
+    }
+    // reset stato all'inizio di ogni tentativo
+    setSubmitError(false);
+    setSubmissionSuccess(false);
     setIsSubmitting(true);
     try {
       await insertRequest(table, nickname, selectedSong, selectedMood, dedication);
+      // successo: solo qui mostriamo il successo e resettiamo il form
+      setSelectedSong(null);
+      setDedication("");
+      setShowPreview(false);
+      setSubmissionSuccess(true);
+      if (submissionTimeoutRef.current) clearTimeout(submissionTimeoutRef.current);
+      submissionTimeoutRef.current = setTimeout(() => {
+        setSubmissionSuccess(false);
+        setActiveTab("my-songs");
+        submissionTimeoutRef.current = null;
+      }, 6000);
     } catch (err) {
       console.error('insertRequest failed:', err);
+      setSubmitError(true);
+      // NON resettare selectedSong/dedication/showPreview: permette retry
+    } finally {
+      setIsSubmitting(false);
     }
-
-    setSelectedSong(null);
-    setDedication("");
-    setShowPreview(false);
-    setSubmissionSuccess(true);
-    setIsSubmitting(false);
-
-    if (submissionTimeoutRef.current) clearTimeout(submissionTimeoutRef.current);
-    submissionTimeoutRef.current = setTimeout(() => {
-      setSubmissionSuccess(false);
-      setActiveTab("my-songs");
-    }, 6000);
   };
 
   const handleDismissSubmission = () => {
@@ -1359,6 +1371,27 @@ export default function CustomerRequest() {
               OK, MI DISSOCIO
             </button>
           </div>
+        </div>
+      )}
+
+      {submitError && (
+        <div
+          role="alert"
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            padding: "16px",
+            background: "#1c0a00",
+            color: "#ff6600",
+            borderBottom: "2px solid #ff6600",
+            zIndex: 10000,
+            textAlign: "center",
+            fontWeight: "bold"
+          }}
+        >
+          Richiesta non inviata. Controlla la connessione e riprova.
         </div>
       )}
 
