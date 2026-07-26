@@ -444,13 +444,16 @@
 .wlp-qr-card {
   width: 100%;
   object-fit: contain;
-  background: transparent;
+  background: #fffdd0;
   display: block;
   flex-shrink: 0;
   /* P1.2 — leggermente più grande per leggibilità a 4m */
   max-height: clamp(100px, 25vh, 200px);
   transform: rotate(1deg);
-  box-shadow: 5px 5px 0 rgba(0,0,0,0.55);
+  /* ZERO-AI-SLOP: ombra poster dura + bordo nero (no soft shadow) */
+  border: 3px solid #000000;
+  box-shadow: 5px 5px 0 #000000;
+  padding: 4px;
 }
 
 /* P1.2 — Label QR leggibile a distanza in Impact giallo */
