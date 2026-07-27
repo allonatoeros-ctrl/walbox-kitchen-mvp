@@ -177,3 +177,33 @@ o refactor cross-file, o build/test non verificabili in locale → ESCALATE/CLAU
 - Stato Gate 1: PASS (piano completo, read-only, modello riuso verificato live, policy distinguono staff reale da account generico, rollback pronto, ordine sicuro).
 - Stato Gate 2: PENDING (frontend 8f45431 committato; sicurezza end-to-end in attesa di F0/F4/F5 DB su approvazione Eros).
 - Valutazione: CLAUDE + SUPABASE_MCP NEEDED
+
+### P0-2-R5 Apply F4+F5 — CLOSED
+- Obiettivo: applicare policy staff-only (F4) + bootstrap staff (F5) su Supabase Walbox, come da P0-2-R4.
+- Esecuzione: Hermes (autonomia Eros) via Supabase MCP remoto, passato a read-write (read_only=false)
+  per consentire l'apply (Eros ha autorizzato esplicitamente il superamento del read-only).
+- Operazioni eseguite (SOLO 3 tabelle + 1 INSERT, nessun'altra tabella/policy, nessun Auth user creato):
+  - F4: DROP+CREATE policy song_requests UPDATE, venue_settings UPDATE, playback_state INSERT/UPDATE
+    -> tutte USING/WITH_CHECK is_staff_for_venue('walrus-main')
+  - F5: INSERT kitchen_staff_members (df1fc13f-d414-4601-a3fb-ee60fe487741, 'walrus-main', 'staff')
+    [staff87@walrus.it, utente reale non-anonimo verificato via MCP]
+- Test T1-T5 (post-apply, read-only):
+  - T1 PASS: song_requests UPDATE USING is_staff_for_venue (non true)
+  - T2 PASS: authenticated NON-staff (1bd32dbb...) -> EXISTS kitchen_staff_members = false (bloccato)
+  - T3 PASS: riga staff df1fc13f... trovata (1 riga, role staff) -> staff autorizzato
+  - T4 PASS: song_requests INSERT {authenticated} with_check true invariato (cliente puo' inviare)
+  - T5 PASS: playback_state SELECT {public} using true invariato (TV read-only)
+- Evidenza live (pg_policies post-apply):
+  - song_requests UPDATE: roles {authenticated}, using/with_check is_staff_for_venue('walrus-main')
+  - venue_settings UPDATE: roles {authenticated}, using/with_check (id='main' AND is_staff_for_venue)
+  - playback_state INSERT/UPDATE: roles {authenticated}, using/with_check is_staff_for_venue
+  - playback_state SELECT: roles {public}, using true
+- Nota membership: kitchen_staff_members ha 2 righe staff per walrus-main:
+  df1fc13f... (inserita in F5) + 4d1e3af4-72fc-4525-9e26-871904ef7137 (PREESISTENTE, non creata da questo run,
+  coerente con uso Kitchen di is_staff_for_venue). Riuso registro confermato.
+- Rollback disponibile (non eseguito): policy originali {authenticated}/{public} true + DELETE riga F5.
+- Nessuna modifica: Auth users creati, env/secrets, codice app, deploy, commit/push.
+- Stato Gate 1: PASS. Stato Gate 2: CLOSED (frontend 8f45431 + DB F4/F5 applicati e verificati).
+- Risiduali: F-SEC-1 (getStaffSession frontend autorizza qualsiasi non-anonimo) backstoppato da policy DB F4;
+  F-SEC-2 (Kitchen gate debole) resta finding separato da trattare a parte.
+- Valutazione: CLAUDE + SUPABASE_MCP NEEDED
