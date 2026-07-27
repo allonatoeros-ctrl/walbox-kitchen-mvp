@@ -114,3 +114,66 @@ o refactor cross-file, o build/test non verificabili in locale → ESCALATE/CLAU
 - Costo: Hermes = modello free; Claude Code = quota Claude Pro consumata; Supabase MCP = tooling necessario
 - Risultato finale: run PASS / capability OK / security FAIL (3 CONFIRMED, 1 DISPROVED)
 - Valutazione: CLAUDE + SUPABASE_MCP NEEDED
+
+### P0-2-R4 Piano hardening RLS Jukebox staff — F0/F4/F5 (read-only, approvato Gate 1)
+- Obiettivo: piano SQL per rendere sicuro il Jukebox staff dopo commit 8f45431 (gate /staff + write autenticate)
+- Modello: Claude Code + Supabase MCP remoto (read-only), Hermes coordina. Nessun DB write eseguito.
+- File/codice modificati: nessuno (solo piano). Commit frontend Gate 2 = 8f45431 (separato).
+- Verifiche live effettuate (Supabase MCP, metadata/definizioni, 0 righe lette):
+  - is_staff_for_venue(p_venue_id): SECURITY DEFINER, STABLE, search_path fissato,
+    corpo EXISTS(SELECT 1 FROM public.kitchen_staff_members WHERE user_id=auth.uid() AND venue_id=p_venue_id)
+  - kitchen_staff_members: user_id(PK,FK auth.users), venue_id(PK), role CHECK(staff/manager), created_at default now();
+    RLS enabled; 1 policy staff_select_own_member_record (SELECT, authenticated, user_id=auth.uid()) -> nessun client auto-promuove staff
+  - song_requests/venue_settings: UPDATE policy {authenticated} using/with_check true (vulnerabili)
+  - playback_state: INSERT/SELECT/UPDATE {public} using/with_check true (vulnerabile)
+  - auth.users: 254 totali, 2 non-anonimi/non-test (candidati staff, nessuna email letta)
+  - jukebox_staff_members: NON esiste
+- Decisione riuso kitchen_staff_members: il commit 8f45431 riusa is_staff_for_venue + kitchen_staff_members
+  (venue_id='walrus-main'). NESSUNA nuova tabella/funzione (coerente CLAUDE.md §7: stesso registro per
+  locale, non duplicazione struttura Jukebox). F0 = nessuna DDL (tabella+policy SELECT own gia' corrette).
+- SQL F4 (completo, NON eseguito):
+  DROP POLICY IF EXISTS song_requests_allow_authenticated_update ON song_requests;
+  CREATE POLICY song_requests_staff_update ON song_requests FOR UPDATE TO authenticated
+    USING ( is_staff_for_venue('walrus-main') ) WITH CHECK ( is_staff_for_venue('walrus-main') );
+  DROP POLICY IF EXISTS venue_settings_allow_authenticated_update ON venue_settings;
+  CREATE POLICY venue_settings_staff_update ON venue_settings FOR UPDATE TO authenticated
+    USING ( id='main' AND is_staff_for_venue('walrus-main') )
+    WITH CHECK ( id='main' AND is_staff_for_venue('walrus-main') );
+  DROP POLICY IF EXISTS "playback_state upsert" ON playback_state;
+  DROP POLICY IF EXISTS "playback_state update" ON playback_state;
+  CREATE POLICY playback_state_staff_write ON playback_state FOR INSERT TO authenticated
+    WITH CHECK ( is_staff_for_venue('walrus-main') );
+  CREATE POLICY playback_state_staff_update ON playback_state FOR UPDATE TO authenticated
+    USING ( is_staff_for_venue('walrus-main') ) WITH CHECK ( is_staff_for_venue('walrus-main') );
+- Bootstrap F5 (placeholder, operazione Eros su Supabase):
+  INSERT INTO kitchen_staff_members (user_id, venue_id, role)
+    VALUES ('<AUTH_UID_STAFF>', 'walrus-main', 'staff');
+- Revoca F5:
+  DELETE FROM kitchen_staff_members WHERE user_id='<AUTH_UID_STAFF>' AND venue_id='walrus-main';
+- Ordine operativo: F4 -> F5 (mai F5 prima di F4: evita finestra staff-in-tabella ma policy true/true)
+- Test 5 scenari:
+  T1 anonymous JWT (is_anonymous=true): UPDATE song_requests -> 42501 bloccato
+  T2 authenticated NON-staff: UPDATE -> 42501 bloccato
+  T3 staff autorizzato (in kitchen_staff_members walrus-main): UPDATE/upsert -> OK
+  T4 cliente pubblico: INSERT song_requests (anon) -> OK
+  T5 TV read-only: SELECT playback_state da anon/public -> OK invariato
+- Rollback completo:
+  DROP POLICY IF EXISTS song_requests_staff_update ON song_requests;
+  CREATE POLICY song_requests_allow_authenticated_update ON song_requests FOR UPDATE TO authenticated USING (true) WITH CHECK (true);
+  DROP POLICY IF EXISTS venue_settings_staff_update ON venue_settings;
+  CREATE POLICY venue_settings_allow_authenticated_update ON venue_settings FOR UPDATE TO authenticated USING (id='main') WITH CHECK (id='main');
+  DROP POLICY IF EXISTS playback_state_staff_write ON playback_state;
+  DROP POLICY IF EXISTS playback_state_staff_update ON playback_state;
+  CREATE POLICY "playback_state upsert" ON playback_state FOR INSERT TO public USING (true) WITH CHECK (true);
+  CREATE POLICY "playback_state update" ON playback_state FOR UPDATE TO public USING (true) WITH CHECK (true);
+- Rischi residui:
+  R1 F-SEC-1 (getStaffSession autorizza qualsiasi non-anonimo) resta nel frontend, ma DOPO F4 la policy DB
+     blocca le write se non staff -> backstop reale. Sistema sicuro SOLO dopo F4+F5.
+  R2 bootstrap richiede utente Auth reale (tra i 2 candidati o nuovo): operazione Supabase Auth, fuori codice.
+  R3 finestra vulnerabile se F5 prima di F4 -> evitata da ordine F4->F5.
+  R4 riuso kitchen_staff_members mescola Jukebox/Kitchen nello stesso registro locale (accettabile per venue unico).
+  F-SEC-2 (Kitchen gate debole getStaffSession) resta finding separato, da trattare a parte.
+- Costo: Hermes free; Claude Code quota Claude Pro consumata; Supabase MCP tooling necessario.
+- Stato Gate 1: PASS (piano completo, read-only, modello riuso verificato live, policy distinguono staff reale da account generico, rollback pronto, ordine sicuro).
+- Stato Gate 2: PENDING (frontend 8f45431 committato; sicurezza end-to-end in attesa di F0/F4/F5 DB su approvazione Eros).
+- Valutazione: CLAUDE + SUPABASE_MCP NEEDED
