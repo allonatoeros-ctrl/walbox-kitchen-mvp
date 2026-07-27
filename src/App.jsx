@@ -10,6 +10,8 @@ import KitchenStaffDashboard from "./pages/KitchenStaffDashboard";
 import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
+import StaffLogin from "./pages/StaffLogin";
+import { getStaffSession, onAuthStateChange } from "./lib/supabaseAuth";
 import { initializeStorage } from "./data/mockData";
 
 // Custom Link helper component for internal navigation without full-page reloads
@@ -30,6 +32,35 @@ function NavLink({ to, activePath, children }) {
       {children}
     </a>
   );
+}
+
+// P0-2-R3 (F2): gate /staff — solo sessione non-anonima (staff reale). Il verdetto
+// AUTORITATIVO di "staff" resta sulla policy DB is_staff_for_venue (F0/F4); qui blocchiamo
+// solo l'accesso anonimo dal frontend. NOTA: getStaffSession() consente qualsiasi account
+// non-anonimo (F-SEC-1); la sicurezza completa richiede F0/F4/F5 (tabella staff + policy IS_STAFF).
+function StaffRouteGuard() {
+  const [session, setSession] = useState(null);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getStaffSession().then((s) => {
+      if (cancelled) return;
+      setSession(s);
+      setChecked(true);
+    });
+    const { data: { subscription } } = onAuthStateChange((s) => {
+      setSession(s);
+      setChecked(true);
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  if (!checked) return null;
+  return session ? <StaffDashboard /> : <StaffLogin />;
 }
 
 export default function App() {
@@ -59,7 +90,7 @@ export default function App() {
       case "/request":
         return <CustomerRequest />;
       case "/staff":
-        return <StaffDashboard />;
+        return <StaffRouteGuard />;
 
       // === TV / POSTER ROUTES ===
       case "/tv":

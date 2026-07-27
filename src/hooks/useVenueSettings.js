@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { ensureSession } from './useSongRequests';
+import { ensureSession, getAuthSession } from './useSongRequests';
 
 export async function setQueuePaused(paused) {
-  await ensureSession();
+  await getAuthSession();
   const { error } = await supabase
     .from('venue_settings')
     .update({ queue_paused: paused, updated_at: new Date().toISOString() })

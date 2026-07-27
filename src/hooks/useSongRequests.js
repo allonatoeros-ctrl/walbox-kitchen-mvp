@@ -12,6 +12,17 @@ export async function ensureSession() {
   return session;
 }
 
+// P0-2-R3 (F3): sessione AUTENTICATA per operazioni di scrittura staff.
+// NON chiama signInAnonymously: se non c'e' sessione reale, la write fallira'
+// (corretto — solo staff autenticato scrive; il verdetto finale e' la policy DB F4).
+export async function getAuthSession() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session || session.user.is_anonymous) {
+    throw new Error('Staff authentication required');
+  }
+  return session;
+}
+
 function normalizeRow(row) {
   return {
     id:         row.id,
@@ -41,6 +52,7 @@ export async function insertRequest(table, nickname, song, mood, dedication) {
 }
 
 export async function updateStatus(id, status) {
+  await getAuthSession();
   const { error } = await supabase
     .from('song_requests')
     .update({ status })
@@ -49,12 +61,14 @@ export async function updateStatus(id, status) {
 }
 
 export async function setPlaying(id) {
+  await getAuthSession();
   await supabase.from('song_requests').update({ status: 'played' }).eq('status', 'playing');
   const { error } = await supabase.from('song_requests').update({ status: 'playing' }).eq('id', id);
   if (error) throw error;
 }
 
 export async function closeAllActiveRequests() {
+  await getAuthSession();
   const { error } = await supabase
     .from('song_requests')
     .update({ status: 'closed' })

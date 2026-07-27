@@ -7,6 +7,7 @@ import {
 } from "../data/mockData";
 import { useRealtimeRequests, updateStatus, setPlaying, closeAllActiveRequests } from "../hooks/useSongRequests";
 import { useVenueSettings, setQueuePaused } from "../hooks/useVenueSettings";
+import { signOut } from "../lib/supabaseAuth";
 import { playTrack, addToQueue, skipToNext, getStoredToken, getCurrentPlayback, pauseTrack, resumeTrack } from "../services/spotifyApi";
 import { supabase } from "../lib/supabaseClient";
 
@@ -565,6 +566,13 @@ export default function StaffDashboard() {
     resetToDemoState();
   };
 
+  // P0-2-R3 (F2): logout staff — torna al login (/staff ricade su StaffLogin via guard)
+  const handleStaffLogout = async () => {
+    await signOut();
+    window.history.pushState({}, '', '/staff');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  };
+
   // Mood color utility
   const getMoodColor = (mood) => {
     switch (mood) {
@@ -965,6 +973,13 @@ export default function StaffDashboard() {
                 style={{ padding: "8px", fontSize: "12px", color: "var(--accent-glow)" }}
               >
                 Carica serata demo 🔄
+              </button>
+              <button
+                onClick={handleStaffLogout}
+                className="btn-secondary"
+                style={{ padding: "8px", fontSize: "12px", color: "#ff4444" }}
+              >
+                Logout staff 🚪
               </button>
             </div>
           </div>
