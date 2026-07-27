@@ -95,6 +95,7 @@ export default function App() {
       // === TV / POSTER ROUTES ===
       case "/tv":
       case "/tv-poster":
+      case "/live-tv":
         return <LiveTvScreenWalrusPoster />;
 
       // === KITCHEN MODULE ROUTES ===
