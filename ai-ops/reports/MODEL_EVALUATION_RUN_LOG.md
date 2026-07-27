@@ -207,3 +207,38 @@ o refactor cross-file, o build/test non verificabili in locale → ESCALATE/CLAU
 - Risiduali: F-SEC-1 (getStaffSession frontend autorizza qualsiasi non-anonimo) backstoppato da policy DB F4;
   F-SEC-2 (Kitchen gate debole) resta finding separato da trattare a parte.
 - Valutazione: CLAUDE + SUPABASE_MCP NEEDED
+
+### P0-2-R6 F-SEC-2 Kitchen — guard staff debole (read-only finding, NON applicato)
+- Obiettivo: aprire e valutare il finding separato F-SEC-2 (Kitchen gate debole) come da istruzione,
+  in modalita' read-only. Nessun file/DB/Auth/env/MCP/Git modificato.
+- Evidenza (codice letto + Supabase MCP live, read-only):
+  - KitchenStaffDashboard.jsx:47 guard usa getStaffSession() -> null solo se !session || is_anonymous.
+    Qualsiasi account Supabase NON-anonimo supera il guard e vede la dashboard Kitchen.
+  - getStaffSession() (supabaseAuth.js:11-14) NON verifica is_staff_for_venue() ne' membership.
+  - KitchenLogin.jsx: login email/password validi qualsiasi -> /kitchen/staff.
+  - kitchen_staff_members: 1 policy SELECT own (user_id=auth.uid()) -> nessuna auto-promozione via RLS.
+  - Policy RLS Kitchen (MCP): kitchen_orders UPDATE/SELECT staff = is_staff_for_venue(venue_id);
+    nessuna policy USING(true) su tabelle Kitchen.
+- Finding UI: CONFIRMED (guard frontend lascia passare qualsiasi non-anonimo).
+- Escalation dati: DISPROVED (DB Kitchen gia' protetto da is_staff_for_venue(venue_id) su kitchen_orders;
+  nessuna scrittura non-staff possibile).
+- Rischio: MEDIO (solo confidenzialita' UI: account autenticato non-staff puo' aprire /kitchen/staff e
+  leggere coda ordini/sessioni/menu staff; integrita' dati SICURA perche' RLS blocca write).
+  Diverso da F-SEC-1 Jukebox pre-F4 (che aveva policy true/true anche su DB).
+- DB Kitchen gia' protetto: is_staff_for_venue(venue_id) presente su kitchen_orders (verificato live).
+  Nessuna modifica RLS Kitchen necessaria.
+- Remediation proposta (SOLO frontend, NON eseguita): in KitchenStaffDashboard.jsx dopo getStaffSession(),
+  verificare is_staff_for_venue('walrus-main') lato client (RPC/select); se false -> /kitchen/login.
+  Pattern specchiato a Jukebox Gate 2. Nessuna nuova tabella/policy.
+- Test matrix:
+  - T1 anonimo: /kitchen/staff senza sessione -> redirect /kitchen/login (gia' ok)
+  - T2 auth NON-staff: con fix -> redirect /kitchen/login; senza fix -> vede dashboard (gap attuale)
+  - T3 kitchen staff autorizzato (df1fc13f o 4d1e3af4, in kitchen_staff_members walrus-main): dashboard+write OK
+  - T4 auth NON-staff tenta UPDATE kitchen_orders -> 42501 (RLS blocca, gia' vero)
+  - T5 TV/cliente Kitchen: SELECT menu pubblico invariato
+- Rollback (se si applica fix): ripristina KitchenStaffDashboard.jsx:47 al guard originale
+  (solo getStaffSession, senza check is_staff_for_venue). Nessuna modifica DB da rollbackare.
+- Gate 1: PASS (finding completo, read-only, evidenza live+codice, rischio quantificato, remediation
+  minima pronta, rollback pronto, nessuna modifica necessaria su DB).
+- Implementazione: PENDING (su ticket Gate 1 dedicato, solo frontend, fuori da P0-2-R5 Jukebox).
+- Valutazione: CLAUDE + SUPABASE_MCP NEEDED
