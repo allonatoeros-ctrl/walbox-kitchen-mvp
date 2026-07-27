@@ -242,3 +242,19 @@ o refactor cross-file, o build/test non verificabili in locale → ESCALATE/CLAU
   minima pronta, rollback pronto, nessuna modifica necessaria su DB).
 - Implementazione: PENDING (su ticket Gate 1 dedicato, solo frontend, fuori da P0-2-R5 Jukebox).
 - Valutazione: CLAUDE + SUPABASE_MCP NEEDED
+
+### ROUTING-V2-SMOKE — Routing V2 Smoke Test (MEMORY § Workflow & Executor Routing V2)
+- Obiettivo: verificare il routing Hermes/Claude reale contro la nuova sezione MEMORY.md, 3 scenari.
+- Modello/executor: Hermes (tencent/hy3:free), read-only, 0 Claude invocato.
+- File repo modificati durante il test: 0
+- Workflow V2: VERIFIED
+- Routing V2: VERIFIED
+- Scenario A (Hermes-only, route TV): PASS — App.jsx:96-99 → /tv /tv-poster /live-tv = LiveTvScreenWalrusPoster
+- Scenario B (Hermes + eventuale review Claude, transferPlayback eval): PASS — patch semplice Hermes, review Claude su rischio serata
+- Scenario C (Claude + approval Eros, RLS live simulata): PASS — executor Claude (MCP), approval Eros, STOP §5, non eseguita
+- escalation eccessive: 0
+- escalation mancanti: 0
+- STOP totali: 1 (solo finale, nessuno dopo micro-azione)
+- Nota: il punto 2bis proposto nello smoke test NON è introdotto. Hermes può implementare patch
+  deterministiche; Claude entra per complessità, ambiguità o review di rischio.
+- Valutazione: FREE_OK
