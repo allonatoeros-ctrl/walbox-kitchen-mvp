@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
-import { getStaffSession, signOut, onAuthStateChange } from '../lib/supabaseAuth';
+import { getStaffSession, signOut, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
 import CounterOrdersView from './CounterOrdersView';
 import KitchenOrdersView from './KitchenOrdersView';
 import MenuView from './MenuView';
@@ -44,9 +44,19 @@ export default function KitchenStaffDashboard() {
       setAuthChecked(true);
       return;
     }
-    getStaffSession().then((session) => {
-      setAuthChecked(true);
-      if (!session) navigate('/kitchen/login');
+    // F-SEC-2: authenticated NON equivale a staff. Dopo la sessione, verifica membership venue.
+    // try/catch: qualsiasi eccezione (es. RPC throw) -> login, mai dashboard; authChecked sempre risolto.
+    getStaffSession().then(async (session) => {
+      if (!session) { navigate('/kitchen/login'); return; }
+      try {
+        const ok = await isKitchenStaff('walrus-main');
+        if (!ok) { navigate('/kitchen/login'); return; }
+      } catch {
+        navigate('/kitchen/login');
+        return;
+      } finally {
+        setAuthChecked(true);
+      }
     });
     const { data: { subscription } } = onAuthStateChange((session) => {
       if (!session) navigate('/kitchen/login');
