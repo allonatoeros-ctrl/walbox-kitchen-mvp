@@ -140,3 +140,9 @@ file per il target Poster: vedi §9. Check preview: `/tv-poster`, zoom 100%, QR,
 
 Claude non fa "tutto": esegue passi controllati, approvati e verificabili. Il progetto vince restando
 stabile, demo-ready e sotto controllo. Mai scambiare il controllo per la velocità.
+
+## 22. Repeated Test-Failure Escalation (FantaWalrus / test-heavy)
+
+Se la **stessa classe di errore** persiste dopo **2 tentativi autonomi**: interrompi i tentativi,
+classifica il failure e **delega a Claude Code** (subagent) se la causa non è immediatamente
+deterministica. Non attendere un sollecito di Eros.
