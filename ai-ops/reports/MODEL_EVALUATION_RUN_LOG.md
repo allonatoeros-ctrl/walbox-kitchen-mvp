@@ -9,7 +9,7 @@ o refactor cross-file, o build/test non verificabili in locale → ESCALATE/CLAU
 
 ## 2026-07
 
-### P0-1 CustomerRequest.jsx — falsa-conferma invio — PATCH_APPLIED_PASS
+### P0-1 CustomerRequest.jsx — falsa-conferma invio — P0_1_FULL_PASS
 - Obiettivo: mostrare successo solo dopo insertRequest riuscita (bug: successo anche su fallimento)
 - Modello: tencent/hy3:free (Hermes/Nous, effort high)
 - Skill/agent: gated-readonly-audit (applicato manualmente, read-only)
@@ -23,8 +23,8 @@ o refactor cross-file, o build/test non verificabili in locale → ESCALATE/CLAU
 - Supervis. Eros richiesta: Gate1 approvazione patch (APPROVA PATCH CUSTOMER REQUEST); Gate2 commit pendente
 - Costo modello dichiarato: $0 (free)
 - Tempo operativo: n/d
-- Risultato finale: PATCH_APPLIED_PASS — diff identico a FINAL_DIFF_READY_FOR_APPROVAL, fermato prima del commit
-- Valutazione: FREE_OK (1 errore strumentale, sotto soglia escalation; da monitorare ripetizione)
+- Risultato finale: P0_1_FULL_PASS (verifica finale 2026-07-28). Confronto `git show 6f6ccab:src/pages/CustomerRequest.jsx` vs `6f6ccab^:src/pages/CustomerRequest.jsx` su `handleSubmitRequest`: la funzione è IDENTICA nei due blob. core bug (falso successo su fallimento) ASSENTE in entrambi. Successo (`setSubmissionSuccess(true)`) presente SOLO dentro il `try` dopo `await insertRequest` (riga 132); `catch` esegue `setSubmitError(true)` senza mostrare successo e NON resetta selectedSong/dedication/showPreview (permette retry); `finally` esegue `setIsSubmitting(false)`. Messaggio errore visibile: `submitError` renderizzato a riga 1399. I 5 criteri (successo post-insertRequest, catch, preservazione canzone/dedica/preview, reset isSubmitting, errore visibile) sono TUTTI presenti. Provenienza: la correzione era GIÀ nel parent `6f6ccab^` (prima di V1+V2); 6f6ccab (V1+V2, solo restyle colore) NON l'ha introdotta né rimossa. Vecchio diff P0-1 approvato in RUN-001 NON conservato come artifact (nessun patch P0-1 in repo o /tmp; /tmp/walbox_request_v1_v2.patch contiene solo V1+V2). build V2 PASS (npm run build exit 0). Test runtime rete/Supabase: PENDENTE (non eseguibile su VPS senza env reali). Conclusione: il bug era già risolto nel tree prima di questa macro-run; classificazione [T] state persistence risolta — nessun patch P0-1 da ri-applicare.
+- Valutazione: FREE_OK (1 errore strumentale in RUN-001, sotto soglia escalation; P0-1 core bug assente alla verifica finale)
 
 ### P0-2-R1 Walbox RLS — static review (Claude Code, read-only)
 - Obiettivo: audit read-only RLS Supabase dal codice app (inventario operazioni, guard lato client, rischio)
