@@ -1,0 +1,12 @@
+{
+  "goal": 3,
+  "assist": 1,
+  "yellow_card": -0.5,
+  "red_card": -1,
+  "penalty_scored": 3,
+  "penalty_missed": -3,
+  "penalty_saved": 3,
+  "own_goal": -2,
+  "goal_conceded": -1,
+  "cleansheet_gk": 1
+}

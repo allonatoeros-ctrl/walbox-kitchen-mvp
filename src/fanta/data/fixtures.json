@@ -1,0 +1,6 @@
+[
+  { "fixtureId": "fix_001", "home": "JUV", "away": "MIL", "date": "2026-07-28" },
+  { "fixtureId": "fix_002", "home": "INT", "away": "LAZ", "date": "2026-07-28" },
+  { "fixtureId": "fix_003", "home": "ARM", "away": "JUV", "date": "2026-07-28" },
+  { "fixtureId": "fix_004", "home": "MIL", "away": "INT", "date": "2026-07-28" }
+]

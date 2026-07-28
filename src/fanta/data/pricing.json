@@ -1,0 +1,14 @@
+{
+  "minutes": { "played": 1, "full": 2 },
+  "goal": { "GK": 5, "DEF": 5, "MID": 4, "FWD": 3 },
+  "assist": 3,
+  "cleansheet": { "GK": 3, "DEF": 2 },
+  "save": 1,
+  "pen_saved": 5,
+  "pen_miss": -3,
+  "yellow": -1,
+  "red": -3,
+  "owngoal": -3,
+  "goal_conceded": { "GK": -1, "DEF": -1 },
+  "bonus": { "star": 2 }
+}

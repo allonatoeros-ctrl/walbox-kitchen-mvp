@@ -1,0 +1,546 @@
+[
+  {
+    "teamId": "t_001",
+    "teamName": "Squadra Tricheco 1",
+    "crestId": "crest_01",
+    "formation": "4-3-3",
+    "roster": [
+      {
+        "id": "p_021",
+        "isStarter": true
+      },
+      {
+        "id": "p_058",
+        "isStarter": true
+      },
+      {
+        "id": "p_052",
+        "isStarter": true
+      },
+      {
+        "id": "p_004",
+        "isStarter": true
+      },
+      {
+        "id": "p_053",
+        "isStarter": true
+      },
+      {
+        "id": "p_034",
+        "isStarter": true
+      },
+      {
+        "id": "p_026",
+        "isStarter": true
+      },
+      {
+        "id": "p_054",
+        "isStarter": true
+      },
+      {
+        "id": "p_067",
+        "isStarter": true
+      },
+      {
+        "id": "p_036",
+        "isStarter": true
+      },
+      {
+        "id": "p_037",
+        "isStarter": true
+      },
+      {
+        "id": "p_020",
+        "isStarter": false
+      },
+      {
+        "id": "p_039",
+        "isStarter": false
+      },
+      {
+        "id": "p_029",
+        "isStarter": false
+      },
+      {
+        "id": "p_065",
+        "isStarter": false
+      }
+    ]
+  },
+  {
+    "teamId": "t_002",
+    "teamName": "Squadra Tricheco 2",
+    "crestId": "crest_02",
+    "formation": "4-3-3",
+    "roster": [
+      {
+        "id": "p_051",
+        "isStarter": true
+      },
+      {
+        "id": "p_059",
+        "isStarter": true
+      },
+      {
+        "id": "p_022",
+        "isStarter": true
+      },
+      {
+        "id": "p_065",
+        "isStarter": true
+      },
+      {
+        "id": "p_047",
+        "isStarter": true
+      },
+      {
+        "id": "p_016",
+        "isStarter": true
+      },
+      {
+        "id": "p_041",
+        "isStarter": true
+      },
+      {
+        "id": "p_006",
+        "isStarter": true
+      },
+      {
+        "id": "p_044",
+        "isStarter": true
+      },
+      {
+        "id": "p_055",
+        "isStarter": true
+      },
+      {
+        "id": "p_019",
+        "isStarter": true
+      },
+      {
+        "id": "p_029",
+        "isStarter": false
+      },
+      {
+        "id": "p_042",
+        "isStarter": false
+      },
+      {
+        "id": "p_009",
+        "isStarter": false
+      },
+      {
+        "id": "p_005",
+        "isStarter": false
+      }
+    ]
+  },
+  {
+    "teamId": "t_003",
+    "teamName": "Squadra Tricheco 3",
+    "crestId": "crest_03",
+    "formation": "4-3-3",
+    "roster": [
+      {
+        "id": "p_011",
+        "isStarter": true
+      },
+      {
+        "id": "p_003",
+        "isStarter": true
+      },
+      {
+        "id": "p_052",
+        "isStarter": true
+      },
+      {
+        "id": "p_005",
+        "isStarter": true
+      },
+      {
+        "id": "p_013",
+        "isStarter": true
+      },
+      {
+        "id": "p_060",
+        "isStarter": true
+      },
+      {
+        "id": "p_042",
+        "isStarter": true
+      },
+      {
+        "id": "p_015",
+        "isStarter": true
+      },
+      {
+        "id": "p_050",
+        "isStarter": true
+      },
+      {
+        "id": "p_043",
+        "isStarter": true
+      },
+      {
+        "id": "p_062",
+        "isStarter": true
+      },
+      {
+        "id": "p_067",
+        "isStarter": false
+      },
+      {
+        "id": "p_054",
+        "isStarter": false
+      },
+      {
+        "id": "p_040",
+        "isStarter": false
+      },
+      {
+        "id": "p_056",
+        "isStarter": false
+      }
+    ]
+  },
+  {
+    "teamId": "t_004",
+    "teamName": "Squadra Tricheco 4",
+    "crestId": "crest_04",
+    "formation": "4-3-3",
+    "roster": [
+      {
+        "id": "p_051",
+        "isStarter": true
+      },
+      {
+        "id": "p_024",
+        "isStarter": true
+      },
+      {
+        "id": "p_064",
+        "isStarter": true
+      },
+      {
+        "id": "p_053",
+        "isStarter": true
+      },
+      {
+        "id": "p_065",
+        "isStarter": true
+      },
+      {
+        "id": "p_026",
+        "isStarter": true
+      },
+      {
+        "id": "p_048",
+        "isStarter": true
+      },
+      {
+        "id": "p_054",
+        "isStarter": true
+      },
+      {
+        "id": "p_068",
+        "isStarter": true
+      },
+      {
+        "id": "p_017",
+        "isStarter": true
+      },
+      {
+        "id": "p_061",
+        "isStarter": true
+      },
+      {
+        "id": "p_002",
+        "isStarter": false
+      },
+      {
+        "id": "p_015",
+        "isStarter": false
+      },
+      {
+        "id": "p_047",
+        "isStarter": false
+      },
+      {
+        "id": "p_046",
+        "isStarter": false
+      }
+    ]
+  },
+  {
+    "teamId": "t_005",
+    "teamName": "Squadra Tricheco 5",
+    "crestId": "crest_05",
+    "formation": "4-3-3",
+    "roster": [
+      {
+        "id": "p_031",
+        "isStarter": true
+      },
+      {
+        "id": "p_046",
+        "isStarter": true
+      },
+      {
+        "id": "p_012",
+        "isStarter": true
+      },
+      {
+        "id": "p_004",
+        "isStarter": true
+      },
+      {
+        "id": "p_013",
+        "isStarter": true
+      },
+      {
+        "id": "p_006",
+        "isStarter": true
+      },
+      {
+        "id": "p_054",
+        "isStarter": true
+      },
+      {
+        "id": "p_026",
+        "isStarter": true
+      },
+      {
+        "id": "p_037",
+        "isStarter": true
+      },
+      {
+        "id": "p_027",
+        "isStarter": true
+      },
+      {
+        "id": "p_067",
+        "isStarter": true
+      },
+      {
+        "id": "p_022",
+        "isStarter": false
+      },
+      {
+        "id": "p_002",
+        "isStarter": false
+      },
+      {
+        "id": "p_016",
+        "isStarter": false
+      },
+      {
+        "id": "p_058",
+        "isStarter": false
+      }
+    ]
+  },
+  {
+    "teamId": "t_006",
+    "teamName": "Squadra Tricheco 6",
+    "crestId": "crest_06",
+    "formation": "4-3-3",
+    "roster": [
+      {
+        "id": "p_057",
+        "isStarter": true
+      },
+      {
+        "id": "p_033",
+        "isStarter": true
+      },
+      {
+        "id": "p_032",
+        "isStarter": true
+      },
+      {
+        "id": "p_013",
+        "isStarter": true
+      },
+      {
+        "id": "p_012",
+        "isStarter": true
+      },
+      {
+        "id": "p_026",
+        "isStarter": true
+      },
+      {
+        "id": "p_025",
+        "isStarter": true
+      },
+      {
+        "id": "p_041",
+        "isStarter": true
+      },
+      {
+        "id": "p_028",
+        "isStarter": true
+      },
+      {
+        "id": "p_068",
+        "isStarter": true
+      },
+      {
+        "id": "p_037",
+        "isStarter": true
+      },
+      {
+        "id": "p_019",
+        "isStarter": false
+      },
+      {
+        "id": "p_067",
+        "isStarter": false
+      },
+      {
+        "id": "p_065",
+        "isStarter": false
+      },
+      {
+        "id": "p_059",
+        "isStarter": false
+      }
+    ]
+  },
+  {
+    "teamId": "t_007",
+    "teamName": "Squadra Tricheco 7",
+    "crestId": "crest_07",
+    "formation": "4-3-3",
+    "roster": [
+      {
+        "id": "p_045",
+        "isStarter": true
+      },
+      {
+        "id": "p_059",
+        "isStarter": true
+      },
+      {
+        "id": "p_033",
+        "isStarter": true
+      },
+      {
+        "id": "p_004",
+        "isStarter": true
+      },
+      {
+        "id": "p_047",
+        "isStarter": true
+      },
+      {
+        "id": "p_025",
+        "isStarter": true
+      },
+      {
+        "id": "p_066",
+        "isStarter": true
+      },
+      {
+        "id": "p_026",
+        "isStarter": true
+      },
+      {
+        "id": "p_019",
+        "isStarter": true
+      },
+      {
+        "id": "p_017",
+        "isStarter": true
+      },
+      {
+        "id": "p_010",
+        "isStarter": true
+      },
+      {
+        "id": "p_032",
+        "isStarter": false
+      },
+      {
+        "id": "p_002",
+        "isStarter": false
+      },
+      {
+        "id": "p_014",
+        "isStarter": false
+      },
+      {
+        "id": "p_027",
+        "isStarter": false
+      }
+    ]
+  },
+  {
+    "teamId": "t_008",
+    "teamName": "Squadra Tricheco 8",
+    "crestId": "crest_08",
+    "formation": "4-3-3",
+    "roster": [
+      {
+        "id": "p_063",
+        "isStarter": true
+      },
+      {
+        "id": "p_003",
+        "isStarter": true
+      },
+      {
+        "id": "p_012",
+        "isStarter": true
+      },
+      {
+        "id": "p_013",
+        "isStarter": true
+      },
+      {
+        "id": "p_047",
+        "isStarter": true
+      },
+      {
+        "id": "p_006",
+        "isStarter": true
+      },
+      {
+        "id": "p_034",
+        "isStarter": true
+      },
+      {
+        "id": "p_026",
+        "isStarter": true
+      },
+      {
+        "id": "p_008",
+        "isStarter": true
+      },
+      {
+        "id": "p_036",
+        "isStarter": true
+      },
+      {
+        "id": "p_028",
+        "isStarter": true
+      },
+      {
+        "id": "p_043",
+        "isStarter": false
+      },
+      {
+        "id": "p_022",
+        "isStarter": false
+      },
+      {
+        "id": "p_061",
+        "isStarter": false
+      },
+      {
+        "id": "p_020",
+        "isStarter": false
+      }
+    ]
+  }
+]
