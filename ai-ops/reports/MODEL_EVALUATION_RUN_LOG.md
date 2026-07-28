@@ -258,3 +258,37 @@ o refactor cross-file, o build/test non verificabili in locale → ESCALATE/CLAU
 - Nota: il punto 2bis proposto nello smoke test NON è introdotto. Hermes può implementare patch
   deterministiche; Claude entra per complessità, ambiguità o review di rischio.
 - Valutazione: FREE_OK
+
+---
+
+## WALBOX-RUN-001 — CLOSED
+
+- Stato finale RUN-001:
+  - P0-1: CODE_PASS_RUNTIME_PENDING (core bug assente alla verifica blob `6f6ccab` vs `6f6ccab^`; 5/5 criteri presenti; test runtime Supabase/rete PENDENTE)
+  - build: PASS (npm run build exit 0)
+  - commit codice: 6f6ccab (feat(request): apply approved V1 and V2 visual polish)
+  - commit evidence: 98a8f47 (docs(ai-ops): rectify P0-1 model evaluation evidence)
+  - push/deploy: NESSUNO
+  - test reale Supabase/rete: PENDENTE (non eseguibile su VPS senza env reali)
+- Note: V1+V2 erano autorizzate da macro-run espliciti in sessione; non parte di RUN-001 originario. P0-1 era già risolto nel tree prima di V1+V2.
+
+## WALBOX-RUN-002 — CLOSED (VISIBLE_TEAM_MODE)
+
+- Obiettivo: riformulare e valutare P0-2 — warning brano senza `spotify_uri` persistente e chiaramente associato alla richiesta, non perso sotto carico staff.
+- Team: [COORDINATOR] Hermes · [DEV] walbox-dev · [QA] walbox-qa-serata · [PRODUCT] walbox-product-owner
+- Fase: READ-ONLY → APPROVED PATCH → COMMITTED
+
+### P0-2 warning senza Spotify — CODE_PASS_RUNTIME_PENDING
+- Task: P0-2 warning senza Spotify
+- Modello: tencent/hy3:free (Hermes/Nous)
+- File modificato: src/pages/StaffDashboard.jsx (solo questo; 12 insertions, badge su card pendingRequests + approvedQueue)
+- Soluzione: badge persistente derivato dai dati della richiesta (`!req.song?.spotify_uri && (req.status === 'pending' || req.status === 'approved')`), copy "⚠️ SENZA SPOTIFY — AVVIO MANUALE". Nessun nuovo stato/array, nessun timer, nessun toast modificato, nessun bottone/playback/approvazione toccato.
+- build: PASS (npm run build exit 0)
+- QA statica: PASS (badge condizionato correttamente: presente pending/approved senza URI; assente con URI, playing, played, rejected; nessuna interferenza bottoni)
+- QA runtime con 5 richieste consecutive e refresh: PENDING (non eseguibile su VPS senza env reali/Supabase live)
+- Errori [R]: 0
+- Errori [T]: 0
+- Supervisione Eros: direzione corretta da array warning con timer a badge derivato dai dati (decisione Eros, no lista toast)
+- Valutazione: FREE_OK (0 errori, sotto soglia; nessuna escalation Claude necessaria)
+- commit codice: b2ebd2c (fix(staff): persist no-Spotify warning on request cards)
+- push/deploy: NESSUNO
