@@ -292,3 +292,23 @@ o refactor cross-file, o build/test non verificabili in locale → ESCALATE/CLAU
 - Valutazione: FREE_OK (0 errori, sotto soglia; nessuna escalation Claude necessaria)
 - commit codice: b2ebd2c (fix(staff): persist no-Spotify warning on request cards)
 - push/deploy: NESSUNO
+
+---
+
+## WALBOX-RUN-003 — FINAL CLOSEOUT (VISIBLE_TEAM_MODE)
+
+- Obiettivo: Jukebox RELEASE CANDIDATE verificata; chiudere epic prima di Walrus Fantacalcio.
+- Team: COORDINATOR Hermes · DEV walbox-dev · QA walbox-qa-serata · PRODUCT walbox-product-owner · HARDENING walbox-hardening
+- Gate tecnici:
+  - `git diff --check`: PASS (0 errori whitespace)
+  - `npm run build`: PASS (exit 0, ~749ms)
+  - `npm run test:e2e`: PENDING — richiede dev server + Supabase reale; su VPS senza env i test non sono eseguibili in modo significativo (browser installati, 19+ spec presenti: customer-kitchen-flow, f-sec-2-kitchen-guard). HUMAN_RUNTIME_REQUIRED.
+  - `git status --short`: pulito (solo 2 doc untracked esclusi: WALBOX_FUTURE_MODULES_PLAN.md, research doc)
+- P0-1 runtime (errore rete/Supabase, no successo, alert visibile, form preservato, pulsante riutilizzabile, no request salvata): HUMAN_RUNTIME_REQUIRED — verificato staticamente (handleSubmitRequest try/catch, submitError render a riga 1399, finally reset isSubmitting, catch non resetta form); runtime reale non eseguibile senza Supabase.
+- P0-2 runtime (5 richieste no URI, badge su card corrette, refresh, assenti con URI/playing/played/rejected): HUMAN_RUNTIME_REQUIRED — badge derivato dai dati (`!req.song?.spotify_uri && status pending|approved`), verificato staticamente; runtime con 5 richieste + refresh non eseguibile senza Supabase live.
+- Regressione (cliente invia, staff approva, playback, TV coerente): HUMAN_RUNTIME_REQUIRED — richiede device Spotify reale + locale.
+- Hardening read-only: PASS — nessun .env/secrets nel repo o tracciato; nessun `process.env` in src (solo import.meta.env Vite); QR pubblico presente (LiveTvScreenWalrusPoster); errori visibili gestiti in hook.
+- Bug residui: nessuno nuovo introdotto; runtime Supabase/Spotify non verificato in locale.
+- Stato commit: 6f6ccab (V1+V2), 98a8f47 (P0-1 evidence), b2ebd2c (P0-2), 55077e0 (runs 001+002). Tutto committato, nessun push/deploy.
+- Verdetto: JUKEBOX_GO_WITH_RESERVATIONS (code PASS, runtime HUMAN_RUNTIME_REQUIRED per P0-1/P0-2/regressione/e2e).
+- Note: nessuna nuova miglioria UX, non avviato P0-3/Creative Track, Kitchen/M5+ non modificati.
