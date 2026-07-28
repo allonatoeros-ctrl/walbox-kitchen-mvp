@@ -635,6 +635,12 @@ export default function StaffDashboard() {
                   </span>
                 </div>
 
+                {(!req.song?.spotify_uri && (req.status === "pending" || req.status === "approved")) && (
+                  <span style={{ display: "inline-block", marginTop: "6px", padding: "3px 8px", fontSize: "10px", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.5px", color: "#000", background: "#ffd700", border: "1px solid #000", borderRadius: "4px" }}>
+                    ⚠️ SENZA SPOTIFY — AVVIO MANUALE
+                  </span>
+                )}
+
                 <div className="staff-card-body">
                   <img 
                     src={req.song.cover} 
@@ -721,6 +727,12 @@ export default function StaffDashboard() {
                     {req.nickname ? `${req.nickname} • T.${req.table}` : `Tavolo ${req.table}`} • {req.song.artist}
                   </p>
                 </div>
+
+                {(!req.song?.spotify_uri && (req.status === "pending" || req.status === "approved")) && (
+                  <span style={{ display: "inline-block", marginTop: "4px", padding: "3px 8px", fontSize: "10px", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.5px", color: "#000", background: "#ffd700", border: "1px solid #000", borderRadius: "4px" }}>
+                    ⚠️ SENZA SPOTIFY — AVVIO MANUALE
+                  </span>
+                )}
 
                 {/* Queue Control Buttons */}
                 <div style={{ display: "flex", gap: "6px" }}>
