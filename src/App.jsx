@@ -12,6 +12,7 @@ import KitchenTvScreen from "./pages/KitchenTvScreen";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
 import StaffLogin from "./pages/StaffLogin";
 import { getStaffSession, onAuthStateChange } from "./lib/supabaseAuth";
+import FantaEntryTesseramento from "./fanta/pages/FantaEntryTesseramento";
 import { initializeStorage } from "./data/mockData";
 
 // Custom Link helper component for internal navigation without full-page reloads
@@ -113,6 +114,8 @@ export default function App() {
         return <KitchenTvScreen />;
       case "/spotify-test":
         return <SpotifyTestPanel />;
+      case "/fantawalrus":
+        return <FantaEntryTesseramento />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;
