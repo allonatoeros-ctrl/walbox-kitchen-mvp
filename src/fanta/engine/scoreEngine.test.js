@@ -257,3 +257,118 @@ test("scoreLeague produce classifica ordinata 1-vs-tutti", () => {
     assert.ok(standings[i - 1].total >= standings[i].total, "non ordinata");
   }
 });
+
+// 15. BUG1: primo sostituto sv, secondo valido => usa il secondo
+test("primo sostituto SV, secondo valido => usa il secondo", () => {
+  const votesOverride = {
+    round: "r01",
+    votes: [...votes.votes, { playerId: "p_003", noVote: true, reason: "sv" }],
+  };
+  const roster = explicitRoster(
+    ["p_011", "p_002", "p_022", "p_032", "p_046", "p_035", "p_048", "p_054", "p_055", "p_061", "p_067"],
+    ["p_003", "p_012", "p_016", "p_019"]
+  );
+  const r = scoreTeam(makeTeam("t_sv2", roster), [], players, scoring, votesOverride);
+  const sub = r.playerPoints.find((p) => p.substituted);
+  assert.ok(sub, "un subentro deve avvenire");
+  assert.equal(sub.id, "p_012", "salta il primo di panchina sv (p_003) e usa il secondo valido (p_012)");
+});
+
+// 16. BUG1: tutta panchina sv/assente => nessuna sostituzione, slot non consumati
+test("tutta panchina SV/assente => nessuna sostituzione e slot non consumati", () => {
+  const votesOverride = {
+    round: "r01",
+    votes: [
+      ...votes.votes.filter((v) => v.playerId !== "p_012"),
+      { playerId: "p_003", noVote: true, reason: "sv" },
+    ],
+  };
+  const roster = explicitRoster(
+    ["p_011", "p_002", "p_022", "p_032", "p_046", "p_035", "p_048", "p_054", "p_055", "p_061", "p_067"],
+    ["p_003", "p_012", "p_016", "p_019"]
+  );
+  const r = scoreTeam(makeTeam("t_svall", roster), [], players, scoring, votesOverride);
+  const subs = r.playerPoints.filter((p) => p.substituted).length;
+  assert.equal(subs, 0, "panchina DEF tutta sv/assente: nessuno slot consumato");
+  const p002 = r.playerPoints.find((p) => p.id === "p_002");
+  assert.equal(p002.points, 0, "titolare sv senza sostituto valido resta a 0");
+  assert.equal(p002.noVote, true);
+});
+
+// 17. BUG1 regressione: max 3 sostituzioni anche con panchina tutta valida
+test("regressione: max 3 sostituzioni con panchina valida", () => {
+  const votesOverride = {
+    round: "r01",
+    votes: [
+      ...votes.votes,
+      { playerId: "p_002", noVote: true, reason: "sv" },
+      { playerId: "p_022", noVote: true, reason: "sv" },
+      { playerId: "p_032", noVote: true, reason: "sv" },
+      { playerId: "p_046", noVote: true, reason: "sv" },
+    ],
+  };
+  const roster = explicitRoster(
+    ["p_011", "p_002", "p_022", "p_032", "p_046", "p_035", "p_048", "p_054", "p_055", "p_061", "p_067"],
+    ["p_003", "p_012", "p_023", "p_033"]
+  );
+  const r = scoreTeam(makeTeam("t_cap4", roster), [], players, scoring, votesOverride);
+  const substituted = r.playerPoints.filter((p) => p.substituted);
+  assert.ok(substituted.length <= 3, `sostituzioni = ${substituted.length}, devono essere <= 3`);
+  const remainingSv = r.playerPoints.filter((p) => p.noVote && p.points === 0);
+  assert.equal(remainingSv.length, 1, "il 4° titolare sv resta a 0 nonostante panchina valida disponibile");
+});
+
+// 18. BUG2: tipo evento sconosciuto -> skip senza toccare il punteggio
+test("BUG2: evento con tipo sconosciuto viene skippato senza alterare il punteggio", () => {
+  const roster = validRoster();
+  const fwds = votedStarters(roster).filter((id) => ROLE_OF[id] === "FWD");
+  const target = fwds[0];
+  const base = VOTE_OF[target].baseVote;
+  const ev = [{ eventId: "u1", round: "r01", fixtureId: "f1", playerId: target, type: "super_bonus_inesistente", minute: 5 }];
+  const r = scoreTeam(makeTeam("t_unk", roster), ev, players, scoring, votes);
+  const pt = r.playerPoints.find((p) => p.id === target).points;
+  assert.equal(pt, base, "tipo sconosciuto non deve alterare il punteggio");
+  assert.equal(r.skippedEvents.length, 1, "l'evento sconosciuto deve finire in skippedEvents");
+  assert.equal(r.skippedEvents[0].eventId, "u1");
+  assert.equal(r.skippedEvents[0].reason, "UNKNOWN_EVENT_TYPE");
+});
+
+// 19. BUG2: valore di scoring non numerico -> skip senza throw
+test("BUG2: valore di scoring non valido viene skippato senza throw", () => {
+  const roster = validRoster();
+  const fwds = votedStarters(roster).filter((id) => ROLE_OF[id] === "FWD");
+  const target = fwds[0];
+  const base = VOTE_OF[target].baseVote;
+  const scoringBroken = { ...scoring, goal: "tre" }; // valore non numerico
+  const ev = [{ eventId: "u2", round: "r01", fixtureId: "f1", playerId: target, type: "goal", minute: 6 }];
+  assert.doesNotThrow(() => scoreTeam(makeTeam("t_invalid", roster), ev, players, scoringBroken, votes));
+  const r = scoreTeam(makeTeam("t_invalid", roster), ev, players, scoringBroken, votes);
+  const pt = r.playerPoints.find((p) => p.id === target).points;
+  assert.equal(pt, base, "valore di scoring non valido non deve alterare il punteggio");
+  assert.equal(r.skippedEvents.length, 1, "l'evento con valore non valido deve finire in skippedEvents");
+  assert.equal(r.skippedEvents[0].eventId, "u2");
+  assert.equal(r.skippedEvents[0].reason, "INVALID_SCORING_VALUE");
+});
+
+// 20. BUG2: mix di eventi validi + sconosciuti -> punti validi mantenuti, sconosciuti tracciati
+test("BUG2: mix valido + sconosciuto mantiene i punti validi e traccia gli skippati", () => {
+  const roster = validRoster();
+  const st = votedStarters(roster);
+  const fwds = st.filter((id) => ROLE_OF[id] === "FWD");
+  const mids = st.filter((id) => ROLE_OF[id] === "MID");
+  const target = fwds[0];
+  const other = mids[0];
+  const baseTarget = VOTE_OF[target].baseVote;
+  const baseOther = VOTE_OF[other].baseVote;
+  const ev = [
+    { eventId: "v1", round: "r01", fixtureId: "f1", playerId: target, type: "goal", minute: 10 },       // valido +3
+    { eventId: "v2", round: "r01", fixtureId: "f1", playerId: other, type: "evento_alieno", minute: 11 }, // sconosciuto
+  ];
+  const r = scoreTeam(makeTeam("t_mix", roster), ev, players, scoring, votes);
+  const ptTarget = r.playerPoints.find((p) => p.id === target).points;
+  const ptOther = r.playerPoints.find((p) => p.id === other).points;
+  assert.equal(ptTarget, Math.round((baseTarget + 3) * 100) / 100, "evento valido applicato normalmente");
+  assert.equal(ptOther, baseOther, "evento sconosciuto non altera il giocatore");
+  assert.equal(r.skippedEvents.length, 1, "un solo evento skippato");
+  assert.equal(r.skippedEvents[0].eventId, "v2");
+});

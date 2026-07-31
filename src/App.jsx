@@ -11,6 +11,7 @@ import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
 import StaffLogin from "./pages/StaffLogin";
+import FantaVarRoom from "./fanta/pages/FantaVarRoom";
 import { getStaffSession, onAuthStateChange } from "./lib/supabaseAuth";
 import { initializeStorage } from "./data/mockData";
 
@@ -113,6 +114,10 @@ export default function App() {
         return <KitchenTvScreen />;
       case "/spotify-test":
         return <SpotifyTestPanel />;
+
+      // === FANTAWALRUS MODULE ROUTES ===
+      case "/fanta/var":
+        return <FantaVarRoom />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;
