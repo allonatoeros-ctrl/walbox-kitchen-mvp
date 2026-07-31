@@ -53,7 +53,7 @@ function buildVoteIndex(votes) {
 function pointsForEvent(type, scoring) {
   if (!(type in scoring)) return null; // tipo non in scoring V1 -> ignorato (es. cleansheet_def, save, bonus)
   const v = scoring[type];
-  if (typeof v !== "number") throw new Error(`REGOLA_NON_VALIDA: "${type}"`);
+  if (typeof v !== "number") return null; // valore di scoring non valido -> ignorato
   return v;
 }
 
@@ -100,7 +100,7 @@ function resolveLineup(roster, votesIndex, playerIndex) {
       if (subsUsed.count >= MAX_SUBSTITUTIONS) {
         return { id: s.id, role: s.role, substituted: false, noVote: true };
       }
-      const repl = bench.find((b) => b.role === s.role && !b.used);
+      const repl = bench.find((b) => b.role === s.role && !b.used && votesIndex[b.id] && !votesIndex[b.id].noVote);
       if (repl) {
         repl.used = true;
         subsUsed.count += 1;
@@ -152,13 +152,18 @@ export function scoreTeam(team, events, players, scoring, votes, retractions = [
   }
 
   const varLog = [];
+  const skippedEvents = [];
 
   function applyEventList(list, sign) {
     const ordered = sortEvents(list);
     for (const e of ordered) {
       if (!effectiveIds.has(e.playerId)) continue; // non in formazione effettiva
       const pts = pointsForEvent(e.type, scoring);
-      if (pts === null) continue; // tipo non in scoring V1: ignorato
+      if (pts === null) {
+        const reason = !(e.type in scoring) ? "UNKNOWN_EVENT_TYPE" : "INVALID_SCORING_VALUE";
+        skippedEvents.push({ eventId: e.eventId, playerId: e.playerId, type: e.type, reason });
+        continue; // tipo sconosciuto o valore non valido: ignorato, replay continua
+      }
       const delta = pts * sign;
       playerPoints[e.playerId] = (playerPoints[e.playerId] || 0) + delta;
       varLog.push({
@@ -188,7 +193,7 @@ export function scoreTeam(team, events, players, scoring, votes, retractions = [
     noVote: e.noVote || false,
   }));
 
-  return { teamId: team.teamId, playerPoints: playerBreakdown, total: Math.round(total * 100) / 100, varLog };
+  return { teamId: team.teamId, playerPoints: playerBreakdown, total: Math.round(total * 100) / 100, varLog, skippedEvents };
 }
 
 /**

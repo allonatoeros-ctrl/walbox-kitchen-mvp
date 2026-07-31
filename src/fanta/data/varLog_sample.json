@@ -1,0 +1,9 @@
+[
+  { "eventId": "evt_001", "round": "r01", "fixtureId": "fix_001", "playerId": "p_008", "type": "goal", "minute": 12 },
+  { "eventId": "evt_004", "round": "r01", "fixtureId": "fix_001", "playerId": "p_011", "type": "cleansheet_gk", "minute": 90 },
+  { "eventId": "evt_006", "round": "r01", "fixtureId": "fix_001", "playerId": "p_003", "type": "red_card", "minute": 67 },
+  { "eventId": "evt_009", "round": "r01", "fixtureId": "fix_001", "playerId": "p_004", "type": "own_goal", "minute": 84 },
+  { "eventId": "evt_015", "round": "r01", "fixtureId": "fix_002", "playerId": "p_022", "type": "goal", "minute": 62 },
+  { "eventId": "evt_025", "round": "r01", "fixtureId": "fix_004", "playerId": "p_017", "type": "goal", "minute": 8 },
+  { "eventId": "evt_035", "round": "r01", "fixtureId": "fix_004", "playerId": "p_019", "type": "goal", "minute": 81 }
+]
