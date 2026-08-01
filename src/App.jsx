@@ -12,6 +12,7 @@ import KitchenTvScreen from "./pages/KitchenTvScreen";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
 import StaffLogin from "./pages/StaffLogin";
 import FantaVarRoom from "./fanta/pages/FantaVarRoom";
+import FantaMatchday from "./fanta/pages/FantaMatchday";
 import { getStaffSession, onAuthStateChange } from "./lib/supabaseAuth";
 import { initializeStorage } from "./data/mockData";
 
@@ -118,6 +119,8 @@ export default function App() {
       // === FANTAWALRUS MODULE ROUTES ===
       case "/fanta/var":
         return <FantaVarRoom />;
+      case "/fanta/matchday":
+        return <FantaMatchday />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;
