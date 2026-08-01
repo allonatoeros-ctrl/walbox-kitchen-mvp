@@ -1,0 +1,638 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
+
+.fanta-entry {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 390px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  background: #0a0f1c;
+  color: #FFFFFF;
+  font-family: var(--font-sans, sans-serif);
+  overflow-x: hidden;
+  isolation: isolate;
+}
+
+.fanta-entry::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(700px 500px at -15% -20%, rgba(130, 175, 255, 0.22), transparent 60%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 40px),
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1.4px);
+  background-size: auto, auto, 5px 5px;
+  pointer-events: none;
+}
+
+.fanta-entry::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 260px;
+  z-index: -1;
+  background: linear-gradient(to bottom, rgba(5, 8, 16, 0), rgba(5, 8, 16, 0.95));
+  pointer-events: none;
+}
+
+.fanta-entry__band {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 76px;
+  background: rgba(8, 12, 23, 0.9);
+  border-bottom: 1px solid rgba(255, 215, 0, 0.32);
+  padding: 0 20px;
+}
+
+.fanta-entry__band-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.fanta-entry__band-crest {
+  flex: 0 0 auto;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.5));
+}
+
+.fanta-entry__band-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fanta-entry__band-title {
+  font-family: 'Anton', var(--font-display, sans-serif);
+  font-weight: 400;
+  font-size: 23px;
+  letter-spacing: 1.4px;
+  color: #f3eee2;
+  line-height: 26px;
+}
+
+.fanta-entry__band-sub {
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 0.4px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fanta-entry__band-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.fanta-entry__band-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 1.2px;
+  color: #ffd700;
+  white-space: nowrap;
+}
+
+.fanta-entry__band-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffd700;
+  box-shadow: 0 0 6px 1px rgba(255, 215, 0, 0.7);
+}
+
+.fanta-entry__band-matchday {
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 1.2px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fanta-entry__card-wrap {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.fanta-entry__card {
+  position: relative;
+  width: 240px;
+  height: 308px;
+  flex: 0 0 auto;
+  transform: rotate(1.8deg);
+  background: #efe7d6;
+  border: 1.5px solid rgba(255, 215, 0, 0.75);
+  border-radius: 4px;
+  box-shadow:
+    2px 3px 0px rgba(0, 0, 0, 0.45),
+    7px 16px 20px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.fanta-entry__card-head {
+  box-sizing: border-box;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 34px;
+  background: #121826;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10.5px;
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 1.2px;
+  color: rgba(239, 231, 214, 0.92);
+  white-space: nowrap;
+}
+
+.fanta-entry__card-num {
+  color: #ffd700;
+}
+
+.fanta-entry__card-seal {
+  position: absolute;
+  left: 138.5px;
+  top: 4.5px;
+  width: 18.33px;
+  height: 22px;
+  clip-path: polygon(50% 0%, 100% 20%, 100% 62%, 50% 100%, 0% 62%, 0% 20%);
+  background: radial-gradient(circle at 35% 25%, #fff2b8, #d9b24d 55%, #8a6a1c 100%);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  z-index: 2;
+}
+
+.fanta-entry__card-crest {
+  position: absolute;
+  left: 54.5px;
+  top: 38.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fanta-entry__card-stamp {
+  position: absolute;
+  left: 189.53px;
+  top: 266.09px;
+  transform: translate(-50%, -50%) rotate(9deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 34px;
+  border: 2.5px solid rgba(193, 39, 45, 0.85);
+  border-radius: 3px;
+  opacity: 0.9;
+  font-family: 'Anton', var(--font-display, sans-serif);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: 1.6px;
+  color: rgba(193, 39, 45, 0.9);
+  z-index: 3;
+}
+
+.fanta-entry__card-foot {
+  box-sizing: border-box;
+  position: absolute;
+  left: 0;
+  top: 190px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+}
+
+.fanta-entry__card-label {
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 1.6px;
+  color: rgba(18, 24, 38, 0.45);
+}
+
+.fanta-entry__card-name {
+  font-family: 'Anton', var(--font-display, sans-serif);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: 0.6px;
+  color: #121826;
+  text-align: center;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fanta-entry__card-divider {
+  position: absolute;
+  left: 10.5px;
+  top: 254.5px;
+  width: 216px;
+  height: 1px;
+  background: rgba(18, 24, 38, 0.18);
+}
+
+.fanta-entry__card-season {
+  position: absolute;
+  left: 10.5px;
+  top: 266.5px;
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: rgba(18, 24, 38, 0.5);
+}
+
+.fanta-entry__card-ribbon {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 13px;
+  display: flex;
+}
+
+.fanta-entry__card-ribbon::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 9px;
+  background: #121826;
+}
+
+.fanta-entry__card-ribbon-stripe {
+  position: absolute;
+  bottom: 0;
+  width: 33.34%;
+  height: 4px;
+}
+
+.fanta-entry__card-ribbon-stripe--green {
+  left: 0;
+  background: #008c45;
+}
+
+.fanta-entry__card-ribbon-stripe--white {
+  left: 33.33%;
+  background: #ffffff;
+}
+
+.fanta-entry__card-ribbon-stripe--red {
+  left: 66.66%;
+  background: #cd212a;
+}
+
+.fanta-entry__input {
+  flex: 0 0 auto;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 62px;
+  margin: 14px 24px 0;
+  border: 0.5px solid #bfa100;
+  background: rgba(20, 18, 15, 0.7);
+  padding: 0 14px 0 20px;
+  box-shadow: inset 0px 2px 8px 0px rgba(0, 0, 0, 0.35);
+}
+
+.fanta-entry__input-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 4px;
+  height: 100%;
+  background: #ffd700;
+}
+
+.fanta-entry__input-field {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: 'Anton', var(--font-display, sans-serif);
+  font-weight: 400;
+  font-size: 28px;
+  letter-spacing: 1px;
+  color: #f3eee2;
+  caret-color: #ffd700;
+}
+
+.fanta-entry__input-field::placeholder {
+  color: rgba(243, 238, 226, 0.35);
+  font-size: 20px;
+  letter-spacing: 0.06em;
+}
+
+.fanta-entry__input-cursor {
+  position: absolute;
+  right: 64px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 32px;
+  background: #ffd700;
+  animation: fanta-entry-caret-blink 1s step-end infinite;
+}
+
+@keyframes fanta-entry-caret-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.fanta-entry__input-counter {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fanta-entry__deco-tick {
+  position: absolute;
+  background: rgba(255, 215, 0, 0.5);
+  pointer-events: none;
+}
+
+.fanta-entry__deco-line {
+  position: absolute;
+  background: rgba(255, 215, 0, 0.35);
+  pointer-events: none;
+}
+
+.fanta-entry__deco-tick--input-tr-h {
+  left: 331.5px;
+  top: -0.5px;
+  width: 10px;
+  height: 0.5px;
+}
+
+.fanta-entry__deco-tick--input-tr-v {
+  left: 341px;
+  top: -0.5px;
+  width: 0.5px;
+  height: 10px;
+}
+
+.fanta-entry__deco-tick--input-br-h {
+  left: 331.5px;
+  top: 61px;
+  width: 10px;
+  height: 0.5px;
+}
+
+.fanta-entry__deco-tick--input-br-v {
+  left: 341px;
+  top: 51.5px;
+  width: 0.5px;
+  height: 10px;
+}
+
+.fanta-entry__deco-line--input {
+  left: 3.5px;
+  top: 60px;
+  width: 338px;
+  height: 1.5px;
+}
+
+.fanta-entry__selector {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 6px 24px 10px;
+}
+
+.fanta-entry__selector-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.fanta-entry__selector-label {
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 1.6px;
+  color: rgba(243, 238, 226, 0.9);
+}
+
+.fanta-entry__selector-hint {
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 1.2px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.fanta-entry__selector-track {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  width: 100%;
+  padding: 3px 2px 0;
+}
+
+.fanta-entry__selector-track::-webkit-scrollbar {
+  display: none;
+}
+
+.fanta-entry__selector-cell {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+  transition: transform 0.1s ease;
+}
+
+.fanta-entry__selector-cell:active {
+  transform: scale(0.95);
+}
+
+.fanta-entry__selector-empty {
+  font-size: 14px;
+  opacity: 0.6;
+  margin: 0;
+}
+
+.fanta-entry__rules {
+  flex: 0 0 auto;
+  position: relative;
+  margin: 4px 24px 0;
+  padding: 7.5px 12px 0.5px 20px;
+  border: 0.5px solid #bfa100;
+  background: rgba(15, 14, 11, 0.75);
+  box-shadow: inset 0px 1px 6px 0px rgba(0, 0, 0, 0.3);
+}
+
+.fanta-entry__rules::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: rgba(255, 215, 0, 0.9);
+}
+
+.fanta-entry__rules p {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 14px;
+  line-height: 22.5px;
+  color: #ede8de;
+  margin: 0;
+}
+
+.fanta-entry__deco-tick--rules-tr-h {
+  left: 333.5px;
+  top: -0.5px;
+  width: 8px;
+  height: 0.5px;
+  background: rgba(255, 215, 0, 0.4);
+}
+
+.fanta-entry__deco-tick--rules-tr-v {
+  left: 341px;
+  top: -0.5px;
+  width: 0.5px;
+  height: 8px;
+  background: rgba(255, 215, 0, 0.4);
+}
+
+.fanta-entry__deco-tick--rules-br-h {
+  left: 333.5px;
+  top: 97px;
+  width: 8px;
+  height: 0.5px;
+  background: rgba(255, 215, 0, 0.4);
+}
+
+.fanta-entry__deco-tick--rules-br-v {
+  left: 341px;
+  top: 89.5px;
+  width: 0.5px;
+  height: 8px;
+  background: rgba(255, 215, 0, 0.4);
+}
+
+.fanta-entry__deco-line--rules {
+  left: 2.5px;
+  top: 96.5px;
+  width: 339px;
+  height: 1px;
+  background: rgba(255, 215, 0, 0.25);
+}
+
+.fanta-entry__meta {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 24px 0;
+}
+
+.fanta-entry__meta-link {
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 1.2px;
+  color: #ffdb26;
+  text-decoration: underline;
+  width: fit-content;
+}
+
+.fanta-entry__meta-countdown {
+  font-family: 'Roboto Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.fanta-entry__cta {
+  flex: 0 0 auto;
+  position: sticky;
+  bottom: 0;
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 24px 14px;
+  background: rgba(6, 10, 18, 0.94);
+  box-shadow: 0 -8px 10px rgba(0, 0, 0, 0.5);
+  border-top: 1px solid rgba(191, 161, 0, 0.2);
+}
+
+.fanta-entry__cta-button {
+  position: relative;
+  width: 100%;
+  height: 58px;
+  border-radius: 2px;
+  border: none;
+  font-family: 'Anton', var(--font-display, sans-serif);
+  font-weight: 400;
+  font-size: 20px;
+  letter-spacing: 1.6px;
+  background: #ffd700;
+  color: #0a0f1c;
+  cursor: pointer;
+  box-shadow: 0 4px 20px 1px rgba(255, 214, 0, 0.3);
+  overflow: hidden;
+}
+
+.fanta-entry__cta-button::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 242, 153, 0.5);
+}
+
+.fanta-entry__cta-button::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 2px;
+  background: rgba(178, 148, 0, 0.4);
+}
+
+.fanta-entry__cta-button:disabled {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.4);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.fanta-entry__cta-sub {
+  font-family: var(--font-sans, sans-serif);
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.78);
+}
