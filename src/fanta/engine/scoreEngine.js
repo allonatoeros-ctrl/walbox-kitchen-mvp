@@ -19,7 +19,7 @@ function sortEvents(events) {
 }
 
 // --- Indice giocatori id -> {role, club} ---
-function buildPlayerIndex(players) {
+export function buildPlayerIndex(players) {
   const idx = {};
   for (const p of players) {
     if (idx[p.id]) throw new Error(`PLAYER_DUPLICATO: ${p.id}`);
@@ -80,6 +80,15 @@ function validateLineup(starters, playerIndex) {
     if (n > MAX_PER_CLUB) throw new Error(`MAX_PER_CLUB: ${n} di ${club} > ${MAX_PER_CLUB}`);
   }
   return counts;
+}
+
+export function isValidLineup(starters, playerIndex) {
+  try {
+    validateLineup(starters, playerIndex);
+    return { valid: true, errors: [] };
+  } catch (e) {
+    return { valid: false, errors: [e.message] };
+  }
 }
 
 // --- Sostituzioni SV: panchina nell'ordine del roster, stesso ruolo, max 3 ---
