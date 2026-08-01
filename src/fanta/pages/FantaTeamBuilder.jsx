@@ -9,6 +9,7 @@ const LOCAL_TEAM_KEY = 'fanta_walrus_custom_team';
 
 export default function FantaTeamBuilder() {
   const [identity, setIdentity] = useState(null);
+  const [identityLoaded, setIdentityLoaded] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [saved, setSaved] = useState(false);
 
@@ -18,8 +19,16 @@ export default function FantaTeamBuilder() {
       if (raw) setIdentity(JSON.parse(raw));
     } catch (e) {
       setIdentity(null);
+    } finally {
+      setIdentityLoaded(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!identityLoaded || identity) return;
+    window.history.pushState({}, '', '/fanta/entry');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }, [identityLoaded, identity]);
 
   useEffect(() => {
     if (!identity) return;
@@ -91,9 +100,7 @@ export default function FantaTeamBuilder() {
     setSaved(true);
   }
 
-  if (!identity) {
-    window.history.pushState({}, '', '/fanta/entry');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+  if (!identityLoaded || !identity) {
     return null;
   }
 
