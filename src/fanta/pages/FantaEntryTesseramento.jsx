@@ -4,6 +4,17 @@ import './FantaEntryTesseramento.css';
 
 const FANTA_NAME = 'FANTAWALRUS';
 const TEAM_NAME_MAX = 24;
+const LOCAL_STORAGE_KEY = 'fanta_walrus_team_identity';
+
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36).slice(0, 8);
+}
 
 export default function FantaEntryTesseramento() {
   const [teamName, setTeamName] = useState('');
@@ -19,6 +30,25 @@ export default function FantaEntryTesseramento() {
 
   function handleNameChange(e) {
     setTeamName(e.target.value.slice(0, TEAM_NAME_MAX));
+  }
+
+  function handleTessera() {
+    if (ctaDisabled) return;
+    const createdAt = new Date().toISOString();
+    const teamId = 'team_' + simpleHash(trimmedName + selectedCrestId + createdAt);
+    const identity = {
+      teamId,
+      teamName: trimmedName,
+      crest: { id: selectedCrestId, preset: selectedPreset },
+      createdAt,
+    };
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(identity));
+    } catch (e) {
+      // ignore storage errors
+    }
+    window.history.pushState({}, '', '/fanta/team');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   }
 
   return (
@@ -163,7 +193,7 @@ export default function FantaEntryTesseramento() {
       </div>
 
       <footer className="fanta-entry__cta">
-        <button type="button" className="fanta-entry__cta-button" disabled={ctaDisabled}>
+        <button type="button" className="fanta-entry__cta-button" disabled={ctaDisabled} onClick={handleTessera}>
           TESSERA LA SQUADRA
         </button>
         <span className="fanta-entry__cta-sub">Nessun account richiesto · nessuna app</span>
