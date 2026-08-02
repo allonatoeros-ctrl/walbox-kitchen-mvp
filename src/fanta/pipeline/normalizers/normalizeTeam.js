@@ -6,6 +6,22 @@ const TEAM_CODE_MAP = Object.freeze({
   "AC Milan": "MIL",
   Inter: "INT",
   Lazio: "LAZ",
+  Atalanta: "ATA",
+  Bologna: "BOL",
+  Cagliari: "CAG",
+  Como: "COM",
+  Empoli: "EMP",
+  Fiorentina: "FIO",
+  Genoa: "GEN",
+  "Hellas Verona": "VER",
+  Lecce: "LEC",
+  Monza: "MON",
+  Napoli: "NAP",
+  Parma: "PAR",
+  Roma: "ROM",
+  Torino: "TOR",
+  Udinese: "UDI",
+  Venezia: "VEN",
 });
 
 /**

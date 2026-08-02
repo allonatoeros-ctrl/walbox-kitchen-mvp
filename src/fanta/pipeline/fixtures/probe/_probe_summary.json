@@ -1,0 +1,13 @@
+{
+  "callCount": 1,
+  "calls": [
+    {
+      "call": "fixtures",
+      "status": 200,
+      "resultCount": 0,
+      "errors": {
+        "plan": "Free plans do not have access to the Last parameter."
+      }
+    }
+  ]
+}
