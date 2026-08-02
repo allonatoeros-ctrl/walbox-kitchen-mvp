@@ -166,9 +166,13 @@ create policy fanta_rosters_delete_own on fanta_rosters
   );
 
 -- ============================================================
--- fanta_lineups — owner reads own always; others only once round is locked/finalized
--- (prevents opponents from scouting a lineup before the deadline). Owner writes only
--- pre-deadline (trigger fn_enforce_lineup_deadline enforces this server-side too).
+-- fanta_lineups — owner reads/writes own lineup any time before the deadline;
+-- other members of the SAME LEAGUE can read only once the round is locked or
+-- finalized (prevents opponents from scouting a lineup before the deadline,
+-- and never exposes lineups to anon or to members of a different league).
+-- Owner writes only pre-deadline (trigger fn_enforce_lineup_deadline enforces
+-- this server-side too). Admin has full read override, always auditable via
+-- the fanta_is_admin() claim (see 0002).
 -- ============================================================
 create policy fanta_lineups_select_own_or_public on fanta_lineups
   for select
@@ -180,8 +184,13 @@ create policy fanta_lineups_select_own_or_public on fanta_lineups
       where m.team_id = fanta_lineups.team_id and m.user_id = auth.uid()
     )
     or exists (
-      select 1 from fanta_rounds r
-      where r.id = fanta_lineups.round_id and r.status in ('locked', 'finalized')
+      select 1
+      from fanta_rounds r
+      join fanta_teams league_team on league_team.league_id = r.league_id
+      join fanta_team_members viewer on viewer.team_id = league_team.id
+      where r.id = fanta_lineups.round_id
+        and r.status in ('locked', 'finalized')
+        and viewer.user_id = auth.uid()
     )
   );
 
