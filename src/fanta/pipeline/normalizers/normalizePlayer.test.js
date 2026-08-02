@@ -20,6 +20,35 @@ test("normalizePlayer: tutti i ruoli mappabili", () => {
   }
 });
 
+test("normalizePlayer: sigle API-Football (G/D/M/F) mappate correttamente", () => {
+  const map = { G: "GK", D: "DEF", M: "MID", F: "FWD" };
+  for (const [position, role] of Object.entries(map)) {
+    const p = normalizePlayer(base({ statistics: [{ team: { id: 496, name: "Juventus" }, games: { position } }] }));
+    assert.equal(p.role, role);
+  }
+});
+
+test("normalizePlayer: posizione null -> RUOLO_AMBIGUO", () => {
+  assert.throws(
+    () => normalizePlayer(base({ statistics: [{ team: { id: 496, name: "Juventus" }, games: { position: null } }] })),
+    /RUOLO_AMBIGUO/
+  );
+});
+
+test("normalizePlayer: posizione sconosciuta ('X') -> RUOLO_AMBIGUO", () => {
+  assert.throws(
+    () => normalizePlayer(base({ statistics: [{ team: { id: 496, name: "Juventus" }, games: { position: "X" } }] })),
+    /RUOLO_AMBIGUO/
+  );
+});
+
+test("normalizePlayer: sigla minuscola ('g') -> RUOLO_AMBIGUO (case-sensitive, nessun fallback silenzioso)", () => {
+  assert.throws(
+    () => normalizePlayer(base({ statistics: [{ team: { id: 496, name: "Juventus" }, games: { position: "g" } }] })),
+    /RUOLO_AMBIGUO/
+  );
+});
+
 test("normalizePlayer: campo nome mancante -> throw esplicito", () => {
   assert.throws(() => normalizePlayer(base({ player: { id: 1006, name: "" } })), /PLAYER_MALFORMATO/);
 });

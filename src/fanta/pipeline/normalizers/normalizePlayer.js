@@ -8,6 +8,10 @@ const POSITION_ROLE_MAP = Object.freeze({
   Defender: "DEF",
   Midfielder: "MID",
   Attacker: "FWD",
+  G: "GK",
+  D: "DEF",
+  M: "MID",
+  F: "FWD",
 });
 
 /**
