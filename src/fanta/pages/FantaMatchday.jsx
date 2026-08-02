@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useMatchday, snapshotReplayState } from "../hooks/useMatchday.js";
 import { adaptCustomTeam } from "../adapters/customTeamAdapter.js";
+import { buildPlayerIndex, isValidLineup } from "../engine/scoreEngine.js";
 import fixturesData from "../data/fixtures.json";
 import eventsData from "../data/events.json";
 import playersData from "../data/players.json";
@@ -32,7 +33,7 @@ export default function FantaMatchday() {
     [fixtureId]
   );
 
-  const customTeam = useMemo(() => {
+  const rawCustomTeam = useMemo(() => {
     let raw = null;
     try {
       const stored = localStorage.getItem(LOCAL_TEAM_KEY);
@@ -42,6 +43,19 @@ export default function FantaMatchday() {
     }
     return adaptCustomTeam(raw, playersData);
   }, []);
+
+  // adaptCustomTeam pulisce solo la forma (id noti, campi presenti): un roster con
+  // meno di 11 titolari validi passerebbe comunque e farebbe crashare il motore
+  // (validateLineup) in fase di render. Qui verifichiamo il modulo prima di usarlo.
+  const playerIndexForValidation = useMemo(() => buildPlayerIndex(playersData), []);
+  const customTeamValid = useMemo(() => {
+    if (!rawCustomTeam) return null;
+    const starters = rawCustomTeam.roster.filter((r) => r.isStarter);
+    return isValidLineup(starters, playerIndexForValidation).valid;
+  }, [rawCustomTeam, playerIndexForValidation]);
+
+  const customTeam = customTeamValid ? rawCustomTeam : null;
+  const customTeamIncomplete = !!rawCustomTeam && customTeamValid === false;
 
   const teams = useMemo(() => {
     if (!customTeam) return teamsData;
@@ -108,6 +122,20 @@ export default function FantaMatchday() {
           <strong style={{ color: "#ffd27a" }}>MOCK (teams_sample.json)</strong>
         )}
       </p>
+      {customTeamIncomplete && (
+        <p style={{ background: "#3a1f1f", border: "1px solid #ff6b6b", color: "#ffb3b3", padding: "8px 12px" }}>
+          La tua squadra salvata è incompleta o non valida (modulo non conforme): uso la squadra demo
+          finché non la correggi in{" "}
+          <button
+            type="button"
+            onClick={() => navigateTo("/fanta/team")}
+            style={{ background: "none", border: "none", color: "#ffb3b3", textDecoration: "underline", cursor: "pointer", padding: 0, font: "inherit" }}
+          >
+            Team Builder
+          </button>
+          .
+        </p>
+      )}
 
       <div style={{ marginBottom: 16 }}>
         <label>

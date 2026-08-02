@@ -1,6 +1,11 @@
 // customTeamAdapter.js — mappa il team custom salvato dal Team Builder
 // nel contratto atteso da useMatchday/replayEngine/scoreEngine.
 // Puro: nessun localStorage/DOM/rete qui dentro (il chiamante passa il dato già parsato).
+//
+// Nota: qui si pulisce solo la FORMA (id noti, campi presenti). La validità del modulo
+// (11 titolari, ruoli, max per club) è responsabilità di chi consuma il team (vedi
+// FantaMatchday.jsx), perché lì si può distinguere "nessuna squadra salvata" da
+// "squadra incompleta" e mostrare uno stato diverso invece di un fallback silenzioso.
 
 /**
  * @param {any} rawCustomTeam  oggetto già JSON.parse-ato (o null/undefined) da fanta_walrus_custom_team
