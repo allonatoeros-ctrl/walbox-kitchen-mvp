@@ -1,0 +1,456 @@
+/* =============================================================================
+ * FANTAWALRUS — DESIGN TOKENS
+ * Materializzazione di FANTAWALRUS_VISUAL_SYSTEM_CONTRACT_V1 (fase F0.a)
+ * Fonte: ai-ops/reports/fantawalrus-visual-system-contract-v1.md
+ * Estratti da: src/fanta/pages/FantaEntryTesseramento.css (riferimento canonico)
+ *              src/fanta/components/TeamCrest.jsx
+ *
+ * REGOLE DI QUESTO FILE
+ * - Solo custom properties. Nessuna regola di presentazione: le classi `.fw-*`
+ *   arrivano in F0.b (fanta-system.css).
+ * - Prefisso `--fw-*` su ogni token. Non collide con `--k-*` (Kitchen),
+ *   `--walrus-*` / `--accent-*` (index.css) né con i `--gold`/`--midnight-*`
+ *   locali del Tesseramento.
+ * - Scope `.fw-root`, non `:root`: i token non escono dal modulo FantaWalrus e
+ *   non raggiungono Jukebox/Kitchen nemmeno dopo l'import. `.fw-root` sarà
+ *   applicato da `FantaShell` in F0.b; l'ereditarietà delle custom properties
+ *   copre tutto il sottoalbero.
+ * - Ogni valore proviene dal contratto. Le voci marcate [NUOVO] non esistevano
+ *   nel Tesseramento e sono derivate dalla palette: ognuna è motivata inline.
+ *
+ * STATO: non importato da nessuna pagina. Zero impatto visivo.
+ * ========================================================================== */
+
+.fw-root {
+
+  /* ===========================================================================
+   * 1. PALETTE — MEZZANOTTE
+   * ======================================================================== */
+  --fw-midnight-0: #05070d;   /* fondo pagina · testo su oro · scrim CTA */
+  --fw-midnight-1: #0b1020;   /* stop gradiente atmosfera · base superfici */
+  --fw-midnight-2: #131a2e;   /* fondo note · input soft */
+  --fw-midnight-3: #1c2438;   /* top gradiente input e tile */
+
+  /* ---- ORO ---------------------------------------------------------------- */
+  --fw-gold:        #E9C46A;  /* accento primario: selezione, LED, marker */
+  --fw-gold-bright: #F5D373;  /* stop chiaro dei gradienti oro */
+  --fw-gold-mid:    #C79A32;  /* stop scuro gradiente CTA */
+  --fw-gold-deep:   #B47F1F;  /* stop scuro gradiente testo · filetto pergamena */
+  --fw-gold-dark:   #7A5510;  /* bordo CTA · base sigillo */
+  --fw-gold-soft:   rgba(233, 196, 106, 0.35);  /* underline link */
+  --fw-gold-line:   rgba(233, 196, 106, 0.22);  /* hairline strutturale */
+  --fw-gold-veil:   rgba(233, 196, 106, 0.12);  /* alone focus */
+  --fw-gold-haze:   rgba(233, 196, 106, 0.10);  /* radial di atmosfera */
+
+  /* ---- PERGAMENA ---------------------------------------------------------- */
+  --fw-parchment:   #F4EBDA;  /* testo display su fondo scuro · riga nastro */
+  --fw-parchment-2: #E7DCC3;  /* riservato: dichiarato nel contratto, non ancora usato */
+  --fw-parchment-3: #C9BB9C;  /* riservato: dichiarato nel contratto, non ancora usato */
+  --fw-parchment-hi: #F8EEDA; /* stop chiaro superficie tessera */
+  --fw-parchment-mid:#EEDFC3; /* stop intermedio superficie tessera */
+  --fw-parchment-lo: #E1CFAB; /* stop scuro superficie tessera */
+
+  /* ---- CREMISI E INK ------------------------------------------------------ */
+  --fw-crimson:      #C1272D;                  /* ufficialità e obbligo — MAI errore (§A.9.6) */
+  --fw-crimson-line: rgba(193, 39, 45, 0.55);  /* bordo badge RICHIESTO · timbro */
+  --fw-ink:          #0f1116;                  /* testo su pergamena · testo su oro */
+
+  /* ---- COLORI SOCIALI (TeamCrest.jsx TEAM_COLORS) ------------------------- */
+  --fw-club-gold:    var(--fw-gold);
+  --fw-club-crimson: var(--fw-crimson);
+  --fw-club-navy:    #1E3A5F;
+  --fw-club-bosco:   #2F6A3E;
+
+  /* ---- CANALE DI PERSONALIZZAZIONE (pattern P12) -------------------------- */
+  /* Legge la custom property che il React del Tesseramento imposta inline
+     (FantaEntryTesseramento.jsx:72-74). Ponte verso il sistema esistente:
+     nessuna pagina deve cambiare il nome che già scrive. */
+  --fw-club-accent: var(--fanta-club-accent, var(--fw-gold));
+
+  /* ---- ATMOSFERA ---------------------------------------------------------- */
+  --fw-atmo-navy: rgba(30, 58, 95, 0.55);   /* radial sinistro */
+
+  /* ===========================================================================
+   * 2. GRADIENTI
+   * ======================================================================== */
+  --fw-grad-cta: linear-gradient(180deg, var(--fw-gold-bright) 0%, var(--fw-gold-mid) 100%);
+  --fw-grad-gold-text: linear-gradient(180deg, var(--fw-gold-bright) 0%, var(--fw-gold-deep) 100%);
+  --fw-grad-parchment: linear-gradient(160deg,
+      var(--fw-parchment-hi) 0%,
+      var(--fw-parchment-mid) 55%,
+      var(--fw-parchment-lo) 100%);
+  /* superficie generica (tile, pannello) */
+  --fw-grad-surface: linear-gradient(180deg,
+      rgba(28, 36, 56, 0.85),
+      rgba(11, 16, 32, 0.85));
+  /* input: stesso stop alto, stop basso più chiaro del tile */
+  --fw-grad-input: linear-gradient(180deg,
+      rgba(28, 36, 56, 0.85),
+      rgba(15, 20, 35, 0.85));
+  --fw-grad-surface-active: linear-gradient(180deg,
+      rgba(60, 45, 12, 0.55),
+      rgba(20, 15, 5, 0.85));
+  /* superficie piatta dei blocchi nota (midnight-2 velato) */
+  --fw-surface-note: rgba(19, 26, 46, 0.55);
+  --fw-surface-soft: rgba(19, 26, 46, 0.60);
+  --fw-grad-band: linear-gradient(180deg,
+      rgba(9, 12, 22, 0.94),
+      rgba(6, 9, 16, 0.88));
+  --fw-grad-scrim: linear-gradient(180deg,
+      rgba(5, 7, 13, 0),
+      rgba(5, 7, 13, 0.95) 30%,
+      rgba(5, 7, 13, 1));
+  --fw-grad-seal: radial-gradient(circle at 30% 30%, var(--fw-gold) 0 3px, transparent 3.5px),
+                  radial-gradient(circle, var(--fw-gold-deep) 40%, var(--fw-gold-dark) 100%);
+
+  /* ===========================================================================
+   * 3. OPACITÀ E COLORI DI TESTO
+   * Scala §A.1. I token `-a*` sono gli scalari; i `--fw-text-*` i valori pronti.
+   * ======================================================================== */
+  --fw-alpha-body:        0.72;
+  --fw-alpha-lede:        0.70;
+  --fw-alpha-meta:        0.55;
+  --fw-alpha-tertiary:    0.50;
+  --fw-alpha-quiet:       0.45;
+  --fw-alpha-placeholder: 0.28;
+  --fw-alpha-border-soft: 0.20;
+  --fw-alpha-border-inert:0.08;
+
+  /* Su fondo mezzanotte */
+  --fw-text-strong:      var(--fw-parchment);
+  --fw-text-body:        rgba(244, 235, 218, 0.72);
+  --fw-text-lede:        rgba(244, 235, 218, 0.70);
+  --fw-text-meta:        rgba(244, 235, 218, 0.55);
+  --fw-text-tertiary:    rgba(244, 235, 218, 0.50);
+  --fw-text-quiet:       rgba(244, 235, 218, 0.45);
+  --fw-text-placeholder: rgba(244, 235, 218, 0.28);
+
+  /* Su pergamena */
+  --fw-ink-strong:    var(--fw-ink);
+  --fw-ink-secondary: rgba(15, 17, 22, 0.55);
+  --fw-ink-micro:     rgba(15, 17, 22, 0.50);
+
+  /* Bruni su pergamena (filetti, trame, divisori della tessera) */
+  --fw-sepia-line:    rgba(180, 127, 31, 0.55);
+  --fw-sepia-dash:    rgba(180, 127, 31, 0.50);
+  --fw-sepia-rule:    rgba(180, 127, 31, 0.35);
+  --fw-sepia-wash:    rgba(180, 127, 31, 0.09);
+  --fw-sepia-grain:   rgba(120, 84, 25, 0.08);
+  --fw-sepia-hatch:   rgba(120, 84, 25, 0.045);
+
+  /* ===========================================================================
+   * 4. TIPOGRAFIA
+   * Tre voci non intercambiabili: Anton dichiara, Montserrat spiega,
+   * Roboto Mono misura (§A.9.5).
+   * ======================================================================== */
+  /* Fallback esplicito: il Tesseramento scriveva `var(--font-display)`, che a
+     livello globale è Oswald (index.css:30) — un fallback non neutro rimasto
+     implicito. Qui è dichiarato. */
+  --fw-font-display: 'Anton', 'Oswald', Impact, sans-serif;
+  --fw-font-body:    'Montserrat', system-ui, -apple-system, sans-serif;
+  --fw-font-mono:    'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ---- Scala display (Anton, peso 400) ------------------------------------
+     Regola d'oro §A.2: il tracking cresce mentre la dimensione cala.
+     Ogni gradino porta con sé il proprio tracking: usarli in coppia. */
+  --fw-display-hero: clamp(46px, 12vw, 62px);
+  --fw-display-xl:   30px;
+  --fw-display-lg:   22px;
+  --fw-display-md:   20px;
+  --fw-display-sm:   19px;
+  --fw-display-xs:   15px;
+  --fw-display-2xs:  14px;
+  --fw-display-3xs:  13.5px;
+
+  --fw-track-hero: 0.5px;
+  --fw-track-xl:   1.6px;
+  --fw-track-lg:   1.5px;
+  --fw-track-md:   2.8px;
+  --fw-track-sm:   1.3px;
+  --fw-track-xs:   2px;
+  --fw-track-2xs:  2.4px;
+  --fw-track-3xs:  1.4px;
+  --fw-track-stamp: 3.5px;
+
+  --fw-leading-hero: 0.92;
+  --fw-leading-xl:   1.05;
+  --fw-leading-tile: 1.15;
+
+  --fw-weight-display: 400;   /* Anton ha un solo peso: non usarne altri */
+
+  /* ---- Scala prosa (Montserrat) ------------------------------------------- */
+  --fw-body-md: 13px;
+  --fw-body-sm: 12.5px;
+  --fw-body-xs: 11px;
+  --fw-leading-body: 1.5;
+  --fw-leading-body-tight: 1.45;
+  --fw-measure: 34ch;         /* larghezza di lettura massima (hero-sub) */
+
+  /* ---- Scala metadata (Roboto Mono, sempre uppercase) --------------------- */
+  --fw-mono-lg:  11px;
+  --fw-mono-md:  10.5px;
+  --fw-mono-sm:  10px;
+  --fw-mono-xs:  9.5px;
+  --fw-mono-2xs: 9px;
+  --fw-mono-3xs: 8.5px;
+
+  --fw-track-mono-tight: 1px;
+  --fw-track-mono:       1.4px;
+  --fw-track-mono-wide:  1.8px;
+  --fw-track-mono-xwide: 2.2px;
+  --fw-track-mono-max:   3px;
+
+  --fw-weight-mono:        400;
+  --fw-weight-mono-medium: 500;
+  --fw-weight-mono-bold:   700;
+
+  /* ===========================================================================
+   * 5. SPACING — base 2px, scala del contratto §A.3
+   * ======================================================================== */
+  --fw-space-2:  2px;
+  --fw-space-4:  4px;
+  --fw-space-6:  6px;
+  --fw-space-8:  8px;
+  --fw-space-10: 10px;
+  --fw-space-12: 12px;
+  --fw-space-14: 14px;
+  --fw-space-16: 16px;
+  --fw-space-18: 18px;
+  --fw-space-20: 20px;
+  --fw-space-22: 22px;
+  --fw-space-24: 24px;
+  --fw-space-28: 28px;
+
+  /* Gutter di pagina: unica costante non negoziabile. Nel Tesseramento è
+     ripetuto su 5 selettori più un media query; qui è un token solo. */
+  --fw-gutter: var(--fw-space-20);
+
+  /* ===========================================================================
+   * 6. RADIUS — scala a 7 gradini §A.4
+   * Diverge deliberatamente da --radius-sm/md/lg globali (6/10/16): il raggio
+   * piccolo è ciò che fa leggere il sistema come "stampa" e non come "app".
+   * ======================================================================== */
+  --fw-radius-2xs:  3px;   /* badge · indice · nastro */
+  --fw-radius-xs:   4px;   /* DEFAULT interattivo: input, CTA, timbro */
+  --fw-radius-sm:   5px;   /* chip colore */
+  --fw-radius-md:   6px;   /* tile selezionabile */
+  --fw-radius-lg:   8px;   /* filetto interno tessera */
+  --fw-radius-xl:  14px;   /* tessera */
+  --fw-radius-full: 50%;   /* LED · check · dot · sigillo */
+
+  /* ===========================================================================
+   * 7. BORDER
+   * ======================================================================== */
+  --fw-border-w:       1px;     /* hairline: default assoluto */
+  --fw-border-w-stamp: 2.5px;   /* timbro */
+  --fw-border-w-rail:  3px;     /* rail sinistro dei blocchi nota */
+
+  --fw-border-active:   var(--fw-gold-line);              /* struttura viva */
+  --fw-border-focus:    var(--fw-gold);                   /* focus / selezione */
+  --fw-border-inert:    rgba(244, 235, 218, 0.08);        /* superficie a riposo */
+  --fw-border-soft:     rgba(244, 235, 218, 0.20);        /* badge facoltativo */
+  --fw-border-required: var(--fw-crimson-line);           /* badge richiesto */
+  --fw-border-style-optional: dashed;                     /* opzionale/soft */
+
+  /* ===========================================================================
+   * 8. SHADOW — tre registri distinti §A.4
+   * ======================================================================== */
+  /* 8.1 Elevazione fisica — riservata all'artefatto (tessera) */
+  --fw-shadow-artifact:
+      0 30px 60px -30px rgba(0, 0, 0, 0.9),
+      0 12px 24px -12px rgba(0, 0, 0, 0.6),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.55);
+
+  /* 8.2 Glow oro — selezione e azione */
+  --fw-shadow-glow-xs: 0 0 6px var(--fw-gold);
+  --fw-shadow-glow-sm: 0 0 8px rgba(233, 196, 106, 0.40);
+  --fw-shadow-glow-md: 0 8px 20px -8px rgba(233, 196, 106, 0.50);
+  --fw-shadow-glow-lg: 0 12px 30px -12px rgba(233, 196, 106, 0.55);
+  --fw-shadow-glow-xl: 0 16px 34px -12px rgba(233, 196, 106, 0.65);
+  --fw-shadow-selected:
+      0 8px 20px -8px rgba(233, 196, 106, 0.50),
+      inset 0 0 0 1px rgba(233, 196, 106, 0.50);
+
+  /* 8.3 Bevel inset — solo CTA primaria */
+  --fw-shadow-bevel:
+      inset 0 1px 0 rgba(255, 255, 255, 0.60),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.20);
+  --fw-shadow-bevel-hover:
+      inset 0 1px 0 rgba(255, 255, 255, 0.70),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+
+  /* Focus ring (input :focus-within) */
+  --fw-focus-ring: 0 0 0 3px var(--fw-gold-veil);
+
+  /* Filtro drop-shadow per gli SVG (crest, sigillo di band) */
+  --fw-drop-crest: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+  --fw-drop-seal:  drop-shadow(0 2px 3px rgba(0, 0, 0, 0.55));
+
+  /* ===========================================================================
+   * 9. TEXTURE — la firma anti-SaaS del sistema §A.4
+   * Strati 1-2: ogni schermata FantaWalrus.
+   * Strati 3-4: esclusivi della tessera (§A.11).
+   * ======================================================================== */
+  /* Strato 1 — atmosfera di fondo (z-index -2) */
+  --fw-texture-atmosphere:
+      radial-gradient(650px 460px at 100% -10%, var(--fw-gold-haze), transparent 60%),
+      radial-gradient(700px 500px at -20% 20%, var(--fw-atmo-navy), transparent 62%),
+      linear-gradient(180deg, #05070d 0%, #0b1020 60%, #05070d 100%),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.02) 0 1px, transparent 1px 3px);
+
+  /* Strato 2 — grana finissima (z-index -1) */
+  --fw-texture-grain: radial-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1.2px);
+  --fw-texture-grain-size: 3px 3px;
+  --fw-texture-grain-blend: overlay;
+  --fw-texture-grain-opacity: 0.6;
+
+  /* Strato 3 — trama pergamena (solo tessera) */
+  --fw-texture-parchment:
+      repeating-linear-gradient(45deg, var(--fw-sepia-hatch) 0 1px, transparent 1px 6px),
+      radial-gradient(var(--fw-sepia-grain) 1px, transparent 1.2px);
+  --fw-texture-parchment-size: auto, 3px 3px;
+  --fw-texture-parchment-blend: multiply;
+
+  /* Strato 4 — filetto oro interno (solo tessera) */
+  --fw-filet-inset: 8px;
+
+  /* Divisori */
+  --fw-divider-dashed: repeating-linear-gradient(90deg,
+      rgba(180, 127, 31, 0.6) 0 3px, transparent 3px 6px);
+
+  /* ===========================================================================
+   * 10. STEMMI — scala canonica §A.8
+   * TeamCrest ha aspect ratio fisso 1:1.2 (height = size * 1.2).
+   * ======================================================================== */
+  --fw-crest-ratio: 1.2;
+  --fw-crest-xs:  28px;   /* riga di tabella / classifica */
+  --fw-crest-sm:  48px;   /* lista */
+  --fw-crest-md:  62px;   /* griglia di scelta */
+  --fw-crest-lg:  96px;   /* header squadra */
+  --fw-crest-xl: 148px;   /* vetrina tessera */
+
+  /* ===========================================================================
+   * 11. SHELL — due archetipi (decisione Eros, 2026-08-03)
+   * Stessi token, stessa band, stessi strati 1-2 di texture: cambia solo la
+   * larghezza e la densità.
+   * ======================================================================== */
+  --fw-shell-narrow:   440px;   /* flussi cliente: Entry, Team Builder, Picker, Home */
+  --fw-shell-wide-min: 720px;   /* soglia sotto la quale il wide collassa a colonna */
+  --fw-shell-wide-max: 960px;   /* dati e regia: Classifica, Matchday, VAR */
+  --fw-band-h: 72px;
+  --fw-band-blur: 6px;
+
+  /* Breakpoint (documentati come token; le @media li ripetono per necessità
+     della sintassi CSS, che non accetta var() nelle condizioni) */
+  --fw-bp-gutter: 520px;
+  --fw-bp-grid:   720px;
+
+  /* ===========================================================================
+   * 12. STATI SEMANTICI  [NUOVO — non esisteva nel Tesseramento]
+   * Buco §A.1/§A.12.4: senza questi token ogni schermata inventa i propri
+   * (già successo: #8aff8a, #ff6b6b, #fff3cd). Ogni tinta è derivata dalla
+   * palette esistente e schiarita quanto basta per essere leggibile su
+   * --fw-midnight-0, che i colori sociali originali non sono.
+   *
+   * VINCOLO: il cremisi resta riservato all'ufficialità e all'obbligo
+   * (§A.9.6). L'errore usa quindi una tinta distinta per hue e chiarezza,
+   * così che «RICHIESTO» e «ERRORE» non si confondano mai.
+   * ======================================================================== */
+  /* success — da BOSCO #2F6A3E, schiarito */
+  --fw-success:      #5FA96B;
+  --fw-success-line: rgba(95, 169, 107, 0.45);
+  --fw-success-wash: rgba(95, 169, 107, 0.10);
+
+  /* warning — #E8A02E, l'ambra della palette araldica p8 (TeamCrest.jsx:45),
+     già in-contratto e distinguibile dall'oro di selezione */
+  --fw-warning:      #E8A02E;
+  --fw-warning-line: rgba(232, 160, 46, 0.45);
+  --fw-warning-wash: rgba(232, 160, 46, 0.10);
+
+  /* error — NON il cremisi: rosso più chiaro e più caldo, distinto a colpo
+     d'occhio da #C1272D che resta l'obbligo */
+  --fw-error:      #E4574F;
+  --fw-error-line: rgba(228, 87, 79, 0.45);
+  --fw-error-wash: rgba(228, 87, 79, 0.10);
+
+  /* info — da MARINA #1E3A5F, schiarito */
+  --fw-info:      #6E9BD1;
+  --fw-info-line: rgba(110, 155, 209, 0.45);
+  --fw-info-wash: rgba(110, 155, 209, 0.10);
+
+  /* ===========================================================================
+   * 13. AZIONI
+   * ======================================================================== */
+  /* 13.1 Primaria — estratta dal Tesseramento */
+  --fw-cta-bg:      var(--fw-grad-cta);
+  --fw-cta-fg:      var(--fw-ink);
+  --fw-cta-border:  var(--fw-gold-dark);
+  --fw-cta-pad-y:   var(--fw-space-16);
+  --fw-cta-pad-x:   var(--fw-space-20);
+  --fw-cta-gap:     var(--fw-space-12);
+
+  /* 13.2 Secondaria / ghost  [NUOVO — buco §A.12.5]
+     Nel Tesseramento l'unica affordance non primaria è il meta-link mono.
+     Il Team Builder, non avendo alternativa, clona il bottone primario
+     (FantaTeamBuilder.jsx:286) e la gerarchia collassa. Stesse metriche
+     della primaria, peso visivo opposto: nessun riempimento, nessun bevel. */
+  --fw-cta-ghost-bg:           transparent;
+  --fw-cta-ghost-bg-hover:     rgba(233, 196, 106, 0.06);
+  --fw-cta-ghost-fg:           var(--fw-gold);
+  --fw-cta-ghost-border:       var(--fw-gold-line);
+  --fw-cta-ghost-border-hover: var(--fw-gold);
+
+  /* 13.3 Disabled — regola caratteristica del sistema: l'oro diventa peltro,
+     non sbiadisce. Niente opacity. */
+  --fw-disabled-filter: grayscale(0.65) brightness(0.65);
+  --fw-disabled-cursor: not-allowed;
+
+  /* ===========================================================================
+   * 14. DENSITÀ TABELLARE  [NUOVO — nessun precedente nel Tesseramento]
+   * §F.4: la schermata di riferimento non ha tabelle. Questi token sono
+   * inventati, non estratti, e restano da validare visivamente in F4 con il
+   * primo consumatore reale (Standings).
+   * Anton non regge la densità (§A.12.1): la voce dei dati è Roboto Mono per
+   * i numeri e Montserrat per i nomi. Nessun token display qui.
+   * ======================================================================== */
+  --fw-table-row-h:         40px;
+  --fw-table-row-h-compact: 32px;
+  --fw-table-cell-pad-x:    var(--fw-space-10);
+  --fw-table-cell-pad-y:    var(--fw-space-8);
+  --fw-table-head-size:     var(--fw-mono-xs);
+  --fw-table-head-track:    var(--fw-track-mono-wide);
+  --fw-table-cell-size:     var(--fw-body-md);
+  --fw-table-num-size:      var(--fw-mono-lg);
+  --fw-table-numeric:       tabular-nums;   /* per font-variant-numeric */
+  --fw-table-line:          var(--fw-border-inert);
+  --fw-table-row-alt:       rgba(255, 255, 255, 0.02);
+  --fw-table-row-hover:     rgba(233, 196, 106, 0.05);
+  --fw-table-row-self:      rgba(233, 196, 106, 0.09);  /* la squadra dell'utente */
+
+  /* ===========================================================================
+   * 15. MOTION §A.9.10
+   * ======================================================================== */
+  --fw-ease:        cubic-bezier(0.22, 1, 0.36, 1);
+  --fw-ease-inout:  cubic-bezier(0.4, 0, 0.2, 1);
+  --fw-dur-fast:    0.15s;
+  --fw-dur:         0.25s;
+  --fw-dur-slow:    0.6s;
+  --fw-lift:        -1px;   /* hover CTA */
+  --fw-lift-tile:   -2px;   /* hover tile selezionabile */
+  --fw-press:        1px;   /* active CTA */
+
+  /* ===========================================================================
+   * 16. LIVELLI
+   * ======================================================================== */
+  --fw-z-atmosphere: -2;
+  --fw-z-grain:      -1;
+  --fw-z-sticky:      5;
+}
+
+/* Gutter: 20px mobile → 28px da 520px (§A.3).
+   Centralizza il media query che il Tesseramento ripete su 5 selettori. */
+@media (min-width: 520px) {
+  .fw-root {
+    --fw-gutter: var(--fw-space-28);
+  }
+}

@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
+/* Roboto Mono (400/500/700) è caricato da index.html insieme agli altri font
+   del progetto — F0.c. L'@import che stava qui creava una richiesta di rete a
+   cascata: stessa famiglia, stessi pesi, un round-trip in meno. */
 
 /*
  * FantaWalrus — Tesseramento

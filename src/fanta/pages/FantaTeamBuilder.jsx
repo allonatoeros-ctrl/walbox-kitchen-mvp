@@ -1,13 +1,28 @@
 import { useState, useEffect, useMemo } from 'react';
-import TeamCrest, { CREST_PRESETS } from '../components/TeamCrest';
+import TeamCrest from '../components/TeamCrest';
 import { isValidLineup, buildPlayerIndex } from '../engine/scoreEngine.js';
 import playersData from '../data/players.json';
-import './FantaEntryTesseramento.css';
+import PlayerPicker from '../components/PlayerPicker.jsx';
+import {
+  FantaShell,
+  FantaBand,
+  FantaButton,
+  FantaBadge,
+  FantaPanel,
+  CREST_SIZE,
+} from '../components/ui';
 
 const LOCAL_IDENTITY_KEY = 'fanta_walrus_team_identity';
 const LOCAL_TEAM_KEY = 'fanta_walrus_custom_team';
 const MAX_BENCH = 4;
 const MAX_BENCH_GK = 1;
+const MAX_STARTERS = 11;
+
+// Limiti allineati a scoreEngine.js (ROLE_LIMITS / MAX_PER_CLUB). Servono solo
+// a disabilitare i tile in anticipo: la verità resta isValidLineup().
+const ROLE_LIMITS = { GK: 1, DEF: 5, MID: 5, FWD: 5 };
+const MAX_PER_CLUB = 3;
+const ROLE_LABELS = { GK: 'POR', DEF: 'DIF', MID: 'CEN', FWD: 'ATT' };
 
 export default function FantaTeamBuilder() {
   const [identity, setIdentity] = useState(null);
@@ -19,8 +34,10 @@ export default function FantaTeamBuilder() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LOCAL_IDENTITY_KEY);
+      // Sync one-time da localStorage al mount, non un loop di render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (raw) setIdentity(JSON.parse(raw));
-    } catch (e) {
+    } catch {
       setIdentity(null);
     } finally {
       setIdentityLoaded(true);
@@ -52,9 +69,11 @@ export default function FantaTeamBuilder() {
         .filter((r) => r && typeof r.id === 'string' && validIds.has(r.id) && r.isStarter === false && !starterIdSet.has(r.id))
         .slice(0, MAX_BENCH)
         .map((r) => r.id);
+      // Sync one-time da localStorage quando l'identità è pronta, non un loop di render.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedIds(starters.map((r) => r.id));
       setBenchIds(bench);
-    } catch (e) {
+    } catch {
       // ignore malformed storage
     }
   }, [identity, playersData]);
@@ -95,7 +114,7 @@ export default function FantaTeamBuilder() {
   function togglePlayer(id) {
     setSelectedIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
-      if (prev.length >= 11) return prev;
+      if (prev.length >= MAX_STARTERS) return prev;
       return [...prev, id];
     });
     setBenchIds((prev) => prev.filter((x) => x !== id));
@@ -126,10 +145,32 @@ export default function FantaTeamBuilder() {
     };
     try {
       localStorage.setItem(LOCAL_TEAM_KEY, JSON.stringify(team));
-    } catch (e) {
+    } catch {
       // ignore storage errors
     }
     setSaved(true);
+  }
+
+  // La panchina si sceglie fra i non titolari (invariato rispetto a prima
+  // dell'estrazione: era il .filter() inline della seconda lista).
+  const benchCandidates = useMemo(
+    () => playersData.filter((p) => !selectedIds.includes(p.id)),
+    [selectedIds]
+  );
+
+  // Regole di indisponibilità allineate a scoreEngine.js. Vivono qui, non nel
+  // picker: il picker resta ignaro del regolamento.
+  function starterUnavailableReason(p) {
+    if ((counts.clubs[p.club] || 0) >= MAX_PER_CLUB) return `MAX ${MAX_PER_CLUB} ${p.club}`;
+    if (counts.role[p.role] >= ROLE_LIMITS[p.role]) return `${ROLE_LABELS[p.role]} AL LIMITE`;
+    if (selectedIds.length >= MAX_STARTERS) return 'ROSA PIENA';
+    return null;
+  }
+
+  function benchUnavailableReason(p) {
+    if (benchIds.length >= MAX_BENCH) return 'PANCHINA PIENA';
+    if (p.role === 'GK' && benchValidation.gkCount >= MAX_BENCH_GK) return 'GIÀ 1 POR';
+    return null;
   }
 
   function goToMatchday() {
@@ -141,154 +182,149 @@ export default function FantaTeamBuilder() {
     return null;
   }
 
-  return (
-    <div className="fanta-entry">
-      <header className="fanta-entry__band">
-        <div className="fanta-entry__band-left">
-          <div className="fanta-entry__band-titles">
-            <span className="fanta-entry__band-title">FANTAWALRUS</span>
-            <span className="fanta-entry__band-sub">LA TUA SQUADRA</span>
-          </div>
-        </div>
-        <div className="fanta-entry__band-right">
-          <span className="fanta-entry__band-matchday">TEAM BUILDER</span>
-        </div>
-      </header>
+  const accentStyle = identity.teamColor?.value
+    ? { '--fanta-club-accent': identity.teamColor.value }
+    : undefined;
 
-      <section className="fanta-entry__card-wrap">
-        <div className="fanta-entry__card">
-          <div className="fanta-entry__card-head">
-            <span>IDENTITÀ</span>
-            <span className="fanta-entry__card-num">{identity.teamId}</span>
-          </div>
-          <div className="fanta-entry__card-crest">
+  return (
+    <FantaShell width="narrow" style={accentStyle} data-testid="fanta-team-page">
+      <FantaBand
+        title="FANTAWALRUS"
+        subtitle="LA TUA SQUADRA"
+        status="TEAM BUILDER"
+        context={validation.valid ? 'FORMAZIONE VALIDA' : `${selectedIds.length}/${MAX_STARTERS} TITOLARI`}
+        live={validation.valid}
+      />
+
+      <section className="fw-section" aria-label="Identità squadra">
+        <FantaPanel
+          title="IDENTITÀ"
+          meta={identity.teamId}
+          data-testid="fanta-team-identity"
+        >
+          <div className="fw-identity">
             <TeamCrest
               shape={identity.crest?.preset?.shape}
               pattern={identity.crest?.preset?.pattern}
               palette={identity.crest?.preset?.palette}
               initial={identity.teamName || 'T'}
-              size={125}
+              size={CREST_SIZE.lg}
               empty={!identity.crest}
               medallion
               goldBorder
             />
+            <div className="fw-identity__text">
+              <span className="fw-stat__label">CLUB</span>
+              <span className="fw-identity__name" data-testid="fanta-team-name">
+                {(identity.teamName || '').toUpperCase()}
+              </span>
+              {identity.managerNickname && (
+                <span className="fw-identity__manager">{identity.managerNickname.toUpperCase()}</span>
+              )}
+            </div>
           </div>
-          <div className="fanta-entry__card-foot">
-            <span className="fanta-entry__card-label">NOME</span>
-            <span className="fanta-entry__card-name">{(identity.teamName || '').toUpperCase()}</span>
-          </div>
-        </div>
+        </FantaPanel>
       </section>
 
-      <section className="fanta-entry__selector">
-        <div className="fanta-entry__selector-header">
-          <span className="fanta-entry__selector-label">SELEZIONA 11 TITOLARI</span>
-          <span className="fanta-entry__selector-hint">
-            1 GK · max 5 DEF/MID/FWD · max 3 per club
-          </span>
-        </div>
-        <div className="fanta-entry__selector-track">
-          {playersData.map((p) => {
-            const selected = selectedIds.includes(p.id);
-            const disabled = !selected && selectedIds.length >= 11;
+      <section className="fw-section" aria-label="Conteggio rosa">
+        <div className="fw-stat-grid" data-testid="fanta-team-counts">
+          {['GK', 'DEF', 'MID', 'FWD'].map((role) => {
+            const n = counts.role[role];
+            const limit = ROLE_LIMITS[role];
+            const full = n >= limit;
             return (
-              <button
-                key={p.id}
-                type="button"
-                className={`fanta-entry__selector-cell${selected ? ' fanta-entry__selector-cell--selected' : ''}`}
-                onClick={() => togglePlayer(p.id)}
-                disabled={disabled}
-                aria-pressed={selected}
-              >
-                <div>{p.name}</div>
-                <div style={{ fontSize: 12, opacity: 0.8 }}>
-                  {p.role} · {p.club}
-                </div>
-              </button>
+              <div className="fw-stat" key={role}>
+                <span className="fw-stat__label">{ROLE_LABELS[role]}</span>
+                <span className={`fw-stat__value${full ? ' fw-stat__value--done' : ''}`}>
+                  {n}/{limit}
+                </span>
+              </div>
             );
           })}
+          <div className="fw-stat">
+            <span className="fw-stat__label">TOTALE</span>
+            <span
+              className={`fw-stat__value${validation.valid ? ' fw-stat__value--done' : ''}`}
+              data-testid="fanta-team-total"
+            >
+              {selectedIds.length}/{MAX_STARTERS}
+            </span>
+          </div>
         </div>
       </section>
 
-      <section className="fanta-entry__selector">
-        <div className="fanta-entry__selector-header">
-          <span className="fanta-entry__selector-label">SELEZIONA PANCHINA (max {MAX_BENCH})</span>
-          <span className="fanta-entry__selector-hint">
-            non titolari · max {MAX_BENCH_GK} GK
-          </span>
-        </div>
-        <div className="fanta-entry__selector-track">
-          {playersData
-            .filter((p) => !selectedIds.includes(p.id))
-            .map((p) => {
-              const selected = benchIds.includes(p.id);
-              const isGk = p.role === 'GK';
-              const disabled =
-                !selected && (benchIds.length >= MAX_BENCH || (isGk && benchValidation.gkCount >= MAX_BENCH_GK));
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={`fanta-entry__selector-cell${selected ? ' fanta-entry__selector-cell--selected' : ''}`}
-                  onClick={() => toggleBench(p.id)}
-                  disabled={disabled}
-                  aria-pressed={selected}
-                >
-                  <div>{p.name}</div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>
-                    {p.role} · {p.club}
-                  </div>
-                </button>
-              );
-            })}
-        </div>
-      </section>
+      <PlayerPicker
+        index="01"
+        title="TITOLARI"
+        badge={<FantaBadge variant="required">RICHIESTO</FantaBadge>}
+        hint={`1 POR · max 5 DIF/CEN/ATT · max ${MAX_PER_CLUB} per club`}
+        players={playersData}
+        selectedIds={selectedIds}
+        onToggle={togglePlayer}
+        getUnavailableReason={starterUnavailableReason}
+        testId="fanta-team-starters"
+      />
 
-      <section className="fanta-entry__rules">
-        <div>
-          Conteggio: GK {counts.role.GK}/1 · DEF {counts.role.DEF}/5 · MID {counts.role.MID}/5 · FWD {counts.role.FWD}/5 · Totale {selectedIds.length}/11
-        </div>
-        <div>
-          Panchina: {benchIds.length}/{MAX_BENCH} · GK {benchValidation.gkCount}/{MAX_BENCH_GK} ·{' '}
-          {benchValidation.complete ? 'Completa' : 'Incompleta (manca il portiere di riserva)'}
-        </div>
-        {!benchValidation.valid && (
-          <div style={{ color: '#ff6b6b' }}>
-            {benchValidation.errors.map((e, i) => (
-              <div key={`bench-err-${i}`}>{e}</div>
-            ))}
-          </div>
-        )}
-        {!validation.valid && (
-          <div style={{ color: '#ff6b6b' }}>
-            {validation.errors.map((e, i) => (
-              <div key={i}>{e}</div>
-            ))}
-          </div>
-        )}
+      <PlayerPicker
+        index="02"
+        title="PANCHINA"
+        badge={<FantaBadge variant="optional">MAX {MAX_BENCH}</FantaBadge>}
+        hint={`non titolari · max ${MAX_BENCH_GK} POR · ${benchIds.length}/${MAX_BENCH} scelti`}
+        players={benchCandidates}
+        selectedIds={benchIds}
+        onToggle={toggleBench}
+        getUnavailableReason={benchUnavailableReason}
+        testId="fanta-team-bench"
+      />
+
+      <div
+        className={`fw-note${validation.valid ? ' fw-note--success' : ' fw-note--error'}`}
+        data-testid="fanta-team-validation"
+      >
+        <p className="fw-note__line">
+          <strong>Panchina</strong>
+          {benchValidation.complete ? 'completa.' : 'incompleta: manca il portiere di riserva.'}
+        </p>
+        {benchValidation.errors.map((e, i) => (
+          <p className="fw-note__line fw-note__line--error" key={`bench-err-${i}`}>{e}</p>
+        ))}
+        {!validation.valid &&
+          validation.errors.map((e, i) => (
+            <p className="fw-note__line fw-note__line--error" key={`lineup-err-${i}`}>{e}</p>
+          ))}
         {validation.valid && (
-          <div style={{ color: '#8aff8a' }}>Formazione valida</div>
+          <p className="fw-note__line fw-note__line--success">Formazione valida.</p>
         )}
-      </section>
+      </div>
 
-      <footer className="fanta-entry__cta">
-        <button
-          type="button"
-          className="fanta-entry__cta-button"
+      <footer className="fw-footer">
+        <FantaButton
+          variant="primary"
+          block
           disabled={!validation.valid}
           onClick={handleSave}
+          data-testid="fanta-team-save-cta"
         >
-          SALVA FORMAZIONE
-        </button>
+          Salva formazione
+        </FantaButton>
         {saved && (
-          <>
-            <span className="fanta-entry__cta-sub">Formazione salvata localmente</span>
-            <button type="button" className="fanta-entry__cta-button" onClick={goToMatchday} style={{ marginTop: 8 }}>
-              VAI ALLA GIORNATA →
-            </button>
-          </>
+          <FantaButton
+            variant="ghost"
+            block
+            onClick={goToMatchday}
+            data-testid="fanta-team-matchday-cta"
+          >
+            Vai alla giornata →
+          </FantaButton>
         )}
+        <span className="fw-footer__sub" data-testid="fanta-team-cta-sub">
+          {saved
+            ? 'Formazione salvata su questo telefono'
+            : validation.valid
+              ? 'Pronta da salvare'
+              : 'Completa gli 11 titolari per salvare'}
+        </span>
       </footer>
-    </div>
+    </FantaShell>
   );
 }

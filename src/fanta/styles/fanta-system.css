@@ -1,0 +1,681 @@
+@import './fanta-tokens.css';
+
+/* =============================================================================
+ * FANTAWALRUS — DESIGN SYSTEM (fase F0.b)
+ * Classi `.fw-*` costruite esclusivamente sopra i token `--fw-*`.
+ * Materializza i pattern P1–P14 di FANTAWALRUS_VISUAL_SYSTEM_CONTRACT_V1.
+ *
+ * REGOLE
+ * - Nessun valore letterale: colori, spazi, raggi e ombre passano dai token.
+ * - Gli elementi esclusivi del Tesseramento (tessera, timbro, sigillo, nastro,
+ *   cursore) NON sono qui: restano in FantaEntryTesseramento.css (§A.11).
+ * - Texture: strati 1-2 su ogni shell, strati 3-4 mai.
+ * ========================================================================== */
+
+/* =============================================================================
+ * P1 — SHELL
+ * ========================================================================== */
+.fw-root {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 100dvh;
+  background: var(--fw-midnight-0);
+  color: var(--fw-text-strong);
+  font-family: var(--fw-font-body);
+  overflow-x: hidden;
+  isolation: isolate;
+  padding-bottom: var(--fw-space-24);
+}
+
+.fw-shell--narrow { max-width: var(--fw-shell-narrow); }
+.fw-shell--wide   { max-width: var(--fw-shell-wide-max); }
+
+/* Strato 1 — atmosfera */
+.fw-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--fw-z-atmosphere);
+  background: var(--fw-texture-atmosphere);
+  pointer-events: none;
+}
+
+/* Strato 2 — grana finissima */
+.fw-root::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: var(--fw-z-grain);
+  background-image: var(--fw-texture-grain);
+  background-size: var(--fw-texture-grain-size);
+  mix-blend-mode: var(--fw-texture-grain-blend);
+  opacity: var(--fw-texture-grain-opacity);
+  pointer-events: none;
+}
+
+/* =============================================================================
+ * P2 — BAND (header)
+ * ========================================================================== */
+.fw-band {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fw-space-8);
+  min-height: var(--fw-band-h);
+  padding: var(--fw-space-12) var(--fw-gutter);
+  background: var(--fw-grad-band);
+  border-bottom: var(--fw-border-w) solid var(--fw-border-active);
+  backdrop-filter: blur(var(--fw-band-blur));
+}
+
+.fw-band__left { display: flex; align-items: center; gap: var(--fw-space-12); }
+.fw-band__crest { flex: 0 0 auto; filter: var(--fw-drop-seal); display: inline-flex; }
+.fw-band__titles { display: flex; flex-direction: column; gap: var(--fw-space-2); min-width: 0; }
+
+.fw-band__title {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-lg);
+  letter-spacing: var(--fw-track-lg);
+  line-height: 24px;
+  color: var(--fw-text-strong);
+}
+
+.fw-band__sub {
+  font-family: var(--fw-font-mono);
+  font-weight: var(--fw-weight-mono-medium);
+  font-size: var(--fw-mono-xs);
+  letter-spacing: var(--fw-track-mono-wide);
+  color: var(--fw-text-meta);
+}
+
+.fw-band__right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--fw-space-4);
+  text-align: right;
+}
+
+.fw-band__status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fw-space-6);
+  font-family: var(--fw-font-mono);
+  font-weight: var(--fw-weight-mono-bold);
+  font-size: var(--fw-mono-sm);
+  letter-spacing: var(--fw-track-mono);
+  color: var(--fw-gold);
+}
+
+.fw-band__led {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--fw-radius-full);
+  background: var(--fw-gold);
+  box-shadow: var(--fw-shadow-glow-xs);
+  flex: 0 0 auto;
+}
+
+.fw-band__led--live { animation: fw-led 2.4s ease-in-out infinite; }
+
+@keyframes fw-led { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+.fw-band__context {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-xs);
+  letter-spacing: var(--fw-track-mono-wide);
+  color: var(--fw-text-meta);
+}
+
+/* =============================================================================
+ * P3 — SECTION HEAD
+ * ========================================================================== */
+.fw-section {
+  padding: var(--fw-space-16) var(--fw-gutter) var(--fw-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--fw-space-10);
+}
+
+.fw-section-head { display: flex; align-items: center; gap: var(--fw-space-10); }
+
+.fw-section-head__label {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-xs);
+  letter-spacing: var(--fw-track-xs);
+  color: var(--fw-text-strong);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.fw-section-head__hint {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-2xs);
+  letter-spacing: var(--fw-track-mono);
+  color: var(--fw-text-tertiary);
+  flex: 0 0 auto;
+}
+
+/* Sotto-riga descrittiva a piena larghezza */
+.fw-section__hint {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-2xs);
+  letter-spacing: var(--fw-track-mono);
+  color: var(--fw-text-tertiary);
+}
+
+/* =============================================================================
+ * BADGE (§A.7) — required / optional / index / stati semantici
+ * ========================================================================== */
+.fw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fw-space-4);
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-2xs);
+  letter-spacing: var(--fw-track-mono-wide);
+  padding: 3px var(--fw-space-6);
+  border-radius: var(--fw-radius-2xs);
+  border: var(--fw-border-w) solid transparent;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.fw-badge--index {
+  font-size: var(--fw-mono-md);
+  letter-spacing: var(--fw-track-mono);
+  color: var(--fw-gold);
+  border-color: var(--fw-border-active);
+}
+
+.fw-badge--required { color: var(--fw-crimson); border-color: var(--fw-border-required); }
+.fw-badge--optional { color: var(--fw-text-meta);  border-color: var(--fw-border-soft); }
+
+.fw-badge--success { color: var(--fw-success); border-color: var(--fw-success-line); background: var(--fw-success-wash); }
+.fw-badge--warning { color: var(--fw-warning); border-color: var(--fw-warning-line); background: var(--fw-warning-wash); }
+.fw-badge--error   { color: var(--fw-error);   border-color: var(--fw-error-line);   background: var(--fw-error-wash); }
+.fw-badge--info    { color: var(--fw-info);    border-color: var(--fw-info-line);    background: var(--fw-info-wash); }
+
+.fw-badge--neutral { color: var(--fw-text-meta); border-color: var(--fw-border-inert); }
+
+/* =============================================================================
+ * PANEL — archetipo "superficie scura" (§A.7)
+ * ========================================================================== */
+.fw-panel {
+  background: var(--fw-grad-surface);
+  border: var(--fw-border-w) solid var(--fw-border-inert);
+  border-radius: var(--fw-radius-md);
+  overflow: hidden;
+}
+
+.fw-panel--flush { border-radius: 0; border-left: 0; border-right: 0; }
+
+.fw-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fw-space-8);
+  padding: var(--fw-space-10) var(--fw-space-12);
+  border-bottom: var(--fw-border-w) solid var(--fw-border-inert);
+}
+
+.fw-panel__title {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-2xs);
+  letter-spacing: var(--fw-track-2xs);
+  color: var(--fw-text-strong);
+}
+
+.fw-panel__meta {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-xs);
+  letter-spacing: var(--fw-track-mono);
+  color: var(--fw-text-meta);
+}
+
+.fw-panel__body { padding: var(--fw-space-12); }
+.fw-panel__body--flush { padding: 0; }
+
+/* =============================================================================
+ * P9 — BUTTON (primaria + ghost + disabled)
+ * ========================================================================== */
+.fw-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--fw-cta-gap);
+  padding: var(--fw-cta-pad-y) var(--fw-cta-pad-x);
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-md);
+  letter-spacing: var(--fw-track-md);
+  text-transform: uppercase;
+  border-radius: var(--fw-radius-xs);
+  border: var(--fw-border-w) solid transparent;
+  cursor: pointer;
+  transition: transform var(--fw-dur-fast) ease,
+              box-shadow var(--fw-dur) ease,
+              filter var(--fw-dur) ease,
+              background var(--fw-dur) ease,
+              border-color var(--fw-dur) ease;
+}
+
+.fw-btn__icon  { display: inline-flex; flex: 0 0 auto; }
+.fw-btn__label { display: inline-block; }
+
+.fw-btn--primary {
+  color: var(--fw-cta-fg);
+  background: var(--fw-cta-bg);
+  border-color: var(--fw-cta-border);
+  box-shadow: var(--fw-shadow-glow-lg), var(--fw-shadow-bevel);
+}
+
+.fw-btn--primary:hover:not(:disabled) {
+  transform: translateY(var(--fw-lift));
+  box-shadow: var(--fw-shadow-glow-xl), var(--fw-shadow-bevel-hover);
+}
+
+.fw-btn--ghost {
+  color: var(--fw-cta-ghost-fg);
+  background: var(--fw-cta-ghost-bg);
+  border-color: var(--fw-cta-ghost-border);
+}
+
+.fw-btn--ghost:hover:not(:disabled) {
+  background: var(--fw-cta-ghost-bg-hover);
+  border-color: var(--fw-cta-ghost-border-hover);
+  transform: translateY(var(--fw-lift));
+}
+
+.fw-btn--sm {
+  font-size: var(--fw-display-3xs);
+  letter-spacing: var(--fw-track-3xs);
+  padding: var(--fw-space-8) var(--fw-space-12);
+  gap: var(--fw-space-8);
+}
+
+.fw-btn--block { width: 100%; }
+
+.fw-btn:active:not(:disabled) { transform: translateY(var(--fw-press)); }
+
+.fw-btn:disabled {
+  cursor: var(--fw-disabled-cursor);
+  filter: var(--fw-disabled-filter);
+  box-shadow: none;
+}
+
+.fw-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--fw-focus-ring);
+}
+
+/* =============================================================================
+ * P10 — STICKY FOOTER
+ * ========================================================================== */
+.fw-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fw-space-10);
+  align-items: stretch;
+  padding: var(--fw-space-18) var(--fw-gutter) var(--fw-space-24);
+  position: sticky;
+  bottom: 0;
+  z-index: var(--fw-z-sticky);
+  background: var(--fw-grad-scrim);
+}
+
+.fw-footer__sub {
+  display: block;
+  text-align: center;
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-md);
+  letter-spacing: var(--fw-track-mono);
+  color: var(--fw-text-meta);
+}
+
+/* =============================================================================
+ * P8 — NOTE (blocco con rail)
+ * ========================================================================== */
+.fw-note {
+  margin: var(--fw-space-20) var(--fw-gutter) var(--fw-space-6);
+  padding: var(--fw-space-14) var(--fw-space-16);
+  background: var(--fw-surface-note);
+  border-left: var(--fw-border-w-rail) solid var(--fw-gold);
+  border-radius: 0 var(--fw-radius-xs) var(--fw-radius-xs) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--fw-space-4);
+}
+
+.fw-note__line {
+  margin: 0;
+  font-size: var(--fw-body-sm);
+  line-height: var(--fw-leading-body-tight);
+  color: var(--fw-text-body);
+  letter-spacing: 0.2px;
+}
+
+.fw-note__line strong {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  letter-spacing: 1px;
+  color: var(--fw-text-strong);
+  margin-right: var(--fw-space-4);
+}
+
+.fw-note--success { border-left-color: var(--fw-success); }
+.fw-note--warning { border-left-color: var(--fw-warning); }
+.fw-note--error   { border-left-color: var(--fw-error); }
+.fw-note--info    { border-left-color: var(--fw-info); }
+
+.fw-note__line--success { color: var(--fw-success); }
+.fw-note__line--warning { color: var(--fw-warning); }
+.fw-note__line--error   { color: var(--fw-error); }
+
+/* =============================================================================
+ * P5 — INPUT
+ * ========================================================================== */
+.fw-input {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--fw-space-8);
+  padding: var(--fw-space-10) var(--fw-space-12);
+  background: var(--fw-grad-input);
+  border: var(--fw-border-w) solid var(--fw-border-active);
+  border-radius: var(--fw-radius-xs);
+  transition: border-color var(--fw-dur) ease, box-shadow var(--fw-dur) ease;
+}
+
+.fw-input:focus-within {
+  border-color: var(--fw-border-focus);
+  box-shadow: var(--fw-focus-ring);
+}
+
+.fw-input__marker {
+  width: 4px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 1px;
+  background: var(--fw-gold);
+  box-shadow: var(--fw-shadow-glow-sm);
+}
+
+.fw-input__field {
+  flex: 1 1 auto;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  padding: var(--fw-space-2) 0;
+  color: var(--fw-text-strong);
+  font-family: var(--fw-font-body);
+  font-size: var(--fw-body-md);
+  letter-spacing: 0.4px;
+}
+
+.fw-input__field::placeholder { color: var(--fw-text-placeholder); }
+
+.fw-input__counter {
+  flex: 0 0 auto;
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-md);
+  letter-spacing: var(--fw-track-mono-tight);
+  color: var(--fw-text-tertiary);
+}
+
+.fw-input__clear {
+  flex: 0 0 auto;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0 var(--fw-space-2);
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-lg);
+  color: var(--fw-text-tertiary);
+}
+
+.fw-input__clear:hover { color: var(--fw-gold); }
+
+/* =============================================================================
+ * P7 — CHIP (filtri)
+ * ========================================================================== */
+.fw-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--fw-space-6);
+}
+
+.fw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fw-space-6);
+  padding: var(--fw-space-6) var(--fw-space-10);
+  background: var(--fw-grad-surface);
+  border: var(--fw-border-w) solid var(--fw-border-inert);
+  border-radius: var(--fw-radius-sm);
+  cursor: pointer;
+  color: var(--fw-text-meta);
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-2xs);
+  letter-spacing: var(--fw-track-mono);
+  transition: transform var(--fw-dur-fast) ease,
+              border-color var(--fw-dur-fast) ease,
+              color var(--fw-dur-fast) ease,
+              box-shadow var(--fw-dur-fast) ease;
+}
+
+.fw-chip:hover { border-color: var(--fw-gold-soft); transform: translateY(var(--fw-lift)); }
+
+.fw-chip.is-selected {
+  color: var(--fw-gold);
+  border-color: var(--fw-gold);
+  box-shadow: var(--fw-shadow-glow-md);
+}
+
+.fw-chip__count {
+  font-size: var(--fw-mono-3xs);
+  color: var(--fw-text-tertiary);
+}
+
+.fw-chip.is-selected .fw-chip__count { color: var(--fw-gold); }
+
+/* =============================================================================
+ * P6 — SELECT TILE (riga selezionabile)
+ * ========================================================================== */
+.fw-tile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--fw-space-10);
+  width: 100%;
+  padding: var(--fw-space-10) var(--fw-space-12);
+  background: var(--fw-grad-surface);
+  border: var(--fw-border-w) solid var(--fw-border-inert);
+  border-radius: var(--fw-radius-md);
+  color: var(--fw-text-strong);
+  cursor: pointer;
+  text-align: left;
+  transition: transform var(--fw-dur) ease,
+              border-color var(--fw-dur) ease,
+              box-shadow var(--fw-dur) ease,
+              background var(--fw-dur) ease;
+}
+
+.fw-tile:hover:not(:disabled) {
+  transform: translateY(var(--fw-lift-tile));
+  border-color: var(--fw-border-active);
+}
+
+.fw-tile.is-selected {
+  border-color: var(--fw-gold);
+  background: var(--fw-grad-surface-active);
+  box-shadow: var(--fw-shadow-selected);
+}
+
+.fw-tile:disabled {
+  cursor: var(--fw-disabled-cursor);
+  filter: var(--fw-disabled-filter);
+}
+
+.fw-tile:focus-visible { outline: none; box-shadow: var(--fw-focus-ring); }
+
+.fw-tile__main { display: flex; flex-direction: column; gap: var(--fw-space-2); min-width: 0; }
+
+.fw-tile__name {
+  font-family: var(--fw-font-body);
+  font-size: var(--fw-body-md);
+  font-weight: 600;
+  color: var(--fw-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fw-tile__meta {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-2xs);
+  letter-spacing: var(--fw-track-mono);
+  color: var(--fw-text-tertiary);
+}
+
+.fw-tile__aside { display: flex; align-items: center; gap: var(--fw-space-8); flex: 0 0 auto; }
+
+.fw-tile__check {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--fw-radius-full);
+  background: var(--fw-gold);
+  color: var(--fw-midnight-0);
+  font-size: var(--fw-mono-lg);
+  font-weight: 800;
+  box-shadow: var(--fw-shadow-glow-sm);
+}
+
+/* Lista scrollabile di tile */
+.fw-tile-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fw-space-6);
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: var(--fw-space-4);
+}
+
+/* =============================================================================
+ * IDENTITY — stemma + nome club (header di squadra)
+ * Superficie scura, non pergamena: la tessera resta esclusiva del
+ * Tesseramento (§A.9.3).
+ * ========================================================================== */
+.fw-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--fw-space-16);
+}
+
+.fw-identity__text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fw-space-2);
+  min-width: 0;
+}
+
+.fw-identity__name {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-xl);
+  letter-spacing: var(--fw-track-xl);
+  line-height: var(--fw-leading-xl);
+  color: var(--fw-club-accent);
+  word-break: break-word;
+}
+
+.fw-identity__manager {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-xs);
+  letter-spacing: var(--fw-track-mono-wide);
+  color: var(--fw-text-meta);
+}
+
+/* =============================================================================
+ * STAT (generalizzazione di card-meta-cell)
+ * ========================================================================== */
+.fw-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--fw-space-10);
+}
+
+.fw-stat { display: flex; flex-direction: column; gap: var(--fw-space-2); min-width: 0; }
+
+.fw-stat__label {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-3xs);
+  letter-spacing: var(--fw-track-mono-xwide);
+  color: var(--fw-text-tertiary);
+}
+
+.fw-stat__value {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-2xs);
+  letter-spacing: var(--fw-track-3xs);
+  color: var(--fw-text-strong);
+  font-variant-numeric: var(--fw-table-numeric);
+}
+
+.fw-stat__value--over { color: var(--fw-error); }
+.fw-stat__value--done { color: var(--fw-success); }
+
+/* =============================================================================
+ * UTILITY minime
+ * ========================================================================== */
+.fw-empty {
+  padding: var(--fw-space-12);
+  text-align: center;
+  font-size: var(--fw-body-md);
+  color: var(--fw-text-meta);
+}
+
+.fw-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =============================================================================
+ * RESPONSIVE — il gutter è già un token (@media in fanta-tokens.css)
+ * ========================================================================== */
+@media (min-width: 720px) {
+  .fw-tile-list { max-height: 420px; }
+}
+
+/* =============================================================================
+ * MOTION RESPECTFUL (§A.9.10 / P13)
+ * ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .fw-band__led--live { animation: none; }
+  .fw-btn,
+  .fw-tile,
+  .fw-chip,
+  .fw-input { transition: none; }
+  .fw-btn:hover:not(:disabled),
+  .fw-tile:hover:not(:disabled),
+  .fw-chip:hover { transform: none; }
+}
