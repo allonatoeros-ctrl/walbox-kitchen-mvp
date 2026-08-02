@@ -7,6 +7,7 @@ import './FantaEntryTesseramento.css';
 const LOCAL_IDENTITY_KEY = 'fanta_walrus_team_identity';
 const LOCAL_TEAM_KEY = 'fanta_walrus_custom_team';
 const MAX_BENCH = 4;
+const MAX_BENCH_GK = 1;
 
 export default function FantaTeamBuilder() {
   const [identity, setIdentity] = useState(null);
@@ -71,6 +72,14 @@ export default function FantaTeamBuilder() {
     return isValidLineup(starters, playerIndex);
   }, [selectedIds, playerIndex, identity]);
 
+  const benchValidation = useMemo(() => {
+    const gkCount = benchIds.filter((id) => playersById[id]?.role === 'GK').length;
+    const errors = [];
+    if (benchIds.length > MAX_BENCH) errors.push(`Troppe riserve: ${benchIds.length} > ${MAX_BENCH}`);
+    if (gkCount > MAX_BENCH_GK) errors.push(`Troppi portieri in panchina: ${gkCount} > ${MAX_BENCH_GK}`);
+    return { valid: errors.length === 0, complete: errors.length === 0 && gkCount >= 1, gkCount, errors };
+  }, [benchIds, playersById]);
+
   const counts = useMemo(() => {
     const c = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
     const clubs = {};
@@ -97,6 +106,8 @@ export default function FantaTeamBuilder() {
     setBenchIds((prev) => {
       if (prev.includes(id)) return prev.filter((x) => x !== id);
       if (prev.length >= MAX_BENCH) return prev;
+      const isGk = playersById[id]?.role === 'GK';
+      if (isGk && prev.some((x) => playersById[x]?.role === 'GK')) return prev;
       return [...prev, id];
     });
     setSaved(false);
@@ -198,15 +209,17 @@ export default function FantaTeamBuilder() {
         <div className="fanta-entry__selector-header">
           <span className="fanta-entry__selector-label">SELEZIONA PANCHINA (max {MAX_BENCH})</span>
           <span className="fanta-entry__selector-hint">
-            solo giocatori di movimento, non titolari
+            non titolari · max {MAX_BENCH_GK} GK
           </span>
         </div>
         <div className="fanta-entry__selector-track">
           {playersData
-            .filter((p) => p.role !== 'GK' && !selectedIds.includes(p.id))
+            .filter((p) => !selectedIds.includes(p.id))
             .map((p) => {
               const selected = benchIds.includes(p.id);
-              const disabled = !selected && benchIds.length >= MAX_BENCH;
+              const isGk = p.role === 'GK';
+              const disabled =
+                !selected && (benchIds.length >= MAX_BENCH || (isGk && benchValidation.gkCount >= MAX_BENCH_GK));
               return (
                 <button
                   key={p.id}
@@ -231,8 +244,16 @@ export default function FantaTeamBuilder() {
           Conteggio: GK {counts.role.GK}/1 · DEF {counts.role.DEF}/5 · MID {counts.role.MID}/5 · FWD {counts.role.FWD}/5 · Totale {selectedIds.length}/11
         </div>
         <div>
-          Panchina: {benchIds.length}/{MAX_BENCH}
+          Panchina: {benchIds.length}/{MAX_BENCH} · GK {benchValidation.gkCount}/{MAX_BENCH_GK} ·{' '}
+          {benchValidation.complete ? 'Completa' : 'Incompleta (manca il portiere di riserva)'}
         </div>
+        {!benchValidation.valid && (
+          <div style={{ color: '#ff6b6b' }}>
+            {benchValidation.errors.map((e, i) => (
+              <div key={`bench-err-${i}`}>{e}</div>
+            ))}
+          </div>
+        )}
         {!validation.valid && (
           <div style={{ color: '#ff6b6b' }}>
             {validation.errors.map((e, i) => (

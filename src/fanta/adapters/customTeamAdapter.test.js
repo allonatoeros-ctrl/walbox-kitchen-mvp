@@ -121,3 +121,38 @@ test("panchina custom team abilita sostituzione SV end-to-end via scoreTeam", ()
   assert.equal(sub.id, "p_003", "subentra il DEF di panchina p_003, coerente col motore");
   assert.equal(result.playerPoints.find((p) => p.id === "p_002"), undefined, "p_002 sostituito non conteggiato");
 });
+
+// end-to-end: panchina custom team con 1 GK (regola V1: panchina completa richiede 1 GK)
+// abilita la sostituzione SV anche per il portiere titolare, stesso motore/percorso della
+// sostituzione DEF sopra. p_031 (GK) è "sv" in votes.json (infortunato); p_038 (GK) in
+// panchina ha voto base regolare -> deve subentrare.
+test("panchina custom team con GK abilita sostituzione SV del portiere end-to-end via scoreTeam", () => {
+  const rawCustomTeam = validTeam({
+    roster: [
+      { id: "p_031", isStarter: true }, // GK, sv nei votes.json
+      { id: "p_022", isStarter: true },
+      { id: "p_032", isStarter: true },
+      { id: "p_046", isStarter: true },
+      { id: "p_052", isStarter: true },
+      { id: "p_025", isStarter: true },
+      { id: "p_048", isStarter: true },
+      { id: "p_054", isStarter: true },
+      { id: "p_036", isStarter: true },
+      { id: "p_061", isStarter: true },
+      { id: "p_067", isStarter: true },
+      { id: "p_038", isStarter: false }, // GK di riserva, voto base regolare
+      { id: "p_064", isStarter: false },
+      { id: "p_066", isStarter: false },
+      { id: "p_068", isStarter: false },
+    ],
+  });
+
+  const adapted = adaptCustomTeam(rawCustomTeam, players);
+  assert.ok(adapted, "adapter deve accettare un roster con 11 titolari + 4 panchina inclusivo di 1 GK");
+
+  const result = scoreTeam(adapted, [], players, scoring, votes);
+  const sub = result.playerPoints.find((p) => p.substituted);
+  assert.ok(sub, "la squadra custom deve ricevere un subentro SV per il GK");
+  assert.equal(sub.id, "p_038", "subentra il GK di panchina p_038, coerente col motore");
+  assert.equal(result.playerPoints.find((p) => p.id === "p_031"), undefined, "p_031 (GK sv) sostituito non conteggiato");
+});

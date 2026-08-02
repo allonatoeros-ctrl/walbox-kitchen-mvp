@@ -4,6 +4,7 @@ import { isValidLineup, buildPlayerIndex } from '../engine/scoreEngine.js';
 
 const players = [
   { id: 'p_gk', role: 'GK', club: 'A' },
+  { id: 'p_gk2', role: 'GK', club: 'H' },
   { id: 'p_d1', role: 'DEF', club: 'A' },
   { id: 'p_d2', role: 'DEF', club: 'B' },
   { id: 'p_d3', role: 'DEF', club: 'C' },
@@ -171,4 +172,66 @@ test('team builder: restore panchina con storage malformato -> null, no crash', 
   const ids = new Set(players.map((p) => p.id));
   assert.equal(restoreBench('', 'team_abc', ids), null);
   assert.equal(restoreBench('{}', 'team_abc', ids), null);
+});
+
+// --- Panchina V1: max 4 riserve, max 1 GK ---
+// Mirror di FantaTeamBuilder.jsx toggleBench(): stessa logica di cap usata dal componente.
+const MAX_BENCH_GK = 1;
+const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
+
+function toggleBenchPure(prev, id) {
+  if (prev.includes(id)) return prev.filter((x) => x !== id);
+  if (prev.length >= MAX_BENCH) return prev;
+  const isGk = playersById[id]?.role === 'GK';
+  if (isGk && prev.some((x) => playersById[x]?.role === 'GK')) return prev;
+  return [...prev, id];
+}
+
+// Mirror di FantaTeamBuilder.jsx benchValidation: stessa definizione di "panchina completa".
+function benchStatus(benchIds) {
+  const gkCount = benchIds.filter((id) => playersById[id]?.role === 'GK').length;
+  const errors = [];
+  if (benchIds.length > MAX_BENCH) errors.push('troppe riserve');
+  if (gkCount > MAX_BENCH_GK) errors.push('troppi GK');
+  return { valid: errors.length === 0, complete: errors.length === 0 && gkCount >= 1, gkCount };
+}
+
+test('panchina: un GK può essere aggiunto in panchina', () => {
+  const bench = toggleBenchPure(['p_d5'], 'p_gk2');
+  assert.deepEqual(bench, ['p_d5', 'p_gk2']);
+});
+
+test('panchina: un secondo GK non viene aggiunto (max 1 GK)', () => {
+  const bench = toggleBenchPure(['p_d5', 'p_gk2'], 'p_gk');
+  assert.deepEqual(bench, ['p_d5', 'p_gk2'], 'il secondo GK candidato viene ignorato, bench invariata');
+});
+
+test('panchina: il GK già in panchina può essere rimosso (toggle off)', () => {
+  const bench = toggleBenchPure(['p_d5', 'p_gk2'], 'p_gk2');
+  assert.deepEqual(bench, ['p_d5']);
+});
+
+test('panchina: dopo la rimozione del GK, un altro GK può essere aggiunto', () => {
+  const afterRemove = toggleBenchPure(['p_d5', 'p_gk2'], 'p_gk2');
+  const afterAdd = toggleBenchPure(afterRemove, 'p_gk');
+  assert.deepEqual(afterAdd, ['p_d5', 'p_gk']);
+});
+
+test('panchina: cap a MAX_BENCH (4) resta invariato con o senza GK', () => {
+  const full = ['p_d5', 'p_m4', 'p_m5', 'p_gk2'];
+  const bench = toggleBenchPure(full, 'p_f4');
+  assert.deepEqual(bench, full, 'panchina piena, nuovo candidato ignorato');
+});
+
+test('panchina: incompleta senza GK, completa con esattamente 1 GK', () => {
+  assert.equal(benchStatus(['p_d5', 'p_m4']).complete, false);
+  assert.equal(benchStatus(['p_d5', 'p_m4', 'p_gk2']).complete, true);
+});
+
+test('panchina: con 2 GK è invalida (non completa) anche se il conteggio slot lo permetterebbe', () => {
+  // stato raggiungibile solo bypassando toggleBenchPure (es. dato salvato manualmente);
+  // benchStatus deve comunque segnalarlo come invalido, mai "completo".
+  const status = benchStatus(['p_gk', 'p_gk2']);
+  assert.equal(status.valid, false);
+  assert.equal(status.complete, false);
 });
