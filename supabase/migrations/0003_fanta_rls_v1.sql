@@ -60,10 +60,13 @@ create policy fanta_teams_owner_write on fanta_teams
     )
   );
 
-create policy fanta_teams_owner_insert on fanta_teams
-  for insert
-  to authenticated
-  with check (true); -- membership row created in the same transaction enforces 1 team/user
+-- No direct INSERT policy for `authenticated` on fanta_teams: team creation is
+-- only allowed through the create_fanta_team_v1() RPC (SECURITY DEFINER, 0002),
+-- which creates the team + owner membership atomically and never trusts a
+-- client-supplied user_id. A prior "with check (true)" policy here allowed any
+-- authenticated user to insert team rows directly, bypassing the max_teams/
+-- one-team-per-user checks the RPC now enforces (see schema-pack-v1 report,
+-- DECISIONS_REQUIRED #1).
 
 create policy fanta_teams_admin_delete on fanta_teams
   for delete
@@ -78,10 +81,12 @@ create policy fanta_team_members_select_self on fanta_team_members
   to authenticated
   using (user_id = auth.uid() or fanta_is_admin());
 
-create policy fanta_team_members_insert_self on fanta_team_members
-  for insert
-  to authenticated
-  with check (user_id = auth.uid());
+-- No direct INSERT policy for `authenticated` on fanta_team_members either:
+-- a self-only "with check (user_id = auth.uid())" policy would still let any
+-- authenticated user attach themselves as an extra owner of an EXISTING team
+-- created by someone else (no unique(team_id) guard prevents a second owner
+-- row). Membership is created exclusively inside create_fanta_team_v1() (0002),
+-- alongside the team row it owns, in the same transaction.
 
 create policy fanta_team_members_admin_delete on fanta_team_members
   for delete
