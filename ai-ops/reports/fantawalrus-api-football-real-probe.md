@@ -72,3 +72,23 @@ NEXT_RECOMMENDED_TASK: micro-task dedicato per aggiornare POSITION_ROLE_MAP (e r
 - Nessuna modifica al codice sorgente in questo run (solo probe read-only + report).
 - Nessun commit, push, deploy, integrazione Supabase o UI eseguiti.
 - File probe precedenti (`_probe_summary.json`, `real_league_135_probe.json`) conservati intatti.
+
+## Aggiornamento — Real-Data Integration Sprint (2026-08-02)
+
+Mismatch risolti nello sprint successivo (dettagli completi in
+`ai-ops/reports/fantawalrus-real-data-integration-sprint.md`):
+
+- **`normalizePlayer.js`**: `POSITION_ROLE_MAP` esteso con le sigle singola lettera reali
+  (`G`→GK, `D`→DEF, `M`→MID, `F`→FWD), mantenendo le parole intere già supportate.
+- **`normalizeTeam.js`**: `TEAM_CODE_MAP` era minimale (4 club) e rifiutava `"Lecce"` (presente nel
+  fixture reale) con `TEAM_SCONOSCIUTO`. Esteso a tutti i 20 club Serie A 2024/25.
+- **Gap di shape non normalizzatore** (bridged nel nuovo `ingestionService.js`, non nei
+  normalizzatori): l'endpoint reale `/fixtures/players` riporta `team` sul blocco squadra padre, non
+  su ogni riga statistiche/giocatore come si aspettano `normalizePlayer`/`normalizeRating`; gli
+  endpoint `/fixtures/events` e `/fixtures/players` (query per singolo fixture) non riportano
+  `fixtureId` per riga come richiesto da `buildOfflineDataset`. L'ingestion service inietta questi
+  due campi dal contesto della chiamata prima di normalizzare.
+
+`PLAYER_STATS_SHAPE_MATCH` passa da `PARTIAL` a `FULL` con questi fix; il replay del probe reale
+1223969 (`realProbeReplay.test.js`, `ingestionService.test.js`) produce dataset completo, 0 player
+scartati, shape compatibile con `scoreEngine`.
