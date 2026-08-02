@@ -100,19 +100,21 @@ FILES_CHANGED:
 COMMITS: nessuno ancora — proposti sotto, in attesa di approvazione Eros
 BLOCKERS: nessuno (0 tentativi falliti, nessuna escalation necessaria)
 DECISIONS_REQUIRED:
-  (1) fanta_teams_owner_insert oggi ha `with check (true)`: un utente autenticato può inserire
-      righe in fanta_teams senza ancora avere una fanta_team_members associata (l'app dovrebbe
-      creare team+membership nella stessa transazione/RPC). Senza quella garanzia applicativa,
-      un utente potrebbe teoricamente creare più righe team fittizie fino al cap di 60 senza
-      esserne owner — non ho aggiunto una funzione DB più stringente perché andrebbe oltre
-      "niente business logic complessa nel DB" richiesto in FASE 3; da decidere se serve una
-      RPC atomica dedicata quando si collega davvero l'adapter (fuori scope qui).
+  (1) RISOLTO in fantawalrus-supabase-schema-hardening-v1.md (2026-08-02): aggiunta
+      create_fanta_team_v1() RPC (SECURITY DEFINER, 0002) che crea team+membership in modo
+      atomico e mai fidandosi di user_id lato client; rimossa la policy fanta_teams_owner_insert
+      (`with check (true)`) e la policy fanta_team_members_insert_self — nessun insert diretto
+      resta possibile per `authenticated` su nessuna delle due tabelle.
   (2) fanta_is_admin() assume un claim app_metadata.fanta_role — dipende dalla decisione D1 del
       backend contract audit (modello utenti/auth) non ancora presa da Eros; se il modello auth
-      cambia, il claim va rinominato in questa stessa migration prima di applicarla.
-  (3) fanta_lineups_select_own_or_public apre la lettura a tutti dopo round.status in
-      ('locked','finalized') per pubblicare le formazioni post-deadline (utile per TV/derby) —
-      confermare che sia il comportamento voluto e non solo "solo classifica pubblica".
+      cambia, il claim va rinominato in questa stessa migration prima di applicarla. Confermato
+      in hardening v1: claim assegnabile solo server-side, nessun client può promuoversi, service
+      role mai esposta (vedi fantawalrus-supabase-schema-hardening-v1.md FASE 3).
+  (3) RISOLTO in fantawalrus-supabase-schema-hardening-v1.md (2026-08-02): la policy
+      fanta_lineups_select_own_or_public ora richiede che il lettore sia owner della lineup
+      OPPURE membro di una squadra della STESSA lega del round (join fanta_rounds → fanta_teams →
+      fanta_team_members), non più "qualunque utente autenticato" — comportamento confermato da
+      Eros come voluto (§FASE 2 del prompt di hardening).
 REMOTE_APPLY_COMMAND_PROPOSED: supabase db push --linked (NON eseguito — richiede STOP
   esplicito rimosso da Eros, progetto Supabase collegato, e revisione DECISIONS_REQUIRED sopra
   prima di qualunque esecuzione)
