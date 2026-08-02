@@ -6,11 +6,13 @@ import './FantaEntryTesseramento.css';
 
 const LOCAL_IDENTITY_KEY = 'fanta_walrus_team_identity';
 const LOCAL_TEAM_KEY = 'fanta_walrus_custom_team';
+const MAX_BENCH = 4;
 
 export default function FantaTeamBuilder() {
   const [identity, setIdentity] = useState(null);
   const [identityLoaded, setIdentityLoaded] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [benchIds, setBenchIds] = useState([]);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -44,7 +46,13 @@ export default function FantaTeamBuilder() {
       const playerIndex = buildPlayerIndex(playersData);
       const validation = isValidLineup(starters, playerIndex);
       if (!validation.valid) return;
+      const starterIdSet = new Set(starters.map((r) => r.id));
+      const bench = roster
+        .filter((r) => r && typeof r.id === 'string' && validIds.has(r.id) && r.isStarter === false && !starterIdSet.has(r.id))
+        .slice(0, MAX_BENCH)
+        .map((r) => r.id);
       setSelectedIds(starters.map((r) => r.id));
+      setBenchIds(bench);
     } catch (e) {
       // ignore malformed storage
     }
@@ -81,6 +89,16 @@ export default function FantaTeamBuilder() {
       if (prev.length >= 11) return prev;
       return [...prev, id];
     });
+    setBenchIds((prev) => prev.filter((x) => x !== id));
+    setSaved(false);
+  }
+
+  function toggleBench(id) {
+    setBenchIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= MAX_BENCH) return prev;
+      return [...prev, id];
+    });
     setSaved(false);
   }
 
@@ -89,7 +107,10 @@ export default function FantaTeamBuilder() {
     const team = {
       teamId: identity.teamId,
       formation: '4-3-3',
-      roster: selectedIds.map((id) => ({ id, isStarter: true })),
+      roster: [
+        ...selectedIds.map((id) => ({ id, isStarter: true })),
+        ...benchIds.map((id) => ({ id, isStarter: false })),
+      ],
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -173,9 +194,44 @@ export default function FantaTeamBuilder() {
         </div>
       </section>
 
+      <section className="fanta-entry__selector">
+        <div className="fanta-entry__selector-header">
+          <span className="fanta-entry__selector-label">SELEZIONA PANCHINA (max {MAX_BENCH})</span>
+          <span className="fanta-entry__selector-hint">
+            solo giocatori di movimento, non titolari
+          </span>
+        </div>
+        <div className="fanta-entry__selector-track">
+          {playersData
+            .filter((p) => p.role !== 'GK' && !selectedIds.includes(p.id))
+            .map((p) => {
+              const selected = benchIds.includes(p.id);
+              const disabled = !selected && benchIds.length >= MAX_BENCH;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={`fanta-entry__selector-cell${selected ? ' fanta-entry__selector-cell--selected' : ''}`}
+                  onClick={() => toggleBench(p.id)}
+                  disabled={disabled}
+                  aria-pressed={selected}
+                >
+                  <div>{p.name}</div>
+                  <div style={{ fontSize: 12, opacity: 0.8 }}>
+                    {p.role} · {p.club}
+                  </div>
+                </button>
+              );
+            })}
+        </div>
+      </section>
+
       <section className="fanta-entry__rules">
         <div>
           Conteggio: GK {counts.role.GK}/1 · DEF {counts.role.DEF}/5 · MID {counts.role.MID}/5 · FWD {counts.role.FWD}/5 · Totale {selectedIds.length}/11
+        </div>
+        <div>
+          Panchina: {benchIds.length}/{MAX_BENCH}
         </div>
         {!validation.valid && (
           <div style={{ color: '#ff6b6b' }}>

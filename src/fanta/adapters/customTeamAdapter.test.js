@@ -4,9 +4,15 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { adaptCustomTeam } from "./customTeamAdapter.js";
+import { scoreTeam } from "../engine/scoreEngine.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const players = JSON.parse(readFileSync(join(__dirname, "../data/players.json"), "utf8"));
+function load(name) {
+  return JSON.parse(readFileSync(join(__dirname, "../data", name), "utf8"));
+}
+const players = load("players.json");
+const scoring = load("scoring.json");
+const votes = load("votes.json");
 
 function validTeam(overrides = {}) {
   return {
@@ -79,4 +85,39 @@ test("bench vuota ammessa senza crash (solo titolari, nessun elemento isStarter:
 
 test("fallback a mock: adapter ritorna null, il chiamante userà teams_sample.json", () => {
   assert.equal(adaptCustomTeam({ garbage: true }, players), null);
+});
+
+// end-to-end: roster con panchina salvato dal Team Builder -> adapter -> scoreEngine
+// esegue davvero una sostituzione SV per la squadra custom (stesso roster/esito di
+// scoreEngine.test.js "SV sostituito dalla panchina (stesso ruolo)": p_002 DEF sv -> p_003 DEF).
+test("panchina custom team abilita sostituzione SV end-to-end via scoreTeam", () => {
+  const rawCustomTeam = validTeam({
+    roster: [
+      { id: "p_011", isStarter: true },
+      { id: "p_002", isStarter: true },
+      { id: "p_022", isStarter: true },
+      { id: "p_032", isStarter: true },
+      { id: "p_046", isStarter: true },
+      { id: "p_035", isStarter: true },
+      { id: "p_048", isStarter: true },
+      { id: "p_054", isStarter: true },
+      { id: "p_055", isStarter: true },
+      { id: "p_061", isStarter: true },
+      { id: "p_067", isStarter: true },
+      { id: "p_003", isStarter: false },
+      { id: "p_012", isStarter: false },
+      { id: "p_016", isStarter: false },
+      { id: "p_019", isStarter: false },
+    ],
+  });
+
+  const adapted = adaptCustomTeam(rawCustomTeam, players);
+  assert.ok(adapted, "adapter deve accettare un roster con 11 titolari + 4 panchina");
+  assert.equal(adapted.roster.filter((r) => !r.isStarter).length, 4, "panchina passa intatta attraverso l'adapter");
+
+  const result = scoreTeam(adapted, [], players, scoring, votes);
+  const sub = result.playerPoints.find((p) => p.substituted);
+  assert.ok(sub, "la squadra custom deve ricevere un subentro SV");
+  assert.equal(sub.id, "p_003", "subentra il DEF di panchina p_003, coerente col motore");
+  assert.equal(result.playerPoints.find((p) => p.id === "p_002"), undefined, "p_002 sostituito non conteggiato");
 });
