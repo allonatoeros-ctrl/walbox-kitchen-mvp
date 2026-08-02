@@ -1,11 +1,14 @@
 import { useState, useMemo } from "react";
 import { useMatchday, snapshotReplayState } from "../hooks/useMatchday.js";
+import { adaptCustomTeam } from "../adapters/customTeamAdapter.js";
 import fixturesData from "../data/fixtures.json";
 import eventsData from "../data/events.json";
 import playersData from "../data/players.json";
 import scoringData from "../data/scoring.json";
 import votesData from "../data/votes.json";
 import teamsData from "../data/teams_sample.json";
+
+const LOCAL_TEAM_KEY = "fanta_walrus_custom_team";
 
 const STATE_LABELS = {
   idle: "Idle",
@@ -22,13 +25,30 @@ export default function FantaMatchday() {
     [fixtureId]
   );
 
+  const customTeam = useMemo(() => {
+    let raw = null;
+    try {
+      const stored = localStorage.getItem(LOCAL_TEAM_KEY);
+      if (stored) raw = JSON.parse(stored);
+    } catch (e) {
+      raw = null;
+    }
+    return adaptCustomTeam(raw, playersData);
+  }, []);
+
+  const teams = useMemo(() => {
+    if (!customTeam) return teamsData;
+    const rest = teamsData.filter((t) => t.teamId !== customTeam.teamId);
+    return [...rest, customTeam];
+  }, [customTeam]);
+
   const md = useMatchday({
     fixtures: fixturesData,
     events: fixtureEvents,
     players: playersData,
     scoring: scoringData,
     votes: votesData,
-    teams: teamsData,
+    teams,
     speedMs: 800,
   });
 
@@ -38,6 +58,14 @@ export default function FantaMatchday() {
     <div style={{ padding: 24, fontFamily: "monospace" }}>
       <h1>FantaWalrus — Matchday</h1>
       <p style={{ opacity: 0.8 }}>UI tecnica: stato giornata, evento corrente e classifica.</p>
+      <p style={{ opacity: 0.8 }}>
+        Squadra in campo:{" "}
+        {customTeam ? (
+          <strong style={{ color: "#8aff8a" }}>CUSTOM ({customTeam.teamId})</strong>
+        ) : (
+          <strong style={{ color: "#ffd27a" }}>MOCK (teams_sample.json)</strong>
+        )}
+      </p>
 
       <div style={{ marginBottom: 16 }}>
         <label>
