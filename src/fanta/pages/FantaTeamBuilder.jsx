@@ -132,6 +132,11 @@ export default function FantaTeamBuilder() {
     setSaved(true);
   }
 
+  function goToMatchday() {
+    window.history.pushState({}, '', '/fanta/matchday');
+    window.dispatchEvent(new PopStateEvent('popstate'));
+  }
+
   if (!identityLoaded || !identity) {
     return null;
   }
@@ -275,7 +280,14 @@ export default function FantaTeamBuilder() {
         >
           SALVA FORMAZIONE
         </button>
-        {saved && <span className="fanta-entry__cta-sub">Formazione salvata localmente</span>}
+        {saved && (
+          <>
+            <span className="fanta-entry__cta-sub">Formazione salvata localmente</span>
+            <button type="button" className="fanta-entry__cta-button" onClick={goToMatchday} style={{ marginTop: 8 }}>
+              VAI ALLA GIORNATA →
+            </button>
+          </>
+        )}
       </footer>
     </div>
   );

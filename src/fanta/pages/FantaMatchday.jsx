@@ -19,6 +19,11 @@ const STATE_LABELS = {
 
 const ROLE_LABELS = { GK: "POR", DEF: "DIF", MID: "CEN", FWD: "ATT" };
 
+function navigateTo(path) {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 export default function FantaMatchday() {
   const [fixtureId, setFixtureId] = useState(fixturesData[0]?.fixtureId || null);
 
@@ -78,6 +83,22 @@ export default function FantaMatchday() {
   return (
     <div style={{ padding: 24, fontFamily: "monospace" }}>
       <h1>FantaWalrus — Matchday</h1>
+      <nav style={{ marginBottom: 8, display: "flex", gap: 16 }}>
+        <button
+          type="button"
+          onClick={() => navigateTo("/fanta/team")}
+          style={{ background: "none", border: "none", color: "#8aff8a", cursor: "pointer", padding: 0, font: "inherit" }}
+        >
+          ← Modifica formazione
+        </button>
+        <button
+          type="button"
+          onClick={() => navigateTo("/fanta/var")}
+          style={{ background: "none", border: "none", color: "#8aff8a", cursor: "pointer", padding: 0, font: "inherit" }}
+        >
+          Sala VAR →
+        </button>
+      </nav>
       <p style={{ opacity: 0.8 }}>UI tecnica: stato giornata, evento corrente e classifica.</p>
       <p style={{ opacity: 0.8 }}>
         Squadra in campo:{" "}

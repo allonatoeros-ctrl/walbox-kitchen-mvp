@@ -59,6 +59,11 @@ function StandingsTable({ title, standings, teamNames }) {
   );
 }
 
+function navigateTo(path) {
+  window.history.pushState({}, "", path);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}
+
 export default function FantaVarRoom() {
   const [retractedIds, setRetractedIds] = useState([]);
 
@@ -103,6 +108,15 @@ export default function FantaVarRoom() {
   return (
     <div style={{ padding: 24, fontFamily: "sans-serif" }}>
       <h1>FantaWalrus — Sala VAR</h1>
+      <nav style={{ marginBottom: 8 }}>
+        <button
+          type="button"
+          onClick={() => navigateTo("/fanta/matchday")}
+          style={{ background: "none", border: "none", color: "#0d6efd", cursor: "pointer", padding: 0, font: "inherit", textDecoration: "underline" }}
+        >
+          ← Torna al Matchday
+        </button>
+      </nav>
       <p style={{ background: "#fff3cd", padding: "8px 12px", border: "1px solid #ffe08a" }}>
         Demo locale — rettifiche non persistenti
       </p>
