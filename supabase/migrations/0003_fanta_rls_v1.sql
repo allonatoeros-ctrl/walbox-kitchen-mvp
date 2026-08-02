@@ -21,6 +21,23 @@ alter table fanta_standings enable row level security;
 alter table fanta_var_adjustments enable row level security;
 
 -- ============================================================
+-- Base table grants — RLS policies decide WHICH rows a role can touch, but
+-- Postgres requires a baseline table-level GRANT before RLS is even
+-- evaluated ("permission denied for table" happens pre-RLS otherwise).
+-- Supabase's managed platform seeds broad anon/authenticated grants
+-- automatically at project bootstrap; a from-scratch local `supabase init`
+-- stack does not inherit that seed, so it must be explicit here. anon gets
+-- nothing: every policy below is `to authenticated` only, so anon stays at
+-- true zero access rather than relying on absence of a base grant alone.
+-- ============================================================
+grant select, insert, update, delete on
+  fanta_leagues, fanta_teams, fanta_team_members, fanta_player_snapshots,
+  fanta_rosters, fanta_rounds, fanta_fixtures, fanta_lineups,
+  fanta_ingestion_runs, fanta_events, fanta_votes, fanta_team_scores,
+  fanta_standings, fanta_var_adjustments
+to authenticated;
+
+-- ============================================================
 -- fanta_leagues — read published league; admin manages
 -- ============================================================
 create policy fanta_leagues_select_published on fanta_leagues
