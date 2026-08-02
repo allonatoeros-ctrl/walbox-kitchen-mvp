@@ -1,0 +1,74 @@
+[
+  {
+    "fixtureId": 592871,
+    "time": { "elapsed": 12, "extra": null },
+    "team": { "id": 496, "name": "Juventus" },
+    "player": { "id": 1001, "name": "D. Vlahović" },
+    "assist": { "id": 1002, "name": "W. McKennie" },
+    "type": "Goal",
+    "detail": "Normal Goal"
+  },
+  {
+    "fixtureId": 592871,
+    "time": { "elapsed": 45, "extra": 1 },
+    "team": { "id": 496, "name": "Juventus" },
+    "player": { "id": 1002, "name": "W. McKennie" },
+    "assist": null,
+    "type": "Card",
+    "detail": "Yellow Card"
+  },
+  {
+    "fixtureId": 592871,
+    "time": { "elapsed": 67, "extra": null },
+    "team": { "id": 496, "name": "Juventus" },
+    "player": { "id": 1003, "name": "F. Gatti" },
+    "assist": null,
+    "type": "Card",
+    "detail": "Red Card"
+  },
+  {
+    "fixtureId": 592871,
+    "time": { "elapsed": 78, "extra": null },
+    "team": { "id": 496, "name": "Juventus" },
+    "player": { "id": 1001, "name": "D. Vlahović" },
+    "assist": null,
+    "type": "Goal",
+    "detail": "Missed Penalty"
+  },
+  {
+    "fixtureId": 592871,
+    "time": { "elapsed": 84, "extra": null },
+    "team": { "id": 489, "name": "AC Milan" },
+    "player": { "id": 1005, "name": "R. Loftus-Cheek" },
+    "assist": null,
+    "type": "Goal",
+    "detail": "Own Goal"
+  },
+  {
+    "fixtureId": 592871,
+    "time": { "elapsed": 55, "extra": null },
+    "team": { "id": 489, "name": "AC Milan" },
+    "player": { "id": 1006, "name": "N. Okafor" },
+    "assist": { "id": 1005, "name": "R. Loftus-Cheek" },
+    "type": "subst",
+    "detail": "Substitution 1"
+  },
+  {
+    "fixtureId": 592871,
+    "time": { "elapsed": 90, "extra": 2 },
+    "team": { "id": 489, "name": "AC Milan" },
+    "player": { "id": 1005, "name": "R. Loftus-Cheek" },
+    "assist": null,
+    "type": "Var",
+    "detail": "Goal Disallowed - offside"
+  },
+  {
+    "fixtureId": 592871,
+    "time": { "elapsed": 90, "extra": null },
+    "team": { "id": 489, "name": "AC Milan" },
+    "player": { "id": null, "name": null },
+    "assist": null,
+    "type": "Card",
+    "detail": "Yellow Card"
+  }
+]

@@ -1,0 +1,50 @@
+[
+  {
+    "fixtureId": 592871,
+    "team": { "id": 496, "name": "Juventus" },
+    "players": [
+      {
+        "player": { "id": 1001, "name": "D. Vlahović" },
+        "statistics": [
+          { "games": { "minutes": 90, "position": "Attacker", "rating": "7.200000", "captain": false, "substitute": false } }
+        ]
+      },
+      {
+        "player": { "id": 1002, "name": "W. McKennie" },
+        "statistics": [
+          { "games": { "minutes": 90, "position": "Midfielder", "rating": "6.500000", "captain": false, "substitute": false } }
+        ]
+      },
+      {
+        "player": { "id": 1003, "name": "F. Gatti" },
+        "statistics": [
+          { "games": { "minutes": 67, "position": "Defender", "rating": null, "captain": false, "substitute": false } }
+        ]
+      },
+      {
+        "player": { "id": 1004, "name": "M. Perin" },
+        "statistics": [
+          { "games": { "minutes": 90, "position": "Goalkeeper", "rating": "6.000000", "captain": false, "substitute": false } }
+        ]
+      },
+      {
+        "player": { "id": 1007, "name": "N. Fabbri" },
+        "statistics": [
+          { "games": { "minutes": 0, "position": "Midfielder", "rating": null, "captain": false, "substitute": true } }
+        ]
+      },
+      {
+        "player": { "id": 1008, "name": "G. Malo" },
+        "statistics": [
+          { "games": { "minutes": 90, "position": "Defender", "rating": "-", "captain": false, "substitute": false } }
+        ]
+      },
+      {
+        "player": { "id": 1002, "name": "W. McKennie" },
+        "statistics": [
+          { "games": { "minutes": 90, "position": "Midfielder", "rating": "6.500000", "captain": false, "substitute": false } }
+        ]
+      }
+    ]
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "player": { "id": 1001, "name": "D. Vlahović", "firstname": "Dušan", "lastname": "Vlahović", "nationality": "Serbia" },
+    "statistics": [
+      { "team": { "id": 496, "name": "Juventus" }, "games": { "position": "Attacker" } }
+    ]
+  },
+  {
+    "player": { "id": 1002, "name": "W. McKennie", "firstname": "Weston", "lastname": "McKennie", "nationality": "USA" },
+    "statistics": [
+      { "team": { "id": 496, "name": "Juventus" }, "games": { "position": "Midfielder" } }
+    ]
+  },
+  {
+    "player": { "id": 1003, "name": "F. Gatti", "firstname": "Federico", "lastname": "Gatti", "nationality": "Italy" },
+    "statistics": [
+      { "team": { "id": 496, "name": "Juventus" }, "games": { "position": "Defender" } }
+    ]
+  },
+  {
+    "player": { "id": 1004, "name": "M. Perin", "firstname": "Mattia", "lastname": "Perin", "nationality": "Italy" },
+    "statistics": [
+      { "team": { "id": 496, "name": "Juventus" }, "games": { "position": "Goalkeeper" } }
+    ]
+  },
+  {
+    "player": { "id": 1005, "name": "R. Loftus-Cheek", "firstname": "Ruben", "lastname": "Loftus-Cheek", "nationality": "England" },
+    "statistics": [
+      { "team": { "id": 489, "name": "AC Milan" }, "games": { "position": "Defender/Midfielder" } }
+    ]
+  },
+  {
+    "player": { "id": 1006, "name": "", "firstname": null, "lastname": null, "nationality": "Italy" },
+    "statistics": [
+      { "team": { "id": 489, "name": "AC Milan" }, "games": { "position": "Attacker" } }
+    ]
+  },
+  {
+    "player": { "id": 1002, "name": "W. McKennie", "firstname": "Weston", "lastname": "McKennie", "nationality": "USA" },
+    "statistics": [
+      { "team": { "id": 496, "name": "Juventus" }, "games": { "position": "Midfielder" } }
+    ]
+  }
+]
