@@ -5,7 +5,7 @@ import { createReplay } from "../engine/replayEngine.js";
 // Funzione pura: mappa lo stato di un replay (o snapshot) nello stato esposto dall'hook.
 export function snapshotReplayState(r) {
   const s = r.getState();
-  return { state: s.state, cursor: s.cursor, total: s.total, standings: s.standings, completed: s.completed };
+  return { state: s.state, cursor: s.cursor, total: s.total, standings: s.standings, byTeam: s.byTeam, completed: s.completed };
 }
 
 export function useMatchday({ fixtures, events, players, scoring, votes, teams, speedMs = 1000 }) {
@@ -21,11 +21,12 @@ export function useMatchday({ fixtures, events, players, scoring, votes, teams, 
   const [total, setTotal] = useState(events.length);
   const [currentEvent, setCurrentEvent] = useState(null);
   const [standings, setStandings] = useState([]);
+  const [byTeam, setByTeam] = useState({});
   const timerRef = useRef(null);
 
   const sync = useCallback(() => {
     const s = replayRef.current.getState();
-    setState(s.state); setCursor(s.cursor); setTotal(s.total); setStandings(s.standings);
+    setState(s.state); setCursor(s.cursor); setTotal(s.total); setStandings(s.standings); setByTeam(s.byTeam);
   }, []);
 
   const step = useCallback(() => { replayRef.current.step(); sync(); }, [sync]);
@@ -46,7 +47,7 @@ export function useMatchday({ fixtures, events, players, scoring, votes, teams, 
         if (r.getState().state !== "running") { stopTimer(); return; }
         r.step();
         const s = r.getState();
-        setState(s.state); setCursor(s.cursor); setTotal(s.total); setStandings(s.standings);
+        setState(s.state); setCursor(s.cursor); setTotal(s.total); setStandings(s.standings); setByTeam(s.byTeam);
         if (s.completed) stopTimer();
       }, speedMs);
     }
@@ -55,5 +56,5 @@ export function useMatchday({ fixtures, events, players, scoring, votes, teams, 
 
   useEffect(() => () => { stopTimer(); }, []); // cleanup unmount
 
-  return { state, cursor, total, currentEvent, standings, start, pause, resume, reset, seek, step };
+  return { state, cursor, total, currentEvent, standings, byTeam, start, pause, resume, reset, seek, step };
 }

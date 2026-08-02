@@ -5,7 +5,7 @@
 // Avanzamento evento-per-evento; il "tempo" è emulato dal chiamante (step()),
 // quindi i test possono fare replay istantaneo senza timer reale.
 
-import { scoreLeague } from "./scoreEngine.js";
+import { scoreLeague, scoreTeam } from "./scoreEngine.js";
 
 // Ordinamento deterministico richiesto da MT3: round, fixture, minuto, eventId.
 // (scoreEngine ordina per minuto/round/fixture internamente; il replay espone
@@ -83,6 +83,22 @@ export function createReplay(cfg) {
     return scoreLeague(teams, applied, players, scoring, votes);
   }
 
+  // Breakdown per-squadra (titolari effettivi, sostituzioni, punti) — riusa scoreTeam,
+  // nessuna logica di scoring nuova. Calcolato sugli stessi eventi applicati finora.
+  function recomputeByTeam() {
+    const byTeam = {};
+    for (const t of teams) {
+      const r = scoreTeam(t, applied, players, scoring, votes);
+      byTeam[t.teamId] = {
+        teamId: t.teamId,
+        total: r.total,
+        playerPoints: r.playerPoints,
+        roster: t.roster,
+      };
+    }
+    return byTeam;
+  }
+
   function step() {
     if (state === "completed") return null;
     if (cursor >= events.length) {
@@ -155,6 +171,7 @@ export function createReplay(cfg) {
       total: events.length,
       appliedCount: applied.length,
       standings: recomputeStandings(),
+      byTeam: recomputeByTeam(),
       completed: state === "completed",
     };
   }

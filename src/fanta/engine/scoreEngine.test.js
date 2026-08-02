@@ -144,6 +144,7 @@ test("SV sostituito dalla panchina (stesso ruolo)", () => {
   assert.equal(sub.id, "p_003", "subentra il DEF di panchina p_003");
   assert.equal(r.playerPoints.find((p) => p.id === "p_002"), undefined, "p_002 sostituito non conteggiato");
   assert.equal(sub.points, VOTE_OF[sub.id].baseVote, "subentra con suo voto base");
+  assert.equal(sub.fromId, "p_002", "fromId traccia il titolare sostituito (per UI breakdown)");
 });
 
 // 5. SV senza sostituto valido (GK sv p_031, panchina senza GK)

@@ -200,6 +200,7 @@ export function scoreTeam(team, events, players, scoring, votes, retractions = [
     points: Math.round(playerPoints[e.id] * 100) / 100,
     substituted: e.substituted,
     noVote: e.noVote || false,
+    fromId: e.substituted ? e.fromId : null,
   }));
 
   return { teamId: team.teamId, playerPoints: playerBreakdown, total: Math.round(total * 100) / 100, varLog, skippedEvents };

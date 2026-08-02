@@ -17,6 +17,8 @@ const STATE_LABELS = {
   completed: "Completata",
 };
 
+const ROLE_LABELS = { GK: "POR", DEF: "DIF", MID: "CEN", FWD: "ATT" };
+
 export default function FantaMatchday() {
   const [fixtureId, setFixtureId] = useState(fixturesData[0]?.fixtureId || null);
 
@@ -53,6 +55,25 @@ export default function FantaMatchday() {
   });
 
   const fixture = fixturesData.find((f) => f.fixtureId === fixtureId);
+
+  const playerIndex = useMemo(() => {
+    const idx = {};
+    for (const p of playersData) idx[p.id] = p;
+    return idx;
+  }, []);
+
+  const voteIndex = useMemo(() => {
+    const idx = {};
+    for (const v of votesData.votes) idx[v.playerId] = v;
+    return idx;
+  }, []);
+
+  const displayTeamId = customTeam ? customTeam.teamId : teamsData[0]?.teamId || null;
+  const breakdownTeam = md.byTeam?.[displayTeamId] || null;
+  const benchRoster = (breakdownTeam?.roster || []).filter((r) => !r.isStarter);
+  const usedBenchIds = new Set(
+    (breakdownTeam?.playerPoints || []).filter((p) => p.substituted).map((p) => p.id)
+  );
 
   return (
     <div style={{ padding: 24, fontFamily: "monospace" }}>
@@ -129,6 +150,75 @@ export default function FantaMatchday() {
           Step
         </button>
       </div>
+
+      {breakdownTeam ? (
+        <div style={{ marginBottom: 24 }}>
+          <h2>
+            Formazione &amp; punteggi — {displayTeamId} ({breakdownTeam.total} pt)
+          </h2>
+          <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
+            <thead>
+              <tr>
+                <th style={{ textAlign: "left" }}>Ruolo</th>
+                <th style={{ textAlign: "left" }}>Giocatore</th>
+                <th style={{ textAlign: "left" }}>Stato</th>
+                <th style={{ textAlign: "right" }}>Voto base</th>
+                <th style={{ textAlign: "right" }}>Bonus/Malus</th>
+                <th style={{ textAlign: "right" }}>Fantavoto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {breakdownTeam.playerPoints.map((pp) => {
+                const p = playerIndex[pp.id];
+                const vote = voteIndex[pp.id];
+                const baseVote = vote && !vote.noVote ? vote.baseVote : null;
+                const bonusMalus = baseVote != null ? Math.round((pp.points - baseVote) * 100) / 100 : null;
+                const fromPlayer = pp.fromId ? playerIndex[pp.fromId] : null;
+                let stato = "Titolare";
+                if (pp.substituted) stato = `Subentra (per ${fromPlayer ? fromPlayer.name : pp.fromId})`;
+                else if (pp.noVote) stato = "SV (nessun sostituto valido)";
+                return (
+                  <tr key={pp.id}>
+                    <td>{p ? ROLE_LABELS[p.role] || p.role : "?"}</td>
+                    <td>{p ? p.name : pp.id}</td>
+                    <td>{stato}</td>
+                    <td style={{ textAlign: "right" }}>{baseVote != null ? baseVote.toFixed(1) : "SV"}</td>
+                    <td style={{ textAlign: "right" }}>{bonusMalus != null ? bonusMalus.toFixed(2) : "-"}</td>
+                    <td style={{ textAlign: "right" }}>{pp.points.toFixed(2)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          <h3>Panchina</h3>
+          {benchRoster.length ? (
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: "left" }}>Ruolo</th>
+                  <th style={{ textAlign: "left" }}>Giocatore</th>
+                  <th style={{ textAlign: "left" }}>Stato</th>
+                </tr>
+              </thead>
+              <tbody>
+                {benchRoster.map((r) => {
+                  const p = playerIndex[r.id];
+                  return (
+                    <tr key={r.id}>
+                      <td>{p ? ROLE_LABELS[p.role] || p.role : "?"}</td>
+                      <td>{p ? p.name : r.id}</td>
+                      <td>{usedBenchIds.has(r.id) ? "Subentrato" : "Non entrato"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ opacity: 0.7 }}>Nessun giocatore in panchina.</div>
+          )}
+        </div>
+      ) : null}
 
       <div>
         <h2>Classifica</h2>
