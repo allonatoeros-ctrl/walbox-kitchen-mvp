@@ -15,6 +15,7 @@ import FantaVarRoom from "./fanta/pages/FantaVarRoom";
 import FantaMatchday from "./fanta/pages/FantaMatchday";
 import FantaEntryTesseramento from "./fanta/pages/FantaEntryTesseramento";
 import FantaTeamBuilder from "./fanta/pages/FantaTeamBuilder";
+import FantaHome from "./fanta/pages/FantaHome";
 import { getStaffSession, onAuthStateChange } from "./lib/supabaseAuth";
 import { initializeStorage } from "./data/mockData";
 
@@ -127,6 +128,8 @@ export default function App() {
         return <FantaEntryTesseramento />;
       case "/fanta/team":
         return <FantaTeamBuilder />;
+      case "/fanta/home":
+        return <FantaHome />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;

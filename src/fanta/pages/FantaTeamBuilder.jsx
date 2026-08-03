@@ -149,6 +149,8 @@ export default function FantaTeamBuilder() {
       // ignore storage errors
     }
     setSaved(true);
+    window.history.pushState({}, '', '/fanta/home');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   }
 
   // La panchina si sceglie fra i non titolari (invariato rispetto a prima
