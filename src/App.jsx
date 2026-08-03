@@ -16,7 +16,9 @@ import FantaMatchday from "./fanta/pages/FantaMatchday";
 import FantaEntryTesseramento from "./fanta/pages/FantaEntryTesseramento";
 import FantaTeamBuilder from "./fanta/pages/FantaTeamBuilder";
 import FantaHome from "./fanta/pages/FantaHome";
+import FantaAuth from "./fanta/pages/FantaAuth";
 import { getStaffSession, onAuthStateChange } from "./lib/supabaseAuth";
+import { getFantaSession, onFantaAuthStateChange } from "./lib/fantaAuth";
 import { initializeStorage } from "./data/mockData";
 
 // Custom Link helper component for internal navigation without full-page reloads
@@ -66,6 +68,41 @@ function StaffRouteGuard() {
 
   if (!checked) return null;
   return session ? <StaffDashboard /> : <StaffLogin />;
+}
+
+// F-AUTH1: gate per le route Fanta che richiedono login (entry/team/home).
+// Anonimi (incluse le sessioni signInAnonymously di Jukebox) vengono
+// rimandati a /fanta/auth; /fanta/var e /fanta/matchday restano pubblici.
+function FantaRouteGuard({ Component }) {
+  const [session, setSession] = useState(null);
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getFantaSession().then((s) => {
+      if (cancelled) return;
+      setSession(s);
+      setChecked(true);
+    });
+    const { data: { subscription } } = onFantaAuthStateChange((s) => {
+      setSession(s);
+      setChecked(true);
+    });
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (checked && !session) {
+      window.history.pushState({}, "", "/fanta/auth");
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    }
+  }, [checked, session]);
+
+  if (!checked || !session) return null;
+  return <Component />;
 }
 
 export default function App() {
@@ -120,16 +157,18 @@ export default function App() {
         return <SpotifyTestPanel />;
 
       // === FANTAWALRUS MODULE ROUTES ===
+      case "/fanta/auth":
+        return <FantaAuth />;
       case "/fanta/var":
         return <FantaVarRoom />;
       case "/fanta/matchday":
         return <FantaMatchday />;
       case "/fanta/entry":
-        return <FantaEntryTesseramento />;
+        return <FantaRouteGuard Component={FantaEntryTesseramento} />;
       case "/fanta/team":
-        return <FantaTeamBuilder />;
+        return <FantaRouteGuard Component={FantaTeamBuilder} />;
       case "/fanta/home":
-        return <FantaHome />;
+        return <FantaRouteGuard Component={FantaHome} />;
       default:
         // Redirect/fall-through default
         return <CustomerEntry />;
