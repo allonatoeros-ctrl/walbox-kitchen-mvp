@@ -11,9 +11,11 @@ import {
   FantaPanel,
   CREST_SIZE,
 } from '../components/ui';
+import { saveRosterV1 } from '../../lib/fantaRosterPersistence.js';
 
 const LOCAL_IDENTITY_KEY = 'fanta_walrus_team_identity';
 const LOCAL_TEAM_KEY = 'fanta_walrus_custom_team';
+const LOCAL_ROSTER_SYNC_KEY = 'fanta_walrus_roster_sync';
 const MAX_BENCH = 4;
 const MAX_BENCH_GK = 1;
 const MAX_STARTERS = 11;
@@ -30,6 +32,9 @@ export default function FantaTeamBuilder() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [benchIds, setBenchIds] = useState([]);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [rosterSynced, setRosterSynced] = useState(false);
 
   useEffect(() => {
     try {
@@ -132,7 +137,7 @@ export default function FantaTeamBuilder() {
     setSaved(false);
   }
 
-  function handleSave() {
+  async function handleSave() {
     if (!identity || !validation.valid) return;
     const team = {
       teamId: identity.teamId,
@@ -143,14 +148,41 @@ export default function FantaTeamBuilder() {
       ],
       updatedAt: new Date().toISOString(),
     };
+
+    setSaving(true);
+    setSaveError(null);
+    setSaved(false);
+    setRosterSynced(false);
+
     try {
       localStorage.setItem(LOCAL_TEAM_KEY, JSON.stringify(team));
     } catch {
       // ignore storage errors
     }
-    setSaved(true);
-    window.history.pushState({}, '', '/fanta/home');
-    window.dispatchEvent(new PopStateEvent('popstate'));
+
+    const roster = [
+      ...selectedIds.map((id) => ({ id, isStarter: true })),
+      ...benchIds.map((id) => ({ id, isStarter: false })),
+    ];
+
+    const { ok, saved, error } = await saveRosterV1(identity.teamId, roster);
+
+    if (ok) {
+      setSaved(true);
+      setRosterSynced(true);
+      try {
+        localStorage.setItem(LOCAL_ROSTER_SYNC_KEY, JSON.stringify({ teamId: identity.teamId, syncedAt: new Date().toISOString() }));
+      } catch {
+        // ignore
+      }
+      window.history.pushState({}, '', '/fanta/home');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    } else {
+      setSaveError(error || 'Non è stato possibile salvare la formazione sul cloud. Puoi comunque continuare.');
+      setSaved(true);
+    }
+
+    setSaving(false);
   }
 
   // La panchina si sceglie fra i non titolari (invariato rispetto a prima
@@ -303,13 +335,13 @@ export default function FantaTeamBuilder() {
         <FantaButton
           variant="primary"
           block
-          disabled={!validation.valid}
+          disabled={!validation.valid || saving}
           onClick={handleSave}
           data-testid="fanta-team-save-cta"
         >
-          Salva formazione
+          {saving ? 'SALVATAGGIO IN CORSO…' : 'Salva formazione'}
         </FantaButton>
-        {saved && (
+        {saved && !saveError && (
           <FantaButton
             variant="ghost"
             block
@@ -320,11 +352,7 @@ export default function FantaTeamBuilder() {
           </FantaButton>
         )}
         <span className="fw-footer__sub" data-testid="fanta-team-cta-sub">
-          {saved
-            ? 'Formazione salvata su questo telefono'
-            : validation.valid
-              ? 'Pronta da salvare'
-              : 'Completa gli 11 titolari per salvare'}
+          {saveError ? saveError : rosterSynced ? 'Formazione salvata su cloud e telefono' : saved ? 'Formazione salvata su questo telefono' : validation.valid ? 'Pronta da salvare' : 'Completa gli 11 titolari per salvare'}
         </span>
       </footer>
     </FantaShell>
