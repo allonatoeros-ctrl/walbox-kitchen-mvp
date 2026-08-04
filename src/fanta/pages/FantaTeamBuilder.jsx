@@ -12,6 +12,7 @@ import {
   CREST_SIZE,
 } from '../components/ui';
 import { saveRosterV1 } from '../../lib/fantaRosterPersistence.js';
+import { loadRosterV1 } from '../../lib/fantaRosterPersistence.js';
 
 const LOCAL_IDENTITY_KEY = 'fanta_walrus_team_identity';
 const LOCAL_TEAM_KEY = 'fanta_walrus_custom_team';
@@ -35,6 +36,8 @@ export default function FantaTeamBuilder() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [rosterSynced, setRosterSynced] = useState(false);
+  const [cloudHydrated, setCloudHydrated] = useState(false);
+  const [cloudError, setCloudError] = useState(null);
 
   useEffect(() => {
     try {
@@ -82,6 +85,33 @@ export default function FantaTeamBuilder() {
       // ignore malformed storage
     }
   }, [identity, playersData]);
+
+  useEffect(() => {
+    if (!identityLoaded || !identity) return;
+    let cancelled = false;
+    setCloudHydrated(false);
+    setCloudError(null);
+    loadRosterV1(identity.teamId)
+      .then(({ ok, roster, error }) => {
+        if (cancelled || !Array.isArray(roster)) return;
+        if (ok && roster.length > 0) {
+          const validIds = new Set(playersData.map((p) => p.id));
+          const starters = roster.filter((r) => validIds.has(r.id) && r.isStarter).map((r) => r.id);
+          const bench = roster.filter((r) => validIds.has(r.id) && !r.isStarter).slice(0, MAX_BENCH).map((r) => r.id);
+          setSelectedIds(starters);
+          setBenchIds(bench);
+          setCloudHydrated(true);
+        } else {
+          setCloudError(error || 'Roster cloud non disponibile');
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setCloudError('Roster cloud non disponibile');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [identityLoaded, identity, playersData]);
 
   const playerIndex = useMemo(() => buildPlayerIndex(playersData), [playersData]);
   const playersById = useMemo(() => {
@@ -352,7 +382,19 @@ export default function FantaTeamBuilder() {
           </FantaButton>
         )}
         <span className="fw-footer__sub" data-testid="fanta-team-cta-sub">
-          {saveError ? saveError : rosterSynced ? 'Formazione salvata su cloud e telefono' : saved ? 'Formazione salvata su questo telefono' : validation.valid ? 'Pronta da salvare' : 'Completa gli 11 titolari per salvare'}
+          {saveError
+            ? saveError
+            : cloudHydrated
+              ? 'Formazione caricata dal cloud'
+              : cloudError
+                ? cloudError
+                : rosterSynced
+                  ? 'Formazione salvata su cloud e telefono'
+                  : saved
+                    ? 'Formazione salvata su questo telefono'
+                    : validation.valid
+                      ? 'Pronta da salvare'
+                      : 'Completa gli 11 titolari per salvare'}
         </span>
       </footer>
     </FantaShell>

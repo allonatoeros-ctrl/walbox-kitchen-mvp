@@ -40,4 +40,33 @@ test('fantaRosterPersistence non importa routing/App/fanta_leagues', () => {
   assert.doesNotMatch(src, /App\.jsx|App\.js|router/);
 });
 
+const loadSrc = readFileSync(join(__dirname, 'fantaRosterPersistence.js'), 'utf8');
+
+test('fantaRosterPersistence espone loadRosterV1', () => {
+  assert.match(loadSrc, /export async function loadRosterV1\(/);
+});
+
+test('loadRosterV1 usa fanta_rosters join fanta_player_snapshots senza toccare fanta_lineups', () => {
+  assert.match(loadSrc, /from\('fanta_rosters'\)/);
+  assert.match(loadSrc, /fanta_player_snapshots/);
+  const loadFnStart = loadSrc.indexOf('export async function loadRosterV1');
+  const loadFnEnd = loadSrc.indexOf('}\n', loadFnStart) + 1;
+  const loadFn = loadSrc.slice(loadFnStart, loadFnEnd);
+  assert.doesNotMatch(loadFn, /fanta_lineups/);
+});
+
+test('loadRosterV1 filtra per team_id e restituisce { ok, roster }', () => {
+  assert.match(loadSrc, /\.eq\('team_id', teamId\)/);
+  assert.match(loadSrc, /return \{ ok: false, roster: \[\], error:/);
+  assert.match(loadSrc, /return \{ ok: true, roster \}/);
+});
+
+test('loadRosterV1 non lancia eccezioni e non scrive su Supabase', () => {
+  const loadFnStart = loadSrc.indexOf('export async function loadRosterV1');
+  const loadFnEnd = loadSrc.indexOf('}\n', loadFnStart) + 1;
+  const loadFn = loadSrc.slice(loadFnStart, loadFnEnd);
+  assert.doesNotMatch(loadFn, /throw /);
+  assert.doesNotMatch(loadFn, /\.insert\(|\.delete\(/);
+});
+
 console.log('fantaRosterPersistence.test.js: tutti i test passati.');

@@ -93,20 +93,46 @@ function RosterTileList({ players, testId, emptyLabel }) {
   );
 }
 
+import { loadRosterV1 } from '../../lib/fantaRosterPersistence.js';
+
 export default function FantaHome() {
   const [loaded, setLoaded] = useState(false);
   const [identityRaw, setIdentityRaw] = useState(null);
   const [teamRaw, setTeamRaw] = useState(null);
+  const [cloudError, setCloudError] = useState(null);
 
   useEffect(() => {
-    // Lettura one-time da localStorage al mount, non un loop di render.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIdentityRaw(readJSON(LOCAL_IDENTITY_KEY));
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTeamRaw(readJSON(LOCAL_TEAM_KEY));
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoaded(true);
   }, []);
+
+  useEffect(() => {
+    if (!loaded || !identityRaw?.teamId || teamRaw) return;
+    let cancelled = false;
+    setCloudError(null);
+    loadRosterV1(identityRaw.teamId)
+      .then(({ ok, roster, error }) => {
+        if (cancelled) return;
+        if (!ok || !roster.length) {
+          setCloudError(error || 'Roster cloud non disponibile');
+          return;
+        }
+        const team = {
+          teamId: identityRaw.teamId,
+          formation: '4-3-3',
+          roster,
+          updatedAt: new Date().toISOString(),
+        };
+        setTeamRaw(team);
+      })
+      .catch(() => {
+        if (!cancelled) setCloudError('Roster cloud non disponibile');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [loaded, identityRaw?.teamId, teamRaw]);
 
   const state = useMemo(
     () => buildHomeState(identityRaw, teamRaw, playersData),
@@ -142,8 +168,7 @@ export default function FantaHome() {
 
         <div className="fw-note fw-note--warning" data-testid="fanta-home-incomplete-note">
           <p className="fw-note__line">
-            <strong>Formazione incompleta.</strong> Completa gli 11 titolari nel Team Builder per
-            vedere qui la tua squadra.
+            <strong>Formazione incompleta.</strong> {cloudError ? cloudError : 'Completa gli 11 titolari nel Team Builder per vedere qui la tua squadra.'}
           </p>
         </div>
 

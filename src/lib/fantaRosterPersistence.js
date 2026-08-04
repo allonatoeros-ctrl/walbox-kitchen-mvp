@@ -53,3 +53,37 @@ export async function saveRosterV1(teamId, roster) {
 
   return { ok: true, saved: validItems.length }
 }
+
+/**
+ * Carica il roster cloud per teamId leggendo fanta_rosters join
+ * fanta_player_snapshots. Nessuna scrittura, nessun touch su
+ * fanta_lineups. Fallimento/rete -> { ok: false, error }.
+ */
+export async function loadRosterV1(teamId) {
+  if (!teamId || typeof teamId !== 'string') {
+    return { ok: false, roster: [], error: 'TEAM_ID_MANCANTE' }
+  }
+
+  const { data, error } = await supabase
+    .from('fanta_rosters')
+    .select('player_id, isStarter, fanta_player_snapshots ( external_player_id )')
+    .eq('team_id', teamId)
+
+  if (error) {
+    return { ok: false, roster: [], error: `SUPABASE_ERROR: ${error.message}` }
+  }
+
+  if (!Array.isArray(data)) {
+    return { ok: false, roster: [], error: 'ROSTER_NON_TROVATO' }
+  }
+
+  const roster = data
+    .map((row) => {
+      const ext = row?.fanta_player_snapshots?.external_player_id
+      if (!ext || !row.player_id) return null
+      return { id: `p_${ext}`, isStarter: Boolean(row.isStarter) }
+    })
+    .filter(Boolean)
+
+  return { ok: true, roster }
+}

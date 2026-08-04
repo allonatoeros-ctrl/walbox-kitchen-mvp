@@ -97,9 +97,21 @@ test('FantaHome legge le stesse chiavi localStorage scritte da entry/team builde
   assert.match(pageSource, /fanta_walrus_custom_team/);
 });
 
-test('FantaHome non tocca Auth/Supabase/DB', () => {
-  assert.doesNotMatch(pageSource, /supabase/i);
-  assert.doesNotMatch(pageSource, /from ['"]\.\.\/\.\.\/lib\//);
+test('FantaHome non tocca Auth/Supabase/DB fuori dallo helper dedicato', () => {
+  const lines = pageSource.split('\n');
+  const body = lines
+    .filter((line) => !line.includes("../../lib/fantaRosterPersistence.js"))
+    .join('\n');
+  assert.doesNotMatch(body, /supabase/i);
+  assert.doesNotMatch(body, /from ['"]\.\.\/\.\.\/lib\//);
+});
+
+test('FantaHome legge Supabase tramite helper invece di supabase diretto', () => {
+  assert.match(pageSource, /loadRosterV1/);
+});
+
+test('FantaHome mostra errore cloud su incomplete quando loadRosterV1 fallisce', () => {
+  assert.match(pageSource, /cloudError/);
 });
 
 test('FantaHome non introduce captain/scoring/VAR/classifica/scheduler', () => {
