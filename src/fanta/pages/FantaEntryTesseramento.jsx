@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import TeamCrest, { CREST_PRESETS, TEAM_COLORS } from '../components/TeamCrest';
+import { createFantaTeam } from '../../lib/fantaTeamCreation';
 import './FantaEntryTesseramento.css';
 
 const FANTA_NAME = 'FANTAWALRUS';
@@ -7,14 +8,25 @@ const TEAM_NAME_MAX = 24;
 const NICKNAME_MAX = 18;
 const LOCAL_STORAGE_KEY = 'fanta_walrus_team_identity';
 
-function simpleHash(str) {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash;
+// Messaggi utente per i codici di errore risollevati da create_fanta_team_v1()
+// (supabase/migrations/0002_fanta_functions_v1.sql). Fallback generico per
+// errori di rete/imprevisti.
+function mapFantaTeamError(error) {
+  switch (error?.code) {
+    case 'FANTA_AUTH_REQUIRED':
+      return 'Sessione non valida. Accedi di nuovo per continuare.';
+    case 'FANTA_USER_ALREADY_HAS_TEAM':
+      return 'Hai gia’ un club registrato in questa lega.';
+    case 'FANTA_LEAGUE_FULL':
+      return 'La lega ha raggiunto il numero massimo di squadre.';
+    case 'FANTA_LEAGUE_NOT_FOUND':
+    case 'FANTA_LEAGUE_NOT_ACTIVE':
+      return 'Nessuna lega attiva al momento. Riprova più tardi.';
+    case 'FANTA_TEAM_CREATE_CONFLICT':
+      return 'Nome club già in uso. Scegline un altro.';
+    default:
+      return 'Non è stato possibile fondare il club. Riprova.';
   }
-  return Math.abs(hash).toString(36).slice(0, 8);
 }
 
 export default function FantaEntryTesseramento() {
@@ -22,6 +34,8 @@ export default function FantaEntryTesseramento() {
   const [managerNickname, setManagerNickname] = useState('');
   const [selectedCrestId, setSelectedCrestId] = useState(null);
   const [selectedColorId, setSelectedColorId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
   const trimmedName = teamName.trim();
   const trimmedNick = managerNickname.trim();
@@ -46,12 +60,23 @@ export default function FantaEntryTesseramento() {
     setManagerNickname(e.target.value.slice(0, NICKNAME_MAX));
   }
 
-  function handleTessera() {
-    if (ctaDisabled) return;
+  async function handleTessera() {
+    if (ctaDisabled || submitting) return;
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const { teamId, error } = await createFantaTeam(trimmedName);
+
+    if (error || !teamId) {
+      setSubmitError(mapFantaTeamError(error));
+      setSubmitting(false);
+      return;
+    }
+
     const createdAt = new Date().toISOString();
-    const teamId = 'team_' + simpleHash(trimmedName + selectedCrestId + createdAt);
     // Contratto localStorage preservato: teamId, teamName, crest{id,preset}, createdAt.
     // Campi opzionali additivi non rompono i lettori esistenti (FantaTeamBuilder ecc.).
+    // teamId ora e' lo UUID restituito da create_fanta_team_v1(), non piu' un hash locale.
     const identity = {
       teamId,
       teamName: trimmedName,
@@ -65,6 +90,7 @@ export default function FantaEntryTesseramento() {
     } catch {
       // ignore storage errors
     }
+
     window.history.pushState({}, '', '/fanta/team');
     window.dispatchEvent(new PopStateEvent('popstate'));
   }
@@ -308,7 +334,7 @@ export default function FantaEntryTesseramento() {
         <button
           type="button"
           className="fanta-entry__cta-button"
-          disabled={ctaDisabled}
+          disabled={ctaDisabled || submitting}
           onClick={handleTessera}
           data-testid="fanta-entry-tessera-cta"
         >
@@ -318,10 +344,14 @@ export default function FantaEntryTesseramento() {
               <path d="M6 11 L8 13 L12 8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </span>
-          <span className="fanta-entry__cta-label">FONDA IL CLUB</span>
+          <span className="fanta-entry__cta-label">{submitting ? 'REGISTRAZIONE IN CORSO…' : 'FONDA IL CLUB'}</span>
         </button>
         <span className="fanta-entry__cta-sub" data-testid="fanta-entry-cta-sub">
-          {ctaDisabled ? 'Inserisci nome e scegli lo stemma per continuare' : 'Nessun account · Nessuna app · Solo campo'}
+          {submitError
+            ? submitError
+            : ctaDisabled
+              ? 'Inserisci nome e scegli lo stemma per continuare'
+              : 'Nessun account · Nessuna app · Solo campo'}
         </span>
       </footer>
     </div>
