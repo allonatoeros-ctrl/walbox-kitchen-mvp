@@ -50,8 +50,6 @@ const CATEGORIES = [
   { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
   { key: 'patatine', label: 'PATATINE', icon: CATEGORY_SVGS.patatine },
   { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
-  { key: 'combo', label: 'COMBO', icon: CATEGORY_SVGS.combo },
-  { key: 'special', label: 'SPECIAL', icon: CATEGORY_SVGS.special },
   { key: 'bbq', label: 'AMERICAN BBQ', icon: CATEGORY_SVGS.special },
   { key: 'box', label: 'BOX', icon: CATEGORY_SVGS.special },
   { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.special },
@@ -60,11 +58,6 @@ const CATEGORIES = [
   { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.special },
   { key: 'bruschette', label: 'BRUSCHETTE', icon: CATEGORY_SVGS.special },
 ];
-
-const promoItem =
-  kitchenMenuItems.find((i) => i.id === 'item-007') ||
-  kitchenMenuItems.find((i) => i.category === 'combo');
-
 
 
 function generateOrderCode() {
@@ -96,7 +89,6 @@ function getCategoryTitle(cat) {
   if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
   if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
   if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
-  if (cat === 'special') return <>I PESI <span style={{ color: 'var(--k-orange)' }}>MASSIMI</span></>;
   if (cat === 'bbq') return <>AMERICAN <span style={{ color: 'var(--k-orange)' }}>BBQ</span></>;
   if (cat === 'box') return <>BOX <span style={{ color: 'var(--k-orange)' }}>TAKE AWAY</span></>;
   if (cat === 'tartare') return <>TARTARE <span style={{ color: 'var(--k-orange)' }}>Fresche</span></>;
@@ -341,8 +333,8 @@ export default function CustomerKitchenMenu() {
           box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(196,168,106,0.45) !important;
         }
 
-        /* COMBO tab active */
-        .active-cat-combo .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle {
+        /* BBQ tab active */
+        .active-cat-bbq .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle {
           background-color: #3a4a28 !important;
           color: #fff !important;
           box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(58,74,40,0.5) !important;

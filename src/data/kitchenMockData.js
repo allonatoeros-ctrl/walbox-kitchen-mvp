@@ -171,7 +171,7 @@ export const kitchenMenuItems = [
     ingredients: 'Acqua purificata, malto d\'orzo tostato, luppoli ad alto amaro, lievito.',
     allergens: ['glutine'],
   },
-  // legacy combo (mantenute temporaneamente)
+  // legacy combo (mantenute temporaneamente — nascoste nel menu cliente)
   {
     id: 'item-007',
     name: 'Combo CAVALLOOOO',
@@ -179,7 +179,7 @@ export const kitchenMenuItems = [
     description: 'Panino Porcheria Seria + Patatine da Banco + Birra del Tricheco. Il massimo.',
     price: 16.0,
     points: 25,
-    tags: ['promo', 'bestseller', 'combo'],
+    tags: ['promo', 'bestseller', 'combo', 'legacy'],
     image: '/assets/kitchen/photo-combo-cavalloooo.png',
     available: true,
     ingredients: 'Menu combinato composto da: un Panino Porcheria Seria, una porzione di Patatine da Banco, una Birra del Tricheco da 0,5L.',
@@ -192,7 +192,7 @@ export const kitchenMenuItems = [
     description: 'Panino del Tricheco + Patatine Fuori di Testa + Birra Scura Problemática.',
     price: 17.5,
     points: 28,
-    tags: ['promo', 'combo', 'spicy'],
+    tags: ['promo', 'combo', 'spicy', 'legacy'],
     image: '/assets/kitchen/photo-combo-sta-salendo-male.png',
     available: true,
     ingredients: 'Menu combinato composto da: un Panino del Tricheco, una porzione di Patatine Fuori di Testa, una Birra Scura Problemática.',
@@ -520,10 +520,7 @@ export const kitchenCategoryPromos = {
     image: '/assets/kitchen/07_fries_promo_fritto_terapeutico.png',
     alt: 'Fritto terapeutico',
   },
-  combo: {
-    image: '/assets/kitchen/02_hero_combo_porcheria_seria.png',
-    alt: 'Combo Porcheria Seria',
-  },
+  combo: null,
   bbq: null,
   box: null,
   tartare: null,
