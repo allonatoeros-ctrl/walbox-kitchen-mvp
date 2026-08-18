@@ -114,10 +114,14 @@ export default function FantaHome() {
     loadRosterV1(identityRaw.teamId)
       .then(({ ok, roster, error }) => {
         if (cancelled) return;
-        if (!ok || !roster.length) {
+        if (!ok) {
           setCloudError(error || 'Roster cloud non disponibile');
           return;
         }
+        // ok:true con roster:[] e' uno stato valido (nessun salvataggio
+        // cloud ancora fatto): niente cloudError, resta 'incomplete' via
+        // buildHomeState(identity, null, players).
+        if (!roster.length) return;
         const team = {
           teamId: identityRaw.teamId,
           formation: '4-3-3',

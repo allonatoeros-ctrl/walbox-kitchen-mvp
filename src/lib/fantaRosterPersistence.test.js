@@ -18,20 +18,50 @@ test('saveRosterV1 usa resolveSnapshotUUID per ogni id frontend', () => {
   assert.match(src, /resolveSnapshotUUID\(/);
 });
 
-test('saveRosterV1 opera su fanta_rosters con delete+insert', () => {
-  assert.match(src, /from\('fanta_rosters'\)/);
-  assert.match(src, /\.delete\(\)/);
-  assert.match(src, /\.insert\(/);
+test('saveRosterV1 usa la RPC atomica save_fanta_roster_v1 (fix P0, non piu delete+insert diretti)', () => {
+  assert.match(src, /supabase\.rpc\('save_fanta_roster_v1'/);
+  const saveFnStart = src.indexOf('export async function saveRosterV1');
+  const saveFnEnd = src.indexOf('\n}', saveFnStart) + 2;
+  const saveFn = src.slice(saveFnStart, saveFnEnd);
+  assert.doesNotMatch(saveFn, /\.from\('fanta_rosters'\)/);
+  assert.doesNotMatch(saveFn, /\.delete\(\)/);
+  assert.doesNotMatch(saveFn, /\.insert\(/);
 });
 
-test('saveRosterV1 filtra per team_id', () => {
-  assert.match(src, /\.eq\('team_id', teamId\)/);
+test('saveRosterV1 passa team_id e un payload strutturato { player_id, is_starter } alla RPC', () => {
+  assert.match(src, /p_team_id: teamId/);
+  assert.match(src, /p_roster: payload/);
+  assert.match(src, /player_id: i\.playerId, is_starter: i\.isStarter/);
+});
+
+test('saveRosterV1 rifiuta id duplicati nel roster prima di chiamare la RPC', () => {
+  const saveFnStart = src.indexOf('export async function saveRosterV1');
+  const saveFnEnd = src.indexOf('\n}', saveFnStart) + 2;
+  const saveFn = src.slice(saveFnStart, saveFnEnd);
+  assert.match(saveFn, /seenIds\.has\(item\.id\)/);
+  assert.match(saveFn, /ROSTER_DUPLICATO/);
 });
 
 test('saveRosterV1 restituisce { ok, saved, error } senza lanciare eccezioni', () => {
   assert.match(src, /return \{ ok: false, saved: 0, error:/);
   assert.match(src, /return \{ ok: true, saved:/);
   assert.doesNotMatch(src, /throw /);
+});
+
+test('saveRosterV1 chiama sempre la RPC, anche con roster vuoto (replace/wipe atomico lato server)', () => {
+  const saveFnStart = src.indexOf('export async function saveRosterV1');
+  const saveFnEnd = src.indexOf('\n}', saveFnStart) + 2;
+  const saveFn = src.slice(saveFnStart, saveFnEnd);
+  assert.doesNotMatch(saveFn, /if \(playerIds\.length/);
+  assert.match(saveFn, /supabase\.rpc\('save_fanta_roster_v1'/);
+});
+
+test('saveRosterV1 su errore RPC (failure path) restituisce ok:false senza toccare fanta_rosters direttamente', () => {
+  const saveFnStart = src.indexOf('export async function saveRosterV1');
+  const saveFnEnd = src.indexOf('\n}', saveFnStart) + 2;
+  const saveFn = src.slice(saveFnStart, saveFnEnd);
+  assert.match(saveFn, /if \(error\) \{\s*\n\s*return \{ ok: false, saved: 0, error: error\.message \}/);
+  assert.doesNotMatch(saveFn, /\.from\('fanta_rosters'\)/);
 });
 
 test('fantaRosterPersistence non importa routing/App/fanta_leagues', () => {
@@ -53,6 +83,12 @@ test('loadRosterV1 usa fanta_rosters join fanta_player_snapshots senza toccare f
   const loadFnEnd = loadSrc.indexOf('}\n', loadFnStart) + 1;
   const loadFn = loadSrc.slice(loadFnStart, loadFnEnd);
   assert.doesNotMatch(loadFn, /fanta_lineups/);
+});
+
+test('loadRosterV1 legge la colonna reale is_starter (non isStarter, che non esiste su fanta_rosters)', () => {
+  assert.match(loadSrc, /\.select\('player_id, is_starter, fanta_player_snapshots/);
+  assert.match(loadSrc, /Boolean\(row\.is_starter\)/);
+  assert.doesNotMatch(loadSrc, /select\('player_id, isStarter/);
 });
 
 test('loadRosterV1 filtra per team_id e restituisce { ok, roster }', () => {

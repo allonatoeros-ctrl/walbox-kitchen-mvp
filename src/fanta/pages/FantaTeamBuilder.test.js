@@ -33,4 +33,13 @@ test('FantaTeamBuilder usa cloudHydrated come priorita nel footer', () => {
   assert.match(src, /Formazione caricata dal cloud/);
 });
 
+test('FantaTeamBuilder tratta { ok:true, roster:[] } come stato valido, non come errore cloud', () => {
+  const effectStart = src.indexOf('loadRosterV1(identity.teamId)');
+  const effectEnd = src.indexOf('}, [identityLoaded, identity, playersData]);', effectStart);
+  const effect = src.slice(effectStart, effectEnd);
+  assert.match(effect, /if \(!ok\) \{/, 'errore cloud solo quando ok e\' false, non su roster vuoto');
+  assert.doesNotMatch(effect, /if \(ok && roster\.length > 0\)/, 'roster vuoto con ok:true non deve piu finire nel ramo else/errore');
+  assert.match(effect, /setCloudHydrated\(true\);\s*\n\s*\}\)\s*\n\s*\.catch/, 'cloudHydrated va a true anche quando il roster cloud e\' vuoto (unico setCloudHydrated(true), fuori dal ramo roster.length > 0)');
+});
+
 console.log('FantaTeamBuilder.test.js: tutti i test passati.');

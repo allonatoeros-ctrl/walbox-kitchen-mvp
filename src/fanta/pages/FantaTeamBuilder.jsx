@@ -94,16 +94,21 @@ export default function FantaTeamBuilder() {
     loadRosterV1(identity.teamId)
       .then(({ ok, roster, error }) => {
         if (cancelled || !Array.isArray(roster)) return;
-        if (ok && roster.length > 0) {
+        if (!ok) {
+          setCloudError(error || 'Roster cloud non disponibile');
+          return;
+        }
+        // ok:true con roster:[] e' uno stato valido (squadra nuova, nessun
+        // salvataggio cloud ancora fatto): non e' un errore, non deve
+        // mostrare cloudError.
+        if (roster.length > 0) {
           const validIds = new Set(playersData.map((p) => p.id));
           const starters = roster.filter((r) => validIds.has(r.id) && r.isStarter).map((r) => r.id);
           const bench = roster.filter((r) => validIds.has(r.id) && !r.isStarter).slice(0, MAX_BENCH).map((r) => r.id);
           setSelectedIds(starters);
           setBenchIds(bench);
-          setCloudHydrated(true);
-        } else {
-          setCloudError(error || 'Roster cloud non disponibile');
         }
+        setCloudHydrated(true);
       })
       .catch(() => {
         if (!cancelled) setCloudError('Roster cloud non disponibile');

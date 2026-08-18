@@ -114,6 +114,14 @@ test('FantaHome mostra errore cloud su incomplete quando loadRosterV1 fallisce',
   assert.match(pageSource, /cloudError/);
 });
 
+test('FantaHome tratta { ok:true, roster:[] } come stato valido, non come errore cloud', () => {
+  const effectStart = pageSource.indexOf('loadRosterV1(identityRaw.teamId)');
+  const effectEnd = pageSource.indexOf('}, [loaded, identityRaw?.teamId, teamRaw]);', effectStart);
+  const effect = pageSource.slice(effectStart, effectEnd);
+  assert.match(effect, /if \(!ok\) \{/, 'errore cloud solo quando ok e\' false, non su roster vuoto');
+  assert.doesNotMatch(effect, /if \(!ok \|\| !roster\.length\)/, 'roster vuoto con ok:true non deve piu finire nel ramo errore');
+});
+
 test('FantaHome non introduce captain/scoring/VAR/classifica/scheduler', () => {
   assert.doesNotMatch(pageSource, /captain|capitano/i);
   assert.doesNotMatch(pageSource, /from ['"]\.\.\/engine\//);
