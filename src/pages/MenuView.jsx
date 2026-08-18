@@ -54,7 +54,7 @@ export default function MenuView({ menuItems, toggleAvailability }) {
                     </span>
                   </div>
                   <div className="ksd-history-row-right" style={{ gap: '10px', alignItems: 'center' }}>
-                    <span className="ksd-history-total">€ {item.price.toFixed(2)}</span>
+                    <span className="ksd-history-total">{item.price == null ? 'PREZZO IN ARRIVO' : `€ ${item.price.toFixed(2)}`}</span>
                     <button
                       onClick={() => toggleAvailability(item.id)}
                       style={{
@@ -103,7 +103,7 @@ export default function MenuView({ menuItems, toggleAvailability }) {
                 </span>
               </div>
               <div className="ksd-history-row-right" style={{ gap: '10px', alignItems: 'center' }}>
-                <span className="ksd-history-total">€ {item.price.toFixed(2)}</span>
+                <span className="ksd-history-total">{item.price == null ? 'PREZZO IN ARRIVO' : `€ ${item.price.toFixed(2)}`}</span>
                 <button
                   onClick={() => toggleAvailability(item.id)}
                   style={{
