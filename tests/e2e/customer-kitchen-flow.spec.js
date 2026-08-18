@@ -325,3 +325,15 @@ test('17. Alert critico dopo 15 minuti', async ({ page }) => {
   await page.getByRole('button', { name: /ALERT/i }).click();
   await expect(page.getByText(/🔴 CRITICO/)).toBeVisible();
 });
+
+// ── QA-3: Item "in arrivo" (price: null) ──────────────────────────
+
+test('18. Panino "in arrivo" mostra PREZZO IN ARRIVO e CTA disabilitata', async ({ page }) => {
+  await page.goto('/kitchen');
+
+  await page.locator('.kitch-tabs .kitch-tab').filter({ hasText: 'SPECIAL' }).click();
+
+  const card = page.locator('.kitch-card', { hasText: 'PULLED PORK' });
+  await expect(card.getByText('PREZZO IN ARRIVO')).toBeVisible();
+  await expect(card.getByRole('button', { name: 'LO VOGLIO' })).toBeDisabled();
+});

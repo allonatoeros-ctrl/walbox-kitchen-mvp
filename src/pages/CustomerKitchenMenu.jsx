@@ -36,6 +36,14 @@ const CATEGORY_SVGS = {
       <path d="M18 2 C19.5 9 24.5 12 34 13 C25.5 17 26 23.5 28 33 C20 28 16 28 8 33 C10 23.5 10.5 17 2 13 C11.5 12 16.5 9 18 2 Z" fill="currentColor" />
     </svg>
   ),
+  special: (
+    <svg width="38" height="30" viewBox="0 0 38 30" fill="none">
+      <rect x="3" y="12" width="32" height="8" rx="4" fill="currentColor" />
+      <circle cx="9" cy="16" r="7" fill="currentColor" />
+      <circle cx="29" cy="16" r="7" fill="currentColor" />
+      <rect x="10" y="9" width="18" height="4" rx="2" fill="currentColor" />
+    </svg>
+  ),
 };
 
 const CATEGORIES = [
@@ -43,6 +51,7 @@ const CATEGORIES = [
   { key: 'patatine', label: 'PATATINE', icon: CATEGORY_SVGS.patatine },
   { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
   { key: 'combo', label: 'COMBO', icon: CATEGORY_SVGS.combo },
+  { key: 'special', label: 'SPECIAL', icon: CATEGORY_SVGS.special },
 ];
 
 const promoItem =
@@ -80,6 +89,7 @@ function getCategoryTitle(cat) {
   if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
   if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
   if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
+  if (cat === 'special') return <>I PESI <span style={{ color: 'var(--k-orange)' }}>MASSIMI</span></>;
   return cat.toUpperCase();
 }
 
@@ -110,6 +120,7 @@ export default function CustomerKitchenMenu() {
 
 
   const addItem = (item) => {
+    if (item.price == null) return;
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === item.id);
       if (existing) {
@@ -293,6 +304,7 @@ export default function CustomerKitchenMenu() {
         .kitch-tabs .kitch-tab:nth-child(2) .kitch-tab-circle { background-color: rgba(184,48,32,0.28) !important; color: rgba(212,200,154,0.7) !important; }
         .kitch-tabs .kitch-tab:nth-child(3) .kitch-tab-circle { background-color: rgba(196,168,106,0.28) !important; color: rgba(212,200,154,0.7) !important; }
         .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle { background-color: rgba(58,74,40,0.28) !important; color: rgba(212,200,154,0.7) !important; }
+        .kitch-tabs .kitch-tab:nth-child(5) .kitch-tab-circle { background-color: rgba(120,40,20,0.28) !important; color: rgba(212,200,154,0.7) !important; }
 
         /* PANINI tab active */
         .active-cat-panini .kitch-tabs .kitch-tab:nth-child(1) .kitch-tab-circle {
@@ -435,6 +447,9 @@ export default function CustomerKitchenMenu() {
                 <span className="kitch-card-icon">🦭</span>
               </div>
               <div className="kitch-card-desc">{item.description}</div>
+              {item.ingredients ? (
+                <div className="kitch-card-ingredients">{item.ingredients}</div>
+              ) : null}
               {item.allergens?.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 4px', marginTop: '6px', marginBottom: '4px' }}>
                   {item.allergens.map((a) => (
@@ -455,12 +470,12 @@ export default function CustomerKitchenMenu() {
                 </div>
               )}
               <div className="kitch-card-footer">
-                <div className="kitch-card-price">€{item.price.toFixed(2)}</div>
+                <div className="kitch-card-price">{item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2)}`}</div>
                 <button
                   className="kitch-btn-lo-voglio"
                   onClick={() => addItem(item)}
-                  disabled={item.available === false}
-                  style={item.available === false ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
+                  disabled={item.available === false || item.price == null}
+                  style={item.available === false || item.price == null ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
                 >LO VOGLIO</button>
               </div>
             </div>

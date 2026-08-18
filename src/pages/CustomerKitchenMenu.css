@@ -307,9 +307,25 @@
 
 .kitch-card-price {
   font-family: var(--k-font-display);
-  font-size: 20px;
+  font-size: 15px;
   font-weight: 800;
   color: #c84020;
+  line-height: 1.1;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kitch-btn-lo-voglio:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(20%);
+}
+
+.kitch-card-ingredients {
+  font-size: 11px;
+  color: #6b5740;
+  margin-top: 6px;
+  line-height: 1.35;
 }
 
 .kitch-btn-lo-voglio {
