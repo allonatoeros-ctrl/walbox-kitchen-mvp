@@ -9,6 +9,14 @@ const CATEGORY_THEMES = {
   patatine: { activeBg: '#f3be32', activeBorder: '#e05929', inactiveBg: '#2c2212', inactiveBorder: '#41351e' },
   birre:    { activeBg: '#e05929', activeBorder: '#f8c53a', inactiveBg: '#231c18', inactiveBorder: '#342a24' },
   combo:    { activeBg: '#457c39', activeBorder: '#f8c53a', inactiveBg: '#1b2417', inactiveBorder: '#293623' },
+  bbq:      { activeBg: '#8b1e1e', activeBorder: '#f8c53a', inactiveBg: '#1f1212', inactiveBorder: '#3b1f1f' },
+  box:      { activeBg: '#5c4b1f', activeBorder: '#f8c53a', inactiveBg: '#1a1810', inactiveBorder: '#332e1f' },
+  tartare:  { activeBg: '#c25a6b', activeBorder: '#f8c53a', inactiveBg: '#1f1215', inactiveBorder: '#3b1f25' },
+  tagliere_salumi: { activeBg: '#7a3b2e', activeBorder: '#f8c53a', inactiveBg: '#1f1410', inactiveBorder: '#3b211a' },
+  tagliere_formaggi: { activeBg: '#b88a3a', activeBorder: '#f8c53a', inactiveBg: '#1f1a10', inactiveBorder: '#3b321a' },
+  insalatone: { activeBg: '#4a7c3f', activeBorder: '#f8c53a', inactiveBg: '#121f10', inactiveBorder: '#1f3b1a' },
+  bruschette: { activeBg: '#9c5a2a', activeBorder: '#f8c53a', inactiveBg: '#1f1410', inactiveBorder: '#3b211a' },
+  special:  { activeBg: '#6b4c7a', activeBorder: '#f8c53a', inactiveBg: '#14121f', inactiveBorder: '#251f3b' },
 };
 
 export default function KitchenCategoryTabs({ categories, activeKey, onSelect }) {

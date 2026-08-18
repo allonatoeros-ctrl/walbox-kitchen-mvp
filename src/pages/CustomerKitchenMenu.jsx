@@ -52,6 +52,13 @@ const CATEGORIES = [
   { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
   { key: 'combo', label: 'COMBO', icon: CATEGORY_SVGS.combo },
   { key: 'special', label: 'SPECIAL', icon: CATEGORY_SVGS.special },
+  { key: 'bbq', label: 'AMERICAN BBQ', icon: CATEGORY_SVGS.special },
+  { key: 'box', label: 'BOX', icon: CATEGORY_SVGS.special },
+  { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.special },
+  { key: 'tagliere_salumi', label: 'TAGLIERE SALUMI', icon: CATEGORY_SVGS.special },
+  { key: 'tagliere_formaggi', label: 'TAGLIERE FORMAGGI', icon: CATEGORY_SVGS.special },
+  { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.special },
+  { key: 'bruschette', label: 'BRUSCHETTE', icon: CATEGORY_SVGS.special },
 ];
 
 const promoItem =
@@ -90,6 +97,13 @@ function getCategoryTitle(cat) {
   if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
   if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
   if (cat === 'special') return <>I PESI <span style={{ color: 'var(--k-orange)' }}>MASSIMI</span></>;
+  if (cat === 'bbq') return <>AMERICAN <span style={{ color: 'var(--k-orange)' }}>BBQ</span></>;
+  if (cat === 'box') return <>BOX <span style={{ color: 'var(--k-orange)' }}>TAKE AWAY</span></>;
+  if (cat === 'tartare') return <>TARTARE <span style={{ color: 'var(--k-orange)' }}>Fresche</span></>;
+  if (cat === 'tagliere_salumi') return <>TAGLIERE <span style={{ color: 'var(--k-orange)' }}>SALUMI</span></>;
+  if (cat === 'tagliere_formaggi') return <>TAGLIERE <span style={{ color: 'var(--k-orange)' }}>FORMAGGI</span></>;
+  if (cat === 'insalatone') return <>INSALATONE <span style={{ color: 'var(--k-orange)' }}>Nostrane</span></>;
+  if (cat === 'bruschette') return <>BRUSCHETTE <span style={{ color: 'var(--k-orange)' }}>Croccanti</span></>;
   return cat.toUpperCase();
 }
 
@@ -115,7 +129,7 @@ export default function CustomerKitchenMenu() {
     } catch { }
   }, []);
 
-  const visibleItems = menuItems.filter((i) => i.category === activeCategory);
+  const visibleItems = menuItems.filter((i) => i.category === activeCategory && !i.tags?.includes('legacy'));
 
 
 

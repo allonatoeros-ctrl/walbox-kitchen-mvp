@@ -8,7 +8,7 @@ function makeSeedOrder() {
       id: 'order-seed-t12',
       table: 'T12',
       nickname: 'Eros',
-      items: [{ itemId: 'item-001', name: 'Walrus Smash Burger', quantity: 1, price: 9 }],
+      items: [{ itemId: 'item-001', name: 'Porchetta', quantity: 1, price: 9 }],
       total: 9,
       status: 'received',
       createdAt: new Date().toISOString(),
@@ -328,10 +328,10 @@ test('17. Alert critico dopo 15 minuti', async ({ page }) => {
 
 // ── QA-3: Item "in arrivo" (price: null) ──────────────────────────
 
-test('18. Panino "in arrivo" mostra PREZZO IN ARRIVO e CTA disabilitata', async ({ page }) => {
+test('18. BBQ "in arrivo" mostra PREZZO IN ARRIVO e CTA disabilitata', async ({ page }) => {
   await page.goto('/kitchen');
 
-  await page.locator('.kitch-tabs .kitch-tab').filter({ hasText: 'SPECIAL' }).click();
+  await page.locator('.kitch-tabs .kitch-tab').filter({ hasText: 'AMERICAN BBQ' }).click();
 
   const card = page.locator('.kitch-card', { hasText: 'PULLED PORK' });
   await expect(card.getByText('PREZZO IN ARRIVO')).toBeVisible();

@@ -1,13 +1,13 @@
-const CATEGORY_LABEL = { panini: 'PANINI', patatine: 'PATATINE', birre: 'BIRRE', combo: 'COMBO' };
+const CATEGORY_LABEL = { panini: 'PANINI', patatine: 'PATATINE', birre: 'BIRRE', combo: 'COMBO', bbq: 'AMERICAN BBQ', box: 'BOX', tartare: 'TARTARE', tagliere_salumi: 'TAGLIERE SALUMI', tagliere_formaggi: 'TAGLIERE FORMAGGI', insalatone: 'INSALATONE', bruschette: 'BRUSCHETTE', special: 'SPECIAL' };
 
-const CATEGORY_ORDER = ['panini', 'patatine', 'birre', 'combo'];
+const CATEGORY_ORDER = ['panini', 'patatine', 'birre', 'combo', 'bbq', 'box', 'tartare', 'tagliere_salumi', 'tagliere_formaggi', 'insalatone', 'bruschette', 'special'];
 
 export default function MenuView({ menuItems, toggleAvailability }) {
 
   const unavailableCount = menuItems.filter((i) => !i.available).length;
 
   const grouped = CATEGORY_ORDER.reduce((acc, cat) => {
-    const items = menuItems.filter((i) => i.category === cat);
+    const items = menuItems.filter((i) => i.category === cat && !i.tags?.includes('legacy'));
     if (items.length > 0) acc[cat] = items;
     return acc;
   }, {});
