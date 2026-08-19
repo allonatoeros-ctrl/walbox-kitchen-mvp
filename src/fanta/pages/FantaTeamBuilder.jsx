@@ -9,6 +9,7 @@ import {
   FantaButton,
   FantaBadge,
   FantaPanel,
+  FantaNav,
   CREST_SIZE,
 } from '../components/ui';
 import { saveRosterV1 } from '../../lib/fantaRosterPersistence.js';
@@ -264,6 +265,8 @@ export default function FantaTeamBuilder() {
         context={validation.valid ? 'FORMAZIONE VALIDA' : `${selectedIds.length}/${MAX_STARTERS} TITOLARI`}
         live={validation.valid}
       />
+
+      <FantaNav current="/fanta/team" />
 
       <section className="fw-section" aria-label="Identità squadra">
         <FantaPanel

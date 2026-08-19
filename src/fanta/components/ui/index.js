@@ -3,6 +3,7 @@
 export { default as FantaShell } from './FantaShell.jsx';
 export { default as FantaBand, LeagueSeal } from './FantaBand.jsx';
 export { default as FantaButton } from './FantaButton.jsx';
+export { default as FantaNav } from './FantaNav.jsx';
 export { default as FantaBadge } from './FantaBadge.jsx';
 export { default as FantaPanel } from './FantaPanel.jsx';
 export { CREST_SIZE, CREST_RATIO, crestHeight } from './crestScale.js';

@@ -13,6 +13,7 @@ import SpotifyTestPanel from "./pages/SpotifyTestPanel";
 import StaffLogin from "./pages/StaffLogin";
 import FantaVarRoom from "./fanta/pages/FantaVarRoom";
 import FantaMatchday from "./fanta/pages/FantaMatchday";
+import FantaClassifica from "./fanta/pages/FantaClassifica";
 import FantaEntryTesseramento from "./fanta/pages/FantaEntryTesseramento";
 import FantaTeamBuilder from "./fanta/pages/FantaTeamBuilder";
 import FantaHome from "./fanta/pages/FantaHome";
@@ -163,6 +164,8 @@ export default function App() {
         return <FantaVarRoom />;
       case "/fanta/matchday":
         return <FantaMatchday />;
+      case "/fanta/classifica":
+        return <FantaClassifica />;
       case "/fanta/entry":
         return <FantaRouteGuard Component={FantaEntryTesseramento} />;
       case "/fanta/team":

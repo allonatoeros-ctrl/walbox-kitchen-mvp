@@ -8,6 +8,7 @@ import playersData from "../data/players.json";
 import scoringData from "../data/scoring.json";
 import votesData from "../data/votes.json";
 import teamsData from "../data/teams_sample.json";
+import { FantaShell, FantaBand, FantaPanel, FantaButton, FantaNav } from "../components/ui";
 
 const LOCAL_TEAM_KEY = "fanta_walrus_custom_team";
 
@@ -19,11 +20,6 @@ const STATE_LABELS = {
 };
 
 const ROLE_LABELS = { GK: "POR", DEF: "DIF", MID: "CEN", FWD: "ATT" };
-
-function navigateTo(path) {
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
 
 export default function FantaMatchday() {
   const [fixtureId, setFixtureId] = useState(fixturesData[0]?.fixtureId || null);
@@ -95,116 +91,100 @@ export default function FantaMatchday() {
   );
 
   return (
-    <div style={{ padding: 24, fontFamily: "monospace" }}>
-      <h1>FantaWalrus — Matchday</h1>
-      <nav style={{ marginBottom: 8, display: "flex", gap: 16 }}>
-        <button
-          type="button"
-          onClick={() => navigateTo("/fanta/team")}
-          style={{ background: "none", border: "none", color: "#8aff8a", cursor: "pointer", padding: 0, font: "inherit" }}
-        >
-          ← Modifica formazione
-        </button>
-        <button
-          type="button"
-          onClick={() => navigateTo("/fanta/var")}
-          style={{ background: "none", border: "none", color: "#8aff8a", cursor: "pointer", padding: 0, font: "inherit" }}
-        >
-          Sala VAR →
-        </button>
-      </nav>
-      <p style={{ opacity: 0.8 }}>UI tecnica: stato giornata, evento corrente e classifica.</p>
-      <p style={{ opacity: 0.8 }}>
+    <FantaShell width="wide" data-testid="fanta-matchday-page">
+      <FantaBand
+        title="FANTAWALRUS"
+        subtitle="MATCHDAY"
+        status="DEMO"
+        context="Replay statico — non e' un live reale"
+      />
+
+      <FantaNav current="/fanta/matchday" />
+
+      <p className="fw-empty">
         Squadra in campo:{" "}
         {customTeam ? (
-          <strong style={{ color: "#8aff8a" }}>CUSTOM ({customTeam.teamId})</strong>
+          <strong style={{ color: "var(--fw-success)" }}>CUSTOM ({customTeam.teamId})</strong>
         ) : (
-          <strong style={{ color: "#ffd27a" }}>MOCK (teams_sample.json)</strong>
+          <strong style={{ color: "var(--fw-gold)" }}>MOCK (teams_sample.json)</strong>
         )}
       </p>
       {customTeamIncomplete && (
-        <p style={{ background: "#3a1f1f", border: "1px solid #ff6b6b", color: "#ffb3b3", padding: "8px 12px" }}>
-          La tua squadra salvata è incompleta o non valida (modulo non conforme): uso la squadra demo
-          finché non la correggi in{" "}
-          <button
-            type="button"
-            onClick={() => navigateTo("/fanta/team")}
-            style={{ background: "none", border: "none", color: "#ffb3b3", textDecoration: "underline", cursor: "pointer", padding: 0, font: "inherit" }}
-          >
-            Team Builder
-          </button>
-          .
-        </p>
+        <div className="fw-note fw-note--warning">
+          <p className="fw-note__line">
+            La tua squadra salvata è incompleta o non valida (modulo non conforme): uso la squadra
+            demo finché non la correggi in Team Builder.
+          </p>
+        </div>
       )}
 
-      <div style={{ marginBottom: 16 }}>
-        <label>
-          Fixture{" "}
-          <select
-            value={fixtureId || ""}
-            onChange={(e) => setFixtureId(e.target.value)}
-            style={{ marginLeft: 8 }}
-          >
-            {fixturesData.map((f) => (
-              <option key={f.fixtureId} value={f.fixtureId}>
-                {f.fixtureId}: {f.home} vs {f.away} ({f.date})
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16, marginBottom: 16 }}>
-        <div style={{ border: "1px solid #333", padding: 12 }}>
-          <div>Stato</div>
-          <div style={{ fontSize: 18 }}>{STATE_LABELS[md.state] || md.state}</div>
+      <FantaPanel title="GIORNATA" meta="Dati demo statici">
+        <div style={{ marginBottom: 16 }}>
+          <label>
+            Fixture{" "}
+            <select
+              value={fixtureId || ""}
+              onChange={(e) => setFixtureId(e.target.value)}
+              style={{ marginLeft: 8 }}
+            >
+              {fixturesData.map((f) => (
+                <option key={f.fixtureId} value={f.fixtureId}>
+                  {f.fixtureId}: {f.home} vs {f.away} ({f.date})
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
-        <div style={{ border: "1px solid #333", padding: 12 }}>
-          <div>Progresso</div>
-          <div style={{ fontSize: 18 }}>
-            {md.cursor} / {md.total}
+
+        <div className="fw-stat-grid" style={{ marginBottom: 16 }}>
+          <div className="fw-stat">
+            <span className="fw-stat__label">STATO</span>
+            <span className="fw-stat__value">{STATE_LABELS[md.state] || md.state}</span>
+          </div>
+          <div className="fw-stat">
+            <span className="fw-stat__label">PROGRESSO</span>
+            <span className="fw-stat__value">{md.cursor} / {md.total}</span>
+          </div>
+          <div className="fw-stat">
+            <span className="fw-stat__label">FIXTURE</span>
+            <span className="fw-stat__value">
+              {fixture ? `${fixture.home} vs ${fixture.away}` : fixtureId}
+            </span>
           </div>
         </div>
-        <div style={{ border: "1px solid #333", padding: 12 }}>
-          <div>Fixture</div>
-          <div style={{ fontSize: 18 }}>
-            {fixture ? `${fixture.home} vs ${fixture.away}` : fixtureId}
-          </div>
-        </div>
-      </div>
 
-      <div style={{ marginBottom: 16 }}>
-        <div>Evento corrente</div>
-        {md.currentEvent ? (
-          <pre style={{ background: "#111", padding: 12, overflow: "auto" }}>
+        <div style={{ marginBottom: 16 }}>
+          <span className="fw-stat__label">EVENTO CORRENTE</span>
+          {md.currentEvent ? (
+            <pre style={{ background: "var(--fw-surface-2, #111)", padding: 12, overflow: "auto", marginTop: 6 }}>
 {JSON.stringify(md.currentEvent, null, 2)}
-          </pre>
-        ) : (
-          <div>Nessun evento selezionato</div>
-        )}
-      </div>
+            </pre>
+          ) : (
+            <div className="fw-empty">Nessun evento selezionato</div>
+          )}
+        </div>
 
-      <div style={{ marginBottom: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
-        <button onClick={md.start} disabled={md.state === "running" || md.state === "completed"}>
-          Start
-        </button>
-        <button onClick={md.pause} disabled={md.state !== "running"}>
-          Pause
-        </button>
-        <button onClick={md.resume} disabled={md.state !== "paused"}>
-          Resume
-        </button>
-        <button onClick={md.reset}>Reset</button>
-        <button onClick={() => md.step()} disabled={md.state === "running" || md.state === "completed"}>
-          Step
-        </button>
-      </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <FantaButton variant="ghost" size="sm" onClick={md.start} disabled={md.state === "running" || md.state === "completed"}>
+            Start
+          </FantaButton>
+          <FantaButton variant="ghost" size="sm" onClick={md.pause} disabled={md.state !== "running"}>
+            Pause
+          </FantaButton>
+          <FantaButton variant="ghost" size="sm" onClick={md.resume} disabled={md.state !== "paused"}>
+            Resume
+          </FantaButton>
+          <FantaButton variant="ghost" size="sm" onClick={md.reset}>
+            Reset
+          </FantaButton>
+          <FantaButton variant="ghost" size="sm" onClick={() => md.step()} disabled={md.state === "running" || md.state === "completed"}>
+            Step
+          </FantaButton>
+        </div>
+      </FantaPanel>
 
       {breakdownTeam ? (
-        <div style={{ marginBottom: 24 }}>
-          <h2>
-            Formazione &amp; punteggi — {displayTeamId} ({breakdownTeam.total} pt)
-          </h2>
+        <FantaPanel title="FORMAZIONE & PUNTEGGI" meta={`${displayTeamId} · ${breakdownTeam.total} pt`}>
           <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 16 }}>
             <thead>
               <tr>
@@ -240,7 +220,7 @@ export default function FantaMatchday() {
             </tbody>
           </table>
 
-          <h3>Panchina</h3>
+          <h3 className="fw-stat__label">PANCHINA</h3>
           {benchRoster.length ? (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -264,13 +244,12 @@ export default function FantaMatchday() {
               </tbody>
             </table>
           ) : (
-            <div style={{ opacity: 0.7 }}>Nessun giocatore in panchina.</div>
+            <p className="fw-empty">Nessun giocatore in panchina.</p>
           )}
-        </div>
+        </FantaPanel>
       ) : null}
 
-      <div>
-        <h2>Classifica</h2>
+      <FantaPanel title="CLASSIFICA GIORNATA" meta="Solo questa fixture — vedi Classifica per il totale">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
@@ -289,7 +268,7 @@ export default function FantaMatchday() {
             ))}
           </tbody>
         </table>
-      </div>
-    </div>
+      </FantaPanel>
+    </FantaShell>
   );
 }

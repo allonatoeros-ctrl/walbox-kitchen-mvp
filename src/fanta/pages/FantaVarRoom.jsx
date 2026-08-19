@@ -7,6 +7,7 @@ import eventsData from "../data/events.json";
 import votesData from "../data/votes.json";
 import scoringData from "../data/scoring.json";
 import varLogData from "../data/varLog_sample.json";
+import { FantaShell, FantaBand, FantaPanel, FantaNav } from "../components/ui";
 
 const EVENT_LABELS = {
   goal: "Gol",
@@ -36,7 +37,7 @@ function buildTeamNameMap(teams) {
 function StandingsTable({ title, standings, teamNames }) {
   return (
     <div style={{ flex: 1, minWidth: 260 }}>
-      <h3>{title}</h3>
+      <h3 className="fw-stat__label">{title}</h3>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>
@@ -57,11 +58,6 @@ function StandingsTable({ title, standings, teamNames }) {
       </table>
     </div>
   );
-}
-
-function navigateTo(path) {
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
 export default function FantaVarRoom() {
@@ -106,57 +102,58 @@ export default function FantaVarRoom() {
   }
 
   return (
-    <div style={{ padding: 24, fontFamily: "sans-serif" }}>
-      <h1>FantaWalrus — Sala VAR</h1>
-      <nav style={{ marginBottom: 8 }}>
-        <button
-          type="button"
-          onClick={() => navigateTo("/fanta/matchday")}
-          style={{ background: "none", border: "none", color: "#0d6efd", cursor: "pointer", padding: 0, font: "inherit", textDecoration: "underline" }}
-        >
-          ← Torna al Matchday
-        </button>
-      </nav>
-      <p style={{ background: "#fff3cd", padding: "8px 12px", border: "1px solid #ffe08a" }}>
-        Demo locale — rettifiche non persistenti
-      </p>
+    <FantaShell width="wide" data-testid="fanta-var-page">
+      <FantaBand
+        title="FANTAWALRUS"
+        subtitle="SALA VAR"
+        status="DEMO"
+        context="Rettifiche non persistenti"
+      />
 
-      <h2>Log eventi in revisione</h2>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 32 }}>
-        <thead>
-          <tr>
-            <th style={{ textAlign: "left" }}>Minuto</th>
-            <th style={{ textAlign: "left" }}>Squadra</th>
-            <th style={{ textAlign: "left" }}>Giocatore</th>
-            <th style={{ textAlign: "left" }}>Evento</th>
-            <th style={{ textAlign: "left" }}>Azione</th>
-          </tr>
-        </thead>
-        <tbody>
-          {varLog.entries.map((e) => {
-            const retracted = varLog.isRetracted(e.eventId);
-            return (
-              <tr key={e.eventId} style={retracted ? { opacity: 0.5 } : undefined}>
-                <td>{e.minute}'</td>
-                <td>{teamNames[e.teamId] || e.teamId || "—"}</td>
-                <td>{playerNames[e.playerId] || e.playerId}</td>
-                <td>{EVENT_LABELS[e.type] || e.type}</td>
-                <td>
-                  <button onClick={() => handleRitira(e.eventId)} disabled={retracted}>
-                    {retracted ? "Ritirato" : "Ritira"}
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <FantaNav current="/fanta/var" />
 
-      <h2>Classifica: prima e dopo la ritrattazione</h2>
-      <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
-        <StandingsTable title="Prima" standings={before.standings} teamNames={teamNames} />
-        <StandingsTable title="Dopo" standings={after.standings} teamNames={teamNames} />
+      <div className="fw-note fw-note--warning">
+        <p className="fw-note__line">Demo locale — le rettifiche si perdono al refresh.</p>
       </div>
-    </div>
+
+      <FantaPanel title="LOG EVENTI IN REVISIONE" meta={`${varLog.entries.length} eventi`}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left" }}>Minuto</th>
+              <th style={{ textAlign: "left" }}>Squadra</th>
+              <th style={{ textAlign: "left" }}>Giocatore</th>
+              <th style={{ textAlign: "left" }}>Evento</th>
+              <th style={{ textAlign: "left" }}>Azione</th>
+            </tr>
+          </thead>
+          <tbody>
+            {varLog.entries.map((e) => {
+              const retracted = varLog.isRetracted(e.eventId);
+              return (
+                <tr key={e.eventId} style={retracted ? { opacity: 0.5 } : undefined}>
+                  <td>{e.minute}'</td>
+                  <td>{teamNames[e.teamId] || e.teamId || "—"}</td>
+                  <td>{playerNames[e.playerId] || e.playerId}</td>
+                  <td>{EVENT_LABELS[e.type] || e.type}</td>
+                  <td>
+                    <button onClick={() => handleRitira(e.eventId)} disabled={retracted}>
+                      {retracted ? "Ritirato" : "Ritira"}
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </FantaPanel>
+
+      <FantaPanel title="CLASSIFICA: PRIMA E DOPO LA RITRATTAZIONE">
+        <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
+          <StandingsTable title="Prima" standings={before.standings} teamNames={teamNames} />
+          <StandingsTable title="Dopo" standings={after.standings} teamNames={teamNames} />
+        </div>
+      </FantaPanel>
+    </FantaShell>
   );
 }

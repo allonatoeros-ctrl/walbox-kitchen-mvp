@@ -327,7 +327,6 @@ export default function FantaEntryTesseramento() {
 
       <div className="fanta-entry__meta">
         <span className="fanta-entry__meta-link">REGOLAMENTO COMPLETO</span>
-        <span className="fanta-entry__meta-countdown">CHIUSURA TRA 02:14:38 · GIO 21:45</span>
       </div>
 
       <footer className="fanta-entry__cta">

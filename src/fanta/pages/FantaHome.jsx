@@ -8,6 +8,7 @@ import {
   FantaButton,
   FantaBadge,
   FantaPanel,
+  FantaNav,
   CREST_SIZE,
 } from '../components/ui';
 
@@ -168,6 +169,8 @@ export default function FantaHome() {
           context={`${state.starters.length}/11 TITOLARI`}
         />
 
+        <FantaNav current="/fanta/home" />
+
         <IdentityPanel identity={identity} />
 
         <div className="fw-note fw-note--warning" data-testid="fanta-home-incomplete-note">
@@ -199,6 +202,8 @@ export default function FantaHome() {
         context={state.formation}
         live
       />
+
+      <FantaNav current="/fanta/home" />
 
       <IdentityPanel identity={identity} />
 
