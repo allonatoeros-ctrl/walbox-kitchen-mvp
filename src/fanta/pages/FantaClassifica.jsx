@@ -7,7 +7,10 @@ import playersData from "../data/players.json";
 import eventsData from "../data/events.json";
 import votesData from "../data/votes.json";
 import scoringData from "../data/scoring.json";
-import { FantaShell, FantaBand, FantaPanel, FantaNav } from "../components/ui";
+import { FantaShell, FantaBand, FantaPanel, FantaNav, FantaBadge, CREST_SIZE } from "../components/ui";
+import TeamCrest, { CREST_PRESETS } from "../components/TeamCrest";
+
+const PODIUM_BADGE_VARIANT = ["index", "success", "warning"];
 
 const LOCAL_TEAM_KEY = "fanta_walrus_custom_team";
 
@@ -21,6 +24,12 @@ const LOCAL_TEAM_KEY = "fanta_walrus_custom_team";
 function buildTeamNameMap(teams) {
   const map = {};
   for (const t of teams) map[t.teamId] = t.teamName;
+  return map;
+}
+
+function buildTeamCrestMap(teams) {
+  const map = {};
+  for (const t of teams) map[t.teamId] = CREST_PRESETS.find((p) => p.id === t.crestId) || null;
   return map;
 }
 
@@ -52,6 +61,7 @@ export default function FantaClassifica() {
   }, [customTeam]);
 
   const teamNames = useMemo(() => buildTeamNameMap(teams), [teams]);
+  const teamCrests = useMemo(() => buildTeamCrestMap(teams), [teams]);
 
   const { standings } = useTeams({
     teams,
@@ -73,25 +83,46 @@ export default function FantaClassifica() {
       <FantaNav current="/fanta/classifica" />
 
       <FantaPanel title="CLASSIFICA GENERALE" meta={`${standings.length} squadre`}>
-        <table className="fw-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+        <table className="fw-table">
           <thead>
             <tr>
-              <th style={{ textAlign: "left" }}>#</th>
-              <th style={{ textAlign: "left" }}>Squadra</th>
-              <th style={{ textAlign: "right" }}>Punti</th>
+              <th>#</th>
+              <th>Squadra</th>
+              <th className="fw-table__num">Punti</th>
             </tr>
           </thead>
           <tbody>
-            {standings.map((s, i) => (
-              <tr key={s.teamId}>
-                <td>{i + 1}</td>
-                <td>
-                  {teamNames[s.teamId] || s.teamId}
-                  {customTeam && s.teamId === customTeam.teamId && " (tu)"}
-                </td>
-                <td style={{ textAlign: "right" }}>{s.total}</td>
-              </tr>
-            ))}
+            {standings.map((s, i) => {
+              const isSelf = !!customTeam && s.teamId === customTeam.teamId;
+              const crest = teamCrests[s.teamId];
+              return (
+                <tr key={s.teamId} className={isSelf ? "fw-table__row--self" : ""}>
+                  <td>
+                    {i < 3 ? (
+                      <FantaBadge variant={PODIUM_BADGE_VARIANT[i]}>{i + 1}</FantaBadge>
+                    ) : (
+                      i + 1
+                    )}
+                  </td>
+                  <td>
+                    <span className="fw-table__team">
+                      <TeamCrest
+                        shape={crest?.shape}
+                        pattern={crest?.pattern}
+                        palette={crest?.palette}
+                        initial={teamNames[s.teamId] || s.teamId}
+                        size={CREST_SIZE.xs}
+                        empty={!crest}
+                        showLetter={false}
+                      />
+                      {teamNames[s.teamId] || s.teamId}
+                      {isSelf && " (tu)"}
+                    </span>
+                  </td>
+                  <td className="fw-table__num">{s.total}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </FantaPanel>

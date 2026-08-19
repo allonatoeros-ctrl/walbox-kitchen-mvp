@@ -638,6 +638,57 @@
 .fw-stat__value--done { color: var(--fw-success); }
 
 /* =============================================================================
+ * P14 — TABLE (densità tabellare, §14 fanta-tokens.css)
+ * ========================================================================== */
+.fw-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--fw-font-body);
+  font-size: var(--fw-table-cell-size);
+  color: var(--fw-text-body);
+}
+
+.fw-table th,
+.fw-table td {
+  padding: var(--fw-table-cell-pad-y) var(--fw-table-cell-pad-x);
+  border-bottom: var(--fw-border-w) solid var(--fw-table-line);
+  height: var(--fw-table-row-h);
+  text-align: left;
+}
+
+.fw-table thead th {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-table-head-size);
+  letter-spacing: var(--fw-table-head-track);
+  color: var(--fw-text-tertiary);
+  font-weight: 400;
+}
+
+.fw-table tbody tr:nth-child(even) { background: var(--fw-table-row-alt); }
+.fw-table tbody tr:hover { background: var(--fw-table-row-hover); }
+
+.fw-table td.fw-table__num,
+.fw-table th.fw-table__num {
+  text-align: right;
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-table-num-size);
+  font-variant-numeric: var(--fw-table-numeric);
+  color: var(--fw-text-strong);
+}
+
+.fw-table__team {
+  display: flex;
+  align-items: center;
+  gap: var(--fw-space-8);
+}
+
+.fw-table__row--self { background: var(--fw-table-row-self); }
+.fw-table__row--self td:first-child { border-left: var(--fw-border-w-rail) solid var(--fw-gold); }
+
+.fw-table__row--active { background: var(--fw-gold-veil); }
+.fw-table__row--active td:first-child { border-left: var(--fw-border-w-rail) solid var(--fw-gold); }
+
+/* =============================================================================
  * UTILITY minime
  * ========================================================================== */
 .fw-empty {
