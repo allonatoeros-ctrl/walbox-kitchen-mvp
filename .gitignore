@@ -24,3 +24,8 @@ dist-ssr
 *.sw?
 .vercel
 test-results/
+
+# AI-ops operational evidence (generated, not application source)
+ai-ops/backups/
+ai-ops/reports/
+ai-ops/runs/
