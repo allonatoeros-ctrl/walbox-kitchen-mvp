@@ -8,7 +8,7 @@ function makeSeedOrder() {
       id: 'order-seed-t12',
       table: 'T12',
       nickname: 'Eros',
-      items: [{ itemId: 'item-001', name: 'Porchetta', quantity: 1, price: 9 }],
+      items: [{ itemId: 'item-001', name: 'Walrus Smash Burger', quantity: 1, price: 9 }],
       total: 9,
       status: 'received',
       createdAt: new Date().toISOString(),
@@ -70,6 +70,140 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   expect(latest.nickname).toBe('Eros');
 });
 
+test('3b. Sold-out item shows ESAURITO overlay and disabled ESAURITO CTA', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await page.evaluate(
+    (key) => localStorage.setItem(key, JSON.stringify({ 'item-001': false })),
+    LS_MENU,
+  );
+  await page.goto('/kitchen?table=12&nickname=Eros');
+
+  await expect(page.getByText('ESAURITO').first()).toBeVisible();
+
+  const soldOutButton = page.getByRole('button', { name: 'ESAURITO' });
+  await expect(soldOutButton).toBeVisible();
+  await expect(soldOutButton).toBeDisabled();
+});
+
+test('3c. Empty cart bar persists, disabled CTA, no drawer; refills after last item removed', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+
+  // Empty state: bar visible with 0 count, €0,00 total, disabled CTA
+  const addCta = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
+  await expect(addCta).toBeVisible();
+  await expect(addCta).toBeDisabled();
+  await expect(page.getByText('0 prodotti')).toBeVisible();
+  await expect(page.getByText('€0,00')).toBeVisible();
+
+  // Clicking the empty bar must not open the drawer
+  await page.locator('.kitch-bottom-left').click();
+  await expect(page.locator('.kitch-drawer')).toHaveCount(0);
+
+  // Add a product: normal behavior
+  await page.getByRole('button', { name: 'LO VOGLIO' }).first().click();
+  await expect(page.getByRole('button', { name: "VAI ALL'ORDINE" })).toBeEnabled();
+
+  // Remove the last product from the drawer
+  await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+  await expect(page.locator('.kitch-drawer')).toBeVisible();
+  await page.getByRole('button', { name: '🗑️' }).first().click();
+
+  // Back to persistent empty state, drawer closed
+  await expect(page.locator('.kitch-drawer')).toHaveCount(0);
+  const addCtaAfter = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
+  await expect(addCtaAfter).toBeVisible();
+  await expect(addCtaAfter).toBeDisabled();
+  await expect(page.getByText('0 prodotti')).toBeVisible();
+  await expect(page.getByText('€0,00')).toBeVisible();
+});
+
+test('3e. Category with all items sold out shows "AL MOMENTO È TUTTO ESAURITO" banner, cards stay visible', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  // Both panini items (default active category) set unavailable
+  await page.evaluate(
+    (key) => localStorage.setItem(key, JSON.stringify({ 'item-001': false, 'item-002': false })),
+    LS_MENU,
+  );
+  await page.goto('/kitchen?table=12&nickname=Eros');
+
+  await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).toBeVisible();
+  // Cards remain visible with ESAURITO CTA
+  await expect(page.locator('.kitch-card')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'ESAURITO' })).toHaveCount(2);
+  await expect(page.getByText('NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA')).not.toBeVisible();
+});
+
+test('3f. Category with zero items shows "NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA"', async ({ page }) => {
+  // Remap patatine items into birre so the PATATINE tab has zero items
+  await page.route('**/src/data/kitchenMockData.js*', async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+    const patched = body.replace(/category: "patatine"/g, 'category: "birre"');
+    await route.fulfill({ response, body: patched, contentType: 'application/javascript' });
+  });
+
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await page.getByRole('button', { name: /PATATINE/i }).click();
+
+  await expect(page.getByText('NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA')).toBeVisible();
+  await expect(page.locator('.kitch-card')).toHaveCount(0);
+  await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).not.toBeVisible();
+});
+
+test('3g. Regression: normal category with available items shows no empty/sold-out messages', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+
+  await expect(page.getByText('NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA')).not.toBeVisible();
+  await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).not.toBeVisible();
+  await expect(page.locator('.kitch-card').first()).toBeVisible();
+});
+
+// ── Touch target sizes (mobile) ────────────────────────────────────
+
+const TOUCH_TARGET_VIEWPORTS = [
+  { width: 360, height: 800 },
+  { width: 375, height: 812 },
+  { width: 390, height: 844 },
+];
+
+for (const viewport of TOUCH_TARGET_VIEWPORTS) {
+  test(`3d. Touch targets meet minimum hitbox at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto('/kitchen?table=12&nickname=Eros');
+
+    // CTA `LO VOGLIO`: min-height 40
+    const loVoglioBox = await page.getByRole('button', { name: 'LO VOGLIO' }).first().boundingBox();
+    expect(loVoglioBox.height).toBeGreaterThanOrEqual(40);
+
+    // Add item, then CTA `VAI ALL'ORDINE`: min-height 40
+    await page.getByRole('button', { name: 'LO VOGLIO' }).first().click();
+    const vaiBox = await page.getByRole('button', { name: "VAI ALL'ORDINE" }).boundingBox();
+    expect(vaiBox.height).toBeGreaterThanOrEqual(40);
+
+    // Open drawer
+    await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+    await expect(page.locator('.kitch-drawer')).toBeVisible();
+
+    // Drawer close: min 44x44
+    const closeBox = await page.locator('.kitch-drawer-close').boundingBox();
+    expect(closeBox.width).toBeGreaterThanOrEqual(44);
+    expect(closeBox.height).toBeGreaterThanOrEqual(44);
+
+    // Qty buttons: min 36x36
+    const qtyBoxes = await page.locator('.kitch-qty-btn').all();
+    for (const btn of qtyBoxes) {
+      const box = await btn.boundingBox();
+      expect(box.width).toBeGreaterThanOrEqual(36);
+      expect(box.height).toBeGreaterThanOrEqual(36);
+    }
+
+    // Trash button: min 40x40
+    const trashBox = await page.locator('.kitch-trash-btn').first().boundingBox();
+    expect(trashBox.width).toBeGreaterThanOrEqual(40);
+    expect(trashBox.height).toBeGreaterThanOrEqual(40);
+  });
+}
+
 test('4. Kitchen status → Jukebox bridge preserves table', async ({ page }) => {
   // Seed a received order for T12 / Eros
   const orders = makeSeedOrder();
@@ -86,6 +220,32 @@ test('4. Kitchen status → Jukebox bridge preserves table', async ({ page }) =>
   await expect(page).toHaveURL(/\/request/);
   await expect(page).toHaveURL(/table=12/);
   await expect(page).not.toHaveURL(/\/entry/);
+});
+
+test('4b. Back button on /kitchen/status meets 44x44 tap target on mobile viewports', async ({ page }) => {
+  const orders = makeSeedOrder();
+  await page.evaluate(
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    { key: LS_ORDERS, data: orders },
+  );
+
+  const viewports = [
+    { width: 360, height: 800 },
+    { width: 375, height: 812 },
+    { width: 390, height: 844 },
+  ];
+
+  for (const viewport of viewports) {
+    await page.setViewportSize(viewport);
+    await page.goto('/kitchen/status');
+
+    const backBtn = page.locator('.ost-topbar-back').first();
+    await expect(backBtn).toHaveAttribute('aria-label', 'Torna al menu');
+
+    const box = await backBtn.boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+  }
 });
 
 test('5. Staff dashboard shows T12 and Eros', async ({ page }) => {
@@ -324,16 +484,4 @@ test('17. Alert critico dopo 15 minuti', async ({ page }) => {
 
   await page.getByRole('button', { name: /ALERT/i }).click();
   await expect(page.getByText(/🔴 CRITICO/)).toBeVisible();
-});
-
-// ── QA-3: Item "in arrivo" (price: null) ──────────────────────────
-
-test('18. BBQ "in arrivo" mostra PREZZO IN ARRIVO e CTA disabilitata', async ({ page }) => {
-  await page.goto('/kitchen');
-
-  await page.locator('.kitch-tabs .kitch-tab').filter({ hasText: 'AMERICAN BBQ' }).click();
-
-  const card = page.locator('.kitch-card', { hasText: 'PULLED PORK' });
-  await expect(card.getByText('PREZZO IN ARRIVO')).toBeVisible();
-  await expect(card.getByRole('button', { name: 'LO VOGLIO' })).toBeDisabled();
 });

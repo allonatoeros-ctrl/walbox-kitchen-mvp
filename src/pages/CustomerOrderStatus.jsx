@@ -138,7 +138,7 @@ export default function CustomerOrderStatus() {
     return (
       <div className="ost-page">
         <div className="ost-topbar">
-          <button className="ost-topbar-back" onClick={() => navigate('/kitchen')}>←</button>
+          <button className="ost-topbar-back" aria-label="Torna al menu" onClick={() => navigate('/kitchen')}>←</button>
           <span className="ost-topbar-title">STATO ORDINE</span>
           <span className="ost-topbar-bell">🔔</span>
         </div>
@@ -168,7 +168,7 @@ export default function CustomerOrderStatus() {
 
       {/* TopBar */}
       <div className="ost-topbar">
-        <button className="ost-topbar-back" onClick={() => navigate('/kitchen')}>←</button>
+        <button className="ost-topbar-back" aria-label="Torna al menu" onClick={() => navigate('/kitchen')}>←</button>
         <span className="ost-topbar-title">STATO ORDINE</span>
         <span className="ost-topbar-bell">🔔</span>
       </div>

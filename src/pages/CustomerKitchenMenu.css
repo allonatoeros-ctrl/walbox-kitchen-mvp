@@ -222,6 +222,36 @@
   gap: 14px;
 }
 
+.kitch-menu-empty {
+  margin: 0 10px;
+  padding: 20px 16px;
+  border-radius: 14px;
+  border: 1px dashed rgba(200,150,10,0.35);
+  background: rgba(200,150,10,0.06);
+  text-align: center;
+  font-family: var(--k-font-display);
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  color: rgba(245,234,216,0.75);
+  text-transform: uppercase;
+}
+
+.kitch-menu-soldout-banner {
+  margin: 0 10px 14px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(184,48,32,0.14);
+  border: 1px solid rgba(184,48,32,0.4);
+  text-align: center;
+  font-family: var(--k-font-display);
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  color: #f5ead8;
+  text-transform: uppercase;
+}
+
 .kitch-card {
   display: flex;
   gap: 0;
@@ -307,25 +337,9 @@
 
 .kitch-card-price {
   font-family: var(--k-font-display);
-  font-size: 15px;
+  font-size: 20px;
   font-weight: 800;
   color: #c84020;
-  line-height: 1.1;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.kitch-btn-lo-voglio:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-  filter: grayscale(20%);
-}
-
-.kitch-card-ingredients {
-  font-size: 11px;
-  color: #6b5740;
-  margin-top: 6px;
-  line-height: 1.35;
 }
 
 .kitch-btn-lo-voglio {
@@ -523,6 +537,11 @@
   color: var(--k-surface);
   cursor: pointer;
   line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .kitch-drawer-body {
@@ -600,8 +619,10 @@
   font-weight: 700;
   color: var(--k-surface);
   cursor: pointer;
-  width: 24px;
+  min-width: 36px;
+  min-height: 36px;
   display: flex;
+  align-items: center;
   justify-content: center;
 }
 
@@ -619,6 +640,11 @@
   font-size: 16px;
   cursor: pointer;
   margin-left: 4px;
+  min-width: 40px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── Upsell banner ───────────────────────────────── */
@@ -970,7 +996,7 @@
   }
   .kitch-btn-lo-voglio {
     padding: 8px 10px;
-    min-height: 34px;
+    min-height: 40px;
     font-size: 13px;
   }
   .kitch-tabs {
@@ -1008,7 +1034,7 @@
   .kitch-btn-vai {
     font-size: 13px;
     padding: 8px 12px;
-    min-height: 34px;
+    min-height: 40px;
   }
 }
 
@@ -1028,7 +1054,7 @@
   }
   .kitch-btn-lo-voglio {
     padding: 6px 8px;
-    min-height: 32px;
+    min-height: 40px;
     font-size: 12px;
   }
   .kitch-tab-circle {
@@ -1063,6 +1089,6 @@
   .kitch-btn-vai {
     font-size: 12px;
     padding: 6px 10px;
-    min-height: 32px;
+    min-height: 40px;
   }
 }

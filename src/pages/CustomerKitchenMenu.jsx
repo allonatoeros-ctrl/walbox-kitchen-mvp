@@ -36,28 +36,19 @@ const CATEGORY_SVGS = {
       <path d="M18 2 C19.5 9 24.5 12 34 13 C25.5 17 26 23.5 28 33 C20 28 16 28 8 33 C10 23.5 10.5 17 2 13 C11.5 12 16.5 9 18 2 Z" fill="currentColor" />
     </svg>
   ),
-  special: (
-    <svg width="38" height="30" viewBox="0 0 38 30" fill="none">
-      <rect x="3" y="12" width="32" height="8" rx="4" fill="currentColor" />
-      <circle cx="9" cy="16" r="7" fill="currentColor" />
-      <circle cx="29" cy="16" r="7" fill="currentColor" />
-      <rect x="10" y="9" width="18" height="4" rx="2" fill="currentColor" />
-    </svg>
-  ),
 };
 
 const CATEGORIES = [
   { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
   { key: 'patatine', label: 'PATATINE', icon: CATEGORY_SVGS.patatine },
   { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
-  { key: 'bbq', label: 'AMERICAN BBQ', icon: CATEGORY_SVGS.special },
-  { key: 'box', label: 'BOX', icon: CATEGORY_SVGS.special },
-  { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.special },
-  { key: 'tagliere_salumi', label: 'TAGLIERE SALUMI', icon: CATEGORY_SVGS.special },
-  { key: 'tagliere_formaggi', label: 'TAGLIERE FORMAGGI', icon: CATEGORY_SVGS.special },
-  { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.special },
-  { key: 'bruschette', label: 'BRUSCHETTE', icon: CATEGORY_SVGS.special },
+  { key: 'combo', label: 'COMBO', icon: CATEGORY_SVGS.combo },
 ];
+
+const promoItem =
+  kitchenMenuItems.find((i) => i.id === 'item-007') ||
+  kitchenMenuItems.find((i) => i.category === 'combo');
+
 
 
 function generateOrderCode() {
@@ -89,13 +80,6 @@ function getCategoryTitle(cat) {
   if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
   if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
   if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
-  if (cat === 'bbq') return <>AMERICAN <span style={{ color: 'var(--k-orange)' }}>BBQ</span></>;
-  if (cat === 'box') return <>BOX <span style={{ color: 'var(--k-orange)' }}>TAKE AWAY</span></>;
-  if (cat === 'tartare') return <>TARTARE <span style={{ color: 'var(--k-orange)' }}>Fresche</span></>;
-  if (cat === 'tagliere_salumi') return <>TAGLIERE <span style={{ color: 'var(--k-orange)' }}>SALUMI</span></>;
-  if (cat === 'tagliere_formaggi') return <>TAGLIERE <span style={{ color: 'var(--k-orange)' }}>FORMAGGI</span></>;
-  if (cat === 'insalatone') return <>INSALATONE <span style={{ color: 'var(--k-orange)' }}>Nostrane</span></>;
-  if (cat === 'bruschette') return <>BRUSCHETTE <span style={{ color: 'var(--k-orange)' }}>Croccanti</span></>;
   return cat.toUpperCase();
 }
 
@@ -121,12 +105,11 @@ export default function CustomerKitchenMenu() {
     } catch { }
   }, []);
 
-  const visibleItems = menuItems.filter((i) => i.category === activeCategory && !i.tags?.includes('legacy'));
+  const visibleItems = menuItems.filter((i) => i.category === activeCategory && i.price != null);
 
 
 
   const addItem = (item) => {
-    if (item.price == null) return;
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === item.id);
       if (existing) {
@@ -310,7 +293,6 @@ export default function CustomerKitchenMenu() {
         .kitch-tabs .kitch-tab:nth-child(2) .kitch-tab-circle { background-color: rgba(184,48,32,0.28) !important; color: rgba(212,200,154,0.7) !important; }
         .kitch-tabs .kitch-tab:nth-child(3) .kitch-tab-circle { background-color: rgba(196,168,106,0.28) !important; color: rgba(212,200,154,0.7) !important; }
         .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle { background-color: rgba(58,74,40,0.28) !important; color: rgba(212,200,154,0.7) !important; }
-        .kitch-tabs .kitch-tab:nth-child(5) .kitch-tab-circle { background-color: rgba(120,40,20,0.28) !important; color: rgba(212,200,154,0.7) !important; }
 
         /* PANINI tab active */
         .active-cat-panini .kitch-tabs .kitch-tab:nth-child(1) .kitch-tab-circle {
@@ -333,8 +315,8 @@ export default function CustomerKitchenMenu() {
           box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(196,168,106,0.45) !important;
         }
 
-        /* BBQ tab active */
-        .active-cat-bbq .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle {
+        /* COMBO tab active */
+        .active-cat-combo .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle {
           background-color: #3a4a28 !important;
           color: #fff !important;
           box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(58,74,40,0.5) !important;
@@ -425,6 +407,12 @@ export default function CustomerKitchenMenu() {
       <div className="kitch-section-title">{getCategoryTitle(activeCategory)}</div>
 
       {/* Menu items */}
+      {visibleItems.length === 0 && (
+        <div className="kitch-menu-empty">NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA</div>
+      )}
+      {visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
+        <div className="kitch-menu-soldout-banner">AL MOMENTO È TUTTO ESAURITO</div>
+      )}
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>
@@ -453,9 +441,6 @@ export default function CustomerKitchenMenu() {
                 <span className="kitch-card-icon">🦭</span>
               </div>
               <div className="kitch-card-desc">{item.description}</div>
-              {item.ingredients ? (
-                <div className="kitch-card-ingredients">{item.ingredients}</div>
-              ) : null}
               {item.allergens?.length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 4px', marginTop: '6px', marginBottom: '4px' }}>
                   {item.allergens.map((a) => (
@@ -476,13 +461,15 @@ export default function CustomerKitchenMenu() {
                 </div>
               )}
               <div className="kitch-card-footer">
-                <div className="kitch-card-price">{item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2)}`}</div>
+                <div className="kitch-card-price">
+                  {item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2)}`}
+                </div>
                 <button
                   className="kitch-btn-lo-voglio"
                   onClick={() => addItem(item)}
                   disabled={item.available === false || item.price == null}
                   style={item.available === false || item.price == null ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
-                >LO VOGLIO</button>
+                >{item.available === false ? 'ESAURITO' : 'LO VOGLIO'}</button>
               </div>
             </div>
           </div>
@@ -490,34 +477,40 @@ export default function CustomerKitchenMenu() {
       </div>
 
       {/* Bottom cart bar */}
-      {orderItems.length > 0 && (
-        <>
-          <div className="kitch-bottom-spacer" />
-          <div className="kitch-bottom-bar">
-            <div className="kitch-bottom-card">
-              <div className="kitch-bottom-left" onClick={() => setCartOpen(true)} role="button" aria-label="Apri carrello">
-                <div className="kitch-cart-icon-wrap">
-                  <svg className="kitch-cart-svg" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
-                    <circle cx="23" cy="27" r="2" fill="#e8ddb8"/>
-                  </svg>
-                  <div className="kitch-cart-badge">{itemCount}</div>
-                </div>
-                <div className="kitch-bottom-text-wrap">
-                  <div className="kitch-bottom-title">
-                    {itemCount === 1 ? '1 prodotto' : `${itemCount} prodotti`}
-                  </div>
-                  <div className="kitch-bottom-total">€{total.toFixed(2).replace('.', ',')}</div>
-                </div>
+      <div className="kitch-bottom-spacer" />
+      <div className="kitch-bottom-bar">
+        <div className="kitch-bottom-card">
+          <div
+            className="kitch-bottom-left"
+            onClick={() => { if (itemCount > 0) setCartOpen(true); }}
+            role="button"
+            aria-label="Apri carrello"
+          >
+            <div className="kitch-cart-icon-wrap">
+              <svg className="kitch-cart-svg" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
+                <circle cx="23" cy="27" r="2" fill="#e8ddb8"/>
+              </svg>
+              <div className="kitch-cart-badge">{itemCount}</div>
+            </div>
+            <div className="kitch-bottom-text-wrap">
+              <div className="kitch-bottom-title">
+                {itemCount === 0 ? '0 prodotti' : itemCount === 1 ? '1 prodotto' : `${itemCount} prodotti`}
               </div>
-              <button className="kitch-btn-vai" onClick={() => setCartOpen(true)}>
-                VAI ALL'ORDINE
-              </button>
+              <div className="kitch-bottom-total">€{total.toFixed(2).replace('.', ',')}</div>
             </div>
           </div>
-        </>
-      )}
+          <button
+            className="kitch-btn-vai"
+            onClick={() => { if (itemCount > 0) setCartOpen(true); }}
+            disabled={itemCount === 0}
+            style={itemCount === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+          >
+            {itemCount === 0 ? 'AGGIUNGI QUALCOSA' : "VAI ALL'ORDINE"}
+          </button>
+        </div>
+      </div>
 
       {/* Backdrop */}
       {cartOpen && <div className="kitch-backdrop" onClick={() => setCartOpen(false)} />}
