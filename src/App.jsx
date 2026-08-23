@@ -11,6 +11,7 @@ import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
 import StaffLogin from "./pages/StaffLogin";
+import LiveTvScreenBranded from "./pages/LiveTvScreenBranded";
 import FantaVarRoom from "./fanta/pages/FantaVarRoom";
 import FantaMatchday from "./fanta/pages/FantaMatchday";
 import FantaClassifica from "./fanta/pages/FantaClassifica";
@@ -138,8 +139,9 @@ export default function App() {
       // === TV / POSTER ROUTES ===
       case "/tv":
       case "/tv-poster":
-      case "/live-tv":
         return <LiveTvScreenWalrusPoster />;
+      case "/live-tv":
+        return <LiveTvScreenBranded />;
 
       // === KITCHEN MODULE ROUTES ===
       case "/kitchen/entry":

@@ -1,0 +1,217 @@
+.lts-root {
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  overflow: hidden;
+  position: relative;
+  font-family: 'Impact', 'Arial Narrow', sans-serif;
+}
+
+.lts-webcam {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ltb-poster {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  background-color: #12100d;
+  background-image:
+    linear-gradient(rgba(10, 4, 1, 0.62), rgba(10, 4, 1, 0.62)),
+    url('/assets/tv-poster/bg-grunge-wall.webp');
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(24px, 4vh, 48px) clamp(32px, 5vw, 64px);
+  color: #F1E8D5;
+}
+
+.ltb-poster-signature {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.ltb-poster-badge {
+  height: clamp(36px, 6vh, 64px);
+  width: auto;
+  object-fit: contain;
+}
+
+.ltb-poster-wordmark {
+  font-size: clamp(16px, 2vh, 26px);
+  letter-spacing: 3px;
+  color: #F1E8D5;
+}
+
+.ltb-poster-main {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(24px, 5vw, 80px);
+  min-height: 0;
+}
+
+.ltb-poster-left {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1.4vh, 18px);
+  max-width: 58%;
+}
+
+.ltb-poster-kicker {
+  font-size: clamp(13px, 1.8vh, 22px);
+  letter-spacing: 4px;
+  color: #EC862D;
+}
+
+.ltb-poster-headline {
+  font-size: clamp(44px, 9vh, 128px);
+  line-height: 1.02;
+  margin: 0;
+  color: #F1E8D5;
+}
+
+.ltb-poster-tu {
+  color: #CA281E;
+}
+
+.ltb-poster-sub {
+  font-size: clamp(16px, 2.4vh, 30px);
+  color: #B3A895;
+  margin: 0;
+}
+
+.ltb-poster-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ltb-poster-qr-card {
+  position: relative;
+  transform: rotate(-2.5deg);
+  box-shadow: 8px 10px 0 rgba(0, 0, 0, 0.55);
+}
+
+.ltb-poster-qr-frame {
+  display: block;
+  height: clamp(200px, 38vh, 460px);
+  width: auto;
+}
+
+.ltb-poster-qr-overlay {
+  position: absolute;
+  left: 52.6%;
+  top: 24.9%;
+  width: 36.8%;
+  height: 53.2%;
+  object-fit: contain;
+}
+
+.ltb-poster-corner {
+  position: absolute;
+  right: clamp(32px, 5vw, 64px);
+  bottom: clamp(16px, 2.4vh, 32px);
+  font-size: clamp(11px, 1.4vh, 16px);
+  letter-spacing: 2px;
+  color: #B3A895;
+}
+
+/* Variant A — Branded Frame corner box (webcam mode only) */
+.ltb-corner {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.ltb-badge {
+  width: clamp(32px, 5vh, 48px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+}
+
+.ltb-qr-box {
+  position: relative;
+  height: clamp(140px, 22vh, 220px);
+  width: auto;
+  aspect-ratio: 4 / 3;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ltb-qr-card-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ltb-qr-overlay {
+  position: absolute;
+  left: 52.6%;
+  top: 24.9%;
+  width: 36.8%;
+  height: 53.2%;
+  object-fit: contain;
+}
+
+.ltb-corner-label {
+  color: #FFD700;
+  font-size: clamp(12px, 1.6vh, 18px);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.lts-takeover {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  color: #fff;
+  text-align: center;
+  padding: 0 40px;
+}
+
+.lts-takeover-nick {
+  font-size: clamp(40px, 7vh, 100px);
+  color: #FFD700;
+  margin: 0;
+}
+
+.lts-takeover-table {
+  font-size: clamp(18px, 2.6vh, 32px);
+  letter-spacing: 2px;
+}
+
+.lts-takeover-dedic {
+  font-size: clamp(20px, 3vh, 36px);
+  font-style: italic;
+  max-width: 80%;
+}
+
+.lts-takeover-brand {
+  font-size: clamp(14px, 2vh, 24px);
+  color: #FFD700;
+  margin-top: 12px;
+}
