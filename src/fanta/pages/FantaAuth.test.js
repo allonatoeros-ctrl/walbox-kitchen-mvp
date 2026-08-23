@@ -77,7 +77,7 @@ test('App.jsx NON applica il gate a /fanta/var e /fanta/matchday (restano pubbli
   assert.match(appSource, /case "\/fanta\/matchday":\s*\n\s*return <FantaMatchday \/>/);
 });
 
-test('FantaRouteGuard rimanda gli anonimi a /fanta/auth e blocca il render finche\' non risolto', () => {
+test('FantaRouteGuard rimanda gli anonimi a /fanta/auth, blocca il render finche\' non risolto e bypassa in guest mode', () => {
   const guardFn = appSource.slice(
     appSource.indexOf('function FantaRouteGuard'),
     appSource.indexOf('export default function App'),
@@ -85,7 +85,9 @@ test('FantaRouteGuard rimanda gli anonimi a /fanta/auth e blocca il render finch
   assert.match(guardFn, /getFantaSession\(/);
   assert.match(guardFn, /onFantaAuthStateChange\(/);
   assert.match(guardFn, /pushState\(\{\}, "", "\/fanta\/auth"\)/);
-  assert.match(guardFn, /if \(!checked \|\| !session\) return null;/);
+  assert.match(guardFn, /fanta_walrus_guest_mode/);
+  assert.match(guardFn, /if \(!checked\) return null;/);
+  assert.match(guardFn, /if \(!session && !isGuest\) return null;/);
 });
 
 console.log('FantaAuth.test.js: tutti i test F-AUTH1 (pagina + gate) passati.');

@@ -110,6 +110,10 @@ export default function FantaHome() {
 
   useEffect(() => {
     if (!loaded || !identityRaw?.teamId || teamRaw) return;
+    const isGuest =
+      typeof localStorage !== 'undefined' &&
+      localStorage.getItem('fanta_walrus_guest_mode') === 'true';
+    if (isGuest) return;
     let cancelled = false;
     setCloudError(null);
     loadRosterV1(identityRaw.teamId)

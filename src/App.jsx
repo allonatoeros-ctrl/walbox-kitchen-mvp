@@ -20,6 +20,7 @@ import FantaEntryTesseramento from "./fanta/pages/FantaEntryTesseramento";
 import FantaTeamBuilder from "./fanta/pages/FantaTeamBuilder";
 import FantaHome from "./fanta/pages/FantaHome";
 import FantaAuth from "./fanta/pages/FantaAuth";
+import FantaGuestPrompt from "./fanta/pages/FantaGuestPrompt";
 import { getStaffSession, onAuthStateChange } from "./lib/supabaseAuth";
 import { getFantaSession, onFantaAuthStateChange } from "./lib/fantaAuth";
 import { initializeStorage } from "./data/mockData";
@@ -76,6 +77,8 @@ function StaffRouteGuard() {
 // F-AUTH1: gate per le route Fanta che richiedono login (entry/team/home).
 // Anonimi (incluse le sessioni signInAnonymously di Jukebox) vengono
 // rimandati a /fanta/auth; /fanta/var e /fanta/matchday restano pubblici.
+// In modalità guest (localStorage fanta_walrus_guest_mode=true) il gate
+// viene bypassato per permettere l'uso senza autenticazione.
 function FantaRouteGuard({ Component }) {
   const [session, setSession] = useState(null);
   const [checked, setChecked] = useState(false);
@@ -99,12 +102,21 @@ function FantaRouteGuard({ Component }) {
 
   useEffect(() => {
     if (checked && !session) {
-      window.history.pushState({}, "", "/fanta/auth");
-      window.dispatchEvent(new PopStateEvent("popstate"));
+      const isGuest =
+        typeof localStorage !== 'undefined' &&
+        localStorage.getItem('fanta_walrus_guest_mode') === 'true';
+      if (!isGuest) {
+        window.history.pushState({}, "", "/fanta/auth");
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      }
     }
   }, [checked, session]);
 
-  if (!checked || !session) return null;
+  if (!checked) return null;
+  const isGuest =
+    typeof localStorage !== 'undefined' &&
+    localStorage.getItem('fanta_walrus_guest_mode') === 'true';
+  if (!session && !isGuest) return null;
   return <Component />;
 }
 
@@ -165,6 +177,8 @@ export default function App() {
       // === FANTAWALRUS MODULE ROUTES ===
       case "/fanta/auth":
         return <FantaAuth />;
+      case "/fanta/guest":
+        return <FantaGuestPrompt />;
       case "/fanta/var":
         return <FantaVarRoom />;
       case "/fanta/matchday":
