@@ -109,15 +109,23 @@ export default function FantaHome() {
 
   useEffect(() => {
     if (!loaded || !identityRaw?.teamId || teamRaw) return;
+    const isGuest =
+      typeof localStorage !== 'undefined' &&
+      localStorage.getItem('fanta_walrus_guest_mode') === 'true';
+    if (isGuest) return;
     let cancelled = false;
     setCloudError(null);
     loadRosterV1(identityRaw.teamId)
       .then(({ ok, roster, error }) => {
         if (cancelled) return;
-        if (!ok || !roster.length) {
+        if (!ok) {
           setCloudError(error || 'Roster cloud non disponibile');
           return;
         }
+        // ok:true con roster:[] e' uno stato valido (nessun salvataggio
+        // cloud ancora fatto): niente cloudError, resta 'incomplete' via
+        // buildHomeState(identity, null, players).
+        if (!roster.length) return;
         const team = {
           teamId: identityRaw.teamId,
           formation: '4-3-3',

@@ -55,7 +55,7 @@ test('handleTessera su errore mostra messaggio, non scrive localStorage, non nav
   const errorBlockEnd = fn.indexOf('}', errorBlockStart);
   assert.ok(errorBlockStart > -1, 'branch di errore non trovato');
   const errorBlock = fn.slice(errorBlockStart, errorBlockEnd);
-  assert.match(errorBlock, /setSubmitError\(mapFantaTeamError\(error\)\)/);
+  assert.match(errorBlock, /setSubmitError\(isGuestMode\(\) \? .* : mapFantaTeamError\(error\)\)/);
   assert.match(errorBlock, /setSubmitting\(false\)/);
   assert.match(errorBlock, /return;/);
   assert.doesNotMatch(errorBlock, /localStorage\.setItem/);

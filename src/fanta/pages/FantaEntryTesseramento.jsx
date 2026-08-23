@@ -7,6 +7,15 @@ const FANTA_NAME = 'FANTAWALRUS';
 const TEAM_NAME_MAX = 24;
 const NICKNAME_MAX = 18;
 const LOCAL_STORAGE_KEY = 'fanta_walrus_team_identity';
+const GUEST_MODE_KEY = 'fanta_walrus_guest_mode';
+
+const isGuestMode = () => {
+  try {
+    return localStorage.getItem(GUEST_MODE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+};
 
 // Messaggi utente per i codici di errore risollevati da create_fanta_team_v1()
 // (supabase/migrations/0002_fanta_functions_v1.sql). Fallback generico per
@@ -65,10 +74,22 @@ export default function FantaEntryTesseramento() {
     setSubmitting(true);
     setSubmitError(null);
 
-    const { teamId, error } = await createFantaTeam(trimmedName);
+    let teamId;
+    let error = null;
+
+    if (isGuestMode()) {
+      // Guest mode: genera un teamId locale senza chiamare la RPC cloud.
+      const ts = Date.now();
+      const rand = Math.random().toString(36).slice(2, 9);
+      teamId = `guest_${ts}_${rand}`;
+    } else {
+      const result = await createFantaTeam(trimmedName);
+      teamId = result.teamId;
+      error = result.error;
+    }
 
     if (error || !teamId) {
-      setSubmitError(mapFantaTeamError(error));
+      setSubmitError(isGuestMode() ? 'Non è stato possibile creare il club locale.' : mapFantaTeamError(error));
       setSubmitting(false);
       return;
     }
@@ -76,7 +97,8 @@ export default function FantaEntryTesseramento() {
     const createdAt = new Date().toISOString();
     // Contratto localStorage preservato: teamId, teamName, crest{id,preset}, createdAt.
     // Campi opzionali additivi non rompono i lettori esistenti (FantaTeamBuilder ecc.).
-    // teamId ora e' lo UUID restituito da create_fanta_team_v1(), non piu' un hash locale.
+    // In modalità guest il teamId è un identificatore locale generato; in modalità
+    // autenticata è lo UUID restituito da create_fanta_team_v1().
     const identity = {
       teamId,
       teamName: trimmedName,

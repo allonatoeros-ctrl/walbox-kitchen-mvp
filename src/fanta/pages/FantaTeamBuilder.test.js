@@ -33,4 +33,19 @@ test('FantaTeamBuilder usa cloudHydrated come priorita nel footer', () => {
   assert.match(src, /Formazione caricata dal cloud/);
 });
 
+// === GUEST MODE CONTRACT ===
+
+test('FantaTeamBuilder e\' compatibile con guest mode: legge identity da localStorage senza auth', () => {
+  assert.match(src, /fanta_walrus_team_identity/);
+  assert.doesNotMatch(src, /fanta_walrus_guest_mode/);
+  assert.doesNotMatch(src, /supabaseAuth|fantaAuth/);
+});
+
+test('FantaGuestPrompt.jsx esiste, imposta guest mode in localStorage e reindirizza a /fanta/entry', () => {
+  const guestSrc = readFileSync(join(__dirname, 'FantaGuestPrompt.jsx'), 'utf8');
+  assert.match(guestSrc, /fanta_walrus_guest_mode/);
+  assert.match(guestSrc, /localStorage\.setItem\(GUEST_MODE_KEY|localStorage\.setItem\('fanta_walrus_guest_mode'/);
+  assert.match(guestSrc, /navigateTo\('\/fanta\/entry'\)/);
+});
+
 console.log('FantaTeamBuilder.test.js: tutti i test passati.');
