@@ -12,6 +12,7 @@ import KitchenTvScreen from "./pages/KitchenTvScreen";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
 import StaffLogin from "./pages/StaffLogin";
 import LiveTvScreenBranded from "./pages/LiveTvScreenBranded";
+import PartyFerieRequest from "./pages/PartyFerieRequest";
 import FantaVarRoom from "./fanta/pages/FantaVarRoom";
 import FantaMatchday from "./fanta/pages/FantaMatchday";
 import FantaClassifica from "./fanta/pages/FantaClassifica";
@@ -142,6 +143,8 @@ export default function App() {
         return <LiveTvScreenWalrusPoster />;
       case "/live-tv":
         return <LiveTvScreenBranded />;
+      case "/party-ferie":
+        return <PartyFerieRequest />;
 
       // === KITCHEN MODULE ROUTES ===
       case "/kitchen/entry":
