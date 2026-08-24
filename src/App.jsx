@@ -79,11 +79,20 @@ function StaffRouteGuard() {
 // rimandati a /fanta/auth; /fanta/var e /fanta/matchday restano pubblici.
 // In modalità guest (localStorage fanta_walrus_guest_mode=true) il gate
 // viene bypassato per permettere l'uso senza autenticazione.
+function isFantaGuestMode() {
+  return (
+    typeof localStorage !== 'undefined' &&
+    localStorage.getItem('fanta_walrus_guest_mode') === 'true'
+  );
+}
+
 function FantaRouteGuard({ Component }) {
   const [session, setSession] = useState(null);
-  const [checked, setChecked] = useState(false);
+  const [checked, setChecked] = useState(isFantaGuestMode);
 
   useEffect(() => {
+    if (isFantaGuestMode()) return;
+
     let cancelled = false;
     getFantaSession().then((s) => {
       if (cancelled) return;
