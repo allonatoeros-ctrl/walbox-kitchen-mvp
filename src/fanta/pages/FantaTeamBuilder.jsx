@@ -201,24 +201,31 @@ export default function FantaTeamBuilder() {
       ...benchIds.map((id) => ({ id, isStarter: false })),
     ];
 
-    const { ok, saved, error } = await saveRosterV1(identity.teamId, roster);
+    try {
+      const { ok, error } = await saveRosterV1(identity.teamId, roster);
 
-    if (ok) {
-      setSaved(true);
-      setRosterSynced(true);
-      try {
-        localStorage.setItem(LOCAL_ROSTER_SYNC_KEY, JSON.stringify({ teamId: identity.teamId, syncedAt: new Date().toISOString() }));
-      } catch {
-        // ignore
+      if (ok) {
+        setSaved(true);
+        setRosterSynced(true);
+        try {
+          localStorage.setItem(LOCAL_ROSTER_SYNC_KEY, JSON.stringify({ teamId: identity.teamId, syncedAt: new Date().toISOString() }));
+        } catch {
+          // ignore
+        }
+        window.history.pushState({}, '', '/fanta/home');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      } else {
+        setSaveError(error || 'Non è stato possibile salvare la formazione sul cloud. Puoi comunque continuare.');
+        setSaved(true);
       }
-      window.history.pushState({}, '', '/fanta/home');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    } else {
-      setSaveError(error || 'Non è stato possibile salvare la formazione sul cloud. Puoi comunque continuare.');
+    } catch {
+      // Salvataggio cloud fallito in modo imprevisto (es. rete offline):
+      // la formazione resta comunque salvata in locale, l'utente può riprovare.
+      setSaveError('Salvataggio cloud non riuscito. La formazione è salvata in locale: riprova quando la connessione torna disponibile.');
       setSaved(true);
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
   }
 
   // La panchina si sceglie fra i non titolari (invariato rispetto a prima
