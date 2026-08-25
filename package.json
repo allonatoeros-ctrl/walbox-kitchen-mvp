@@ -11,7 +11,9 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "pilot:check": "node scripts/pilot-preflight.js && npm run build && npm run test:e2e",
-    "test:fanta": "node --test src/fanta/engine/*.test.js"
+    "test:fanta": "node --test src/fanta/engine/*.test.js",
+    "test:unit": "node --test \"src/fanta/**/*.test.js\" \"src/lib/fanta*.test.js\" \"supabase/migrations/*fanta*.test.js\"",
+    "test": "npm run test:unit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.108.2",

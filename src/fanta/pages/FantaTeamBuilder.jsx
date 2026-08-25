@@ -3,6 +3,9 @@ import TeamCrest from '../components/TeamCrest';
 import { isValidLineup, buildPlayerIndex } from '../engine/scoreEngine.js';
 import playersData from '../data/players.json';
 import PlayerPicker from '../components/PlayerPicker.jsx';
+import TeamHeader from '../components/team-builder/TeamHeader.jsx';
+import FantasyPitch from '../components/team-builder/FantasyPitch.jsx';
+import BenchRow from '../components/team-builder/BenchRow.jsx';
 import {
   FantaShell,
   FantaBand,
@@ -22,11 +25,13 @@ const MAX_BENCH = 4;
 const MAX_BENCH_GK = 1;
 const MAX_STARTERS = 11;
 
-// Limiti allineati a scoreEngine.js (ROLE_LIMITS / MAX_PER_CLUB). Servono solo
-// a disabilitare i tile in anticipo: la verità resta isValidLineup().
-const ROLE_LIMITS = { GK: 1, DEF: 5, MID: 5, FWD: 5 };
+// MAX_PER_CLUB allineato a scoreEngine.js. Serve solo a disabilitare i tile
+// in anticipo: la verità resta isValidLineup().
 const MAX_PER_CLUB = 3;
 const ROLE_LABELS = { GK: 'POR', DEF: 'DIF', MID: 'CEN', FWD: 'ATT' };
+
+// Modulo di default V1: fisso, nessuna UI di cambio modulo (fuori scope).
+const PITCH_FORMATION = { GK: 1, DEF: 4, MID: 3, FWD: 3 };
 
 export default function FantaTeamBuilder() {
   const [identity, setIdentity] = useState(null);
@@ -126,6 +131,17 @@ export default function FantaTeamBuilder() {
     return map;
   }, [playersData]);
 
+  // Dati arricchiti (initials/clubTag) solo per la resa visiva del campo/panchina
+  // (PlayerSlot). Puramente derivati, non toccano players.json né la logica di selezione.
+  const pitchPlayersById = useMemo(() => {
+    const map = {};
+    for (const p of playersData) {
+      const surname = (p.name || '').trim().split(/\s+/).pop() || '';
+      map[p.id] = { ...p, initials: surname.slice(0, 3).toUpperCase(), clubTag: p.club };
+    }
+    return map;
+  }, [playersData]);
+
   const validation = useMemo(() => {
     if (!identity) return { valid: false, errors: ['Identità mancante'] };
     const starters = selectedIds.map((id) => ({ id }));
@@ -151,6 +167,76 @@ export default function FantaTeamBuilder() {
     }
     return { role: c, clubs };
   }, [selectedIds, playersById]);
+
+  // Titolari raggruppati per ruolo, per FantasyPitch (righe GK/DEF/MID/FWD).
+  const pitchSelectedIds = useMemo(() => {
+    const grouped = { GK: [], DEF: [], MID: [], FWD: [] };
+    for (const id of selectedIds) {
+      const p = playersById[id];
+      if (p) grouped[p.role].push(id);
+    }
+    return grouped;
+  }, [selectedIds, playersById]);
+
+  // V1: modulo fisso 4-3-3, nessuno slot extra oltre il modulo. Il motore
+  // (scoreEngine.js / ROLE_LIMITS) resta più permissivo e invariato: qui si
+  // limita solo cosa il Team Builder mostra/permette di riempire di default.
+  const pitchFormation = PITCH_FORMATION;
+
+  // Modulo fisso V1: il badge mostra sempre il target (es. "4-3-3"), non il
+  // riempimento corrente — coerente con lo slot fisso del campo (PITCH_FORMATION).
+  const formationLabel = `${PITCH_FORMATION.DEF}-${PITCH_FORMATION.MID}-${PITCH_FORMATION.FWD}`;
+
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerMode, setPickerMode] = useState('starter');
+  const [pickerRole, setPickerRole] = useState(null);
+
+  function openStarterPicker(role) {
+    setPickerMode('starter');
+    setPickerRole(role);
+    setPickerOpen(true);
+  }
+
+  function openBenchPicker() {
+    setPickerMode('bench');
+    setPickerRole(null);
+    setPickerOpen(true);
+  }
+
+  function closePicker() {
+    setPickerOpen(false);
+  }
+
+  // Il picker si apre solo da uno slot vuoto (campo o panchina): ogni tap al
+  // suo interno è quindi sempre una selezione che riempie quello slot, mai
+  // una rimozione da uno slot già pieno (quella avviene con tap diretto sulla
+  // pedina). Si può chiudere subito dopo, per rendere esplicito il ritorno
+  // al campo ("selezione valida → picker chiuso → slot aggiornato").
+  function pickStarter(id) {
+    togglePlayer(id);
+    closePicker();
+  }
+
+  function pickBench(id) {
+    toggleBench(id);
+    closePicker();
+  }
+
+  function handlePitchSlotClick(role, _index, playerId) {
+    if (playerId) {
+      togglePlayer(playerId);
+      return;
+    }
+    openStarterPicker(role);
+  }
+
+  function handleBenchSlotClick(_index, playerId) {
+    if (playerId) {
+      toggleBench(playerId);
+      return;
+    }
+    openBenchPicker();
+  }
 
   function togglePlayer(id) {
     setSelectedIds((prev) => {
@@ -239,7 +325,7 @@ export default function FantaTeamBuilder() {
   // picker: il picker resta ignaro del regolamento.
   function starterUnavailableReason(p) {
     if ((counts.clubs[p.club] || 0) >= MAX_PER_CLUB) return `MAX ${MAX_PER_CLUB} ${p.club}`;
-    if (counts.role[p.role] >= ROLE_LIMITS[p.role]) return `${ROLE_LABELS[p.role]} AL LIMITE`;
+    if (counts.role[p.role] >= PITCH_FORMATION[p.role]) return `${ROLE_LABELS[p.role]} AL LIMITE`;
     if (selectedIds.length >= MAX_STARTERS) return 'ROSA PIENA';
     return null;
   }
@@ -309,7 +395,7 @@ export default function FantaTeamBuilder() {
         <div className="fw-stat-grid" data-testid="fanta-team-counts">
           {['GK', 'DEF', 'MID', 'FWD'].map((role) => {
             const n = counts.role[role];
-            const limit = ROLE_LIMITS[role];
+            const limit = PITCH_FORMATION[role];
             const full = n >= limit;
             return (
               <div className="fw-stat" key={role}>
@@ -332,29 +418,68 @@ export default function FantaTeamBuilder() {
         </div>
       </section>
 
-      <PlayerPicker
-        index="01"
-        title="TITOLARI"
-        badge={<FantaBadge variant="required">RICHIESTO</FantaBadge>}
-        hint={`1 POR · max 5 DIF/CEN/ATT · max ${MAX_PER_CLUB} per club`}
-        players={playersData}
-        selectedIds={selectedIds}
-        onToggle={togglePlayer}
-        getUnavailableReason={starterUnavailableReason}
-        testId="fanta-team-starters"
-      />
+      <section className="fw-section" aria-label="Titolari" data-testid="fanta-team-starters">
+        <TeamHeader
+          teamName={identity.teamName ? identity.teamName.toUpperCase() : 'LA MIA SQUADRA'}
+          formation={formationLabel}
+          status={validation.valid ? 'FORMAZIONE VALIDA' : 'IN COSTRUZIONE'}
+        />
+        <FantasyPitch
+          playersById={pitchPlayersById}
+          selectedIds={pitchSelectedIds}
+          formation={pitchFormation}
+          onSlotClick={handlePitchSlotClick}
+        />
+      </section>
 
-      <PlayerPicker
-        index="02"
-        title="PANCHINA"
-        badge={<FantaBadge variant="optional">MAX {MAX_BENCH}</FantaBadge>}
-        hint={`non titolari · max ${MAX_BENCH_GK} POR · ${benchIds.length}/${MAX_BENCH} scelti`}
-        players={benchCandidates}
-        selectedIds={benchIds}
-        onToggle={toggleBench}
-        getUnavailableReason={benchUnavailableReason}
-        testId="fanta-team-bench"
-      />
+      <section className="fw-section" aria-label="Panchina" data-testid="fanta-team-bench">
+        <div className="fw-section-head">
+          <FantaBadge variant="index">02</FantaBadge>
+          <span className="fw-section-head__label">PANCHINA</span>
+          <FantaBadge variant="optional">MAX {MAX_BENCH}</FantaBadge>
+        </div>
+        <span className="fw-section__hint">
+          non titolari · max {MAX_BENCH_GK} POR · {benchIds.length}/{MAX_BENCH} scelti
+        </span>
+        <BenchRow
+          playersById={pitchPlayersById}
+          benchIds={benchIds}
+          maxBench={MAX_BENCH}
+          onSlotClick={handleBenchSlotClick}
+        />
+      </section>
+
+      {pickerMode === 'starter' ? (
+        <PlayerPicker
+          index="01"
+          title="TITOLARI"
+          badge={<FantaBadge variant="required">RICHIESTO</FantaBadge>}
+          hint={`1 POR · ${PITCH_FORMATION.DEF} DIF · ${PITCH_FORMATION.MID} CEN · ${PITCH_FORMATION.FWD} ATT · max ${MAX_PER_CLUB} per club`}
+          players={playersData}
+          selectedIds={selectedIds}
+          onToggle={pickStarter}
+          getUnavailableReason={starterUnavailableReason}
+          testId="fanta-team-starters-picker"
+          open={pickerOpen}
+          onClose={closePicker}
+          initialRoleFilter={pickerRole}
+        />
+      ) : (
+        <PlayerPicker
+          index="02"
+          title="PANCHINA"
+          badge={<FantaBadge variant="optional">MAX {MAX_BENCH}</FantaBadge>}
+          hint={`non titolari · max ${MAX_BENCH_GK} POR · ${benchIds.length}/${MAX_BENCH} scelti`}
+          players={benchCandidates}
+          selectedIds={benchIds}
+          onToggle={pickBench}
+          getUnavailableReason={benchUnavailableReason}
+          testId="fanta-team-bench-picker"
+          open={pickerOpen}
+          onClose={closePicker}
+          initialRoleFilter={pickerRole}
+        />
+      )}
 
       <div
         className={`fw-note${validation.valid ? ' fw-note--success' : ' fw-note--error'}`}
@@ -384,7 +509,7 @@ export default function FantaTeamBuilder() {
           onClick={handleSave}
           data-testid="fanta-team-save-cta"
         >
-          {saving ? 'SALVATAGGIO IN CORSO…' : 'Salva formazione'}
+          {saving ? 'SALVATAGGIO IN CORSO…' : 'SALVA LA FORMAZIONE'}
         </FantaButton>
         {saved && !saveError && (
           <FantaButton

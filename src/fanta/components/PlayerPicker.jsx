@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import FantaBadge from './ui/FantaBadge.jsx';
 import { filterPlayers, countByRole, ROLE_ORDER } from './playerFilter.js';
 
 /*
- * PlayerPicker — selezione giocatori (fase F2).
+ * PlayerPicker — selezione giocatori (fase F2, overlay bottom-sheet fase F6).
  *
  * Estratto da FantaTeamBuilder, dove le due liste (titolari e panchina) erano
  * duplicate inline. Il picker è puro sulla selezione: non conosce il motore,
@@ -13,6 +13,12 @@ import { filterPlayers, countByRole, ROLE_ORDER } from './playerFilter.js';
  * La disponibilità è delegata a `getUnavailableReason(player)`, così le regole
  * (1 POR, max 5 per reparto, max 3 per club, rosa piena) restano allineate a
  * scoreEngine.js in un punto solo, dal lato del Team Builder.
+ *
+ * `open`/`onClose`/`initialRoleFilter` sono opzionali (fase F6): quando
+ * `open` è passato, il picker si comporta da bottom-sheet (nascosto se
+ * `open` è false, filtro di ruolo preimpostato all'apertura). La firma
+ * principale (players/selectedIds/onToggle/getUnavailableReason) resta
+ * invariata per non rompere gli usi esistenti.
  */
 
 const ROLE_LABELS = { GK: 'POR', DEF: 'DIF', MID: 'CEN', FWD: 'ATT' };
@@ -28,9 +34,20 @@ export default function PlayerPicker({
   hint = null,
   searchPlaceholder = 'Cerca giocatore o club',
   testId = 'player-picker',
+  open = true,
+  onClose = null,
+  initialRoleFilter = null,
 }) {
   const [query, setQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState(null);
+  const [roleFilter, setRoleFilter] = useState(initialRoleFilter);
+
+  useEffect(() => {
+    if (!open) return;
+    // Reset one-time alla (ri)apertura del bottom-sheet, non un loop di render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setQuery('');
+    setRoleFilter(initialRoleFilter);
+  }, [open, initialRoleFilter]);
 
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
 
@@ -43,12 +60,25 @@ export default function PlayerPicker({
 
   const availableRoles = ROLE_ORDER.filter((r) => roleCounts[r] > 0);
 
-  return (
+  if (!open) return null;
+
+  const content = (
     <section className="fw-section" aria-label={title} data-testid={testId}>
       <div className="fw-section-head">
         {index && <FantaBadge variant="index">{index}</FantaBadge>}
         <span className="fw-section-head__label">{title}</span>
         {badge}
+        {onClose && (
+          <button
+            type="button"
+            className="fw-sheet__close"
+            onClick={onClose}
+            aria-label="Chiudi selezione giocatore"
+            data-testid={`${testId}-close`}
+          >
+            ×
+          </button>
+        )}
       </div>
 
       {hint && <span className="fw-section__hint">{hint}</span>}
@@ -139,5 +169,20 @@ export default function PlayerPicker({
         </div>
       )}
     </section>
+  );
+
+  if (!onClose) return content;
+
+  return (
+    <div className="fw-sheet-backdrop" role="presentation" onClick={onClose}>
+      <div
+        className="fw-sheet"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {content}
+      </div>
+    </div>
   );
 }

@@ -711,6 +711,211 @@
 }
 
 /* =============================================================================
+ * SLOT — pedina campo Team Builder (redesign F2, componente PlayerSlot)
+ * ========================================================================== */
+.fw-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--fw-space-4);
+  flex: 0 0 auto;
+}
+
+.fw-slot__circle {
+  position: relative;
+  width: var(--fw-crest-md);
+  height: var(--fw-crest-md);
+  border-radius: var(--fw-radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform var(--fw-dur-fast) var(--fw-ease), box-shadow var(--fw-dur) var(--fw-ease);
+}
+
+.fw-slot--bench .fw-slot__circle {
+  width: 34px;
+  height: 34px;
+}
+
+.fw-slot__circle:active { transform: translateY(var(--fw-press)); }
+
+.fw-slot__circle:focus-visible {
+  outline: none;
+  box-shadow: var(--fw-focus-ring);
+}
+
+/* empty — cerchio dashed oro, "+" centrato */
+.fw-slot--empty .fw-slot__circle {
+  background: rgba(10, 15, 28, 0.2);
+  border: 1.25px dashed var(--fw-gold-soft);
+}
+
+.fw-slot--empty .fw-slot__circle:hover {
+  border-color: var(--fw-gold);
+}
+
+.fw-slot__plus {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-md);
+  color: var(--fw-gold);
+  line-height: 1;
+}
+
+.fw-slot--bench .fw-slot__plus { font-size: var(--fw-display-xs); }
+
+/* filled — pedina navy, iniziali oro, badge ruolo overlay */
+.fw-slot--filled .fw-slot__circle {
+  background: var(--fw-club-navy);
+  border: 2px solid var(--fw-gold-deep);
+}
+
+.fw-slot--filled .fw-slot__initials {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-sm);
+  color: var(--fw-parchment);
+  letter-spacing: var(--fw-track-sm);
+}
+
+.fw-slot--bench.fw-slot--filled .fw-slot__initials { font-size: var(--fw-mono-lg); }
+
+/* gk — variante oro pieno + glow */
+.fw-slot--gk .fw-slot__circle {
+  background: var(--fw-gold);
+  border: 2.5px solid rgba(239, 231, 214, 0.9);
+  box-shadow: var(--fw-shadow-glow-md);
+}
+
+.fw-slot--gk .fw-slot__initials {
+  font-family: var(--fw-font-display);
+  font-weight: var(--fw-weight-display);
+  font-size: var(--fw-display-sm);
+  color: var(--fw-ink);
+  letter-spacing: var(--fw-track-sm);
+}
+
+.fw-slot__badge {
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-3xs);
+  font-weight: var(--fw-weight-mono-bold);
+  letter-spacing: var(--fw-track-mono-tight);
+  padding: 1px var(--fw-space-4);
+  border-radius: var(--fw-radius-2xs);
+  background: var(--fw-gold);
+  color: var(--fw-ink);
+}
+
+.fw-slot--gk .fw-slot__badge {
+  background: var(--fw-ink);
+  color: var(--fw-gold);
+}
+
+.fw-slot__label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  max-width: 72px;
+  text-align: center;
+}
+
+.fw-slot__name {
+  font-family: var(--fw-font-body);
+  font-size: var(--fw-body-xs);
+  color: var(--fw-text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.fw-slot__club {
+  font-family: var(--fw-font-mono);
+  font-size: var(--fw-mono-3xs);
+  letter-spacing: var(--fw-track-mono);
+  color: var(--fw-text-meta);
+  text-transform: uppercase;
+}
+
+/* =============================================================================
+ * PITCH — campo verticale Team Builder (redesign F3, componente FantasyPitch)
+ * ========================================================================== */
+.fw-pitch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fw-space-16);
+  padding: var(--fw-space-16) var(--fw-space-8);
+}
+
+.fw-pitch__row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--fw-space-8);
+  flex-wrap: nowrap;
+}
+
+/* =============================================================================
+ * BENCH — panchina Team Builder (redesign F7, componente BenchRow)
+ * ========================================================================== */
+.fw-bench {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--fw-space-16);
+  padding: var(--fw-space-8) var(--fw-gutter) var(--fw-space-16);
+  flex-wrap: nowrap;
+}
+
+/* =============================================================================
+ * SHEET — bottom-sheet PlayerPicker (redesign F6)
+ * ========================================================================== */
+.fw-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--fw-z-sticky);
+  background: rgba(6, 9, 18, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: flex-end;
+}
+
+.fw-sheet {
+  width: 100%;
+  max-height: 82vh;
+  overflow-y: auto;
+  background: var(--fw-club-navy);
+  border-top: 1.5px solid var(--fw-gold-deep);
+  border-radius: var(--fw-radius-lg) var(--fw-radius-lg) 0 0;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.fw-sheet__close {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--fw-radius-full);
+  border: 1px solid var(--fw-gold-soft);
+  background: transparent;
+  color: var(--fw-gold);
+  font-size: var(--fw-body-md);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fw-sheet__close:focus-visible {
+  outline: none;
+  box-shadow: var(--fw-focus-ring);
+}
+
+/* =============================================================================
  * RESPONSIVE — il gutter è già un token (@media in fanta-tokens.css)
  * ========================================================================== */
 @media (min-width: 720px) {
@@ -725,7 +930,8 @@
   .fw-btn,
   .fw-tile,
   .fw-chip,
-  .fw-input { transition: none; }
+  .fw-input,
+  .fw-slot__circle { transition: none; }
   .fw-btn:hover:not(:disabled),
   .fw-tile:hover:not(:disabled),
   .fw-chip:hover { transform: none; }

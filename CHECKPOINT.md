@@ -1,6 +1,6 @@
 # CHECKPOINT — Walbox
-Aggiornato: 2026-07-25 (push V1.5-B + V1.6.1, runner a V1.6.1)
-Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle Night.
+Aggiornato: 2026-08-25 (stabilizzazione FantaWalrus pre Extraction Audit)
+Fase: FantaWalrus track attivo (roster persistence remota completata 2026-08-18, rebuild UI FantaTeamBuilder da Figma in corso). Jukebox/Spotify reale e Shuffle Night in pausa, invariati da V1.6.1 (2026-07-07).
 
 ---
 
@@ -62,6 +62,9 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
   `ai-ops/runner/rules/task_classifier_rules.md`, `ai-ops/profiles/walbox.json`,
   `ai-ops/profiles/ai-factory.json`.
 - **Reality Sprint 01 — fix customer request realtime status sync (2026-07-08, commit `ad56461`):** `CustomerRequest.jsx` legge ora "Le mie richieste" da Supabase Realtime (`useRealtimeRequests()`), non più da mockData/localStorage — corretto il mismatch cliente/staff/TV su approved/playing/played. `npm run build` PASS, pushato su `origin/main`.
+- **FantaWalrus — roster persistence, remote apply completato (2026-08-18):** applicate su `pcrqfdzipotprqtuemso` le migration `20260818120000_fanta_save_roster_rpc_v1.sql` + `20260818130000_fanta_roster_is_starter_v1.sql`, in ordine. `fanta_rosters.is_starter` ora presente sul remoto; RPC finale `save_fanta_roster_v1(uuid, jsonb)` unica (vecchia firma `(uuid, uuid[])` assente). 15 righe preesistenti in `fanta_rosters` preservate. Migration history remota riallineata (incluso il file locale ricostruito `20260806212722_0004_fanta_league_bootstrap_v1.sql`, contenuto identico al remoto, nessuna riscrittura). Test `node --test` 50/50 PASS, `npm run build` PASS. Verdict **ROSTER_PERSISTENCE_REMOTE_COMPLETE**. Gap dichiarato: nessun test RPC autenticato end-to-end reale contro Auth remoto (bloccato da email confirmation attiva, non un bug — da completare in un secondo momento con credenziali reali). Report: `ai-ops/reports/fantawalrus-roster-rpc-remote-apply-result.md`.
+- **FantaWalrus — rebuild UI FantaTeamBuilder da Figma, in corso (WIP non committato):** piano a 7 fasi (F1-F7, vedi memoria `fantateam-figma-rebuild`) da tile-list a campo verticale, rif. Figma node 44:2 fileKey `XHEvlbwq6y7mkk6NRtEAxE`. Presenti e non committati: `src/fanta/components/team-builder/` (PlayerSlot, FantasyPitch, TeamHeader, BenchRow + test — F1-F4/F7), modifiche a `src/fanta/pages/FantaTeamBuilder.jsx`, `src/fanta/components/PlayerPicker.jsx`, `src/fanta/styles/fanta-system.css` (F5/F6 integrazione, in corso), più `tests/e2e/fanta-team-builder-mobile.spec.js` nuovo. Stato non verificato in questo checkpoint (nessun test/build mirato eseguito su questo WIP).
+- **Micro-task stabilizzazione pre Extraction Audit (2026-08-25):** allineato questo CHECKPOINT.md allo stato FantaWalrus reale; aggiunti in `package.json` solo gli script `test:unit` (`node --test` su tutti i `*.test.js` rilevanti FantaWalrus: `src/fanta/**`, `src/lib/fanta*`, `supabase/migrations/*fanta*`, 30 file) e `test` (alias di `test:unit`). Nessun file `src/` toccato. `npm run test:unit`: 272/272 PASS. `npm run build`: PASS. Working tree lasciato invariato per il resto (WIP Figma rebuild sopra non toccato).
 
 ## STABLE — non toccare senza approvazione
 - **Checkpoint locale salvato (2026-07-05): commit `2f06353` "chore: save ai-ops factory and walbox visual updates"** — contiene ai-ops AI Factory alignment, SECURITY_POLICY.md, reports/knowledge placeholders, modifiche visual/app Walbox, FABLE_WALBOX_CREATIVE_DIRECTION_PACK. Non pushato (vedi OPEN ISSUES).
@@ -91,7 +94,7 @@ Fase: Jukebox/Spotify reale in corso (post V1-P6 Kitchen). Preparazione Shuffle 
 - Kitchen-era memories are archived; see MEMORY.md. Do not use them for the active Jukebox/Shuffle Night track.
 
 ## NEXT STEP
-ai-factory-runner V1.5-B e V1.6.1 completate e **già pushati** su origin/main (RUNNER_VERSION='V1.6.1', run.js:141). NEXT STEP reale: scegliere tra **(a) mini-hardening validazione schema `ai-ops/profiles/*.json` in `loadProfile()`** oppure **(b) tornare a un task reale Walbox** (PILOT_NIGHT_CHECKLIST Jukebox / riprendere stash `CustomerEntry.jsx`/`CustomerRequest.jsx`). In parallelo restano aperti: completare il report finale S3 con la sezione 11 di `docs/PILOT_NIGHT_CHECKLIST_JUKEBOX.md`, passare a S4.
+Track attivo: **FantaWalrus**. Stato appena verificato (2026-08-25): `npm run test:unit` 272/272 PASS, `npm run build` PASS, working tree con WIP Figma rebuild F5/F6 non committato (vedi DONE sopra). NEXT STEP reale: **Extraction Audit** su FantaWalrus (da definire scope con Eros) prima di proseguire F5/F6 del rebuild UI. Restano sullo sfondo, non attivi: ai-factory-runner (V1.6.1, già pushato, nessun next step aperto), Jukebox/Shuffle Night (PILOT_NIGHT_CHECKLIST S3/S4, stash `CustomerEntry.jsx`/`CustomerRequest.jsx`).
 
 ## RESTART PROMPT
 "Walbox — Kitchen stabile e completa (V1-P6). Track attivo: Jukebox/Spotify reale per Shuffle Night (auto-advance, TV sync, ricerca), 39 commit dal 24/6 al 3/7. Prossimo step: walbox-dev fa piano da PILOT_NIGHT_CHECKLIST.md per chiudere fino a demo-stabile."
