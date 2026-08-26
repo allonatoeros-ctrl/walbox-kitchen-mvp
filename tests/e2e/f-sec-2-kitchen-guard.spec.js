@@ -76,3 +76,37 @@ test.describe('F-SEC-2 Kitchen staff guard', () => {
   // la policy RLS kitchen_orders UPDATE richiede is_staff_for_venue. Verifica a livello DB, non E2E UI.
   // Qui si assume verificato via MCP in P0-2-R6 (kitchen_orders UPDATE/SELECT staff = is_staff_for_venue).
 });
+
+// Kitchen Solo Service — DEV Preview Mode (/kitchen/solo?preview=1).
+// Eseguito su questo config (SENZA VITE_E2E_BYPASS_STAFF_AUTH) per verificare il vero
+// comportamento: guard reale intatto senza ?preview=1, bypass DEV-only funzionante con esso.
+test.describe('Kitchen Solo Service — DEV Preview Mode', () => {
+  test('P1: /kitchen/solo senza preview -> guard reale attivo, redirect /kitchen/login', async ({ page }) => {
+    await page.goto('/kitchen/solo');
+    await page.waitForURL('**/kitchen/login', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/kitchen\/login/);
+  });
+
+  test('P2: /kitchen/solo?preview=1 -> accesso senza login, dati fixture, zero chiamate Supabase', async ({ page }) => {
+    const supabaseRequests = [];
+    page.on('request', (req) => {
+      if (req.url().includes('.supabase.co')) supabaseRequests.push(req.url());
+    });
+
+    await page.goto('/kitchen/solo?preview=1');
+
+    // Nessun redirect al login: la preview bypassa il guard senza env var.
+    await expect(page.getByText('SOLO SERVICE MODE')).toBeVisible();
+    await expect(page).not.toHaveURL(/\/kitchen\/login/);
+
+    // Dati fixture locali (non demo/live), lifecycle completo rappresentato.
+    await expect(page.getByTestId('kpi-paga')).toHaveText('1');
+    await expect(page.getByTestId('kpi-dafare')).toHaveText('2');
+    await expect(page.getByTestId('kpi-pronti')).toHaveText('1');
+    await expect(page.getByTestId('focus-code')).toHaveText('P43');
+
+    // Zero rete verso Supabase durante caricamento + interazione minima.
+    await page.getByTestId('next-action').click();
+    expect(supabaseRequests).toEqual([]);
+  });
+});
