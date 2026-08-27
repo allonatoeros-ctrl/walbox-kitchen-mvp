@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { kitchenMenuItems, kitchenCategoryPromos, kitchenCartUpsell } from '../data/kitchenMockData';
+import { kitchenCategoryPromos, kitchenCartUpsell } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
@@ -36,6 +36,37 @@ const CATEGORY_SVGS = {
       <path d="M18 2 C19.5 9 24.5 12 34 13 C25.5 17 26 23.5 28 33 C20 28 16 28 8 33 C10 23.5 10.5 17 2 13 C11.5 12 16.5 9 18 2 Z" fill="currentColor" />
     </svg>
   ),
+  bbq: (
+    <svg width="38" height="20" viewBox="0 0 38 20" fill="none">
+      <rect x="1" y="4" width="6" height="12" rx="2" fill="currentColor" />
+      <rect x="0" y="7" width="3" height="6" rx="1" fill="currentColor" />
+      <rect x="31" y="4" width="6" height="12" rx="2" fill="currentColor" />
+      <rect x="35" y="7" width="3" height="6" rx="1" fill="currentColor" />
+      <rect x="7" y="9" width="24" height="2" fill="currentColor" />
+    </svg>
+  ),
+  cicchetti: (
+    <svg width="14" height="36" viewBox="0 0 14 36" fill="none">
+      <rect x="6" y="1" width="2" height="33" rx="1" fill="currentColor" />
+      <circle cx="7" cy="10" r="5.5" fill="currentColor" />
+      <circle cx="7" cy="21" r="5.5" fill="currentColor" />
+      <path d="M3.5,32 H10.5 L7,36 Z" fill="currentColor" />
+    </svg>
+  ),
+  insalatone: (
+    <svg width="36" height="30" viewBox="0 0 36 30" fill="none">
+      <path d="M2,14 H34 C34,22.5 27,28.5 18,28.5 C9,28.5 2,22.5 2,14 Z" fill="currentColor" />
+      <path d="M4,14 C4,8 10,4 18,4 C26,4 32,8 32,14 Z" fill="currentColor" opacity="0.4" />
+      <path d="M18,4 C20.5,7 20.5,10 17,12.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
+    </svg>
+  ),
+  tartare: (
+    <svg width="34" height="30" viewBox="0 0 34 30" fill="none">
+      <ellipse cx="17" cy="19" rx="15" ry="8.5" fill="currentColor" />
+      <ellipse cx="17" cy="15.5" rx="11" ry="5.5" fill="currentColor" opacity="0.5" />
+      <circle cx="17" cy="9.5" r="3" fill="currentColor" />
+    </svg>
+  ),
 };
 
 // Base tabs: always shown, unchanged legacy behavior (even with zero priced items).
@@ -48,15 +79,18 @@ const BASE_CATEGORIES = [
 
 // New menu categories: hidden automatically until they have at least one priced item.
 const PRICE_GATED_CATEGORIES = [
-  { key: 'bbq', label: 'PESI MASSIMI', icon: CATEGORY_SVGS.panini },
-  { key: 'cicchetti', label: 'CICCHETTI', icon: CATEGORY_SVGS.panini },
-  { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.panini },
-  { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.panini },
+  { key: 'bbq', label: 'PESI MASSIMI', icon: CATEGORY_SVGS.bbq },
+  { key: 'cicchetti', label: 'CICCHETTI', icon: CATEGORY_SVGS.cicchetti },
+  { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.insalatone },
+  { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.tartare },
 ];
 
-const promoItem =
-  kitchenMenuItems.find((i) => i.id === 'item-007') ||
-  kitchenMenuItems.find((i) => i.category === 'combo');
+// DEV-ONLY temporary preview: shows all categories + items even with price:null.
+// Enable with ?previewAll=1, only works in local dev builds. No effect in production.
+const PREVIEW_ALL_ITEMS =
+  import.meta.env.DEV &&
+  typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('previewAll') === '1';
 
 
 
@@ -100,9 +134,11 @@ export default function CustomerKitchenMenu() {
 
   const CATEGORIES = [
     ...BASE_CATEGORIES,
-    ...PRICE_GATED_CATEGORIES.filter((cat) =>
-      menuItems.some((i) => i.category === cat.key && i.price != null)
-    ),
+    ...(PREVIEW_ALL_ITEMS
+      ? PRICE_GATED_CATEGORIES
+      : PRICE_GATED_CATEGORIES.filter((cat) =>
+          menuItems.some((i) => i.category === cat.key && i.price != null)
+        )),
   ];
 
   const [activeCategory, setActiveCategory] = useState('panini');
@@ -122,7 +158,9 @@ export default function CustomerKitchenMenu() {
     } catch { }
   }, []);
 
-  const visibleItems = menuItems.filter((i) => i.category === activeCategory && i.price != null);
+  const visibleItems = menuItems.filter((i) =>
+    i.category === activeCategory && (PREVIEW_ALL_ITEMS || i.price != null)
+  );
 
 
 

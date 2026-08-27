@@ -12,6 +12,7 @@ const CATEGORY_THEMES = {
   bbq:      { activeBg: '#8b1e1e', activeBorder: '#f8c53a', inactiveBg: '#1f1212', inactiveBorder: '#3b1f1f' },
   box:      { activeBg: '#5c4b1f', activeBorder: '#f8c53a', inactiveBg: '#1a1810', inactiveBorder: '#332e1f' },
   tartare:  { activeBg: '#c25a6b', activeBorder: '#f8c53a', inactiveBg: '#1f1215', inactiveBorder: '#3b1f25' },
+  cicchetti: { activeBg: '#b8533a', activeBorder: '#f8c53a', inactiveBg: '#1f1610', inactiveBorder: '#3b2a1a' },
   tagliere_salumi: { activeBg: '#7a3b2e', activeBorder: '#f8c53a', inactiveBg: '#1f1410', inactiveBorder: '#3b211a' },
   tagliere_formaggi: { activeBg: '#b88a3a', activeBorder: '#f8c53a', inactiveBg: '#1f1a10', inactiveBorder: '#3b321a' },
   insalatone: { activeBg: '#4a7c3f', activeBorder: '#f8c53a', inactiveBg: '#121f10', inactiveBorder: '#1f3b1a' },
