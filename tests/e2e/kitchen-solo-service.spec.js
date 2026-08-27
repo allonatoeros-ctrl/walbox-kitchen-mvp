@@ -173,4 +173,69 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.locator('.kss-qcard[data-order="W43"]')).toBeVisible();
     await expect(page.getByTestId('kpi-dafare')).toHaveText('2');
   });
+
+  // Supabase non è configurato in questo ambiente locale (nessun .env) — ogni write
+  // fallisce già oggi, silenziosamente prima di questa patch. Questi test verificano
+  // che il fallimento sia ora sempre visibile (mai presentato come successo) e che il
+  // polling non "rewindi" silenziosamente lo stato durante/dopo un fallimento.
+  test('9. write failure: azione mutativa mostra il tag SYNC ✗ sulla card, mai spacciata per successo', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await expect(page.getByTestId('next-action')).toContainText('PRONTO');
+    await page.getByTestId('next-action').click();
+
+    // W43 passa a "pronto" nella UI (ottimistico), ma la sync verso Supabase fallisce
+    // (ambiente senza .env): deve comparire un indicatore di errore sulla card, non un
+    // successo silenzioso.
+    await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
+
+    // Il dettaglio in focus (aprendo la card) mostra il banner con motivo e RIPROVA.
+    await page.locator('.kss-qcard[data-order="W43"]').click();
+    const banner = page.getByTestId('sync-error-banner');
+    await expect(banner).toBeVisible();
+    await expect(banner).toContainText('Salvataggio non riuscito');
+    await expect(page.getByRole('button', { name: 'RIPROVA' })).toBeVisible();
+  });
+
+  test('10. retry: RIPROVA ritenta la sync senza spacciare il fallimento per successo', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await page.getByTestId('next-action').click();
+    await page.locator('.kss-qcard[data-order="W43"]').click();
+
+    const banner = page.getByTestId('sync-error-banner');
+    await expect(banner).toBeVisible();
+
+    // Stesso ambiente (Supabase non configurato): il retry fallisce di nuovo,
+    // ma il banner/tag devono restare — mai un falso "sincronizzato".
+    await page.getByRole('button', { name: 'RIPROVA' }).click();
+    await expect(banner).toBeVisible();
+    await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
+    await expect(page.getByTestId('focus-code')).toHaveText('W43'); // stato locale coerente, nessun crash
+  });
+
+  test('11. poll durante mutation: lo stato aggiornato non viene riavvolto dal polling successivo', async ({ page }) => {
+    test.setTimeout(40000);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+    await expect(page.getByTestId('next-action')).toContainText('PRONTO');
+    await page.getByTestId('next-action').click();
+
+    // Ordine passato a "pronto" (ottimistico); la sync verso Supabase fallisce subito
+    // (ambiente senza .env) e resta segnalata.
+    await expect(page.getByTestId('kpi-pronti')).toHaveText('2');
+    await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
+
+    // Il poll gira ogni 10s: aspettiamo un ciclo pieno. Prima della fix, il poll
+    // avrebbe silenziosamente riportato W43 allo stato precedente ("preparing"),
+    // facendolo sparire dai "pronti" e riapparire tra i "da fare" senza alcun avviso.
+    await page.waitForTimeout(11000);
+
+    await expect(page.getByTestId('kpi-pronti')).toHaveText('2');
+    await expect(page.locator('.kss-qcard[data-order="W43"]')).toBeVisible();
+  });
 });

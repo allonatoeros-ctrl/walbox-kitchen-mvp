@@ -307,6 +307,7 @@
   border-radius: 5px;
   padding: 3px 6px;
 }
+.kss-qcard-tag--sync-error { color: var(--kss-red); border-color: var(--kss-red); }
 .kss-qcard--late .kss-qcard-min { color: var(--kss-red); }
 .kss-queue-empty {
   padding: 26px 12px;
@@ -466,6 +467,32 @@
   padding: 5px 10px;
 }
 .kss-side-stack { display: flex; flex-direction: column; gap: 12px; }
+
+.kss-sync-error {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--kss-red);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.kss-sync-error-retry {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--kss-red);
+  background: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
 
 /* ---------- Next action ---------- */
 .kss-action-grid {

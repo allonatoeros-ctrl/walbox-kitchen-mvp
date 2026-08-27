@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { demoKitchenOrders } from '../data/kitchenMockData';
 import { supabase } from '../lib/supabaseClient';
 
@@ -50,14 +50,23 @@ function mapSupabaseOrder(row) {
   };
 }
 
-async function supabaseUpdateOrder(id, patch) {
+// export solo per il test mirato P0-A (mock.module su ../lib/supabaseClient); nessun
+// nuovo consumer applicativo.
+export async function supabaseUpdateOrder(id, patch) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session || session.user.is_anonymous) return;
+    // supabaseUpdateOrder è chiamata solo da mutation staff (runOrderSync): qui non
+    // esiste un caso guest/local-only legittimo, quindi nessuna sessione valida è
+    // sempre un fallimento di sync, mai un successo silenzioso (P0-A).
+    if (!session || session.user.is_anonymous) {
+      return { ok: false, error: new Error('no-session: staff sync skipped') };
+    }
     const { error } = await supabase.from('kitchen_orders').update(patch).eq('id', id);
     if (error) throw error;
+    return { ok: true };
   } catch (err) {
     console.warn('[Walbox] Supabase update failed — localStorage updated only', err);
+    return { ok: false, error: err };
   }
 }
 
@@ -92,6 +101,9 @@ async function supabaseInsertActionLog({ order_id, action, from_status, to_statu
  */
 export function useKitchenOrders() {
   const [orders, setOrders] = useState(loadOrders);
+  // orderId -> last patch sent to Supabase, present while a write is in-flight or failed.
+  // Used to (a) skip clobbering that order on the next poll and (b) support retry.
+  const pendingWritesRef = useRef(new Map());
 
   useEffect(() => {
     const refresh = () => setOrders(loadOrders());
@@ -125,7 +137,17 @@ export function useKitchenOrders() {
       if (error) throw error;
       if (!data?.length) return;
 
-      setOrders(data.map(mapSupabaseOrder));
+      setOrders((prev) => {
+        const prevById = new Map(prev.map((o) => [o.id, o]));
+        return data.map((row) => {
+          const mapped = mapSupabaseOrder(row);
+          // A write for this order is still pending or failed and unretried:
+          // keep the local view so the poll doesn't silently rewind it.
+          return pendingWritesRef.current.has(mapped.id)
+            ? (prevById.get(mapped.id) ?? mapped)
+            : mapped;
+        });
+      });
     } catch (err) {
       console.warn('[Walbox] Supabase read failed — using localStorage', err);
     }
@@ -139,6 +161,34 @@ export function useKitchenOrders() {
     const intervalId = setInterval(fetchSupabaseOrders, 10000);
     return () => clearInterval(intervalId);
   }, []);
+
+  const applyLocalSyncStatus = (id, syncStatus, syncError) => {
+    setOrders((prev) => {
+      const next = prev.map((o) => (o.id === id ? { ...o, syncStatus, syncError } : o));
+      saveOrders(next);
+      return next;
+    });
+  };
+
+  // Writes `patch` to Supabase and reflects pending/success/failure on the order itself,
+  // so a failure is never presented to the operator as a successful save.
+  const runOrderSync = async (id, patch) => {
+    pendingWritesRef.current.set(id, patch);
+    applyLocalSyncStatus(id, 'pending', null);
+    const result = await supabaseUpdateOrder(id, patch);
+    if (result.ok) {
+      pendingWritesRef.current.delete(id);
+      applyLocalSyncStatus(id, 'synced', null);
+    } else {
+      applyLocalSyncStatus(id, 'error', 'Sincronizzazione fallita — riprova');
+    }
+  };
+
+  const retrySync = (id) => {
+    const patch = pendingWritesRef.current.get(id);
+    if (!patch) return;
+    runOrderSync(id, patch);
+  };
 
   const updateOrderStatus = (id, newStatus) => {
     const now = new Date().toISOString();
@@ -155,7 +205,7 @@ export function useKitchenOrders() {
       return next;
     });
     const patch = { status: newStatus, ...(newStatus === 'ready' ? { ready_at: now } : {}) };
-    supabaseUpdateOrder(id, patch);
+    runOrderSync(id, patch);
     supabaseInsertActionLog({ order_id: id, action: newStatus, from_status: fromOrder?.status ?? null, to_status: newStatus, created_at: now });
   };
 
@@ -234,7 +284,7 @@ export function useKitchenOrders() {
       paid_at: now,
       ...(current?.status === 'pending_counter_payment' ? { status: 'received' } : {}),
     };
-    supabaseUpdateOrder(orderId, patch);
+    runOrderSync(orderId, patch);
     supabaseInsertActionLog({
       order_id:    orderId,
       action:      'payment_confirmed',
@@ -257,7 +307,7 @@ export function useKitchenOrders() {
       saveOrders(next);
       return next;
     });
-    supabaseUpdateOrder(id, { status: 'cancelled', cancel_reason: reason, cancelled_at: now });
+    runOrderSync(id, { status: 'cancelled', cancel_reason: reason, cancelled_at: now });
     supabaseInsertActionLog({ order_id: id, action: 'cancelled', from_status: fromOrder?.status ?? null, to_status: 'cancelled', reason: reason ?? null, created_at: now });
   };
 
@@ -267,7 +317,7 @@ export function useKitchenOrders() {
       saveOrders(next);
       return next;
     });
-    supabaseUpdateOrder(id, { staff_note: note });
+    runOrderSync(id, { staff_note: note });
   };
 
   const resetToDemo = () => {
@@ -276,5 +326,5 @@ export function useKitchenOrders() {
     setOrders(fresh);
   };
 
-  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote };
+  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote, retrySync };
 }

@@ -111,7 +111,7 @@ export default function KitchenSoloService() {
 
 /** Live page: real Supabase-backed hooks + real staff auth guard. Unchanged behavior. */
 function KitchenSoloServiceLive() {
-  const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote } = useKitchenOrders();
+  const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync } = useKitchenOrders();
   const { menuItems, toggleAvailability } = useKitchenMenu();
 
   const [authChecked, setAuthChecked] = useState(
@@ -159,6 +159,7 @@ function KitchenSoloServiceLive() {
       confirmPayment={confirmPayment}
       cancelOrder={cancelOrder}
       updateStaffNote={updateStaffNote}
+      retrySync={retrySync}
       menuItems={menuItems}
       toggleAvailability={toggleAvailability}
     />
@@ -186,7 +187,7 @@ function KitchenSoloServicePreview() {
 
 /** Shared UI for both Live and Preview. No data source or auth logic lives here. */
 function KitchenSoloServiceView({
-  orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote,
+  orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false,
 }) {
   const [focusId, setFocusId]         = useState(null);
@@ -352,6 +353,11 @@ function KitchenSoloServiceView({
                   <span className="kss-qcard-amount">€{o.total.toFixed(2)}</span>
                 )}
                 {o.status === 'preparing' && <span className="kss-qcard-tag">IN PREPARAZIONE</span>}
+                {o.syncStatus === 'error' && (
+                  <span className="kss-qcard-tag kss-qcard-tag--sync-error" data-testid={`sync-error-tag-${o.orderCode}`}>
+                    SYNC ✗
+                  </span>
+                )}
               </span>
             </button>
           );
@@ -482,6 +488,19 @@ function KitchenSoloServiceView({
                   <div className="kss-focus-timer-sub">ARRIVATO {formatClock(focusOrder.createdAt)}</div>
                 </div>
               </div>
+
+              {focusOrder.syncStatus === 'error' && (
+                <div className="kss-sync-error" data-testid="sync-error-banner">
+                  <span>⚠ Salvataggio non riuscito — {focusOrder.syncError ?? 'riprova'}</span>
+                  <button
+                    type="button"
+                    className="kss-sync-error-retry"
+                    onClick={() => retrySync?.(focusOrder.id)}
+                  >
+                    RIPROVA
+                  </button>
+                </div>
+              )}
 
               <div className="kss-focus-grid">
                 {/* DA PREPARARE */}
