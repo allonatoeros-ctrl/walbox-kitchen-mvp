@@ -38,11 +38,20 @@ const CATEGORY_SVGS = {
   ),
 };
 
-const CATEGORIES = [
+// Base tabs: always shown, unchanged legacy behavior (even with zero priced items).
+const BASE_CATEGORIES = [
   { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
   { key: 'patatine', label: 'PATATINE', icon: CATEGORY_SVGS.patatine },
   { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
   { key: 'combo', label: 'COMBO', icon: CATEGORY_SVGS.combo },
+];
+
+// New menu categories: hidden automatically until they have at least one priced item.
+const PRICE_GATED_CATEGORIES = [
+  { key: 'bbq', label: 'PESI MASSIMI', icon: CATEGORY_SVGS.panini },
+  { key: 'cicchetti', label: 'CICCHETTI', icon: CATEGORY_SVGS.panini },
+  { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.panini },
+  { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.panini },
 ];
 
 const promoItem =
@@ -80,6 +89,7 @@ function getCategoryTitle(cat) {
   if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
   if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
   if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
+  if (cat === 'bbq') return 'PESI MASSIMI';
   return cat.toUpperCase();
 }
 
@@ -87,6 +97,13 @@ export default function CustomerKitchenMenu() {
   const { session } = useCustomerSession();
   const { addOrder } = useKitchenOrders();
   const { menuItems } = useKitchenMenu();
+
+  const CATEGORIES = [
+    ...BASE_CATEGORIES,
+    ...PRICE_GATED_CATEGORIES.filter((cat) =>
+      menuItems.some((i) => i.category === cat.key && i.price != null)
+    ),
+  ];
 
   const [activeCategory, setActiveCategory] = useState('panini');
   const [orderItems, setOrderItems] = useState([]);
