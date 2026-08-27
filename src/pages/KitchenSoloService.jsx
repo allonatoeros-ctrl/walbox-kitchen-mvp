@@ -185,8 +185,8 @@ function KitchenSoloServicePreview() {
   );
 }
 
-/** Shared UI for both Live and Preview. No data source or auth logic lives here. */
-function KitchenSoloServiceView({
+/** Shared UI for Live, DEV Preview and the isolated Demo Harness. No data source or auth logic lives here. */
+export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false,
 }) {
