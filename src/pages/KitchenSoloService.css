@@ -589,6 +589,54 @@
 }
 .kss-focus-empty-title { font-size: 20px; font-weight: 900; color: var(--kss-text); letter-spacing: 0.6px; }
 
+/* ---------- Undo toast (P0-B) ---------- */
+.kss-undo-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--kss-panel-2);
+  border: 1px solid var(--kss-green);
+  border-radius: 12px;
+  padding: 10px 14px;
+  box-shadow: 0 10px 28px rgba(34, 197, 94, 0.18);
+}
+.kss-undo-check {
+  flex-shrink: 0;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--kss-green);
+}
+.kss-undo-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: var(--kss-text);
+}
+.kss-undo-btn {
+  flex-shrink: 0;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  color: #04160c;
+  background: var(--kss-green);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+.kss-undo-btn:active { transform: translateY(1px); }
+.kss-undo-timer {
+  flex-shrink: 0;
+  min-width: 22px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--kss-muted);
+}
+
 /* ---------- Bottom bar ---------- */
 .kss-bar {
   display: grid;

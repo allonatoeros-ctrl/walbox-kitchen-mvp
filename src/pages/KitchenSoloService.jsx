@@ -199,6 +199,8 @@ export function KitchenSoloServiceView({
   const [overlay, setOverlay]         = useState(null); // 'menu' | 'storico' | 'alert'
   const [queueOpen, setQueueOpen]     = useState(false); // phone: coda a schermo intero
   const [, setTick]                   = useState(0);
+  // Undo P0-B: { orderId, orderCode, fromStatus, actionLabel, expiresAt } | null — un solo undo alla volta.
+  const [undo, setUndo]               = useState(null);
 
   // ritorno al focus precedente dopo un pagamento rapido
   const returnFocusRef = useRef(null);
@@ -207,6 +209,15 @@ export function KitchenSoloServiceView({
     const id = setInterval(() => setTick((n) => n + 1), 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Finestra undo: auto-dismiss allo scadere, mai reverse automatico dello stato.
+  useEffect(() => {
+    if (!undo) return undefined;
+    const remaining = undo.expiresAt - Date.now();
+    if (remaining <= 0) { setUndo(null); return undefined; }
+    const id = setTimeout(() => setUndo(null), remaining);
+    return () => clearTimeout(id);
+  }, [undo]);
 
   const active = useMemo(
     () => orders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled'),
@@ -249,7 +260,28 @@ export function KitchenSoloServiceView({
       return;
     }
     const map = { start: 'preparing', ready: 'ready', delivered: 'delivered' };
-    if (map[kind]) updateOrderStatus(order.id, map[kind]);
+    if (!map[kind]) return;
+    const fromStatus = order.status;
+    updateOrderStatus(order.id, map[kind]);
+    // Protezione click accidentale (P0-B): solo PRONTO e CONSEGNATO offrono undo — reverse sicure
+    // senza nuovo state/schema (vedi ai-ops/reports/kitchen-p0b-undo-window-audit.md §4).
+    if (kind === 'ready' || kind === 'delivered') {
+      setUndo({
+        orderId: order.id,
+        orderCode: order.orderCode,
+        fromStatus,
+        actionLabel: kind === 'ready' ? 'PRONTO' : 'CONSEGNATO',
+        expiresAt: Date.now() + 9000,
+      });
+    }
+  };
+
+  /** Click esplicito ANNULLA: unico modo per ripristinare lo stato precedente. Nessun reverse silenzioso. */
+  const cancelUndo = () => {
+    if (!undo) return;
+    updateOrderStatus(undo.orderId, undo.fromStatus);
+    setFocusId(undo.orderId);
+    setUndo(null);
   };
 
   /** Pagamento rapido da card laterale: incassa senza perdere il focus corrente. */
@@ -612,6 +644,22 @@ export function KitchenSoloServiceView({
         </button>
         <button className="kss-phone-btn" onClick={() => stepFocus(1)} disabled={!focusOrder}>SUCC ›</button>
       </div>
+
+      {/* UNDO TOAST — P0-B: protezione click accidentale, un solo undo alla volta */}
+      {undo && (
+        <div className="kss-undo-toast" data-testid="undo-toast">
+          <span className="kss-undo-check" aria-hidden="true">✓</span>
+          <span className="kss-undo-text">
+            Ordine {undo.orderCode} segnato {undo.actionLabel}
+          </span>
+          <button type="button" className="kss-undo-btn" data-testid="undo-btn" onClick={cancelUndo}>
+            ANNULLA
+          </button>
+          <span className="kss-undo-timer" data-testid="undo-timer">
+            {Math.max(0, Math.ceil((undo.expiresAt - Date.now()) / 1000))}
+          </span>
+        </div>
+      )}
 
       {/* BOTTOM BAR */}
       <div className="kss-bar">

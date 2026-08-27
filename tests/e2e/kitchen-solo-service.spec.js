@@ -238,4 +238,82 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('kpi-pronti')).toHaveText('2');
     await expect(page.locator('.kss-qcard[data-order="W43"]')).toBeVisible();
   });
+
+  // P0-B — protezione da click accidentale: banner undo dopo PRONTO/CONSEGNATO.
+  test('12. PRONTO → UNDO ripristina lo stato precedente e il focus', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+    await expect(page.getByTestId('next-action')).toContainText('PRONTO');
+    await page.getByTestId('next-action').click();
+
+    // Il focus passa avanti, ma compare l'undo per W43 appena segnato pronto.
+    await expect(page.getByTestId('focus-code')).toHaveText('W44');
+    const toast = page.getByTestId('undo-toast');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText('W43');
+    await expect(toast).toContainText('PRONTO');
+
+    await page.getByTestId('undo-btn').click();
+
+    // Reverse esplicito: W43 torna "in preparazione", focus torna su W43, toast sparito.
+    await expect(page.getByTestId('undo-toast')).toHaveCount(0);
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+    await expect(page.getByTestId('next-action')).toContainText('PRONTO');
+    await expect(page.getByTestId('kpi-pronti')).toHaveText('1');
+  });
+
+  test('13. CONSEGNATO → UNDO ripristina PRONTO', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await page.locator('.kss-qcard[data-order="W41"]').click();
+    await expect(page.getByTestId('focus-code')).toHaveText('W41');
+    await expect(page.getByTestId('next-action')).toContainText('RITIRATO');
+    await page.getByTestId('next-action').click();
+
+    const toast = page.getByTestId('undo-toast');
+    await expect(toast).toBeVisible();
+    await expect(toast).toContainText('W41');
+    await expect(toast).toContainText('CONSEGNATO');
+
+    await page.getByTestId('undo-btn').click();
+
+    // Reverse esplicito: W41 torna "pronto", focus torna su W41, toast sparito.
+    await expect(page.getByTestId('undo-toast')).toHaveCount(0);
+    await expect(page.getByTestId('focus-code')).toHaveText('W41');
+    await expect(page.getByTestId('next-action')).toContainText('RITIRATO');
+  });
+
+  test('14. la finestra di UNDO scade automaticamente senza reverse', async ({ page }) => {
+    test.setTimeout(20000);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await page.getByTestId('next-action').click(); // W43 -> pronto
+    await expect(page.getByTestId('undo-toast')).toBeVisible();
+
+    await page.waitForTimeout(9500);
+
+    // Toast auto-dismiss allo scadere; nessun reverse automatico: W43 resta "pronto".
+    await expect(page.getByTestId('undo-toast')).toHaveCount(0);
+    await expect(page.getByTestId('kpi-pronti')).toHaveText('2');
+  });
+
+  test('15. undo rispetta P0-A: sync fallita resta visibile con SYNC ✗ e RIPROVA, mai un falso successo', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await page.getByTestId('next-action').click(); // W43 -> pronto, sync fallisce già qui (ambiente senza .env)
+    await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
+
+    await page.getByTestId('undo-btn').click(); // reverse esplicito: ritenta la sync sul patch inverso
+
+    // Stato locale ripristinato e focus tornato su W43, ma il fallimento della sync
+    // sull'operazione di undo resta segnalato: mai un successo silenzioso.
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+    await expect(page.getByTestId('next-action')).toContainText('PRONTO');
+    await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
+  });
 });
