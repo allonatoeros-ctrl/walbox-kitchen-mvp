@@ -337,46 +337,8 @@ export default function CustomerKitchenMenu() {
 
   // ── Main menu ─────────────────────────────────────────────────────────
   return (
-    <div className={`kitch-page active-cat-${activeCategory}`}>
+    <div className="kitch-page">
       <style>{`
-        .kitch-tabs .kitch-tab .kitch-tab-circle {
-          transition: background-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
-        }
-
-        /* Inactive tab base colors (dimmed) */
-        .kitch-tabs .kitch-tab:nth-child(1) .kitch-tab-circle { background-color: rgba(200,150,10,0.28) !important; color: rgba(212,200,154,0.7) !important; }
-        .kitch-tabs .kitch-tab:nth-child(2) .kitch-tab-circle { background-color: rgba(184,48,32,0.28) !important; color: rgba(212,200,154,0.7) !important; }
-        .kitch-tabs .kitch-tab:nth-child(3) .kitch-tab-circle { background-color: rgba(196,168,106,0.28) !important; color: rgba(212,200,154,0.7) !important; }
-        .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle { background-color: rgba(58,74,40,0.28) !important; color: rgba(212,200,154,0.7) !important; }
-
-        /* PANINI tab active */
-        .active-cat-panini .kitch-tabs .kitch-tab:nth-child(1) .kitch-tab-circle {
-          background-color: #c8960a !important;
-          color: #0e0c08 !important;
-          box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(200,150,10,0.5) !important;
-        }
-
-        /* PATATINE tab active */
-        .active-cat-patatine .kitch-tabs .kitch-tab:nth-child(2) .kitch-tab-circle {
-          background-color: #b83020 !important;
-          color: #fff !important;
-          box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(184,48,32,0.5) !important;
-        }
-
-        /* BIRRE tab active */
-        .active-cat-birre .kitch-tabs .kitch-tab:nth-child(3) .kitch-tab-circle {
-          background-color: #c4a86a !important;
-          color: #0e0c08 !important;
-          box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(196,168,106,0.45) !important;
-        }
-
-        /* COMBO tab active */
-        .active-cat-combo .kitch-tabs .kitch-tab:nth-child(4) .kitch-tab-circle {
-          background-color: #3a4a28 !important;
-          color: #fff !important;
-          box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35), 0 6px 18px rgba(58,74,40,0.5) !important;
-        }
-
         /* Card svg icons: dark color on cream background */
         .kitch-card-img svg {
           color: #1c1a14 !important;
