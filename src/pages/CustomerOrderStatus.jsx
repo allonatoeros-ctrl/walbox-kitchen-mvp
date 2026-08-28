@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { supabase } from '../lib/supabaseClient';
 import KitchenOrderCard from '../components/kitchen/KitchenOrderCard';
 import './CustomerOrderStatus.css';
 
@@ -47,6 +48,35 @@ function navigate(path) {
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
+// Reused across retries for the same order so a re-click before checkout completes doesn't spawn
+// a fresh idempotency key every time (server-side RPC idempotency keys off this same value).
+function getSumupIdempotencyKey(orderId) {
+  const key = `walbox_sumup_idem_${orderId}`;
+  try {
+    const existing = sessionStorage.getItem(key);
+    if (existing) return existing;
+    const generated = crypto.randomUUID();
+    sessionStorage.setItem(key, generated);
+    return generated;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+const SUMUP_ERROR_MESSAGES = {
+  not_order_owner: 'Sessione ordine non riconosciuta su questo dispositivo. Paga alla cassa.',
+  order_already_paid: 'Questo ordine risulta già pagato.',
+  order_cancelled: 'Questo ordine è stato annullato.',
+  amount_mismatch: 'Importo non allineato all’ordine. Riprova o paga alla cassa.',
+  invalid_attempt_status: 'Pagamento già in corso. Attendi qualche secondo e riprova.',
+};
+
+function friendlySumupError(err) {
+  const raw = err?.message || err?.error || String(err ?? '');
+  const code = Object.keys(SUMUP_ERROR_MESSAGES).find((c) => raw.includes(c));
+  return code ? SUMUP_ERROR_MESSAGES[code] : 'Pagamento con SumUp non disponibile ora. Riprova o paga alla cassa.';
+}
+
 function resolveInitialId(orders) {
   const urlParams  = new URLSearchParams(window.location.search);
   const urlOrderId = urlParams.get('orderId');
@@ -75,6 +105,10 @@ export default function CustomerOrderStatus() {
   const [devOpen, setDevOpen] = useState(false);
   const [tick, setTick] = useState(0);
   const [readyFlash, setReadyFlash] = useState(false);
+  const [sumup, setSumup] = useState(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return { state: urlParams.get('sumup') === 'return' ? 'verifying' : 'idle', error: null };
+  });
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -132,6 +166,44 @@ export default function CustomerOrderStatus() {
   const handleSelectOrder = (oId) => {
     setSelectedId(oId);
     navigate(`/kitchen/status?orderId=${oId}`);
+  };
+
+  const handlePaySumup = async () => {
+    if (!order) return;
+    setSumup({ state: 'loading', error: null });
+    try {
+      let { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        const { data, error } = await supabase.auth.signInAnonymously();
+        if (error) throw error;
+        session = data.session;
+      }
+      if (!session) throw new Error('no_session');
+
+      const { data: attempt, error: attemptError } = await supabase.rpc('kitchen_payment_attempt_start', {
+        p_order_id: order.id,
+        p_channel: 'app',
+        p_provider: 'sumup',
+        p_method: 'sumup_online',
+        p_amount: order.total,
+        p_idempotency_key: getSumupIdempotencyKey(order.id),
+      });
+      if (attemptError) throw attemptError;
+
+      const res = await fetch('/api/kitchen-sumup-create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ order_id: order.id, payment_attempt_id: attempt.id }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body.hosted_checkout_url) throw new Error(body.error || 'checkout_creation_failed');
+
+      setSumup({ state: 'redirecting', error: null });
+      window.location.href = body.hosted_checkout_url;
+    } catch (err) {
+      console.warn('[Walbox] SumUp checkout failed', err);
+      setSumup({ state: 'error', error: friendlySumupError(err) });
+    }
   };
 
   if (!order) {
@@ -265,6 +337,58 @@ export default function CustomerOrderStatus() {
           }}>
             {order.orderCode}
           </div>
+        </div>
+      )}
+
+      {/* SumUp online payment CTA (sandbox) */}
+      {isPendingPayment && (
+        <div style={{ margin: '0 20px 20px', textAlign: 'center' }}>
+          {sumup.state === 'verifying' ? (
+            <div style={{
+              padding: '14px',
+              color: '#c8960a',
+              fontFamily: "'Montserrat', sans-serif",
+              fontSize: '13px',
+              fontWeight: 600,
+            }}>
+              Stiamo verificando il pagamento con SumUp… aggiorna tra qualche secondo.
+            </div>
+          ) : (
+            <>
+              <button
+                onClick={handlePaySumup}
+                disabled={sumup.state === 'loading' || sumup.state === 'redirecting'}
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: sumup.state === 'loading' || sumup.state === 'redirecting' ? '#6b5a1e' : '#c8960a',
+                  color: '#1a1206',
+                  fontFamily: "'Anton', sans-serif",
+                  fontSize: '16px',
+                  letterSpacing: '1px',
+                  cursor: sumup.state === 'loading' || sumup.state === 'redirecting' ? 'default' : 'pointer',
+                }}
+              >
+                {sumup.state === 'loading'
+                  ? 'AVVIO PAGAMENTO…'
+                  : sumup.state === 'redirecting'
+                    ? 'REINDIRIZZAMENTO A SUMUP…'
+                    : '💳 PAGA CON SUMUP'}
+              </button>
+              {sumup.state === 'error' && (
+                <div style={{
+                  marginTop: '8px',
+                  color: '#ef4444',
+                  fontSize: '12px',
+                  fontFamily: "'Montserrat', sans-serif",
+                }}>
+                  {sumup.error}
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 

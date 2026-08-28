@@ -29,3 +29,5 @@ test-results/
 ai-ops/backups/
 ai-ops/reports/
 ai-ops/runs/
+.env*
+.mcp.json
