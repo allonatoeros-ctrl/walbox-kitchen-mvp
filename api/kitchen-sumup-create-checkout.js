@@ -105,10 +105,13 @@ export default async function handler(req, res) {
     console.error('[kitchen-sumup-create-checkout] claim RPC failed', claimError);
     return res.status(500).json({ error: 'internal_server_error' });
   }
-  if (!claimed) {
+  if (!claimed?.id) {
     // Lost the race: another concurrent call already owns checkout creation for this attempt (or
-    // resolved it in the meantime). Never create a second checkout — the winner's response already
-    // carries the real hosted_checkout_url; the client can retry shortly and will then hit the
+    // resolved it in the meantime). PostgREST serializes a NULL composite row (0 rows matched by
+    // the claim UPDATE) as an object with every field null (e.g. { id: null, ... }), NOT bare JSON
+    // null — a plain `!claimed` check is always false for that shape and would wrongly treat a lost
+    // race as a win. Never create a second checkout — the winner's response already carries the
+    // real hosted_checkout_url; the client can retry shortly and will then hit the
     // provider_ref-present reuse path above.
     return res.status(409).json({ error: 'checkout_creation_in_progress' });
   }

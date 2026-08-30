@@ -220,6 +220,44 @@ test('create-checkout: provider_ref assente, claim RPC perde la race -> 409 chec
   assert.equal(sumupCalled, false, 'perdere la claim non deve mai creare un secondo checkout');
 });
 
+test('create-checkout: claim RPC perde la race con la reale forma PostgREST (riga composita NULL, non data:null) -> 409, SumUp mai chiamato', async () => {
+  // Regressione bug reale trovato in E2E su Preview (2026-08-30): PostgREST serializza una riga
+  // composita NULL (0 righe dalla UPDATE atomica della claim) come un oggetto con ogni campo a
+  // null (es. { id: null, order_id: null, ... }), MAI come il letterale JSON null. Un check
+  // `if (!claimed)` e sempre falso per questa forma (e un oggetto, non null) e tratta erroneamente
+  // una race persa come vinta. Verificato a livello SQL diretto su Supabase che
+  // row_to_json(claim_fallita) produce esattamente questa forma, non `null`.
+  const admin = makeSupabaseAdminMock({
+    tables: {
+      kitchen_payments: { data: { id: 'att-20b', order_id: 'ord-20b', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null }, error: null },
+      kitchen_orders: { data: { id: 'ord-20b', payment_status: 'pending_counter_payment' }, error: null },
+    },
+    rpc: {
+      kitchen_payment_attempt_claim_checkout: {
+        data: {
+          id: null, order_id: null, venue_id: null, channel: null, provider: null, method: null,
+          direction: null, status: null, amount: null, provider_ref: null, idempotency_key: null,
+          initiated_by_actor_type: null, initiated_by_actor_id: null, failure_reason: null,
+          raw_last_event: null, created_at: null, updated_at: null, checkout_claim_at: null,
+        },
+        error: null,
+      },
+    },
+  });
+
+  let sumupCalled = false;
+  await withFetch(async () => { sumupCalled = true; return jsonFetchResponse(200, { id: 'co-20b', hosted_checkout_url: 'https://pay.sumup.com/x' }); }, async () => {
+    await withAdmin(admin, async () => {
+      const req = makeReq({ body: { order_id: 'ord-20b', payment_attempt_id: 'att-20b' } });
+      const res = makeRes();
+      await createCheckoutHandler(req, res);
+      assert.equal(res.statusCode, 409);
+      assert.equal(res.body.error, 'checkout_creation_in_progress');
+    });
+  });
+  assert.equal(sumupCalled, false, 'una riga composita NULL (tutti campi null) deve essere trattata come race persa, mai come claim riuscita');
+});
+
 test('create-checkout: provider_ref gia presente + SumUp GET PENDING -> riusa lo stesso checkout, SumUp POST mai chiamato', async () => {
   const admin = makeSupabaseAdminMock({
     tables: {
