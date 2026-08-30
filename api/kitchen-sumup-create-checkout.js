@@ -52,6 +52,35 @@ export default async function handler(req, res) {
     return res.status(409).json({ error: 'invalid_attempt_status', status: attempt.status });
   }
 
+  // Race guard (P1-2): attempt_start already checked order.payment_status once, but the order can
+  // still get paid (e.g. cash at the counter) in the gap between that RPC call and this request.
+  // Re-check server-side right before creating a real hosted checkout — never trust the client's
+  // earlier attempt_start result as still true.
+  const { data: order, error: orderError } = await supabaseAdmin
+    .from('kitchen_orders')
+    .select('id, payment_status')
+    .eq('id', order_id)
+    .maybeSingle();
+
+  if (orderError) {
+    console.error('[kitchen-sumup-create-checkout] order lookup failed', orderError);
+    return res.status(500).json({ error: 'internal_server_error' });
+  }
+  if (!order) {
+    return res.status(404).json({ error: 'order_not_found' });
+  }
+  if (order.payment_status === 'paid') {
+    const { error: failError } = await supabaseAdmin.rpc('kitchen_payment_fail', {
+      p_attempt_id: attempt.id,
+      p_reason: 'order_already_paid_race',
+      p_raw_payload: {},
+    });
+    if (failError) {
+      console.error('[kitchen-sumup-create-checkout] failed to close race-orphaned attempt', failError);
+    }
+    return res.status(409).json({ error: 'order_already_paid' });
+  }
+
   const proto = req.headers['x-forwarded-proto'] || 'https';
   const host = req.headers['x-forwarded-host'] || req.headers.host;
   const baseUrl = `${proto}://${host}`;
@@ -84,6 +113,21 @@ export default async function handler(req, res) {
     if (!sumupData.hosted_checkout_url) {
       console.error('[kitchen-sumup-create-checkout] missing hosted_checkout_url in SumUp response');
       return res.status(502).json({ error: 'sumup_create_checkout_failed' });
+    }
+
+    // Best-effort: persist the SumUp checkout id onto the attempt now, so lost-webhook
+    // reconciliation (api/kitchen-sumup-reconcile.js) has a reliable id to re-check later even if
+    // the webhook never arrives. Never blocks the checkout redirect on this write succeeding — a
+    // failure here only degrades a later reconciliation attempt to UNKNOWN (still safe, still
+    // blocking, never a false confirm), it does not affect the webhook path at all.
+    if (sumupData.id) {
+      const { error: refError } = await supabaseAdmin.rpc('kitchen_payment_attempt_set_provider_ref', {
+        p_attempt_id: attempt.id,
+        p_provider_ref: sumupData.id,
+      });
+      if (refError) {
+        console.warn('[kitchen-sumup-create-checkout] failed to persist provider_ref', refError);
+      }
     }
 
     return res.status(200).json({

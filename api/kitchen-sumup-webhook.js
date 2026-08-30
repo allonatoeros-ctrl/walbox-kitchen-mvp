@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { applySumupCheckoutResult } from './_lib/sumupPaymentResolution.js';
 
 // Kitchen Payment Hub V1 — SumUp sandbox, webhook receiver.
 //
@@ -87,39 +88,23 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true }); // ack: nothing more we can do, avoid endless retries
   }
 
-  if (attempt.status !== 'initiated' && attempt.status !== 'pending') {
-    // Already resolved (confirm is idempotent on its own, but fail is not) — a retried webhook
-    // delivery for a status we already applied would otherwise hit invalid_attempt_status.
+  if (attempt.status !== 'initiated' && attempt.status !== 'pending' && attempt.status !== 'failed') {
+    // Already resolved terminally ('succeeded'/'cancelled') — a retried webhook delivery for a
+    // status we already applied would otherwise hit invalid_attempt_status.
+    // 'failed' is deliberately let through (LONG SESSION F, same-checkout retry): a SumUp checkout
+    // that reported FAILED can still be retried by the customer with a different card and later
+    // report PAID for the same checkout id — applySumupCheckoutResult/kitchen_payment_confirm
+    // re-verify and gate the actual eligibility (provider='sumup' AND
+    // failure_reason='sumup_failed' only), this handler does not need to duplicate that check.
     return res.status(200).json({ ok: true });
   }
 
   try {
-    if (status === 'PAID') {
-      if (attempt.provider !== 'sumup' || Number(attempt.amount) !== Number(checkout.amount)) {
-        console.error('[kitchen-sumup-webhook] amount/provider mismatch, failing attempt instead of confirming', {
-          attemptId, attemptAmount: attempt.amount, checkoutAmount: checkout.amount, provider: attempt.provider,
-        });
-        const { error } = await supabaseAdmin.rpc('kitchen_payment_fail', {
-          p_attempt_id: attemptId,
-          p_reason: 'sumup_amount_mismatch',
-          p_raw_payload: checkout,
-        });
-        if (error) throw error;
-      } else {
-        const { error } = await supabaseAdmin.rpc('kitchen_payment_confirm', {
-          p_attempt_id: attemptId,
-          p_provider_ref: checkoutId,
-          p_raw_payload: checkout,
-        });
-        if (error) throw error;
-      }
-    } else {
-      const { error } = await supabaseAdmin.rpc('kitchen_payment_fail', {
-        p_attempt_id: attemptId,
-        p_reason: `sumup_${status.toLowerCase()}`,
-        p_raw_payload: checkout,
+    const result = await applySumupCheckoutResult(supabaseAdmin, attempt, { ...checkout, id: checkoutId });
+    if (result.outcome === 'failed' && result.reason === 'amount_mismatch') {
+      console.error('[kitchen-sumup-webhook] amount/provider mismatch, failing attempt instead of confirming', {
+        attemptId, attemptAmount: attempt.amount, checkoutAmount: checkout.amount, provider: attempt.provider,
       });
-      if (error) throw error;
     }
   } catch (err) {
     console.error('[kitchen-sumup-webhook] confirm/fail RPC failed', err);

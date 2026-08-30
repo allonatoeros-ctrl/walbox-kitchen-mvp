@@ -109,6 +109,7 @@ export default function CustomerOrderStatus() {
     const urlParams = new URLSearchParams(window.location.search);
     return { state: urlParams.get('sumup') === 'return' ? 'verifying' : 'idle', error: null };
   });
+  const reconcileStartedRef = useRef(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -190,6 +191,16 @@ export default function CustomerOrderStatus() {
       });
       if (attemptError) throw attemptError;
 
+      // Same-checkout retry window still open (LONG SESSION F): kitchen_payment_attempt_start
+      // returns the existing 'failed' attempt instead of opening a new one when SumUp could still
+      // turn it PAID (the customer retrying with a different card on the same hosted checkout).
+      // Never call create-checkout here — it would just 409 (invalid_attempt_status) — and never
+      // show a "pay again" CTA that could lead to a second, independent payment landing on top.
+      if (attempt.status === 'failed') {
+        setSumup({ state: 'pending', error: null });
+        return;
+      }
+
       const res = await fetch('/api/kitchen-sumup-create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -205,6 +216,51 @@ export default function CustomerOrderStatus() {
       setSumup({ state: 'error', error: friendlySumupError(err) });
     }
   };
+
+  // Lost webhook recovery (FASE 3): the browser return from SumUp is never treated as proof of
+  // payment on its own — it only triggers a server-side reconciliation call that re-checks the
+  // authoritative SumUp status via api/kitchen-sumup-reconcile.js. Runs once per mount.
+  useEffect(() => {
+    if (sumup.state !== 'verifying' || !order || reconcileStartedRef.current) return;
+    reconcileStartedRef.current = true;
+
+    (async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setSumup({ state: 'unknown', error: null });
+          return;
+        }
+        const res = await fetch('/api/kitchen-sumup-reconcile', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({ order_id: order.id }),
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          setSumup({ state: 'unknown', error: null });
+          return;
+        }
+        if (body.outcome === 'confirmed' || body.outcome === 'already_paid') {
+          setSumup({ state: 'confirmed', error: null });
+        } else if (body.outcome === 'failed') {
+          setSumup({ state: 'error', error: 'Il pagamento non è andato a buon fine. Riprova o paga alla cassa.' });
+        } else if (body.outcome === 'pending') {
+          setSumup({ state: 'pending', error: null });
+        } else if (body.outcome === 'no_pending_attempt') {
+          setSumup({ state: 'idle', error: null });
+        } else {
+          setSumup({ state: 'unknown', error: null });
+        }
+      } catch (err) {
+        console.warn('[Walbox] SumUp reconciliation failed', err);
+        setSumup({ state: 'unknown', error: null });
+      }
+    })();
+  }, [sumup.state, order]);
 
   if (!order) {
     return (
@@ -352,6 +408,40 @@ export default function CustomerOrderStatus() {
               fontWeight: 600,
             }}>
               Stiamo verificando il pagamento con SumUp… aggiorna tra qualche secondo.
+            </div>
+          ) : sumup.state === 'confirmed' ? (
+            <div style={{
+              padding: '14px',
+              color: '#22c55e',
+              fontFamily: "'Montserrat', sans-serif",
+              fontSize: '13px',
+              fontWeight: 600,
+            }}>
+              Pagamento confermato — stiamo aggiornando l'ordine…
+            </div>
+          ) : sumup.state === 'pending' ? (
+            // Pagamento ancora pendente lato SumUp: nessun retry possibile finché non è certamente
+            // FAILED/CANCELLED — mostrare una CTA qui creerebbe un secondo pagamento (contract V1).
+            <div style={{
+              padding: '14px',
+              color: '#c8960a',
+              fontFamily: "'Montserrat', sans-serif",
+              fontSize: '13px',
+              fontWeight: 600,
+            }}>
+              Pagamento ancora in corso presso SumUp. Non serve ripagare — aggiorna tra qualche secondo.
+            </div>
+          ) : sumup.state === 'unknown' ? (
+            // Verifica temporaneamente impossibile: stesso motivo di 'pending', nessuna CTA.
+            <div style={{
+              padding: '14px',
+              color: '#ef4444',
+              fontFamily: "'Montserrat', sans-serif",
+              fontSize: '13px',
+              fontWeight: 600,
+            }}>
+              Non riusciamo a verificare il pagamento in questo momento. Se hai già pagato non serve
+              ripagare: mostra questa schermata alla cassa se il problema persiste.
             </div>
           ) : (
             <>
