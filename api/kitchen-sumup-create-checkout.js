@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { applySumupCheckoutResult } from './_lib/sumupPaymentResolution.js';
 
 // Kitchen Payment Hub V1 — SumUp sandbox, create checkout.
 //
@@ -34,7 +35,7 @@ export default async function handler(req, res) {
 
   const { data: attempt, error: attemptError } = await supabaseAdmin
     .from('kitchen_payments')
-    .select('id, order_id, provider, method, amount, status, direction')
+    .select('id, order_id, provider, method, amount, status, direction, provider_ref')
     .eq('id', payment_attempt_id)
     .maybeSingle();
 
@@ -79,6 +80,37 @@ export default async function handler(req, res) {
       console.error('[kitchen-sumup-create-checkout] failed to close race-orphaned attempt', failError);
     }
     return res.status(409).json({ error: 'order_already_paid' });
+  }
+
+  // Duplicate live checkout guard (P0): an attempt that already has a provider_ref means a SumUp
+  // checkout was already created for it — creating another one here would leave two live checkouts
+  // sharing the same checkout_reference (=attempt.id), either of which could turn PAID and capture
+  // money twice at the acquirer. Never create a new checkout in this branch: always re-verify the
+  // EXISTING one authoritatively (GET, same pattern as api/kitchen-sumup-reconcile.js) and reuse or
+  // resolve it via the shared applySumupCheckoutResult helper — same decision webhook/reconcile/sweep
+  // already apply, no separate copy of that logic here.
+  if (attempt.provider_ref) {
+    return resolveExistingCheckout({ res, supabaseAdmin, attempt, sumupApiKey });
+  }
+
+  // No checkout created yet for this attempt: claim the "I create it" slot atomically before calling
+  // SumUp. A plain application-level check-then-write here would race under a double-click or two
+  // open tabs — two concurrent calls could both observe provider_ref IS NULL before either writes it.
+  // The claim RPC's single conditional UPDATE is atomic at the DB level regardless of timing (see
+  // supabase/migrations/20260830150000_kitchen_payment_attempt_claim_checkout_v1.sql).
+  const { data: claimed, error: claimError } = await supabaseAdmin.rpc('kitchen_payment_attempt_claim_checkout', {
+    p_attempt_id: attempt.id,
+  });
+  if (claimError) {
+    console.error('[kitchen-sumup-create-checkout] claim RPC failed', claimError);
+    return res.status(500).json({ error: 'internal_server_error' });
+  }
+  if (!claimed) {
+    // Lost the race: another concurrent call already owns checkout creation for this attempt (or
+    // resolved it in the meantime). Never create a second checkout — the winner's response already
+    // carries the real hosted_checkout_url; the client can retry shortly and will then hit the
+    // provider_ref-present reuse path above.
+    return res.status(409).json({ error: 'checkout_creation_in_progress' });
   }
 
   const proto = req.headers['x-forwarded-proto'] || 'https';
@@ -138,4 +170,73 @@ export default async function handler(req, res) {
     console.error('[kitchen-sumup-create-checkout] unexpected error', err);
     return res.status(500).json({ error: 'internal_server_error' });
   }
+}
+
+// Re-verifies an attempt that already has a live SumUp checkout (provider_ref set) instead of ever
+// creating a second one. Mirrors api/kitchen-sumup-reconcile.js's authoritative-GET + shared
+// applySumupCheckoutResult pattern — same decision, no separate copy of the resolution logic.
+async function resolveExistingCheckout({ res, supabaseAdmin, attempt, sumupApiKey }) {
+  let checkout;
+  try {
+    const sumupRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${attempt.provider_ref}`, {
+      headers: { Authorization: `Bearer ${sumupApiKey}` },
+    });
+    checkout = await sumupRes.json();
+    if (!sumupRes.ok) {
+      console.error('[kitchen-sumup-create-checkout] SumUp GET checkout failed', sumupRes.status, checkout);
+      return res.status(502).json({ error: 'sumup_verify_failed' });
+    }
+  } catch (err) {
+    console.error('[kitchen-sumup-create-checkout] unexpected error fetching existing checkout', err);
+    return res.status(502).json({ error: 'sumup_verify_failed' });
+  }
+
+  if (checkout.checkout_reference !== attempt.id) {
+    // Never reuse/resolve on an unverified reference — same defensive check as reconcile.js.
+    console.error('[kitchen-sumup-create-checkout] checkout_reference mismatch', {
+      attemptId: attempt.id, providerRef: attempt.provider_ref, got: checkout.checkout_reference,
+    });
+    return res.status(409).json({ error: 'checkout_reference_mismatch' });
+  }
+
+  let result;
+  try {
+    result = await applySumupCheckoutResult(supabaseAdmin, attempt, { ...checkout, id: attempt.provider_ref });
+  } catch (err) {
+    console.error('[kitchen-sumup-create-checkout] confirm/fail RPC failed', err);
+    return res.status(500).json({ error: 'internal_server_error' });
+  }
+
+  if (result.outcome === 'confirmed') {
+    return res.status(409).json({ error: 'order_already_paid' });
+  }
+
+  if (result.outcome === 'already_resolved') {
+    // Resolved by a concurrent webhook/reconcile call in the gap between our lookup and this check —
+    // never hand out a checkout_id/URL for an attempt whose real outcome we haven't just re-read.
+    return res.status(409).json({ error: 'attempt_already_resolved' });
+  }
+
+  if (result.outcome === 'failed' && result.reason !== 'failed') {
+    // EXPIRED/CANCELLED/amount_mismatch: this checkout is genuinely terminal, never reusable.
+    // kitchen_payment_attempt_start does not block a new attempt for these reasons (LONG SESSION F,
+    // 20260830130000), so the client gets a fresh attempt id there and a normal create-checkout call
+    // on that new attempt takes the provider_ref-NULL path above — never a new checkout from here.
+    return res.status(409).json({ error: 'attempt_no_longer_valid', reason: result.reason });
+  }
+
+  // result.outcome is 'pending', or 'failed' with reason 'failed' (SumUp FAILED — the same-checkout
+  // retry case: SumUp does not invalidate a declined checkout, the customer can retry with a
+  // different card on the SAME hosted checkout page). Both reuse the existing checkout — never
+  // create a new one — but only if SumUp's own GET response still carries hosted_checkout_url: never
+  // guess/reconstruct that URL (Eros decision, Gate 2; confirmed available on GET per SumUp's API
+  // reference — https://developer.sumup.com/api/checkouts/retrieve — but fail closed if absent).
+  if (checkout.hosted_checkout_url) {
+    return res.status(200).json({
+      checkout_id: attempt.provider_ref,
+      hosted_checkout_url: checkout.hosted_checkout_url,
+    });
+  }
+
+  return res.status(409).json({ error: 'checkout_retry_unavailable' });
 }
