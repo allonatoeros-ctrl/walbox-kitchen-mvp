@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
+import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { kitchenMenuItems } from '../data/kitchenMockData';
 import { getStaffSession, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
 import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPreviewFixtures';
@@ -113,6 +114,10 @@ export default function KitchenSoloService() {
 function KitchenSoloServiceLive() {
   const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync } = useKitchenOrders();
   const { menuItems, toggleAvailability } = useKitchenMenu();
+  // Micro-fase 1 (badge anomalie Payment Hub): read-only, nessuna azione — vedi
+  // ai-ops/reports/kitchen-solo-payment-hub-integration-audit.md §5. Non montato in
+  // Preview/Demo per restare isolati da Supabase (invariato).
+  const { anomalies: paymentAnomalies } = useKitchenPayments();
 
   const [authChecked, setAuthChecked] = useState(
     () => import.meta.env.VITE_E2E_BYPASS_STAFF_AUTH === 'true'
@@ -162,6 +167,7 @@ function KitchenSoloServiceLive() {
       retrySync={retrySync}
       menuItems={menuItems}
       toggleAvailability={toggleAvailability}
+      paymentAnomalies={paymentAnomalies}
     />
   );
 }
@@ -188,7 +194,7 @@ function KitchenSoloServicePreview() {
 /** Shared UI for Live, DEV Preview and the isolated Demo Harness. No data source or auth logic lives here. */
 export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
-  menuItems, toggleAvailability, isPreview = false,
+  menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
 }) {
   const [focusId, setFocusId]         = useState(null);
   const [checked, setChecked]         = useState({});   // { [orderId]: { [idx]: true } }
@@ -341,6 +347,9 @@ export function KitchenSoloServiceView({
 
   const alertCount = active.filter((o) => minutesSince(o.createdAt) >= 10).length;
   const unavailableCount = menuItems.filter((i) => !i.available).length;
+  // Badge minimo, nessun dettaglio inline: solo anomalie legate a ordini attivi in questa coda SOLO.
+  const activeIds = new Set(active.map((o) => o.id));
+  const paymentAlertCount = paymentAnomalies.filter((a) => activeIds.has(a.order_id)).length;
 
   const matchesSearch = (o) => {
     if (!search.trim()) return true;
@@ -426,6 +435,11 @@ export function KitchenSoloServiceView({
           </button>
           <button className="kss-secondary-btn" onClick={() => navigate('/kitchen/staff')}>
             <span className="kss-secondary-label">DASHBOARD</span>
+            {paymentAlertCount > 0 && (
+              <span className="kss-secondary-badge" data-testid="payment-anomaly-badge">
+                {paymentAlertCount}
+              </span>
+            )}
           </button>
         </div>
       </div>
