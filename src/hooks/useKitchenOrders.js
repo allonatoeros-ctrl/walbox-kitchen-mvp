@@ -260,9 +260,29 @@ export function useKitchenOrders() {
     }
   };
 
-  const confirmPayment = (orderId, paymentMethod = 'counter') => {
-    const now = new Date().toISOString();
+  // Counter/cash confirmation only (all call sites pass 'counter'). Marking an order paid is a
+  // Payment Hub write: it must go through kitchen_payment_record_cash, never a direct table patch,
+  // so payment_status/payment_method/paid_at and the kitchen_payments row stay coherent and RPC
+  // failures don't get shown to staff as a successful payment.
+  const confirmPayment = async (orderId, paymentMethod = 'counter') => {
     const current = orders.find((o) => o.id === orderId);
+    if (!current) return;
+
+    try {
+      const { error } = await supabase.rpc('kitchen_payment_record_cash', {
+        p_order_id: orderId,
+        p_amount: current.total,
+      });
+      // order_already_paid = another call already recorded this cash payment (double click /
+      // concurrent staff action) — the order IS paid, so this is not a real failure.
+      if (error && !error.message?.includes('order_already_paid')) throw error;
+    } catch (err) {
+      console.warn('[Walbox] Cash payment RPC failed — order not marked paid', err);
+      applyLocalSyncStatus(orderId, 'error', 'Pagamento non registrato — riprova');
+      return;
+    }
+
+    const now = new Date().toISOString();
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== orderId) return o;
@@ -272,27 +292,28 @@ export function useKitchenOrders() {
           paymentMethod,
           paidAt: now,
           status: o.status === 'pending_counter_payment' ? 'received' : o.status,
+          syncStatus: 'synced',
+          syncError: null,
         };
         return appendLog(updated, 'pagato');
       });
       saveOrders(next);
       return next;
     });
-    const patch = {
-      payment_status: 'paid',
-      payment_method: paymentMethod,
-      paid_at: now,
-      ...(current?.status === 'pending_counter_payment' ? { status: 'received' } : {}),
-    };
-    runOrderSync(orderId, patch);
-    supabaseInsertActionLog({
-      order_id:    orderId,
-      action:      'payment_confirmed',
-      from_status: current?.status ?? null,
-      to_status:   current?.status === 'pending_counter_payment' ? 'received' : (current?.status ?? null),
-      metadata:    { payment_method: paymentMethod },
-      created_at:  now,
-    });
+
+    // payment_status/payment_method/paid_at and the 'payment_confirmed' action log entry are
+    // already committed by the RPC above — only the kitchen-workflow status transition (not a
+    // payment field) still needs the regular table patch + its own log entry.
+    if (current.status === 'pending_counter_payment') {
+      runOrderSync(orderId, { status: 'received' });
+      supabaseInsertActionLog({
+        order_id:    orderId,
+        action:      'received',
+        from_status: current.status,
+        to_status:   'received',
+        created_at:  now,
+      });
+    }
   };
 
   const cancelOrder = (id, reason) => {

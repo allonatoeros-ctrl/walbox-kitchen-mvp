@@ -40,7 +40,7 @@ export default function StoricoView({ orders }) {
 
     const byPayment = { counter: 0, card: 0 };
     todayDelivered.forEach((o) => {
-      if (o.paymentMethod === 'counter') byPayment.counter++;
+      if (o.paymentMethod === 'counter' || o.paymentMethod === 'cash') byPayment.counter++;
       else if (o.paymentMethod === 'card') byPayment.card++;
     });
 
