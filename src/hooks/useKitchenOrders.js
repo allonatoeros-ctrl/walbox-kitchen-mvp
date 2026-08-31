@@ -264,7 +264,7 @@ export function useKitchenOrders() {
   // Payment Hub write: it must go through kitchen_payment_record_cash, never a direct table patch,
   // so payment_status/payment_method/paid_at and the kitchen_payments row stay coherent and RPC
   // failures don't get shown to staff as a successful payment.
-  const confirmPayment = async (orderId, paymentMethod = 'counter') => {
+  const confirmPayment = async (orderId) => {
     const current = orders.find((o) => o.id === orderId);
     if (!current) return;
 
@@ -289,7 +289,7 @@ export function useKitchenOrders() {
         const updated = {
           ...o,
           paymentStatus: 'paid',
-          paymentMethod,
+          paymentMethod: 'cash',
           paidAt: now,
           status: o.status === 'pending_counter_payment' ? 'received' : o.status,
           syncStatus: 'synced',
