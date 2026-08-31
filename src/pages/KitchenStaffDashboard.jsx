@@ -7,6 +7,7 @@ import KitchenOrdersView from './KitchenOrdersView';
 import MenuView from './MenuView';
 import StoricoView from './StoricoView';
 import AlertView from './AlertView';
+import PaymentsView from './PaymentsView';
 import './KitchenStaffDashboard.css';
 
 function navigate(path) {
@@ -148,6 +149,12 @@ export default function KitchenStaffDashboard() {
             <span className="ksd-tab-badge ksd-tab-badge--alert">{urgentCount}</span>
           )}
         </button>
+        <button
+          className={`ksd-tab ${activeTab === 'payments' ? 'ksd-tab--active-storico' : ''}`}
+          onClick={() => setActiveTab('payments')}
+        >
+          PAGAMENTI
+        </button>
       </div>
 
       {/* View */}
@@ -160,6 +167,7 @@ export default function KitchenStaffDashboard() {
       {activeTab === 'menu' && <MenuView menuItems={menuItems} toggleAvailability={toggleAvailability} />}
       {activeTab === 'storico' && <StoricoView orders={orders} />}
       {activeTab === 'alert' && <AlertView orders={orders} />}
+      {activeTab === 'payments' && <PaymentsView />}
     </div>
   );
 }
