@@ -9,6 +9,7 @@ import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import KitchenStaffDashboard from "./pages/KitchenStaffDashboard";
 import KitchenSoloService from "./pages/KitchenSoloService";
 import KitchenSoloServiceDemo from "./pages/KitchenSoloServiceDemo";
+import KitchenStaffDashboardDemo from "./pages/KitchenStaffDashboardDemo";
 import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
@@ -182,6 +183,8 @@ export default function App() {
         return <KitchenSoloService />;
       case "/kitchen/solo-demo":
         return <KitchenSoloServiceDemo />;
+      case "/kitchen/staff-payments-demo":
+        return <KitchenStaffDashboardDemo />;
       case "/kitchen/login":
         return <KitchenLogin />;
       case "/kitchen/tv":
