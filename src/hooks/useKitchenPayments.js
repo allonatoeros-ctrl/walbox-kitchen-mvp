@@ -76,9 +76,23 @@ export function useKitchenPayments() {
       if (driftRes.error) throw driftRes.error;
       if (recentRes.error) throw recentRes.error;
 
+      const drift = driftRes.data ?? [];
+      const recent = recentRes.data ?? [];
+
+      const orderIds = [...new Set([...drift, ...recent].map((r) => r.order_id).filter(Boolean))];
+      let orderCodeById = {};
+      if (orderIds.length > 0) {
+        const { data: orders, error: ordersError } = await supabase
+          .from('kitchen_orders')
+          .select('id, order_code')
+          .in('id', orderIds);
+        if (ordersError) throw ordersError;
+        orderCodeById = Object.fromEntries((orders ?? []).map((o) => [o.id, o.order_code]));
+      }
+
       setTodaySummary(summarizeToday(summaryRes.data ?? []));
-      setAnomalies(driftRes.data ?? []);
-      setRecentPayments(recentRes.data ?? []);
+      setAnomalies(drift.map((a) => ({ ...a, order_code: orderCodeById[a.order_id] ?? null })));
+      setRecentPayments(recent.map((p) => ({ ...p, order_code: orderCodeById[p.order_id] ?? null })));
       setError(null);
     } catch (err) {
       console.warn('[Walbox] useKitchenPayments refresh failed', err);

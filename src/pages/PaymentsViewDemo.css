@@ -1,0 +1,149 @@
+/* PaymentsViewDemo.css — kpd-* classes shared by /kitchen/staff-payments-demo and the live PaymentsView. */
+
+.kpd-page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.kpd-section-title {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.45);
+  margin-bottom: 10px;
+}
+
+/* ── ATTENZIONE (anomalie) ───────────────────────── */
+.kpd-attention-title {
+  color: #ef4444;
+}
+.kpd-attention-list { display: flex; flex-direction: column; gap: 10px; }
+.kpd-attention-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #1a0808;
+  border: 1px solid #ef444455;
+  border-left: 4px solid #ef4444;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.kpd-attention-icon { font-size: 22px; line-height: 1; flex-shrink: 0; }
+.kpd-attention-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.kpd-attention-order { font-size: 13px; font-weight: 900; color: #f5f0e8; letter-spacing: 0.3px; }
+.kpd-attention-reason { font-size: 14px; font-weight: 700; color: #fca5a5; line-height: 1.4; }
+.kpd-attention-hint { font-size: 12.5px; color: rgba(245, 240, 232, 0.6); line-height: 1.4; }
+.kpd-attention-amount { font-size: 15px; font-weight: 900; color: #ef4444; white-space: nowrap; flex-shrink: 0; }
+.kpd-attention-empty {
+  color: #10b981;
+  font-size: 13px;
+  font-weight: 700;
+  background: #0a2a0a;
+  border: 1px solid #10b98133;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+/* ── CASSA OGGI ───────────────────────────────────── */
+.kpd-cash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.kpd-cash-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.kpd-cash-label {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(245, 240, 232, 0.5);
+}
+.kpd-cash-value { font-size: 22px; font-weight: 900; line-height: 1.2; }
+
+/* ── PAGAMENTI RECENTI ────────────────────────────── */
+.kpd-payments-list { display: flex; flex-direction: column; gap: 8px; }
+.kpd-payment-row {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr auto auto auto;
+  align-items: center;
+  gap: 14px;
+  background: #111;
+  border: 1px solid #1e1e1e;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.kpd-payment-order { font-size: 14px; font-weight: 900; color: #f5f0e8; }
+.kpd-payment-method { font-size: 13px; color: rgba(245, 240, 232, 0.6); }
+.kpd-payment-amount { font-size: 15px; font-weight: 900; color: var(--k-yellow); text-align: right; white-space: nowrap; }
+.kpd-payment-time { font-size: 12px; color: rgba(245, 240, 232, 0.4); text-align: right; white-space: nowrap; }
+.kpd-payment-status {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  border-radius: 20px;
+  padding: 5px 12px;
+  text-align: center;
+  white-space: nowrap;
+  justify-self: end;
+}
+.kpd-status--paid { background: #0a2a0a; color: #10b981; border: 1px solid #10b98155; }
+.kpd-status--failed { background: #1a0808; color: #ef4444; border: 1px solid #ef444455; }
+.kpd-status--pending { background: #1a1200; color: #f59e0b; border: 1px solid #f59e0b55; }
+.kpd-status--refunded { background: #1a0a20; color: #a855f7; border: 1px solid #a855f755; }
+
+.kpd-payment-refund-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+.kpd-refund-msg { font-size: 12.5px; color: #4ade80; font-weight: 700; }
+
+.kpd-empty {
+  color: rgba(245, 240, 232, 0.35);
+  font-size: 13px;
+  text-align: center;
+  padding: 20px 16px;
+}
+
+/* ── Tablet: più respiro, testo più leggibile a distanza ── */
+@media (min-width: 768px) {
+  .kpd-page { padding: 24px; gap: 26px; max-width: 1100px; margin: 0 auto; }
+  .kpd-section-title { font-size: 13px; }
+  .kpd-cash-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .kpd-cash-value { font-size: 24px; }
+  .kpd-attention-card { padding: 16px 20px; }
+  .kpd-attention-reason { font-size: 15px; }
+  .kpd-payment-row { padding: 14px 18px; gap: 18px; }
+  .kpd-payment-order { font-size: 15px; }
+  .kpd-payment-method { font-size: 13.5px; }
+}
+
+/* ── Mobile: colonne che si impilano ─────────────── */
+@media (max-width: 640px) {
+  .kpd-cash-grid { grid-template-columns: repeat(2, 1fr); }
+  .kpd-payment-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "order status"
+      "method amount"
+      "time time";
+    row-gap: 6px;
+  }
+  .kpd-payment-order { grid-area: order; }
+  .kpd-payment-status { grid-area: status; }
+  .kpd-payment-method { grid-area: method; }
+  .kpd-payment-amount { grid-area: amount; }
+  .kpd-payment-time { grid-area: time; text-align: left; }
+}
