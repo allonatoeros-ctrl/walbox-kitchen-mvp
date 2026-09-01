@@ -7,6 +7,11 @@ async function simulatedRefundAction() {
   return { ok: true, outcome: 'refunded' };
 }
 
+// Reconcile simulato: nessuna chiamata rete/Supabase (il default liveReconcileAction farebbe una fetch reale).
+async function simulatedReconcileAction() {
+  return { ok: true, tone: 'ok', text: 'Pagamento confermato (simulato).' };
+}
+
 const bannerStyle = {
   display: 'flex',
   alignItems: 'center',
@@ -54,6 +59,7 @@ export default function KitchenStaffDashboardDemo() {
       <PaymentsView
         usePaymentsData={usePreviewKitchenPayments}
         refundAction={simulatedRefundAction}
+        reconcileAction={simulatedReconcileAction}
         confirmRefundMessage="Rimborso SIMULATO — nessuna chiamata reale a SumUp. Continuare?"
       />
     </div>

@@ -21,6 +21,8 @@ export default function KitchenStaffDashboard() {
 
   // Default to BANCONE ('counter'), but switch to CUCINA ('kitchen') if there are only kitchen orders and no counter orders.
   const [activeTab, setActiveTab] = useState(() => {
+    if (window.location.hash === '#payments') return 'payments';
+
     const pendingPayment = orders.filter((o) => o.status === 'pending_counter_payment').length;
     const ready = orders.filter((o) => o.status === 'ready').length;
     const activeKitchen = orders.filter(

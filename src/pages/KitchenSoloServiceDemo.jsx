@@ -83,6 +83,7 @@ export default function KitchenSoloServiceDemo() {
         retrySync={retrySync}
         menuItems={menuItems}
         toggleAvailability={toggleAvailability}
+        paymentsPath="/kitchen/staff-payments-demo"
       />
     </>
   );

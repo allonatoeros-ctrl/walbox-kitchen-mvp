@@ -195,6 +195,7 @@ function KitchenSoloServicePreview() {
 export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
+  paymentsPath = '/kitchen/staff#payments',
 }) {
   const [focusId, setFocusId]         = useState(null);
   const [checked, setChecked]         = useState({});   // { [orderId]: { [idx]: true } }
@@ -729,6 +730,15 @@ export function KitchenSoloServiceView({
               </button>
               <button className="kss-more-item" onClick={() => { setOverlay('storico'); setMoreOpen(false); }}>
                 Storico ordini
+              </button>
+              <button
+                className="kss-more-item"
+                onClick={() => {
+                  setMoreOpen(false);
+                  navigate(paymentsPath);
+                }}
+              >
+                Pagamenti
               </button>
               <button className="kss-more-item kss-more-item--danger" disabled={!focusOrder} onClick={askCancel}>
                 Annulla ordine
