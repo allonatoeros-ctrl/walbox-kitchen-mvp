@@ -384,6 +384,19 @@ export const kitchenMenuItems = [
     ingredients: 'Songino, lattughino, pomodoro, zucchine, melanzane, tofu, teriyaki.',
     allergens: ['soia'],
   },
+  {
+    id: 'item-038',
+    name: 'Acqua',
+    category: 'birre',
+    description: 'Acqua naturale o frizzante, 0,5L.',
+    price: 0.5,
+    points: 1,
+    tags: ['drink'],
+    image: null,
+    available: true,
+    ingredients: 'Acqua.',
+    allergens: [],
+  },
 ];
 
 export const demoKitchenOrders = [
