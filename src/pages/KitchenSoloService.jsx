@@ -195,7 +195,7 @@ function KitchenSoloServicePreview() {
 export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
-  paymentsPath = '/kitchen/staff#payments',
+  paymentsPath = '/kitchen/payments',
 }) {
   const [focusId, setFocusId]         = useState(null);
   const [checked, setChecked]         = useState({});   // { [orderId]: { [idx]: true } }

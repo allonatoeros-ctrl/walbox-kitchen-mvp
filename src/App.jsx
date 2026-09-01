@@ -7,6 +7,7 @@ import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
 import CustomerKitchenEntry from "./pages/CustomerKitchenEntry";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import KitchenStaffDashboard from "./pages/KitchenStaffDashboard";
+import KitchenPayments from "./pages/KitchenPayments";
 import KitchenSoloService from "./pages/KitchenSoloService";
 import KitchenSoloServiceDemo from "./pages/KitchenSoloServiceDemo";
 import KitchenStaffDashboardDemo from "./pages/KitchenStaffDashboardDemo";
@@ -180,6 +181,8 @@ export default function App() {
         return <CustomerOrderStatus />;
       case "/kitchen/staff":
         return <KitchenStaffDashboard />;
+      case "/kitchen/payments":
+        return <KitchenPayments />;
       case "/kitchen/solo":
         return <KitchenSoloService />;
       case "/kitchen/solo-demo":
