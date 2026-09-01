@@ -194,8 +194,17 @@ export default function PaymentsView({
   refundAction = liveRefundAction,
   reconcileAction = liveReconcileAction,
   confirmRefundMessage = DEFAULT_CONFIRM_MESSAGE,
+  visiblePaymentIds,
+  visibleAnomalyIds,
+  allowReconcileFailed = true,
 } = {}) {
   const { loading, error, refresh, todaySummary, anomalies, recentPayments } = usePaymentsData();
+  const visiblePayments = visiblePaymentIds
+    ? recentPayments.filter((payment) => visiblePaymentIds.includes(payment.id))
+    : recentPayments;
+  const visibleAnomalies = visibleAnomalyIds
+    ? anomalies.filter((anomaly) => visibleAnomalyIds.includes(anomaly.order_id))
+    : anomalies;
   // order_id -> { status: 'loading'|'done'|'error', message }
   const [refundState, setRefundState] = useState({});
   // order_id -> { status: 'loading'|'done'|'error', message }
@@ -265,11 +274,11 @@ export default function PaymentsView({
       {/* ATTENZIONE */}
       <div>
         <div className="kpd-section-title kpd-attention-title">⚠ Attenzione</div>
-        {anomalies.length === 0 ? (
+        {visibleAnomalies.length === 0 ? (
           <div className="kpd-attention-empty">Nessuna anomalia 🟢</div>
         ) : (
           <div className="kpd-attention-list">
-            {anomalies.map((a, i) => (
+            {visibleAnomalies.map((a, i) => (
               <div key={`${a.order_id}-${a.drift_type}-${i}`} className="kpd-attention-card">
                 <div className="kpd-attention-icon">⚠️</div>
                 <div className="kpd-attention-body">
@@ -314,19 +323,20 @@ export default function PaymentsView({
       {/* PAGAMENTI RECENTI */}
       <div>
         <div className="kpd-section-title">Pagamenti recenti</div>
-        {recentPayments.length === 0 ? (
+        {visiblePayments.length === 0 ? (
           <div className="kpd-empty">Nessun pagamento registrato.</div>
         ) : (
           <div className="kpd-payments-list">
-            {recentPayments.map((p) => {
+            {visiblePayments.map((p) => {
               const canRefund = p.direction === 'charge' && p.status === 'succeeded' && !refundedOrderIds.has(p.order_id);
-              const canReconcile = p.direction === 'charge' && p.provider === 'sumup' && p.status !== 'succeeded';
+              const canReconcile = p.direction === 'charge' && p.provider === 'sumup' && p.status !== 'succeeded'
+                && (allowReconcileFailed || p.status !== 'failed');
               const state = refundState[p.order_id];
               const rState = reconcileState[p.order_id];
               const info = statusInfo(p);
               const note = failureNote(p);
               return (
-                <div key={p.id} className="kpd-payment-row">
+                <div key={p.id} className="kpd-payment-row" data-testid={`payment-row-${p.id}`}>
                   <span className="kpd-payment-order">{orderLabel(p)}</span>
                   <span className="kpd-payment-method">
                     {methodLabel(p)}{note ? ` · ${note}` : ''}
@@ -339,6 +349,7 @@ export default function PaymentsView({
                     <div className="kpd-payment-refund-row">
                       <button
                         className="ksd-btn-reset"
+                        data-testid={`refund-btn-${p.order_id}`}
                         disabled={state?.status === 'loading' || state?.status === 'done'}
                         onClick={() => handleRefund(p.order_id)}
                       >
@@ -356,6 +367,7 @@ export default function PaymentsView({
                     <div className="kpd-payment-refund-row">
                       <button
                         className="ksd-btn-reset"
+                        data-testid={`reconcile-btn-${p.order_id}`}
                         disabled={rState?.status === 'loading'}
                         onClick={() => handleReconcile(p.order_id)}
                       >

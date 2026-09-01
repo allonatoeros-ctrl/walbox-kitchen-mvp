@@ -20,6 +20,12 @@ export function usePreviewKitchenPayments() {
       drift_type: 'refund_stuck_initiated',
       total: 12.0,
     },
+    {
+      order_id: 'ord-training-refund-stuck',
+      order_code: 'Tavolo 9',
+      drift_type: 'refund_stuck_initiated',
+      total: 18.0,
+    },
   ];
 
   const recentPayments = [
@@ -99,6 +105,46 @@ export function usePreviewKitchenPayments() {
       amount: 9.0,
       failure_reason: null,
       created_at: new Date(Date.now() - 180 * 60000).toISOString(),
+    },
+    {
+      id: 'pay-training-success', order_id: 'ord-training-success', order_code: 'Asporto #21',
+      provider: 'sumup', method: 'sumup_online', direction: 'charge', status: 'succeeded', amount: 14.0,
+      failure_reason: null, created_at: new Date(Date.now() - 8 * 60000).toISOString(),
+    },
+    {
+      id: 'pay-training-confirmed', order_id: 'ord-training-confirmed', order_code: 'Asporto #22',
+      provider: 'sumup', method: 'sumup_online', direction: 'charge', status: 'initiated', amount: 10.0,
+      failure_reason: null, created_at: new Date(Date.now() - 6 * 60000).toISOString(),
+    },
+    {
+      id: 'pay-training-pending', order_id: 'ord-training-pending', order_code: 'Asporto #23',
+      provider: 'sumup', method: 'sumup_online', direction: 'charge', status: 'initiated', amount: 11.0,
+      failure_reason: null, created_at: new Date(Date.now() - 5 * 60000).toISOString(),
+    },
+    {
+      id: 'pay-training-refund-stuck-charge', order_id: 'ord-training-refund-stuck', order_code: 'Tavolo 9',
+      provider: 'sumup', method: 'sumup_pos', direction: 'charge', status: 'succeeded', amount: 18.0,
+      failure_reason: null, created_at: new Date(Date.now() - 40 * 60000).toISOString(),
+    },
+    {
+      id: 'pay-training-refund-stuck', order_id: 'ord-training-refund-stuck', order_code: 'Tavolo 9',
+      provider: 'sumup', method: 'sumup_pos', direction: 'refund', status: 'initiated', amount: 18.0,
+      failure_reason: null, created_at: new Date(Date.now() - 30 * 60000).toISOString(),
+    },
+    {
+      id: 'pay-training-double-charge', order_id: 'ord-training-double', order_code: 'Tavolo 10',
+      provider: 'sumup', method: 'sumup_pos', direction: 'charge', status: 'succeeded', amount: 20.0,
+      failure_reason: null, created_at: new Date(Date.now() - 55 * 60000).toISOString(),
+    },
+    {
+      id: 'pay-training-double-refund', order_id: 'ord-training-double', order_code: 'Tavolo 10',
+      provider: 'sumup', method: 'sumup_pos', direction: 'refund', status: 'succeeded', amount: 20.0,
+      failure_reason: null, created_at: new Date(Date.now() - 45 * 60000).toISOString(),
+    },
+    {
+      id: 'pay-training-unknown', order_id: 'ord-training-unknown', order_code: 'Asporto #24',
+      provider: 'sumup', method: 'sumup_online', direction: 'charge', status: 'initiated', amount: 13.0,
+      failure_reason: null, created_at: new Date(Date.now() - 4 * 60000).toISOString(),
     },
   ];
 

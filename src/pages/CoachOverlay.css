@@ -1,0 +1,117 @@
+.coach-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.coach-dim--solid {
+  background: rgba(10, 14, 20, 0.92);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coach-dim--solid .coach-center {
+  position: static;
+  transform: none;
+}
+
+.coach-spot {
+  position: fixed;
+  border-radius: 10px;
+  border: 3px solid #eab308;
+  box-shadow: 0 0 0 9999px rgba(10, 14, 20, 0.72), 0 0 18px 2px rgba(234, 179, 8, 0.55);
+  pointer-events: none;
+  transition: top 0.15s ease, left 0.15s ease, width 0.15s ease, height 0.15s ease;
+}
+
+.coach-tooltip {
+  position: fixed;
+  pointer-events: auto;
+  width: 320px;
+  max-width: calc(100vw - 24px);
+  background: #1b232c;
+  color: #f4f6f8;
+  border: 1px solid #eab30855;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.coach-tooltip--floating {
+  top: auto;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.coach-step-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #eab308;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.coach-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.coach-body {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #d7dde3;
+  margin-bottom: 10px;
+}
+
+.coach-mismatch {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f87171;
+  margin-bottom: 8px;
+}
+
+.coach-waiting {
+  font-size: 12px;
+  color: #9aa4ae;
+  font-style: italic;
+}
+
+.coach-cta {
+  border: 1px solid #eab308;
+  background: #eab308;
+  color: #1b232c;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.coach-center {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  background: #1b232c;
+  color: #f4f6f8;
+  border: 1px solid #eab30855;
+  border-radius: 12px;
+  padding: 22px 24px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  text-align: center;
+}
+
+.coach-center .coach-body {
+  margin-bottom: 16px;
+}
