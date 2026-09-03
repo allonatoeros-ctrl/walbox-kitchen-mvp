@@ -1,0 +1,537 @@
+/* PesiMassimiSection.css — blocco PESI MASSIMI (categoria bbq)
+   Source of truth: Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED — Page 4
+   Frame HERO 128:2 · CLOSED 129:2 · EXPANDED 130:59 / 130:121 / 130:183
+   Stili isolati con prefisso .pm- : nessuna regola tocca le altre categorie. */
+
+.pm-root {
+  --pm-bg: #0e0c08;
+  --pm-card: #1c1a14;
+  --pm-red: #c84020;
+  --pm-red-dark: #b83020;
+  --pm-gold: #c8960a;
+  --pm-cream: #e8ddb8;
+  --pm-cream-hi: #f2d8a7;
+  --pm-sand: #d4c89a;
+  --pm-muted: #8a7e60;
+  --pm-rule: #2e2a1e;
+  --pm-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
+
+  padding: 10px 12px 24px;
+  font-family: var(--pm-font);
+}
+
+/* ── HERO FOTOGRAFICA (128:2) ─────────────────────────────── */
+.pm-hero {
+  position: relative;
+  height: 352px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--pm-bg);
+}
+
+.pm-hero-photos {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 248px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  background: rgba(14, 12, 8, 0.9);
+}
+
+.pm-hero-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pm-hero-scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 118px;
+  height: 130px;
+  background: linear-gradient(180deg, rgba(14, 12, 8, 0) 0%, rgba(14, 12, 8, 0.78) 52%, #0e0c08 100%);
+  pointer-events: none;
+}
+
+.pm-accent-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--pm-red);
+}
+
+.pm-hero-badge {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  height: 28px;
+  min-width: 120px;
+  padding: 0 10px;
+  border-radius: 9px;
+  background: var(--pm-red-dark);
+  color: var(--pm-cream);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pm-hero-body {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 160px;
+}
+
+.pm-hero-title {
+  margin: 0;
+  font-size: 40px;
+  line-height: 42px;
+  font-weight: 900;
+  color: var(--pm-cream-hi);
+}
+
+.pm-hero-sub {
+  margin: 3px 0 0;
+  font-size: 16px;
+  line-height: 18px;
+  font-weight: 800;
+  color: var(--pm-cream);
+}
+
+.pm-hero-cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 27px;
+}
+
+.pm-hero-tagline {
+  margin: 0;
+  max-width: 214px;
+  font-size: 14px;
+  line-height: 16px;
+  font-weight: 800;
+  color: var(--pm-gold);
+}
+
+.pm-hero-cta {
+  flex-shrink: 0;
+  width: 104px;
+  height: 28px;
+  border: none;
+  border-radius: 9px;
+  background: var(--pm-red);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.pm-hero-rule {
+  height: 1px;
+  background: var(--pm-rule);
+  margin: 22px 0 0;
+}
+
+.pm-hero-prices {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 12px;
+}
+
+.pm-hero-price-label {
+  margin: 0;
+  font-size: 12px;
+  line-height: 14px;
+  font-weight: 800;
+  color: var(--pm-sand);
+}
+
+.pm-hero-price-value {
+  margin: 0;
+  font-size: 24px;
+  line-height: 26px;
+  font-weight: 900;
+  color: var(--pm-cream);
+}
+
+/* ── LISTA CARD (129:2 closed / 130:59 expanded) ──────────── */
+.pm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.pm-card {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--pm-card);
+}
+
+/* media = fotografia + overlay, muta da miniatura 132px a foto protagonista */
+.pm-card-media {
+  position: relative;
+  height: 132px;
+  transition: height 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pm-card--open .pm-card-media {
+  height: 230px;
+}
+
+.pm-card-photo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 132px;
+  height: 132px;
+  object-fit: cover;
+  border-radius: 14px;
+  display: block;
+  transition:
+    width 380ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    height 380ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    border-radius 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pm-card--open .pm-card-photo {
+  width: 100%;
+  height: 230px;
+  border-radius: 14px 14px 0 0;
+}
+
+.pm-card-accent {
+  position: absolute;
+  left: 132px;
+  top: 0;
+  width: 3px;
+  height: 132px;
+  background: var(--pm-red);
+  transition:
+    left 380ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    top 380ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    width 380ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    height 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pm-card--open .pm-card-accent {
+  left: 0;
+  top: 227px;
+  width: 100%;
+  height: 3px;
+}
+
+.pm-card-photo-scrim {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 110px;
+  height: 120px;
+  background: linear-gradient(180deg, rgba(14, 12, 8, 0) 0%, rgba(14, 12, 8, 0.72) 55%, rgba(14, 12, 8, 0.94) 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+.pm-card--open .pm-card-photo-scrim {
+  opacity: 1;
+}
+
+/* blocco CLOSED: nome + prezzo + VEDI IL PANINO + caret */
+.pm-card-closed {
+  position: absolute;
+  inset: 0;
+  padding: 16px 16px 16px 150px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 200ms ease;
+}
+
+.pm-card--open .pm-card-closed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pm-card-closed-name {
+  margin: 0;
+  font-size: 22px;
+  line-height: 24px;
+  font-weight: 900;
+  color: var(--pm-cream);
+}
+
+.pm-card-closed-price {
+  margin: 6px 0 0;
+  font-size: 26px;
+  line-height: 28px;
+  font-weight: 900;
+  color: var(--pm-gold);
+}
+
+.pm-card-open-cta {
+  margin-top: auto;
+  width: 140px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--pm-red);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pm-caret {
+  width: 14px;
+  height: 9px;
+  display: block;
+}
+
+.pm-card-caret {
+  position: absolute;
+  right: 16px;
+  top: 62px;
+  transition: transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* titolo sopra la foto quando espanso */
+.pm-card-hero-name {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 25px;
+  margin: 0;
+  font-size: 34px;
+  line-height: 36px;
+  font-weight: 900;
+  color: var(--pm-cream-hi);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 260ms ease 60ms, transform 320ms cubic-bezier(0.22, 0.61, 0.36, 1) 60ms;
+}
+
+.pm-card--open .pm-card-hero-name {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* CHIUDI ↑ */
+.pm-card-close {
+  position: absolute;
+  right: 14px;
+  top: 16px;
+  height: 32px;
+  width: 114px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 17px;
+  border: 1px solid rgba(232, 221, 184, 0.3);
+  border-radius: 10px;
+  background: rgba(14, 12, 8, 0.72);
+  color: var(--pm-cream);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 15px;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+}
+
+.pm-card--open .pm-card-close {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pm-card-close .pm-caret {
+  transform: rotate(180deg);
+}
+
+/* ── EXPANDED body: apertura fluida a contenuto variabile ─── */
+.pm-card-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.pm-card--open .pm-card-body {
+  grid-template-rows: 1fr;
+}
+
+.pm-card-body-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.pm-card-ingredients {
+  margin: 0;
+  padding: 22px 18px 0;
+  font-size: 15px;
+  line-height: 21px;
+  font-weight: 600;
+  color: var(--pm-sand);
+}
+
+.pm-card-rule {
+  height: 1px;
+  background: var(--pm-rule);
+  margin: 16px 18px 0;
+}
+
+.pm-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 0;
+}
+
+.pm-price-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.pm-price-value {
+  margin: 0;
+  font-size: 34px;
+  line-height: 36px;
+  font-weight: 900;
+  color: var(--pm-gold);
+}
+
+.pm-price-note {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 15px;
+  font-weight: 800;
+  color: var(--pm-muted);
+}
+
+.pm-btn-want {
+  flex-shrink: 0;
+  width: 144px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: var(--pm-red);
+  color: #fff;
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+/* ── UPSELL FALLO PESANTE ─────────────────────────────────── */
+.pm-upsell {
+  position: relative;
+  margin: 22px 12px 14px;
+  padding: 14px 18px 14px 18px;
+  border-radius: 12px;
+  background: #231f16;
+  overflow: hidden;
+}
+
+.pm-upsell-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--pm-gold);
+}
+
+.pm-upsell-title {
+  margin: 0;
+  font-size: 22px;
+  line-height: 24px;
+  font-weight: 900;
+  color: var(--pm-gold);
+}
+
+.pm-upsell-sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 800;
+  color: var(--pm-sand);
+}
+
+.pm-upsell-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pm-upsell-price {
+  margin: 0;
+  font-size: 30px;
+  line-height: 32px;
+  font-weight: 900;
+  color: var(--pm-cream);
+}
+
+.pm-btn-heavy {
+  flex-shrink: 0;
+  width: 146px;
+  height: 40px;
+  border: none;
+  border-radius: 10px;
+  background: var(--pm-gold);
+  color: var(--pm-bg);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+/* stato esaurito — riusa la semantica già presente nel menu */
+.pm-card--soldout { opacity: 0.6; }
+
+.pm-btn-want:disabled,
+.pm-btn-heavy:disabled,
+.pm-card-open-cta:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pm-card-media,
+  .pm-card-photo,
+  .pm-card-accent,
+  .pm-card-photo-scrim,
+  .pm-card-closed,
+  .pm-card-hero-name,
+  .pm-card-close,
+  .pm-card-body,
+  .pm-card-caret {
+    transition-duration: 1ms;
+  }
+}

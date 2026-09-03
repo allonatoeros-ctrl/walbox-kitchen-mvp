@@ -76,7 +76,7 @@ export const kitchenMenuItems = [
     tags: ['v2'],
     image: '/assets/kitchen/menu/panini/panino_crudo.png',
     available: true,
-    ingredients: 'Crudo, pomodoro, songino, maionese.',
+    ingredients: 'Crudo, pomodoro, songino e maionese.',
     allergens: ['uova'],
   },
   {
@@ -113,9 +113,9 @@ export const kitchenMenuItems = [
     price: null,
     points: null,
     tags: ['v2'],
-    image: '/assets/kitchen/menu/panini/panino_mortadella.png',
+    image: '/assets/kitchen/menu/panini/panino_mortazza_piatto.png',
     available: true,
-    ingredients: 'Mortadella, pesto di pistacchi, stracciatella, pomodoro confit.',
+    ingredients: 'Mortadella, pesto di pistacchi, stracciatella e pomodoro confit.',
     allergens: ['latte', 'frutta_secca'],
   },
   {
@@ -230,12 +230,12 @@ export const kitchenMenuItems = [
     name: 'Pulled Pork',
     category: 'bbq',
     description: 'Disordinato, esagerato, meravigliosamente fuori controllo.',
-    price: null,
+    price: 13.9,
     points: null,
     tags: ['special', 'v2'],
     image: '/assets/kitchen/photo-pulled-pork-special.png',
     available: true,
-    ingredients: 'Anelli di cipolla · Salsa cheddar · Coleslaw · Maionese al pepe',
+    ingredients: '100 g carne · coleslaw · anelli di cipolla · salsa cheddar · maionese al pepe',
     allergens: [],
   },
   {
@@ -243,12 +243,12 @@ export const kitchenMenuItems = [
     name: 'Pastrami',
     category: 'bbq',
     description: 'Affumicato, dolce, acido. Si fa ricordare.',
-    price: null,
+    price: 14.5,
     points: null,
     tags: ['special', 'v2'],
     image: '/assets/kitchen/photo-pastrami-special.png',
     available: true,
-    ingredients: 'Cetriolo sott’aceto · Cheddar · Senape al miele',
+    ingredients: '120 g carne · cetriolo sott’aceto · cheddar · honey mustard',
     allergens: [],
   },
   {
@@ -256,12 +256,12 @@ export const kitchenMenuItems = [
     name: 'Brisket',
     category: 'bbq',
     description: 'Fumo, sostanza e cattive intenzioni.',
-    price: null,
+    price: 15.0,
     points: null,
     tags: ['special', 'v2'],
     image: '/assets/kitchen/photo-brisket-special.png',
     available: true,
-    ingredients: 'Provola affumicata · Coleslaw · Cetriolo sott’aceto · Salsa BBQ',
+    ingredients: '120 g brisket · provola affumicata · coleslaw · cetrioli sott’aceto · salsa BBQ',
     allergens: [],
   },
   // TARTARE
@@ -399,6 +399,34 @@ export const kitchenMenuItems = [
   },
 ];
 
+// ── PESI MASSIMI — combo "FALLO PESANTE" ────────────────────────────────
+// NON fanno parte di `kitchenMenuItems`: non devono mai comparire come prodotto
+// standalone nel catalogo/menu. Sono ordinabili solo dalla CTA FALLO PESANTE del
+// relativo Peso Massimo (PesiMassimiSection), tramite lo stesso addItem/payload ordine.
+export const kitchenPesiMassimiCombos = {
+  'item-009': {
+    id: 'item-040',
+    name: 'Pulled Pork — Fallo Pesante',
+    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
+    price: 19.0,
+    image: '/assets/kitchen/photo-pulled-pork-special.png',
+  },
+  'item-010': {
+    id: 'item-041',
+    name: 'Pastrami — Fallo Pesante',
+    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
+    price: 20.0,
+    image: '/assets/kitchen/photo-pastrami-special.png',
+  },
+  'item-011': {
+    id: 'item-042',
+    name: 'Brisket — Fallo Pesante',
+    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
+    price: 20.0,
+    image: '/assets/kitchen/photo-brisket-special.png',
+  },
+};
+
 export const demoKitchenOrders = [
   {
     id: 'order-001',
@@ -496,10 +524,9 @@ export const demoKitchenOrders = [
 ];
 
 export const kitchenCategoryPromos = {
-  panini: {
-    image: '/assets/kitchen/02_hero_combo_porcheria_seria.png',
-    alt: 'Porchetta Walrus',
-  },
+  // Legacy hero baked "COMBO PORCHERIA SERIA — €14,90" (item/prezzo inesistenti oggi) — rimossa,
+  // niente asset sostitutivo coerente disponibile senza generare nuove immagini.
+  panini: null,
   patatine: {
     image: '/assets/kitchen/07_fries_promo_fritto_terapeutico.png',
     alt: 'Fritto terapeutico',

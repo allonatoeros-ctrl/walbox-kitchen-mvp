@@ -4,6 +4,7 @@ import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
+import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
 import './CustomerKitchenMenu.css';
 
 // Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
@@ -69,29 +70,26 @@ const CATEGORY_SVGS = {
   ),
 };
 
-// Base tabs: always shown, unchanged legacy behavior (even with zero priced items).
-const BASE_CATEGORIES = [
+// Categorie del menu completo — Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED, Page 4
+// (`MENU — CATEGORIE` 166:2). PATATINE / BIRRE / BEVANDE / COMBO non sono più
+// navigazione primaria: restano nei dati e nell'upsell carrello, non nel menu.
+const MENU_CATEGORIES = [
   { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
-  { key: 'patatine', label: 'PATATINE', icon: CATEGORY_SVGS.patatine },
-  { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
-  { key: 'combo', label: 'COMBO', icon: CATEGORY_SVGS.combo },
-];
-
-// New menu categories: hidden automatically until they have at least one priced item.
-const PRICE_GATED_CATEGORIES = [
   { key: 'bbq', label: 'PESI MASSIMI', icon: CATEGORY_SVGS.bbq },
   { key: 'cicchetti', label: 'CICCHETTI', icon: CATEGORY_SVGS.cicchetti },
   { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.insalatone },
   { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.tartare },
 ];
 
-// DEV-ONLY temporary preview: shows all categories + items even with price:null.
-// Enable with ?previewAll=1, only works in local dev builds. No effect in production.
-const PREVIEW_ALL_ITEMS =
-  import.meta.env.DEV &&
-  typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).get('previewAll') === '1';
+// Panini in evidenza sulla Home (Figma 140:2 / 140:12). `photoBg` = PHOTO BG del frame.
+const HOME_FEATURED = [
+  { id: 'item-014', photoBg: '#fdf7f1' }, // 146:2
+  { id: 'item-017', photoBg: '#f9f0e8' }, // 146:3
+];
 
+// Panini legacy: restano nei dati e negli ordini storici, ma non sono più
+// esposti al cliente (decisione approvata: la UI cliente usa gli 8 panini V2).
+const CUSTOMER_HIDDEN_ITEM_IDS = ['item-001', 'item-002'];
 
 
 function generateOrderCode() {
@@ -123,8 +121,13 @@ function getCategoryTitle(cat) {
   if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
   if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
   if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
-  if (cat === 'bbq') return 'PESI MASSIMI';
+  if (cat === 'bbq') return <>PESI <span style={{ color: 'var(--k-orange)' }}>MASSIMI</span></>;
   return cat.toUpperCase();
+}
+
+function getCategorySubtitle(cat) {
+  if (cat === 'bbq') return 'Affumicato, esagerato, senza scuse. Roba da mangiare con le mani.';
+  return null;
 }
 
 export default function CustomerKitchenMenu() {
@@ -132,15 +135,9 @@ export default function CustomerKitchenMenu() {
   const { addOrder } = useKitchenOrders();
   const { menuItems } = useKitchenMenu();
 
-  const CATEGORIES = [
-    ...BASE_CATEGORIES,
-    ...(PREVIEW_ALL_ITEMS
-      ? PRICE_GATED_CATEGORIES
-      : PRICE_GATED_CATEGORIES.filter((cat) =>
-          menuItems.some((i) => i.category === cat.key && i.price != null)
-        )),
-  ];
+  const CATEGORIES = MENU_CATEGORIES;
 
+  const [view, setView] = useState('home');
   const [activeCategory, setActiveCategory] = useState('panini');
   const [orderItems, setOrderItems] = useState([]);
   const [submitted, setSubmitted] = useState(false);
@@ -158,9 +155,24 @@ export default function CustomerKitchenMenu() {
     } catch { }
   }, []);
 
-  const visibleItems = menuItems.filter((i) =>
-    i.category === activeCategory && (PREVIEW_ALL_ITEMS || i.price != null)
-  );
+  // I piatti senza prezzo restano visibili con `PREZZO IN ARRIVO` (CTA disabilitata):
+  // nessun prezzo inventato, nessuna categoria vuota nel menu approvato.
+  const customerItems = menuItems.filter((i) => !CUSTOMER_HIDDEN_ITEM_IDS.includes(i.id));
+  const visibleItems = customerItems.filter((i) => i.category === activeCategory);
+
+  const pesiMassimiItems = customerItems.filter((i) => i.category === 'bbq');
+  const featuredItems = HOME_FEATURED
+    .map(({ id, photoBg }) => {
+      const item = customerItems.find((i) => i.id === id);
+      return item ? { ...item, photoBg } : null;
+    })
+    .filter(Boolean);
+
+  const openMenu = (category) => {
+    setActiveCategory(category);
+    setView('menu');
+    window.scrollTo({ top: 0 });
+  };
 
 
 
@@ -393,17 +405,99 @@ export default function CustomerKitchenMenu() {
         </div>
       )}
 
-      {/* Header */}
-      <div className="kitch-header" style={{ padding: 0, display: 'block', background: 'transparent' }}>
+      {/* Header — Figma 111:59 (banner) + 111:63 cornice + 111:60/61/62 claim + 111:64 rule.
+          Il banner ha il vecchio claim stampato: 111:60 lo copre, 111:62 scrive quello nuovo. */}
+      <header className="kh-header">
         <img
           src="/assets/kitchen/01_header_walrus_kitchen.png"
-          alt="Walrus Kitchen - Panini Ignoranti, Fame Educata."
-          style={{ width: '100%', height: 'auto', display: 'block' }}
+          alt="Walrus Kitchen"
+          className="kh-header-img"
         />
+        <span className="kh-header-frame" aria-hidden="true" />
+        <span className="kh-header-claim-cover" aria-hidden="true" />
+        <span className="kh-header-claim-rule" aria-hidden="true" />
+        <p className="kh-header-claim">PANINI SERI. PERSONALITÀ DISCUTIBILE.</p>
+        <span className="kh-header-baseline" aria-hidden="true" />
+      </header>
+
+      {/* ── HOME (Figma 111:58 — Walrus Kitchen Home V3.4 PHOTO MENU) ── */}
+      {view === 'home' && (
+        <>
+          <div className="kh-intro">
+            <p className="kh-intro-title">OGGI TI FACCIAMO VENIRE FAME.</p>
+            <p className="kh-intro-sub">Pesi Massimi, panini seri e il resto della faccenda.</p>
+          </div>
+
+          {/* Hero PESI MASSIMI approvata (128:2) — invariata, solo hero */}
+          {pesiMassimiItems.length > 0 && (
+            <PesiMassimiSection
+              items={pesiMassimiItems}
+              heroOnly
+              onHeroCta={() => openMenu('bbq')}
+            />
+          )}
+
+          <div className="kh-section-head">
+            <h2 className="kh-section-title">I PANINI DA SPACCO</h2>
+            <p className="kh-section-sub">Quelli seri. Almeno loro.</p>
+          </div>
+
+          <div className="kh-featured-list">
+            {featuredItems.map((item) => {
+              const soldOut = item.available === false;
+              const noPrice = item.price == null;
+              return (
+                <article key={item.id} className="kh-card">
+                  <div className="kh-card-photo" style={{ background: item.photoBg }}>
+                    {item.image && <img src={item.image} alt={item.name} />}
+                  </div>
+                  <div className="kh-card-accent" />
+                  <h3 className="kh-card-name">{item.name.toUpperCase()}</h3>
+                  <p className="kh-card-ingredients">{item.ingredients}</p>
+                  <p className="kh-card-desc">{item.description}</p>
+                  <div className="kh-card-rule" />
+                  <span className="kh-card-price">
+                    {noPrice ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2).replace('.', ',')}`}
+                  </span>
+                  <button
+                    type="button"
+                    className="kh-btn-want"
+                    disabled={soldOut || noPrice}
+                    onClick={() => addItem(item)}
+                  >
+                    {soldOut ? 'ESAURITO' : 'LO VOGLIO'}
+                  </button>
+                </article>
+              );
+            })}
+          </div>
+
+          <button type="button" className="kh-cta-outline" onClick={() => openMenu('panini')}>
+            VEDI TUTTI I PANINI →
+          </button>
+
+          <div className="kh-menu-block">
+            <p className="kh-menu-block-title">ADESSO ENTRA NEL MENU.</p>
+            <p className="kh-menu-block-sub">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare</p>
+            <button type="button" className="kh-btn-menu" onClick={() => openMenu('panini')}>
+              ENTRA NEL MENU →
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* ── MENU COMPLETO ── */}
+      {view === 'menu' && (
+      <>
+      <div className="kh-menu-topbar">
+        <button type="button" className="kh-btn-back" onClick={() => { setView('home'); window.scrollTo({ top: 0 }); }}>
+          ← INDIETRO
+        </button>
+        <span className="kh-menu-topbar-label">MENU</span>
       </div>
 
       {/* Promo hero card */}
-      {kitchenCategoryPromos[activeCategory] ? (
+      {activeCategory !== 'bbq' && kitchenCategoryPromos[activeCategory] ? (
         <div className="kitch-promo-wrapper">
           <img
             src={kitchenCategoryPromos[activeCategory].image}
@@ -421,15 +515,26 @@ export default function CustomerKitchenMenu() {
       />
 
       {/* Section title */}
-      <div className="kitch-section-title">{getCategoryTitle(activeCategory)}</div>
+      {activeCategory !== 'bbq' && (
+        <>
+          <div className="kitch-section-title">{getCategoryTitle(activeCategory)}</div>
+          {getCategorySubtitle(activeCategory) && (
+            <div className="kitch-section-subtitle">{getCategorySubtitle(activeCategory)}</div>
+          )}
+        </>
+      )}
 
       {/* Menu items */}
+      {activeCategory === 'bbq' && visibleItems.length > 0 && (
+        <PesiMassimiSection items={visibleItems} onAdd={addItem} />
+      )}
       {visibleItems.length === 0 && (
         <div className="kitch-menu-empty">NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA</div>
       )}
-      {visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
+      {activeCategory !== 'bbq' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
         <div className="kitch-menu-soldout-banner">AL MOMENTO È TUTTO ESAURITO</div>
       )}
+      {activeCategory !== 'bbq' && (
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>
@@ -478,7 +583,7 @@ export default function CustomerKitchenMenu() {
                 </div>
               )}
               <div className="kitch-card-footer">
-                <div className="kitch-card-price">
+                <div className={`kitch-card-price${item.price == null ? ' kitch-card-price--soon' : ''}`}>
                   {item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2)}`}
                 </div>
                 <button
@@ -492,6 +597,9 @@ export default function CustomerKitchenMenu() {
           </div>
         ))}
       </div>
+      )}
+      </>
+      )}
 
       {/* Bottom cart bar */}
       <div className="kitch-bottom-spacer" />
