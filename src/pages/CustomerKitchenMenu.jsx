@@ -771,13 +771,29 @@ export default function CustomerKitchenMenu() {
               <button
                 className="kitch-upsell-promo-card"
                 onClick={() => addItem(kitchenCartUpsell)}
-                aria-label={`Aggiungi ${kitchenCartUpsell.name} per €${kitchenCartUpsell.price.toFixed(2).replace('.', ',')}`}
+                aria-label={kitchenCartUpsell.alt || `Aggiungi ${kitchenCartUpsell.name} per €${kitchenCartUpsell.price.toFixed(2).replace('.', ',')}`}
               >
-                <img
-                  src={kitchenCartUpsell.image}
-                  alt={kitchenCartUpsell.alt || kitchenCartUpsell.name}
-                  className="kitch-upsell-promo-img"
-                />
+                <span className="kitch-upsell-icons" aria-hidden="true">
+                  <img
+                    src="/assets/kitchen/photo-patatine-da-banco.png"
+                    alt=""
+                    className="kitch-upsell-icon-img"
+                  />
+                  <img
+                    src="/assets/kitchen/photo-birra-del-tricheco.png"
+                    alt=""
+                    className="kitch-upsell-icon-img kitch-upsell-icon-img--beer"
+                  />
+                </span>
+                <span className="kitch-upsell-text">
+                  <span className="kitch-upsell-title">{kitchenCartUpsell.name.toUpperCase()}</span>
+                  {kitchenCartUpsell.subtitle && (
+                    <span className="kitch-upsell-subtitle">{kitchenCartUpsell.subtitle}</span>
+                  )}
+                </span>
+                <span className="kitch-upsell-price">
+                  +€{kitchenCartUpsell.price.toFixed(2).replace('.', ',')}
+                </span>
               </button>
             </div>
 

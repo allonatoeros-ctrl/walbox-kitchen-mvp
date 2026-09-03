@@ -532,6 +532,9 @@ export const kitchenCategoryPromos = {
     alt: 'Fritto terapeutico',
   },
   combo: null,
+  // bbq resta null: la categoria PESI MASSIMI ha già il proprio hero in
+  // PesiMassimiSection e CustomerKitchenMenu esclude esplicitamente `bbq`
+  // dalla promo hero card — una entry qui sarebbe dato morto.
   bbq: null,
   box: null,
   tartare: null,
@@ -544,8 +547,8 @@ export const kitchenCategoryPromos = {
 
 export const kitchenCartUpsell = {
   id: 'upsell-combo',
-  name: 'Upgrade Combo',
+  name: 'Fallo Combo',
+  subtitle: 'Patatine + Birra',
   price: 2.00,
-  image: '/assets/kitchen/aggiungi_e_risparmia_combo_digitale.png',
-  alt: 'Aggiungi Upgrade Combo per €2,00',
+  alt: 'Fallo Combo — Patatine + Birra, +€2,00',
 };
