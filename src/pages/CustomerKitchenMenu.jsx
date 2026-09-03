@@ -176,16 +176,35 @@ export default function CustomerKitchenMenu() {
     })
     .filter(Boolean);
 
+  // Back navigation locale (HOME → CATEGORIE → LISTA): ogni avanzamento pusha
+  // una history entry con { view } sullo stesso pathname /kitchen; il back
+  // browser/gesture e i back-button UI leggono/consumano la stessa history
+  // (vedi popstate listener sotto), senza toccare il router in App.jsx.
   const openMenu = (category) => {
     setActiveCategory(category);
     setView('menu');
+    window.history.pushState({ view: 'menu' }, '', '/kitchen');
     window.scrollTo({ top: 0 });
   };
 
   const enterMenu = () => {
     setView('categories');
+    window.history.pushState({ view: 'categories' }, '', '/kitchen');
     window.scrollTo({ top: 0 });
   };
+
+  useEffect(() => {
+    if (window.location.pathname === '/kitchen') {
+      window.history.replaceState({ view: 'home' }, '', '/kitchen');
+    }
+    const handlePopState = (event) => {
+      if (window.location.pathname !== '/kitchen') return;
+      setView(event.state?.view || 'home');
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Righe MENU — CATEGORIE (Figma 166:2): conteggio e foto reali dai dati menu,
   // nessun valore inventato — foto = primo item con `image` in quella categoria.
@@ -514,7 +533,7 @@ export default function CustomerKitchenMenu() {
             <button
               type="button"
               className="kh-cat-back"
-              onClick={() => { setView('home'); window.scrollTo({ top: 0 }); }}
+              onClick={() => window.history.back()}
             >
               ← INDIETRO
             </button>
@@ -551,7 +570,7 @@ export default function CustomerKitchenMenu() {
       {view === 'menu' && (
       <>
       <div className="kh-menu-topbar">
-        <button type="button" className="kh-btn-back" onClick={() => { setView('categories'); window.scrollTo({ top: 0 }); }}>
+        <button type="button" className="kh-btn-back" onClick={() => window.history.back()}>
           ← INDIETRO
         </button>
         <span className="kh-menu-topbar-label">MENU</span>
