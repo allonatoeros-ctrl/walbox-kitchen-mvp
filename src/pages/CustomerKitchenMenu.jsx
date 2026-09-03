@@ -174,6 +174,19 @@ export default function CustomerKitchenMenu() {
     window.scrollTo({ top: 0 });
   };
 
+  const enterMenu = () => {
+    setView('categories');
+    window.scrollTo({ top: 0 });
+  };
+
+  // Righe MENU — CATEGORIE (Figma 166:2): conteggio e foto reali dai dati menu,
+  // nessun valore inventato — foto = primo item con `image` in quella categoria.
+  const categoryRows = CATEGORIES.map((cat) => {
+    const items = customerItems.filter((i) => i.category === cat.key);
+    const photo = items.find((i) => i.image)?.image || null;
+    return { ...cat, count: items.length, photo };
+  });
+
 
 
   const addItem = (item) => {
@@ -479,18 +492,58 @@ export default function CustomerKitchenMenu() {
           <div className="kh-menu-block">
             <p className="kh-menu-block-title">ADESSO ENTRA NEL MENU.</p>
             <p className="kh-menu-block-sub">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare</p>
-            <button type="button" className="kh-btn-menu" onClick={() => openMenu('panini')}>
+            <button type="button" className="kh-btn-menu" onClick={enterMenu}>
               ENTRA NEL MENU →
             </button>
           </div>
         </>
       )}
 
+      {/* ── MENU — CATEGORIE (Figma 166:2) ── */}
+      {view === 'categories' && (
+        <div className="kh-cat-screen">
+          <div className="kh-cat-topbar">
+            <button
+              type="button"
+              className="kh-cat-back"
+              onClick={() => { setView('home'); window.scrollTo({ top: 0 }); }}
+            >
+              ← INDIETRO
+            </button>
+            <span className="kh-cat-topbar-label">MENU</span>
+          </div>
+
+          <h2 className="kh-cat-title">IL MENU</h2>
+          <p className="kh-cat-subtitle">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare</p>
+
+          <div className="kh-cat-list">
+            {categoryRows.map((cat) => (
+              <button
+                key={cat.key}
+                type="button"
+                className="kh-cat-row"
+                onClick={() => openMenu(cat.key)}
+              >
+                <div className={`kh-cat-photo${cat.key === 'bbq' ? ' kh-cat-photo--dark' : ''}`}>
+                  {cat.photo && <img src={cat.photo} alt="" />}
+                </div>
+                <div className="kh-cat-accent" />
+                <div className="kh-cat-text">
+                  <span className="kh-cat-name">{cat.label}</span>
+                  <span className="kh-cat-count">{cat.count} {cat.count === 1 ? 'VOCE' : 'VOCI'}</span>
+                </div>
+                <span className="kh-cat-arrow" aria-hidden="true">→</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── MENU COMPLETO ── */}
       {view === 'menu' && (
       <>
       <div className="kh-menu-topbar">
-        <button type="button" className="kh-btn-back" onClick={() => { setView('home'); window.scrollTo({ top: 0 }); }}>
+        <button type="button" className="kh-btn-back" onClick={() => { setView('categories'); window.scrollTo({ top: 0 }); }}>
           ← INDIETRO
         </button>
         <span className="kh-menu-topbar-label">MENU</span>
