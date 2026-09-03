@@ -6,6 +6,9 @@ import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
 import PaniniSection from '../components/kitchen/PaniniSection';
+import CicchettiSection from '../components/kitchen/CicchettiSection';
+import InsalatoneSection from '../components/kitchen/InsalatoneSection';
+import TartareSection from '../components/kitchen/TartareSection';
 import './CustomerKitchenMenu.css';
 
 // Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
@@ -129,6 +132,9 @@ function getCategoryTitle(cat) {
 function getCategorySubtitle(cat) {
   if (cat === 'bbq') return 'Affumicato, esagerato, senza scuse. Roba da mangiare con le mani.';
   if (cat === 'panini') return 'Quelli seri. Almeno loro.';
+  if (cat === 'cicchetti') return 'MORTAZZA · LARDO & NOCI · SCAMORZA & CIPOLLE · CIAPPI VEG';
+  if (cat === 'insalatone') return 'CAESAR · SALMON · VEGGY';
+  if (cat === 'tartare') return 'TARTARE 1 · TARTARE 2';
   return null;
 }
 
@@ -586,13 +592,22 @@ export default function CustomerKitchenMenu() {
       {activeCategory === 'panini' && visibleItems.length > 0 && (
         <PaniniSection items={visibleItems} onAdd={addItem} />
       )}
+      {activeCategory === 'cicchetti' && visibleItems.length > 0 && (
+        <CicchettiSection items={visibleItems} onAdd={addItem} />
+      )}
+      {activeCategory === 'insalatone' && visibleItems.length > 0 && (
+        <InsalatoneSection items={visibleItems} onAdd={addItem} />
+      )}
+      {activeCategory === 'tartare' && visibleItems.length > 0 && (
+        <TartareSection items={visibleItems} onAdd={addItem} />
+      )}
       {visibleItems.length === 0 && (
         <div className="kitch-menu-empty">NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA</div>
       )}
-      {activeCategory !== 'bbq' && activeCategory !== 'panini' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
+      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
         <div className="kitch-menu-soldout-banner">AL MOMENTO È TUTTO ESAURITO</div>
       )}
-      {activeCategory !== 'bbq' && activeCategory !== 'panini' && (
+      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && (
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>

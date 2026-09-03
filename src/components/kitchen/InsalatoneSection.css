@@ -1,0 +1,282 @@
+/* InsalatoneSection.css — blocco INSALATONE (categoria insalatone)
+   Source of truth: Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED — Page 4
+   Frame LISTA 164:65 (CLOSED invariata 1:1, nessun EXPANDED approvato).
+   EXPANDED: pattern riusato da PaniniSection.css (stessi token colore/font,
+   stesso file/pagina Figma). Stili isolati con prefisso .is- : nessuna regola
+   tocca le altre categorie. */
+
+.is-list {
+  --is-card: #1c1a14;
+  --is-red: #c84020;
+  --is-cream: #e8ddb8;
+  --is-sand: #d4c89a;
+  --is-muted: #8a7e60;
+  --is-rule: #2e2a1e;
+  --is-photo-bg: #fdf7f1;
+  --is-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 4px 8px;
+  font-family: var(--is-font);
+}
+
+.is-card {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--is-card);
+}
+
+.is-card--soldout {
+  opacity: 0.7;
+}
+
+/* ── CLOSED: 1:1 Figma 164:65 (foto + nome/ingredienti/prezzo), ora tappabile ── */
+.is-card-closed {
+  display: grid;
+  grid-template-columns: 132px 3px 1fr;
+  align-items: stretch;
+  width: 100%;
+  border: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  max-height: 132px;
+  opacity: 1;
+  transition: max-height 320ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 200ms ease;
+}
+
+.is-card--open .is-card-closed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.is-card-photo-wrap {
+  position: relative;
+  width: 132px;
+  height: 132px;
+  flex-shrink: 0;
+  background: var(--is-photo-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.is-card-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.is-card-photo-placeholder {
+  width: 120px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--is-muted);
+  text-align: center;
+}
+
+.is-card-soldout-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(14, 12, 8, 0.55);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--is-cream);
+}
+
+.is-card-accent {
+  background: var(--is-red);
+}
+
+.is-card-body {
+  padding: 12px 16px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.is-card-name {
+  font-size: 22px;
+  line-height: 24px;
+  font-weight: 900;
+  color: var(--is-cream);
+}
+
+.is-card-ingredients {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--is-sand);
+}
+
+.is-card-bottom-row {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.is-card-price {
+  font-size: 12px;
+  line-height: 15px;
+  font-weight: 800;
+  color: var(--is-cream);
+}
+
+.is-card-price--soon {
+  color: var(--is-red);
+}
+
+.is-caret {
+  width: 12px;
+  height: 8px;
+  flex-shrink: 0;
+  background: url('/assets/kitchen/pesi-massimi-caret.svg') center / contain no-repeat;
+}
+
+.is-caret--up {
+  transform: rotate(180deg);
+}
+
+/* ── EXPANDED: pattern PaniniSection (foto piena larghezza + dettaglio) ── */
+.is-card-open-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.is-card--open .is-card-open-body {
+  grid-template-rows: 1fr;
+}
+
+.is-card-open-content {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.is-card-open-photo-wrap {
+  height: 192px;
+  background: var(--is-photo-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.is-card-open-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.is-card-open-accent-line {
+  height: 3px;
+  background: var(--is-red);
+}
+
+.is-card-open-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.is-card-open-name {
+  margin: 0;
+  padding: 22px 18px 0;
+  font-size: 26px;
+  line-height: 28px;
+  font-weight: 900;
+  color: var(--is-cream);
+}
+
+.is-card-open-ingredients {
+  margin: 8px 0 0;
+  padding: 0 18px;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--is-sand);
+}
+
+.is-card-open-microcopy {
+  margin: 6px 0 0;
+  padding: 0 18px;
+  font-size: 14px;
+  line-height: 17px;
+  font-weight: 600;
+  color: var(--is-muted);
+}
+
+.is-rule {
+  margin: 16px 18px 0;
+  height: 1px;
+  background: var(--is-rule);
+}
+
+.is-price-row {
+  margin: 16px 18px 0;
+  padding: 0 18px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.is-price-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--is-cream);
+}
+
+.is-btn-want {
+  width: 144px;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: var(--is-red);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.is-btn-want:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.is-card-close {
+  margin: 18px 18px 22px;
+  height: 32px;
+  width: 114px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(232, 221, 184, 0.3);
+  border-radius: 10px;
+  background: rgba(14, 12, 8, 0.72);
+  color: var(--is-cream);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
