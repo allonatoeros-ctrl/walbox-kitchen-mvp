@@ -5,6 +5,7 @@ import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
+import PaniniSection from '../components/kitchen/PaniniSection';
 import './CustomerKitchenMenu.css';
 
 // Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
@@ -127,6 +128,7 @@ function getCategoryTitle(cat) {
 
 function getCategorySubtitle(cat) {
   if (cat === 'bbq') return 'Affumicato, esagerato, senza scuse. Roba da mangiare con le mani.';
+  if (cat === 'panini') return 'Quelli seri. Almeno loro.';
   return null;
 }
 
@@ -581,13 +583,16 @@ export default function CustomerKitchenMenu() {
       {activeCategory === 'bbq' && visibleItems.length > 0 && (
         <PesiMassimiSection items={visibleItems} onAdd={addItem} />
       )}
+      {activeCategory === 'panini' && visibleItems.length > 0 && (
+        <PaniniSection items={visibleItems} onAdd={addItem} />
+      )}
       {visibleItems.length === 0 && (
         <div className="kitch-menu-empty">NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA</div>
       )}
-      {activeCategory !== 'bbq' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
+      {activeCategory !== 'bbq' && activeCategory !== 'panini' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
         <div className="kitch-menu-soldout-banner">AL MOMENTO È TUTTO ESAURITO</div>
       )}
-      {activeCategory !== 'bbq' && (
+      {activeCategory !== 'bbq' && activeCategory !== 'panini' && (
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>
