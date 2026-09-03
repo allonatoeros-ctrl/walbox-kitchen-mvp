@@ -28,6 +28,7 @@ function formatPrice(value) {
 export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onHeroCta }) {
   const [openId, setOpenId] = useState(null);
   const listRef = useRef(null);
+  const bodyRefs = useRef({});
 
   if (!items || items.length === 0) return null;
 
@@ -119,7 +120,15 @@ export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onH
                 </button>
               </div>
 
-              <div className="pm-card-body">
+              <div
+                className="pm-card-body"
+                ref={(el) => { bodyRefs.current[item.id] = el; }}
+                onTransitionEnd={(e) => {
+                  if (e.propertyName === 'grid-template-rows' && isOpen) {
+                    bodyRefs.current[item.id]?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                  }
+                }}
+              >
                 <div className="pm-card-body-inner">
                   <p className="pm-card-ingredients">{item.ingredients}</p>
                   <div className="pm-card-rule" />

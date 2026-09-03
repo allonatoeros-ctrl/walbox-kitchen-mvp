@@ -376,6 +376,9 @@
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* clearance per la .kitch-bottom-bar fissa (CustomerKitchenMenu.css) che altrimenti
+     intercetta i tap su LO VOGLIO / FALLO PESANTE quando la card si apre a fondo lista */
+  scroll-margin-bottom: 120px;
 }
 
 .pm-card--open .pm-card-body {
