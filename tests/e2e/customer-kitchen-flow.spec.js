@@ -154,7 +154,7 @@ test('3c. Empty cart bar persists, disabled CTA, no drawer; refills after last i
   await expect(page.getByText('€0,00')).toBeVisible();
 });
 
-test('3e. Category with all items sold out shows "AL MOMENTO È TUTTO ESAURITO" banner, cards stay visible', async ({ page }) => {
+test('3e. All panini sold out: every CTA disabled, category still browsable, nothing addable to cart', async ({ page }) => {
   await page.goto('/kitchen?table=12&nickname=Eros');
   // Tutti i panini (categoria attiva di default nel menu) impostati non disponibili
   await page.evaluate(
@@ -164,11 +164,32 @@ test('3e. Category with all items sold out shows "AL MOMENTO È TUTTO ESAURITO" 
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'PANINI');
 
-  await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).toBeVisible();
-  // Cards remain visible with ESAURITO CTA
-  await expect(page.locator('.kitch-card')).toHaveCount(PANINI_IDS.length);
-  await expect(page.getByRole('button', { name: 'ESAURITO' })).toHaveCount(PANINI_IDS.length);
+  // Contratto visuale corrente (PaniniSection, no banner aggregato pre-Figma): ogni
+  // card resta visibile e mostra il proprio badge ESAURITO sulla faccia chiusa.
+  await expect(page.locator('.pn-card--soldout')).toHaveCount(PANINI_IDS.length);
+  await expect(page.locator('.pn-card-closed .pn-card-open-cta', { hasText: 'ESAURITO' })).toHaveCount(PANINI_IDS.length);
   await expect(page.getByText('NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA')).not.toBeVisible();
+  await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).not.toBeVisible();
+
+  // Requisito funzionale (di sicurezza, non solo visuale): la CTA add-to-cart di ogni
+  // panino esaurito è disabilitata nel markup, non solo nascosta dall'accordion chiuso.
+  await expect(page.locator('.pn-card--soldout .pn-btn-want:disabled')).toHaveCount(PANINI_IDS.length);
+
+  // Aprendo ciascuna card esaurita e forzando il click sulla CTA disabilitata, nessun
+  // panino deve finire nel carrello: un browser blocca il click nativo su un elemento
+  // disabled, quindi questo verifica il comportamento reale, non solo l'attributo.
+  const soldOutCards = await page.locator('.pn-card--soldout .pn-card-closed').all();
+  for (const closedCard of soldOutCards) {
+    await closedCard.click();
+    const wantBtn = page.locator('.pn-card--open .pn-btn-want');
+    await expect(wantBtn).toBeDisabled();
+    await wantBtn.click({ force: true }).catch(() => {});
+  }
+
+  const addCta = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
+  await expect(addCta).toBeVisible();
+  await expect(addCta).toBeDisabled();
+  await expect(page.getByText('0 prodotti')).toBeVisible();
 });
 
 test('3f. Category with zero items shows "NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA"', async ({ page }) => {
