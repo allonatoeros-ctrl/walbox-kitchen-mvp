@@ -187,17 +187,21 @@
 }
 
 /* ── Category tabs ───────────────────────────────── */
-/* A 390px i 5 tab non entrano (richiedono ~404px) e la strip non portava mai
-   il tab attivo in vista: il cerchio di TARTARE restava tagliato sul bordo
-   destro. Il gap scende da 13 a 8 — sotto gli 8 le etichette lunghe
-   ("CICCHETTI", "INSALATONE"), che sono più larghe dei 68px del tab, si
-   toccano — e il tab attivo viene ora portato in vista via `scrollIntoView`
-   (KitchenCategoryTabs.jsx). Cerchio e tipografia restano invariati. */
+/* A 390px i 5 tab non entrano: 5×68 + gap + padding fa ~412px, e la strip non
+   portava mai il tab attivo in vista — con TARTARE attiva il cerchio arancione
+   restava tagliato sul bordo destro. Non si risolve stringendo il gap: le
+   etichette lunghe ("CICCHETTI" 67px, "INSALATONE" 79px, +8% quando il tab è
+   attivo per lo `scale(1.08)`) sono più larghe dei 68px del tab, quindi sotto
+   ~16px di gap si toccano e si leggono come una parola sola. Gap e padding
+   restano quelli approvati: è il tab attivo a essere portato in vista via
+   `scrollIntoView` (KitchenCategoryTabs.jsx), con `scroll-padding-inline` che
+   evita di incollarlo al bordo. */
 .kitch-tabs {
   display: flex;
   justify-content: flex-start;
-  gap: 8px;
-  padding: 18px 10px 12px;
+  gap: 13px;
+  scroll-padding-inline: 12px;
+  padding: 18px 12px 12px;
   background: var(--k-bg);
   overflow-x: auto;
   scrollbar-width: none;
@@ -1340,7 +1344,10 @@
   top: 0;
   width: 100%;
   height: 192px;
-  background: #ded6ce; /* tono caldo, visibile solo in caricamento; sovrascritto per card (146:2 / 146:3) */
+  /* Sovrascritto inline dal PHOTO BG del frame Figma (146:2 / 146:3), quindi
+     questo valore non arriva mai a schermo sulle card Home. Con `cover` il
+     fondo si vede solo durante il caricamento della foto. */
+  background: #fdf7f1;
   border-radius: 14px 14px 0 0;
   overflow: hidden;
 }
