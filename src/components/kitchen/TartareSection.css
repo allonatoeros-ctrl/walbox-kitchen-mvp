@@ -13,6 +13,10 @@
   --tr-muted: #8a7e60;
   --tr-rule: #2e2a1e;
   --tr-photo-bg: #fdf7f1;
+  /* Fondo della foto EXPANDED: tono medio del fondo reale delle foto tartare.
+     Con object-fit:cover non resta banda visibile, ma il fondo non deve mai
+     essere bianco durante il caricamento. */
+  --tr-photo-bg-open: #f8efe2;
   --tr-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
 
   display: flex;
@@ -45,6 +49,9 @@
   background: transparent;
   color: inherit;
   font-family: inherit;
+  /* Vedi il commento in CicchettiSection.css: reset dell'uppercase ereditato
+     dalla regola globale `button` di index.css sugli ingredienti. */
+  text-transform: none;
   text-align: left;
   cursor: pointer;
   overflow: hidden;
@@ -172,18 +179,23 @@
   min-height: 0;
 }
 
+/* Stesso pattern foto EXPANDED di CicchettiSection.css: le foto sono 1:1
+   (1254×1254), il box 4:3 + `cover` le fa riempire la larghezza senza bande e
+   senza deformazione. Vedi il commento esteso in CicchettiSection.css. */
 .tr-card-open-photo-wrap {
-  height: 192px;
-  background: var(--tr-photo-bg);
+  aspect-ratio: 4 / 3;
+  background: var(--tr-photo-bg-open);
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .tr-card-open-photo {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   display: block;
 }
 

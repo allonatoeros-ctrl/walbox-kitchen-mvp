@@ -49,6 +49,11 @@
   background: transparent;
   color: inherit;
   font-family: inherit;
+  /* La card chiusa è un <button>: la regola globale `button { text-transform:
+     uppercase }` (index.css) ereditava sugli ingredienti, che Figma 164:2 mostra
+     in sentence case (e che la stessa card aperta già rende in sentence case).
+     Il nome prodotto resta maiuscolo perché lo è nella stringa (toUpperCase in JSX). */
+  text-transform: none;
   text-align: left;
   cursor: pointer;
   overflow: hidden;
@@ -176,15 +181,17 @@
   min-height: 0;
 }
 
-/* Le foto cicchetti sono quadrate (1254×1254). Con `contain` dentro un contenitore
-   ~2:1 restavano due bande chiare da ~92px per lato a 390px di viewport.
-   Fix: contenitore 3:2 + `cover`, così la foto riempie la larghezza senza deformarsi.
-   `object-position: center 63%` è calcolato sul soggetto reale delle 4 foto
-   (bounding box misurata: y 23%–85.5%, centro 54.5%): la banda visibile a 3:2 copre
-   il soggetto per intero con ~13% di margine sopra e sotto — crop controllato,
-   nessun cicchetto tagliato. Lo stato CLOSED resta invariato (foto 1:1 in box 1:1). */
+/* Tutte le foto del menu sono quadrate (1254×1254). Con `contain` dentro un
+   contenitore ~2:1 restavano due bande chiare da ~92px per lato a 390px.
+   Pattern unico per tutte e 4 le categorie con card espandibile (Panini,
+   Cicchetti, Insalatone, Tartare): contenitore 4:3 + `cover` + `object-position:
+   center`. La banda visibile è il 75% dell'altezza, centrata (12,5%–87,5%):
+   contiene per intero il soggetto di ogni foto misurata (il caso più esteso è
+   insalatona_salmon, y 17,5%–99,5%, dove viene tagliata solo la base della
+   ciotola). Nessuna deformazione, nessuna banda, nessun ritaglio del piatto.
+   Lo stato CLOSED resta invariato (foto 1:1 in box 1:1). */
 .cc-card-open-photo-wrap {
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 4 / 3;
   background: var(--cc-photo-bg-open);
   display: flex;
   align-items: center;
@@ -196,7 +203,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 63%;
+  object-position: center;
   display: block;
 }
 

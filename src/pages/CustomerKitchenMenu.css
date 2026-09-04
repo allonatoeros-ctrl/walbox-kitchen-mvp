@@ -1,9 +1,22 @@
 /* CustomerKitchenMenu.css — Walrus Kitchen UI */
 
 /* ── Page ───────────────────────────────────────── */
+/* Customer = mobile-first (CLAUDE.md §8). Senza contenimento, a 1440px le card
+   diventavano nastri da 1426px e la foto espansa veniva scalata oltre il nativo
+   (1254px). La colonna resta 480px centrata; il `box-shadow` con spread estende
+   il fondo pagina alle fasce laterali senza markup aggiuntivo e senza creare
+   scroll orizzontale (le ombre non entrano nell'area di overflow). */
 .kitch-page {
   min-height: 100vh;
+  /* `width: 100%` è necessario, non ridondante: .kitch-page è un item di un flex
+     container in colonna, quindi l'asse inline è quello trasversale e
+     `margin-inline: auto` da solo disattiva lo stretch, lasciando l'elemento
+     alla sua max-content width (424px a 390, con la tab strip che sfonda). */
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
   background: var(--k-bg);
+  box-shadow: 0 0 0 100vmax var(--k-bg);
   color: var(--k-text);
   font-family: var(--k-font-body);
   overflow-x: hidden;
@@ -245,9 +258,12 @@
 }
 
 /* ── Section subtitle (narrative, per-category) ──── */
+/* Era l'unico Montserrat nel chrome del menu (tutto il resto è Bungee o Barlow
+   Condensed) e a 390px andava a 2 righe, orfanando l'ultima voce dopo il "·".
+   Figma 164:9 SECTION SUB è una riga singola. */
 .kitch-section-subtitle {
-  font-family: var(--k-font-body);
-  font-size: 13px;
+  font-family: 'Barlow Condensed', 'Oswald', sans-serif;
+  font-size: 12px;
   font-weight: 700;
   color: rgba(245,234,216,0.7);
   padding: 4px 12px 0;
@@ -440,6 +456,9 @@
   bottom: 0;
   left: 0;
   right: 0;
+  /* Allineata alla colonna da 480px di .kitch-page (vedi commento lì). */
+  max-width: 480px;
+  margin-inline: auto;
   background: linear-gradient(to top, #0e0c08 70%, transparent);
   border-top: none;
   padding: 10px 10px;
@@ -561,6 +580,9 @@
   bottom: 0;
   left: 0;
   right: 0;
+  /* Allineato alla colonna da 480px di .kitch-page (vedi commento lì). */
+  max-width: 480px;
+  margin-inline: auto;
   background: var(--k-cream);
   border-radius: 24px 24px 0 0;
   z-index: 300;
@@ -622,10 +644,17 @@
   gap: 16px;
 }
 
+/* A 390px la colonna del nome era ~104px: "BRISKET — FALLO PESANTE" andava su
+   3 righe, con la lineetta orfana su una riga da sola. Il nome ha ora una base
+   di 200px, quindi sotto quella soglia il blocco quantità va a capo su una
+   riga propria allineata a destra invece di stritolare il nome. Nessuna
+   riduzione dei target di tocco. */
 .kitch-drawer-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  row-gap: 8px;
   flex-shrink: 0;
 }
 
@@ -649,12 +678,14 @@
 }
 
 .kitch-drawer-row-content {
-  flex: 1;
+  flex: 1 1 200px;
+  min-width: 0;
 }
 
 .kitch-drawer-row-name {
   font-family: var(--k-font-display);
   font-size: 16px;
+  line-height: 1.15;
   color: var(--k-surface);
   margin-bottom: 4px;
 }
@@ -672,6 +703,9 @@
   background: #eaddc2;
   padding: 6px 12px;
   border-radius: 20px;
+  flex-shrink: 0;
+  /* quando va a capo (vedi .kitch-drawer-row) resta allineato a destra */
+  margin-left: auto;
 }
 
 .kitch-qty-btn {
