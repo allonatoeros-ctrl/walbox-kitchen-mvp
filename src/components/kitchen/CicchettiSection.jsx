@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AllergenBadges from './AllergenBadges';
 import './CicchettiSection.css';
 
 /**
@@ -98,6 +99,7 @@ export default function CicchettiSection({ items, onAdd }) {
                   <h3 className="cc-card-open-name">{item.name.toUpperCase()}</h3>
                   <p className="cc-card-open-ingredients">{item.ingredients}</p>
                   <p className="cc-card-open-microcopy">{item.description}</p>
+                  <AllergenBadges allergens={item.allergens} />
                   <div className="cc-rule" />
                   <div className="cc-price-row">
                     <span className={`cc-price-value${noPrice ? ' cc-card-price--soon' : ''}`}>

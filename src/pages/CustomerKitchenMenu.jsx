@@ -9,6 +9,7 @@ import PaniniSection from '../components/kitchen/PaniniSection';
 import CicchettiSection from '../components/kitchen/CicchettiSection';
 import InsalatoneSection from '../components/kitchen/InsalatoneSection';
 import TartareSection from '../components/kitchen/TartareSection';
+import AllergenBadges from '../components/kitchen/AllergenBadges';
 import './CustomerKitchenMenu.css';
 
 // Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
@@ -106,19 +107,6 @@ function drawerIcon(name) {
   if (n.includes('patat')) return '🍟';
   return '🍔';
 }
-
-const ALLERGEN_LABEL = {
-  glutine:   '🌾 Glutine',
-  latte:     '🥛 Latte',
-  uova:      '🥚 Uova',
-  pesce:     '🐟 Pesce',
-  senape:    '🌿 Senape',
-  soia:      '🌱 Soia',
-  arachidi:  '🥜 Arachidi',
-  noci:      '🥜 Frutta secca',
-  crostacei: '🦐 Crostacei',
-  sedano:    '🌿 Sedano',
-};
 
 function getCategoryTitle(cat) {
   if (cat === 'panini') return <>I PANINI DA <span style={{ color: 'var(--k-orange)' }}>SPACCO</span></>;
@@ -237,6 +225,10 @@ export default function CustomerKitchenMenu() {
       // drawer aperto e `cartOpen` è ancora true quando appare la conferma.
       if (submittedRef.current) {
         setSubmitted(false);
+        setSubmitting(false);
+        setOrderItems([]);
+        setSubmittedOrderId(null);
+        setSubmittedOrderCode(null);
         setCartOpen(false);
         restoreEntry(event.state);
         return;
@@ -710,25 +702,7 @@ export default function CustomerKitchenMenu() {
                 <span className="kitch-card-icon">🦭</span>
               </div>
               <div className="kitch-card-desc">{item.description}</div>
-              {item.allergens?.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 4px', marginTop: '6px', marginBottom: '4px' }}>
-                  {item.allergens.map((a) => (
-                    <span key={a} style={{
-                      fontSize: '12px',
-                      fontWeight: 800,
-                      letterSpacing: '0.04em',
-                      padding: '2px 7px',
-                      borderRadius: '20px',
-                      background: '#ffc107',
-                      border: '1px solid #ffb300',
-                      color: '#000000',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {ALLERGEN_LABEL[a] ?? a}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <AllergenBadges allergens={item.allergens} />
               <div className="kitch-card-footer">
                 <div className={`kitch-card-price${item.price == null ? ' kitch-card-price--soon' : ''}`}>
                   {item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2)}`}

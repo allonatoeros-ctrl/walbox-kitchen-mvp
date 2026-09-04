@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AllergenBadges from './AllergenBadges';
 import './TartareSection.css';
 
 /**
@@ -90,6 +91,7 @@ export default function TartareSection({ items, onAdd }) {
                   <h3 className="tr-card-open-name">{item.name.toUpperCase()}</h3>
                   <p className="tr-card-open-ingredients">{item.ingredients}</p>
                   <p className="tr-card-open-microcopy">{item.description}</p>
+                  <AllergenBadges allergens={item.allergens} />
                   <div className="tr-rule" />
                   <div className="tr-price-row">
                     <span className={`tr-price-value${noPrice ? ' tr-card-price--soon' : ''}`}>

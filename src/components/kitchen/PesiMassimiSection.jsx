@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { kitchenPesiMassimiCombos } from '../../data/kitchenMockData';
+import AllergenBadges from './AllergenBadges';
 import './PesiMassimiSection.css';
 
 /**
@@ -131,6 +132,7 @@ export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onH
               >
                 <div className="pm-card-body-inner">
                   <p className="pm-card-ingredients">{item.ingredients}</p>
+                  <AllergenBadges allergens={item.allergens} />
                   <div className="pm-card-rule" />
                   <div className="pm-price-row">
                     <span className="pm-price-block">

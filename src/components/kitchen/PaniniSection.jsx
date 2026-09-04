@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AllergenBadges from './AllergenBadges';
 import './PaniniSection.css';
 
 /**
@@ -102,6 +103,7 @@ export default function PaniniSection({ items, onAdd }) {
                   <h3 className="pn-card-body-name">{item.name.toUpperCase()}</h3>
                   <p className="pn-card-ingredients">{item.ingredients}</p>
                   <p className="pn-card-microcopy">{item.description}</p>
+                  <AllergenBadges allergens={item.allergens} />
                   <div className="pn-rule" />
                   <div className="pn-price-row">
                     <span className={`pn-price-value${noPrice ? ' pn-card-price--soon' : ''}`}>

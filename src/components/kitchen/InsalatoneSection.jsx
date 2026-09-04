@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import AllergenBadges from './AllergenBadges';
 import './InsalatoneSection.css';
 
 /**
@@ -91,6 +92,7 @@ export default function InsalatoneSection({ items, onAdd }) {
                   <h3 className="is-card-open-name">{item.name.toUpperCase()}</h3>
                   <p className="is-card-open-ingredients">{item.ingredients}</p>
                   <p className="is-card-open-microcopy">{item.description}</p>
+                  <AllergenBadges allergens={item.allergens} />
                   <div className="is-rule" />
                   <div className="is-price-row">
                     <span className={`is-price-value${noPrice ? ' is-card-price--soon' : ''}`}>
