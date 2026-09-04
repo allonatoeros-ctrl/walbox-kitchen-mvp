@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { kitchenCategoryPromos, kitchenCartUpsell } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
@@ -183,7 +183,7 @@ export default function CustomerKitchenMenu() {
   const openMenu = (category) => {
     setActiveCategory(category);
     setView('menu');
-    window.history.pushState({ view: 'menu' }, '', '/kitchen');
+    window.history.pushState({ view: 'menu', category }, '', '/kitchen');
     window.scrollTo({ top: 0 });
   };
 
@@ -193,14 +193,69 @@ export default function CustomerKitchenMenu() {
     window.scrollTo({ top: 0 });
   };
 
+  // Il listener popstate vive per tutta la vita del componente ma deve leggere
+  // lo stato corrente, non quello catturato al mount.
+  const viewRef = useRef(view);
+  const cartOpenRef = useRef(cartOpen);
+  const submittedRef = useRef(submitted);
+  const activeCategoryRef = useRef(activeCategory);
+  viewRef.current = view;
+  cartOpenRef.current = cartOpen;
+  submittedRef.current = submitted;
+  activeCategoryRef.current = activeCategory;
+
   useEffect(() => {
-    if (window.location.pathname === '/kitchen') {
+    if (window.location.pathname !== '/kitchen') return undefined;
+
+    // Al rientro su /kitchen (back dal browser, o ritorno da /kitchen/status) il
+    // browser ripristina la entry con il suo { view } e il componente si rimonta:
+    // va ADOTTATO, non sovrascritto, altrimenti si torna alla schermata sbagliata
+    // e il back successivo sembra andare avanti invece che indietro.
+    const restored = window.history.state;
+    if (restored?.view) {
+      setView(restored.view);
+      if (restored.category) setActiveCategory(restored.category);
+    } else {
       window.history.replaceState({ view: 'home' }, '', '/kitchen');
     }
+
+    // Ogni back deve ripristinare anche la categoria della entry, altrimenti si
+    // torna sì alla LISTA ma su una categoria diversa da quella che si stava
+    // guardando.
+    const restoreEntry = (state) => {
+      setView(state?.view || 'home');
+      if (state?.category) setActiveCategory(state.category);
+      window.scrollTo({ top: 0 });
+    };
+
     const handlePopState = (event) => {
       if (window.location.pathname !== '/kitchen') return;
-      setView(event.state?.view || 'home');
-      window.scrollTo({ top: 0 });
+
+      // La schermata ORDINE RICEVUTO è renderizzata a prescindere da `view`:
+      // senza questo il back verrebbe consumato a vuoto finché non si esce dal
+      // sito. Va controllata PRIMA del drawer, perché si invia l'ordine dal
+      // drawer aperto e `cartOpen` è ancora true quando appare la conferma.
+      if (submittedRef.current) {
+        setSubmitted(false);
+        setCartOpen(false);
+        restoreEntry(event.state);
+        return;
+      }
+
+      // Con il drawer aperto il back lo chiude e basta (gesture standard per una
+      // bottom sheet): rimettiamo la entry appena consumata così la schermata
+      // sotto non si muove.
+      if (cartOpenRef.current) {
+        setCartOpen(false);
+        window.history.pushState(
+          { view: viewRef.current, category: activeCategoryRef.current },
+          '',
+          '/kitchen',
+        );
+        return;
+      }
+
+      restoreEntry(event.state);
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
