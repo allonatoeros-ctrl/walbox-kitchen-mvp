@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+
 /**
  * Category tab bar for the kitchen menu.
  * Accepts categories array, activeKey, onSelect handler.
@@ -12,6 +14,16 @@ const TAB_THEME = {
 };
 
 export default function KitchenCategoryTabs({ categories, activeKey, onSelect }) {
+  // A 390px la strip è più larga del viewport e non si spostava mai: con
+  // TARTARE attiva il cerchio arancione restava tagliato sul bordo destro,
+  // senza nulla che segnalasse lo scroll. Il tab attivo viene portato in vista
+  // dentro la strip — `block: 'nearest'` evita che la pagina scrolli in
+  // verticale, `inline: 'nearest'` non muove nulla se il tab è già visibile.
+  const activeRef = useRef(null);
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+  }, [activeKey]);
+
   return (
     <div className="kitch-tabs">
       {categories.map((cat) => {
@@ -20,6 +32,7 @@ export default function KitchenCategoryTabs({ categories, activeKey, onSelect })
         return (
           <button
             key={cat.key}
+            ref={isActive ? activeRef : null}
             className="kitch-tab"
             style={{ transform: isActive ? 'scale(1.08)' : 'scale(1)' }}
             onClick={() => onSelect(cat.key)}

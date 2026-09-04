@@ -181,6 +181,16 @@ export default function CustomerKitchenMenu() {
     window.scrollTo({ top: 0 });
   };
 
+  // Cambio categoria dalla tab strip: è navigazione laterale dentro la stessa
+  // vista `menu`, non un livello più profondo, quindi NON pusha una entry (il
+  // back resterebbe intrappolato a rifare le categorie una per una). Serve però
+  // un `replaceState`: senza, `history.state.category` restava fermo alla
+  // categoria di ingresso e al reload veniva ripristinata quella sbagliata.
+  const selectCategoryTab = (category) => {
+    setActiveCategory(category);
+    window.history.replaceState({ view: 'menu', category }, '', '/kitchen');
+  };
+
   // Il listener popstate vive per tutta la vita del componente ma deve leggere
   // lo stato corrente, non quello catturato al mount.
   const viewRef = useRef(view);
@@ -637,7 +647,7 @@ export default function CustomerKitchenMenu() {
       <KitchenCategoryTabs
         categories={CATEGORIES}
         activeKey={activeCategory}
-        onSelect={setActiveCategory}
+        onSelect={selectCategoryTab}
       />
 
       {/* Section title */}
