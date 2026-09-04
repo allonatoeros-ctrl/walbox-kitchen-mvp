@@ -544,11 +544,3 @@ export const kitchenCategoryPromos = {
   bruschette: null,
   cicchetti: null,
 };
-
-export const kitchenCartUpsell = {
-  id: 'upsell-combo',
-  name: 'Fallo Combo',
-  subtitle: 'Patatine + Birra',
-  price: 2.00,
-  alt: 'Fallo Combo — Patatine + Birra, +€2,00',
-};
