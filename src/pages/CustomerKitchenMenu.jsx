@@ -495,7 +495,7 @@ export default function CustomerKitchenMenu() {
           Il banner ha il vecchio claim stampato: 111:60 lo copre, 111:62 scrive quello nuovo. */}
       <header className="kh-header">
         <img
-          src="/assets/kitchen/01_header_walrus_kitchen.png"
+          src="/assets/kitchen/01_header_walrus_kitchen.webp"
           alt="Walrus Kitchen"
           className="kh-header-img"
         />
