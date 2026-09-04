@@ -326,7 +326,7 @@ export const kitchenMenuItems = [
     price: null,
     points: null,
     tags: ['v2'],
-    image: '/assets/kitchen/menu/cicchetti/cicchetto_scamorza_cipolle.png',
+    image: '/assets/kitchen/menu/cicchetti/cicchetto_scamorza_cipolle_v2.png',
     available: true,
     ingredients: 'Pane, scamorza, speck, marmellata di cipolle rosse.',
     allergens: ['glutine', 'latte'],
