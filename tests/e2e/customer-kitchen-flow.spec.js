@@ -31,6 +31,14 @@ async function openFullMenu(page) {
   await expect(page.getByRole('button', { name: /PANINI/i }).first()).toBeVisible();
 }
 
+// ENTRA NEL MENU porta alla schermata CATEGORIE (tile picker): gli assert a
+// livello di prodotto (ESAURITO, banner esauriti, card) vivono nella LISTA,
+// che si apre solo cliccando la tile della categoria.
+async function openCategoryList(page, categoryName) {
+  await openFullMenu(page);
+  await page.getByRole('button', { name: new RegExp(categoryName, 'i') }).first().click();
+}
+
 // Gli 8 panini V2 hanno `price: null` (PREZZO IN ARRIVO, CTA disabilitata): l'unica
 // categoria con prodotti ordinabili è PESI MASSIMI.
 async function addFirstOrderableItem(page) {
@@ -100,12 +108,16 @@ test('3b. Sold-out item shows ESAURITO overlay and disabled ESAURITO CTA', async
     LS_MENU,
   );
   await page.goto('/kitchen?table=12&nickname=Eros');
-  await openFullMenu(page);
+  await openCategoryList(page, 'PANINI');
 
   await expect(page.getByText('ESAURITO').first()).toBeVisible();
 
-  const soldOutButton = page.getByRole('button', { name: 'ESAURITO' });
+  // La CTA disabilitata vive nella card EXPANDED (stesso pattern accordion di
+  // Pesi Massimi): va aperta la card del panino esaurito per raggiungerla.
+  await page.locator('.pn-card--soldout .pn-card-closed').click();
+  const soldOutButton = page.locator('.pn-card--soldout .pn-btn-want');
   await expect(soldOutButton).toBeVisible();
+  await expect(soldOutButton).toHaveText('ESAURITO');
   await expect(soldOutButton).toBeDisabled();
 });
 
@@ -150,7 +162,7 @@ test('3e. Category with all items sold out shows "AL MOMENTO È TUTTO ESAURITO" 
     { key: LS_MENU, ids: PANINI_IDS },
   );
   await page.goto('/kitchen?table=12&nickname=Eros');
-  await openFullMenu(page);
+  await openCategoryList(page, 'PANINI');
 
   await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).toBeVisible();
   // Cards remain visible with ESAURITO CTA
@@ -179,11 +191,12 @@ test('3f. Category with zero items shows "NESSUN PRODOTTO DISPONIBILE IN QUESTA 
 
 test('3g. Regression: normal category with available items shows no empty/sold-out messages', async ({ page }) => {
   await page.goto('/kitchen?table=12&nickname=Eros');
-  await openFullMenu(page);
+  await openCategoryList(page, 'PANINI');
 
   await expect(page.getByText('NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA')).not.toBeVisible();
   await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).not.toBeVisible();
-  await expect(page.locator('.kitch-card').first()).toBeVisible();
+  // PANINI usa PaniniSection (.pn-card), non più la lista generica .kitch-card
+  await expect(page.locator('.pn-card').first()).toBeVisible();
 });
 
 // ── Touch target sizes (mobile) ────────────────────────────────────
