@@ -176,8 +176,8 @@
 /* ── Category tabs ───────────────────────────────── */
 .kitch-tabs {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 13px;
   padding: 18px 12px 12px;
   background: var(--k-bg);
   overflow-x: auto;
@@ -208,7 +208,7 @@
   width: 68px;
   height: 68px;
   border-radius: 34px;
-  border-width: 0;
+  border-width: 2px;
   border-style: solid;
   border-color: transparent;
   display: flex;
@@ -223,7 +223,11 @@
   font-size: 11px;
   line-height: 1.15;
   text-align: center;
-  color: #d4c89a;
+  font-weight: 700;
+  min-height: 26px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
   transition: var(--k-transition);
   letter-spacing: 0.3px;
   text-transform: uppercase;
@@ -509,9 +513,7 @@
   color: #e8ddb8;
   letter-spacing: 0.64px;
   text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.15;
 }
 
 .kitch-bottom-total {
@@ -705,84 +707,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* ── Upsell banner ───────────────────────────────── */
-.kitch-upsell-promo-card {
-  background: linear-gradient(135deg, rgba(240,90,36,0.16), rgba(240,90,36,0.05));
-  border: 1.5px dashed var(--k-orange);
-  padding: 12px 14px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  margin-top: 8px;
-  border-radius: var(--k-radius);
-  overflow: hidden;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-  box-sizing: border-box;
-  flex-shrink: 0;
-  text-align: left;
-}
-
-.kitch-upsell-promo-card:hover {
-  opacity: 0.95;
-  transform: scale(0.99);
-}
-
-.kitch-upsell-promo-card:active {
-  transform: scale(0.97);
-}
-
-.kitch-upsell-icons {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.kitch-upsell-icon-img {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid var(--k-bg);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
-  display: block;
-}
-
-.kitch-upsell-icon-img--beer {
-  margin-left: -12px;
-}
-
-.kitch-upsell-text {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.kitch-upsell-title {
-  font-family: var(--k-font-display);
-  font-size: 16px;
-  color: var(--k-cream);
-  letter-spacing: 0.5px;
-  line-height: 1.15;
-}
-
-.kitch-upsell-subtitle {
-  font-family: var(--k-font-body);
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(245,234,216,0.65);
-  margin-top: 2px;
-}
-
-.kitch-upsell-price {
-  font-family: var(--k-font-display);
-  font-size: 18px;
-  color: var(--k-orange);
-  flex-shrink: 0;
 }
 
 /* ── Drawer totals + submit ──────────────────────── */

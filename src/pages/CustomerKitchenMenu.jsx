@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { kitchenCategoryPromos, kitchenCartUpsell } from '../data/kitchenMockData';
+import { kitchenCategoryPromos } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
@@ -77,7 +77,7 @@ const CATEGORY_SVGS = {
 
 // Categorie del menu completo — Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED, Page 4
 // (`MENU — CATEGORIE` 166:2). PATATINE / BIRRE / BEVANDE / COMBO non sono più
-// navigazione primaria: restano nei dati e nell'upsell carrello, non nel menu.
+// navigazione primaria: restano nei dati, non nel menu.
 const MENU_CATEGORIES = [
   { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
   { key: 'bbq', label: 'PESI MASSIMI', icon: CATEGORY_SVGS.bbq },
@@ -267,7 +267,6 @@ export default function CustomerKitchenMenu() {
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === item.id);
       if (existing) {
-        if (item.id === kitchenCartUpsell.id) return prev;
         return prev.map((o) => o.id === item.id ? { ...o, qty: o.qty + 1 } : o);
       }
       return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1, image: item.image }];
@@ -620,7 +619,7 @@ export default function CustomerKitchenMenu() {
         <button type="button" className="kh-btn-back" onClick={() => window.history.back()}>
           ← INDIETRO
         </button>
-        <span className="kh-menu-topbar-label">MENU</span>
+        <span className="kh-menu-topbar-label">{CATEGORIES.find((c) => c.key === activeCategory)?.label || 'MENU'}</span>
       </div>
 
       {/* Promo hero card */}
@@ -742,7 +741,7 @@ export default function CustomerKitchenMenu() {
             </div>
             <div className="kitch-bottom-text-wrap">
               <div className="kitch-bottom-title">
-                {itemCount === 0 ? '0 prodotti' : itemCount === 1 ? '1 prodotto' : `${itemCount} prodotti`}
+                {itemCount === 0 ? '0 ROBE NEL SACCO' : itemCount === 1 ? '1 ROBA NEL SACCO' : `${itemCount} ROBE NEL SACCO`}
               </div>
               <div className="kitch-bottom-total">€{total.toFixed(2).replace('.', ',')}</div>
             </div>
@@ -786,7 +785,7 @@ export default function CustomerKitchenMenu() {
                   </div>
                   <div className="kitch-drawer-row-content">
                     <div className="kitch-drawer-row-name">{o.name.toUpperCase()}</div>
-                    <div className="kitch-drawer-row-price">€{o.price.toFixed(2)}</div>
+                    <div className="kitch-drawer-row-price">€{o.price.toFixed(2).replace('.', ',')}</div>
                   </div>
                   <div className="kitch-drawer-row-controls">
                     <button className="kitch-qty-btn" onClick={() => removeItem(o.id)}>−</button>
@@ -796,34 +795,6 @@ export default function CustomerKitchenMenu() {
                   </div>
                 </div>
               ))}
-
-              <button
-                className="kitch-upsell-promo-card"
-                onClick={() => addItem(kitchenCartUpsell)}
-                aria-label={kitchenCartUpsell.alt || `Aggiungi ${kitchenCartUpsell.name} per €${kitchenCartUpsell.price.toFixed(2).replace('.', ',')}`}
-              >
-                <span className="kitch-upsell-icons" aria-hidden="true">
-                  <img
-                    src="/assets/kitchen/photo-patatine-da-banco.png"
-                    alt=""
-                    className="kitch-upsell-icon-img"
-                  />
-                  <img
-                    src="/assets/kitchen/photo-birra-del-tricheco.png"
-                    alt=""
-                    className="kitch-upsell-icon-img kitch-upsell-icon-img--beer"
-                  />
-                </span>
-                <span className="kitch-upsell-text">
-                  <span className="kitch-upsell-title">{kitchenCartUpsell.name.toUpperCase()}</span>
-                  {kitchenCartUpsell.subtitle && (
-                    <span className="kitch-upsell-subtitle">{kitchenCartUpsell.subtitle}</span>
-                  )}
-                </span>
-                <span className="kitch-upsell-price">
-                  +€{kitchenCartUpsell.price.toFixed(2).replace('.', ',')}
-                </span>
-              </button>
             </div>
 
             <div style={{ padding: '0 16px 12px' }}>
@@ -852,7 +823,7 @@ export default function CustomerKitchenMenu() {
             <div className="kitch-drawer-footer">
               <div className="kitch-drawer-total-row">
                 <div className="kitch-drawer-total-label">TOTALE</div>
-                <div className="kitch-drawer-total-value">€{total.toFixed(2)}</div>
+                <div className="kitch-drawer-total-value">€{total.toFixed(2).replace('.', ',')}</div>
               </div>
               <button className="kitch-btn-submit" onClick={handleSubmit} aria-label="Invia ordine" disabled={submitting} style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}>VAI ALL'ORDINE</button>
               <div className="kitch-secure-hint">🔒 Ordine sicuro e veloce</div>
