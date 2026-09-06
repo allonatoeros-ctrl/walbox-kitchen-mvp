@@ -63,7 +63,7 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('focus-code')).toHaveText('W43');
 
     // Gruppi coda
-    await expect(page.getByText('DA PAGARE', { exact: true })).toBeVisible();
+    await expect(page.getByText('DA INCASSARE', { exact: true })).toBeVisible();
     await expect(page.getByText('DA FARE', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('PRONTI', { exact: true }).first()).toBeVisible();
   });
@@ -96,6 +96,12 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
 
   test('4. pagamento rapido: incassa e torna al focus precedente', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
+    // Il pagamento rapido chiama la RPC Supabase reale (kitchen_payment_record_counter):
+    // gli ordini seed sono locali/demo e non esistono lato server, quindi va mockato
+    // il path RPC corrente per verificare il comportamento della UI a fronte di un esito positivo.
+    await page.route('**/rest/v1/rpc/kitchen_payment_record_counter', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+    );
     await page.goto('/kitchen/solo');
 
     await expect(page.getByTestId('focus-code')).toHaveText('W43');
@@ -315,5 +321,87 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('focus-code')).toHaveText('W43');
     await expect(page.getByTestId('next-action')).toContainText('PRONTO');
     await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
+  });
+});
+
+// Sprint 3A — notifica audio nuovo ordine. Sostituisce il Web Audio reale con un mock
+// registrato prima di ogni navigazione, per osservare quali toni (frequenze) vengono
+// suonati senza dipendere da hardware audio reale.
+test.describe('Kitchen — Solo Service Sprint 3A: notifica audio nuovo ordine', () => {
+
+  async function mockAudioContext(page) {
+    await page.addInitScript(() => {
+      window.__audioEvents = [];
+      class MockOscillator {
+        constructor() { this.frequency = { value: 0 }; }
+        connect(dest) { return dest; }
+        start() { window.__audioEvents.push(this.frequency.value); }
+        stop() {}
+      }
+      class MockGain {
+        constructor() { this.gain = { setValueAtTime() {}, exponentialRampToValueAtTime() {} }; }
+        connect(dest) { return dest; }
+      }
+      class MockAudioContext {
+        constructor() { this.state = 'running'; this.currentTime = 0; this.destination = {}; }
+        createOscillator() { return new MockOscillator(); }
+        createGain() { return new MockGain(); }
+        resume() { this.state = 'running'; return Promise.resolve(); }
+      }
+      window.AudioContext = MockAudioContext;
+      window.webkitAudioContext = MockAudioContext;
+    });
+  }
+
+  test('16. nessun suono al primo mount per un ordine pending_counter_payment già in coda', async ({ page }) => {
+    await mockAudioContext(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    // W47 (pending_counter_payment) è già nel seed iniziale: non è un "nuovo" ordine.
+    await expect(page.getByTestId('kpi-paga')).toHaveText('1');
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__audioEvents.length)).toBe(0);
+  });
+
+  // Nota: la verifica end-to-end del suono di notifyCounterPayment() (invariato, fuori
+  // scope Sprint 3A) richiederebbe un click su CONFERMA PAGAMENTO che in questo ambiente
+  // fallisce per un gap pre-esistente e non correlato (VITE_SUPABASE_URL/ANON_KEY assenti
+  // al server Vite di test — stesso gap che fa fallire anche il test 4 preesistente,
+  // "pagamento rapido"). La distinzione dei due suoni resta comunque garantita a livello di
+  // codice: observeOrders() chiama sempre play([660, 880]), notifyCounterPayment() chiama
+  // sempre play([440, 660, 880]) — vedi src/hooks/useKitchenAudio.js.
+  test('17. un nuovo ordine pending_counter_payment suona "nuovo ordine", senza doppioni sul poll successivo', async ({ page }) => {
+    await mockAudioContext(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await expect(page.getByTestId('kpi-paga')).toHaveText('1');
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__audioEvents.length)).toBe(0);
+
+    // Simula l'arrivo di un nuovo ordine da incassare (come da un altro dispositivo/tab):
+    // scrive in localStorage e forza il refresh con lo stesso evento 'focus' già ascoltato
+    // da useKitchenOrders per la sync cross-tab.
+    await page.evaluate(({ key }) => {
+      const current = JSON.parse(localStorage.getItem(key));
+      current.push({
+        id: 'solo-5', orderCode: 'W48', table: 'T6', nickname: 'Elisa',
+        items: [{ itemId: 'item-001', name: 'Smash Burger', quantity: 1, price: 9.0 }],
+        total: 9.0, status: 'pending_counter_payment', paymentStatus: 'pending',
+        createdAt: new Date().toISOString(), note: '',
+      });
+      localStorage.setItem(key, JSON.stringify(current));
+      window.dispatchEvent(new Event('focus'));
+    }, { key: LS_ORDERS });
+
+    await expect(page.getByTestId('kpi-paga')).toHaveText('2');
+    await expect.poll(() => page.evaluate(() => window.__audioEvents.length)).toBe(2);
+    expect(await page.evaluate(() => window.__audioEvents)).toEqual([660, 880]);
+
+    // Dedup: un secondo refresh senza nuovi ordini non deve riprodurre di nuovo il suono.
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    await page.waitForTimeout(300);
+    expect(await page.evaluate(() => window.__audioEvents.length)).toBe(2);
   });
 });

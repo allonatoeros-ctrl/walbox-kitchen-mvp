@@ -40,18 +40,10 @@ export default function AlertView({ orders }) {
 
   const urgentOrders = activeOrders.filter((o) => elapsedMinutes(o.createdAt) >= 10);
 
-  // Allergen summary: group by table, collect all allergens from active orders
-  const allergensByTable = {};
-  activeOrders.forEach((o) => {
-    const allergens = getAllergens(o);
-    if (allergens.length === 0) return;
-    if (!allergensByTable[o.table]) allergensByTable[o.table] = { table: o.table, allergens: new Set() };
-    allergens.forEach((a) => allergensByTable[o.table].allergens.add(a));
-  });
-  const allergenRows = Object.values(allergensByTable).map((r) => ({
-    table: r.table,
-    allergens: [...r.allergens],
-  }));
+  // Allergen summary: one row per ordine attivo con allergeni (no tavoli nel contratto Kitchen).
+  const allergenRows = activeOrders
+    .map((o) => ({ orderCode: o.orderCode, nickname: o.nickname, allergens: getAllergens(o) }))
+    .filter((r) => r.allergens.length > 0);
 
   const hasAlerts = urgentOrders.length > 0 || allergenRows.length > 0;
 
@@ -85,7 +77,7 @@ export default function AlertView({ orders }) {
               return (
                 <div key={order.id} className={`ksd-row ${cls}`}>
                   <div className="ksd-row-left">
-                    <span className="ksd-row-table">{order.table}</span>
+                    {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
                     <span className="ksd-row-nickname">{order.nickname}</span>
                     <span className="ksd-row-time">{elapsedLabel(mins)}</span>
                   </div>
@@ -121,14 +113,15 @@ export default function AlertView({ orders }) {
             style={{ background: '#1a0505', borderLeft: '3px solid #ef4444' }}
           >
             <span className="ksd-section-label" style={{ color: '#ef4444' }}>ALLERGENI ATTIVI</span>
-            <span className="ksd-section-count" style={{ color: '#ef4444' }}>{allergenRows.length} tavol{allergenRows.length === 1 ? 'o' : 'i'}</span>
+            <span className="ksd-section-count" style={{ color: '#ef4444' }}>{allergenRows.length} ordin{allergenRows.length === 1 ? 'e' : 'i'}</span>
           </div>
 
           <div className="ksd-row-list">
             {allergenRows.map((row) => (
-              <div key={row.table} className="ksd-row">
+              <div key={row.orderCode ?? row.nickname} className="ksd-row">
                 <div className="ksd-row-left">
-                  <span className="ksd-row-table">{row.table}</span>
+                  {row.orderCode && <span className="ksd-row-code">#{row.orderCode}</span>}
+                  <span className="ksd-row-nickname">{row.nickname}</span>
                 </div>
                 <div className="ksd-row-center">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>

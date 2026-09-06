@@ -5,6 +5,7 @@ import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { kitchenMenuItems } from '../data/kitchenMockData';
 import { getStaffSession, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
 import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPreviewFixtures';
+import { useKitchenAudio } from '../hooks/useKitchenAudio';
 import MenuView from './MenuView';
 import StoricoView from './StoricoView';
 import AlertView from './AlertView';
@@ -64,7 +65,7 @@ function getAllergens(order) {
 }
 
 const STATUS_PILL = {
-  pending_counter_payment: { label: 'DA PAGARE',      cls: 'pending' },
+  pending_counter_payment: { label: 'DA INCASSARE',   cls: 'pending' },
   received:                { label: 'DA PREPARARE',   cls: 'received' },
   preparing:               { label: 'IN PREPARAZIONE', cls: 'preparing' },
   ready:                   { label: 'PRONTO',          cls: 'ready' },
@@ -208,6 +209,7 @@ export function KitchenSoloServiceView({
   const [, setTick]                   = useState(0);
   // Undo P0-B: { orderId, orderCode, fromStatus, actionLabel, expiresAt } | null — un solo undo alla volta.
   const [undo, setUndo]               = useState(null);
+  const { enabled: audioEnabled, toggle: toggleAudio, observeOrders, notifyCounterPayment } = useKitchenAudio();
 
   // ritorno al focus precedente dopo un pagamento rapido
   const returnFocusRef = useRef(null);
@@ -230,6 +232,10 @@ export function KitchenSoloServiceView({
     () => orders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled'),
     [orders]
   );
+
+  useEffect(() => {
+    observeOrders(orders);
+  }, [orders, observeOrders]);
 
   const daPagare = useMemo(() => sortQueueBy(active.filter(isPending), snoozed), [active, snoozed]);
   const daFare   = useMemo(() => sortQueueBy(active.filter(isToDo),   snoozed), [active, snoozed]);
@@ -255,10 +261,11 @@ export function KitchenSoloServiceView({
   const allergens = focusOrder ? getAllergens(focusOrder) : [];
   const lateFocus = focusOrder ? minutesSince(focusOrder.createdAt) >= 15 : false;
 
-  const runAction = (kind, order = focusOrder) => {
+  const runAction = async (kind, order = focusOrder) => {
     if (!order) return;
     if (kind === 'pay') {
-      confirmPayment(order.id, 'counter');
+      const result = await confirmPayment(order.id, 'cash');
+      if (result?.ok) notifyCounterPayment(order.id);
       // Ritorno al focus precedente se il pagamento era una deviazione.
       if (returnFocusRef.current && returnFocusRef.current !== order.id) {
         setFocusId(returnFocusRef.current);
@@ -292,9 +299,10 @@ export function KitchenSoloServiceView({
   };
 
   /** Pagamento rapido da card laterale: incassa senza perdere il focus corrente. */
-  const quickPay = (order) => {
+  const quickPay = async (order) => {
     const keep = focusOrder?.id ?? null;
-    confirmPayment(order.id, 'counter');
+    const result = await confirmPayment(order.id, 'cash');
+    if (result?.ok) notifyCounterPayment(order.id);
     if (keep) setFocusId(keep);
   };
 
@@ -384,8 +392,6 @@ export function KitchenSoloServiceView({
                 <span className="kss-qcard-line1">
                   {o.orderCode}
                   <span className="kss-qcard-dot">·</span>
-                  {o.table}
-                  <span className="kss-qcard-dot">·</span>
                   <span className="kss-qcard-min">{mins} min</span>
                 </span>
                 <span className="kss-qcard-line2">{itemsLine(o)}</span>
@@ -423,6 +429,9 @@ export function KitchenSoloServiceView({
         </span>
         <span className="kss-header-spacer" />
         <div className="kss-header-actions">
+          <button className="kss-secondary-btn" onClick={toggleAudio} aria-pressed={audioEnabled}>
+            <span aria-hidden="true">{audioEnabled ? '🔊' : '🔇'}</span><span className="kss-secondary-label">AUDIO</span>
+          </button>
           <button className="kss-secondary-btn" onClick={() => setOverlay('menu')}>
             <span aria-hidden="true">☰</span><span className="kss-secondary-label">MENU</span>
             {unavailableCount > 0 && <span className="kss-secondary-badge">{unavailableCount}</span>}
@@ -493,7 +502,7 @@ export function KitchenSoloServiceView({
             )}
 
             <div className="kss-queue-scroll">
-              {renderGroup('pagare', 'DA PAGARE', daPagare, 'pagare')}
+              {renderGroup('pagare', 'DA INCASSARE', daPagare, 'pagare')}
               {renderGroup('fare',   'DA FARE',   daFare,   'fare')}
               {renderGroup('pronti', 'PRONTI',    pronti,   'pronti')}
               {daPagare.length + daFare.length + pronti.length === 0 && (
@@ -521,8 +530,6 @@ export function KitchenSoloServiceView({
                   </span>
                   <div className="kss-focus-code">
                     <span data-testid="focus-code">{focusOrder.orderCode}</span>
-                    <span className="kss-focus-sep">·</span>
-                    <span>{focusOrder.table}</span>
                     <span className="kss-focus-sep kss-focus-sep--min">·</span>
                     <span className="kss-focus-min">{minutesSince(focusOrder.createdAt)} MIN</span>
                   </div>

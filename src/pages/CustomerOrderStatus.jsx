@@ -487,8 +487,8 @@ export default function CustomerOrderStatus() {
         <div className="ost-info-grid-header">DATI ORDINE</div>
         <div className="ost-info-grid-cells">
           <div className="ost-info-cell">
-            <div className="ost-info-label">TAVOLO</div>
-            <div className="ost-info-value ost-info-value--yellow">{order.table}</div>
+            <div className="ost-info-label">RITIRO</div>
+            <div className="ost-info-value ost-info-value--yellow">AL BANCO</div>
           </div>
           <div className="ost-info-cell">
             <div className="ost-info-label">NICKNAME</div>

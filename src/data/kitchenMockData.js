@@ -431,7 +431,6 @@ export const demoKitchenOrders = [
   {
     id: 'order-001',
     orderCode: 'W40',
-    table: 'T3',
     nickname: 'Gamba Lunga',
     items: [
       { itemId: 'item-007', name: 'Combo CAVALLOOOO', quantity: 2, price: 16.0 },
@@ -444,7 +443,6 @@ export const demoKitchenOrders = [
   {
     id: 'order-002',
     orderCode: 'W41',
-    table: 'T7',
     nickname: 'Sabrina87',
     items: [
       { itemId: 'item-001', name: 'Panino Porcheria Seria', quantity: 1, price: 8.5 },
@@ -459,7 +457,6 @@ export const demoKitchenOrders = [
   {
     id: 'order-003',
     orderCode: 'W43',
-    table: 'T1',
     nickname: 'IlCapo',
     items: [
       { itemId: 'item-004', name: 'Patatine Fuori di Testa', quantity: 1, price: 5.5 },
@@ -474,7 +471,6 @@ export const demoKitchenOrders = [
   {
     id: 'order-004',
     orderCode: 'W42',
-    table: 'T5',
     nickname: 'MarcoCavallo',
     items: [
       { itemId: 'item-002', name: 'Panino del Tricheco', quantity: 1, price: 9.0 },
@@ -492,7 +488,6 @@ export const demoKitchenOrders = [
   {
     id: 'order-005',
     orderCode: 'W44',
-    table: 'T4',
     nickname: 'FuriosaDelBanco',
     items: [
       { itemId: 'item-007', name: 'Combo CAVALLOOOO', quantity: 1, price: 16.0 },
@@ -510,7 +505,6 @@ export const demoKitchenOrders = [
   {
     id: 'order-006',
     orderCode: 'W45',
-    table: 'T9',
     nickname: 'SpartatoViaSubito',
     items: [
       { itemId: 'item-002', name: 'Panino del Tricheco', quantity: 1, price: 9.0 },

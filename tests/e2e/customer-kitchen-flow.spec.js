@@ -140,7 +140,7 @@ test('3c. Empty cart bar persists, disabled CTA, no drawer; refills after last i
   const addCta = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
   await expect(addCta).toBeVisible();
   await expect(addCta).toBeDisabled();
-  await expect(page.getByText('0 prodotti')).toBeVisible();
+  await expect(page.getByText('0 ROBE NEL SACCO')).toBeVisible();
   await expect(page.getByText('€0,00')).toBeVisible();
 
   // Clicking the empty bar must not open the drawer
@@ -161,7 +161,7 @@ test('3c. Empty cart bar persists, disabled CTA, no drawer; refills after last i
   const addCtaAfter = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
   await expect(addCtaAfter).toBeVisible();
   await expect(addCtaAfter).toBeDisabled();
-  await expect(page.getByText('0 prodotti')).toBeVisible();
+  await expect(page.getByText('0 ROBE NEL SACCO')).toBeVisible();
   await expect(page.getByText('€0,00')).toBeVisible();
 });
 
@@ -200,7 +200,7 @@ test('3e. All panini sold out: every CTA disabled, category still browsable, not
   const addCta = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
   await expect(addCta).toBeVisible();
   await expect(addCta).toBeDisabled();
-  await expect(page.getByText('0 prodotti')).toBeVisible();
+  await expect(page.getByText('0 ROBE NEL SACCO')).toBeVisible();
 });
 
 test('3f. Category with zero items shows "NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA"', async ({ page }) => {
@@ -324,7 +324,9 @@ test('4b. Back button on /kitchen/status meets 44x44 tap target on mobile viewpo
   }
 });
 
-test('5. Staff dashboard shows T12 and Eros', async ({ page }) => {
+test('5. Staff dashboard shows Eros', async ({ page }) => {
+  // No-tables contract: la staff dashboard non mostra più il pill tavolo
+  // (rimosso da KitchenOrdersView.jsx), il nickname resta l'identificatore visibile.
   const orders = makeSeedOrder();
   await page.evaluate(
     ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
@@ -333,7 +335,6 @@ test('5. Staff dashboard shows T12 and Eros', async ({ page }) => {
 
   await page.goto('/kitchen/staff');
 
-  await expect(page.getByText('T12')).toBeVisible();
   await expect(page.getByText('Eros')).toBeVisible();
 });
 
@@ -387,11 +388,17 @@ async function readOrders(page) {
 // ── QA-1: Happy Path ───────────────────────────────────────────────
 
 test('7. Bancone confirma pagamento → status received', async ({ page }) => {
+  // Il bottone unico "PAGATO" è stato splittato in CONTANTI ✓ / CARTA/POS ✓ (CounterOrdersView).
+  // La conferma chiama la RPC Supabase reale (kitchen_payment_record_counter): l'ordine seed
+  // è locale/demo e non esiste lato server, quindi va mockato il path RPC corrente.
+  await page.route('**/rest/v1/rpc/kitchen_payment_record_counter', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  );
   await seedOrders(page, [makeQAOrder({ status: 'pending_counter_payment' })]);
   await page.goto('/kitchen/staff');
 
   await expect(page.getByText('IN ATTESA PAGAMENTO')).toBeVisible();
-  await page.getByRole('button', { name: /PAGATO/i }).click();
+  await page.getByRole('button', { name: /CONTANTI/i }).click();
   await expect(page.getByText('IN ATTESA PAGAMENTO')).not.toBeVisible();
 
   const orders = await readOrders(page);

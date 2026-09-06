@@ -30,6 +30,7 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
   const [customReason, setCustomReason] = useState('');
   const [editingNoteId, setEditingNoteId] = useState(null);
   const [noteValue, setNoteValue] = useState('');
+  const [payingId, setPayingId] = useState(null);
 
   const startNote = (order) => { setEditingNoteId(order.id); setNoteValue(order.staffNote || ''); };
   const saveNote = (orderId) => { updateStaffNote(orderId, noteValue.trim()); setEditingNoteId(null); };
@@ -60,6 +61,14 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
   };
 
   const isConfirmDisabled = !cancelReason || (cancelReason === 'Altro' && !customReason.trim());
+
+  const recordCounterPayment = async (order, method) => {
+    if (payingId) return;
+    if (method === 'card_counter_manual' && !window.confirm(`Confermi che la carta/POS è stata incassata per € ${order.total.toFixed(2)}?`)) return;
+    setPayingId(order.id);
+    await confirmPayment(order.id, method);
+    setPayingId(null);
+  };
 
   const renderCancelPanel = (order) => (
     <div className="ksd-cancel-panel">
@@ -198,7 +207,6 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                 <div key={order.id} className={`ksd-row ${isCancelling ? 'ksd-row--cancelling' : ''}`}>
                   <div className="ksd-row-left">
                     {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
-                    <span className="ksd-row-table">{order.table}</span>
                     <span className="ksd-row-nickname">{order.nickname}</span>
                     <span className="ksd-row-time">
                       {formatTime(order.createdAt)} · in attesa {elapsedMinutes(order.createdAt)}
@@ -224,9 +232,18 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                         <button
                           className="ksd-btn-action"
                           style={{ background: '#a855f7', color: '#fff' }}
-                          onClick={() => confirmPayment(order.id, 'counter')}
+                          disabled={payingId === order.id}
+                          onClick={() => recordCounterPayment(order, 'cash')}
                         >
-                          PAGATO ✓
+                          {payingId === order.id ? 'REGISTRO…' : 'CONTANTI ✓'}
+                        </button>
+                        <button
+                          className="ksd-btn-action"
+                          style={{ background: '#2563eb', color: '#fff' }}
+                          disabled={payingId === order.id}
+                          onClick={() => recordCounterPayment(order, 'card_counter_manual')}
+                        >
+                          CARTA/POS ✓
                         </button>
                         <button className="ksd-btn-cancel" onClick={() => startCancel(order.id)}>
                           ANNULLA
@@ -262,7 +279,6 @@ export default function CounterOrdersView({ orders, confirmPayment, updateOrderS
                 <div key={order.id} className={`ksd-row ${isCancelling ? 'ksd-row--cancelling' : ''}`}>
                   <div className="ksd-row-left">
                     {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
-                    <span className="ksd-row-table">{order.table}</span>
                     <span className="ksd-row-nickname">{order.nickname}</span>
                     <span className="ksd-row-time">
                       {order.readyAt

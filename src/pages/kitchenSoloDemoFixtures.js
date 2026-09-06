@@ -16,39 +16,39 @@ function minutesAgo(minutes) {
 function seedOrders() {
   return [
     {
-      id: 'demo-1', orderCode: 'D101', table: 'T3', nickname: 'Rocco',
+      id: 'demo-1', orderCode: 'D101', nickname: 'Rocco',
       items: [{ itemId: 'item-001', name: 'Porchetta', quantity: 1, price: 8.5 }],
       total: 8.5, status: 'pending_counter_payment', paymentStatus: 'pending',
       createdAt: minutesAgo(2), note: '', actionLog: [],
     },
     {
-      id: 'demo-2', orderCode: 'D098', table: 'T6', nickname: 'Wanda',
+      id: 'demo-2', orderCode: 'D098', nickname: 'Wanda',
       items: [{ itemId: 'item-004', name: 'Patatine Fuori di Testa', quantity: 2, price: 5.5 }],
       total: 11.0, status: 'pending_counter_payment', paymentStatus: 'pending',
       createdAt: minutesAgo(4), note: '', actionLog: [],
     },
     {
       // allergene reale: item-002 dichiara glutine/uova/senape in kitchenMockData.js
-      id: 'demo-3', orderCode: 'D095', table: 'T1', nickname: 'Bea',
+      id: 'demo-3', orderCode: 'D095', nickname: 'Bea',
       items: [{ itemId: 'item-002', name: 'Panino del Tricheco', quantity: 1, price: 9.0 }],
       total: 9.0, status: 'received', paymentStatus: 'paid',
       createdAt: minutesAgo(7), note: 'Senza senape se possibile', staffNote: 'Allergia dichiarata: uova', actionLog: [],
     },
     {
-      id: 'demo-4', orderCode: 'D091', table: 'T4', nickname: 'Otto',
+      id: 'demo-4', orderCode: 'D091', nickname: 'Otto',
       items: [{ itemId: 'item-007', name: 'Combo CAVALLOOOO', quantity: 1, price: 16.0 }],
       total: 16.0, status: 'preparing', paymentStatus: 'paid',
       createdAt: minutesAgo(12), note: '', staffNote: '', actionLog: [],
     },
     {
-      id: 'demo-5', orderCode: 'D088', table: 'T2', nickname: 'Nadia',
+      id: 'demo-5', orderCode: 'D088', nickname: 'Nadia',
       items: [{ itemId: 'item-004', name: 'Patatine Fuori di Testa', quantity: 1, price: 5.5 }],
       total: 5.5, status: 'ready', paymentStatus: 'paid',
       createdAt: minutesAgo(18), readyAt: minutesAgo(3), note: '', actionLog: [],
     },
     {
       // ordine dedicato al controllo demo "SIMULA SYNC ✗" (vedi KitchenSoloServiceDemo.jsx)
-      id: DEMO_SYNC_ORDER_ID, orderCode: 'D085', table: 'T8', nickname: 'Furio',
+      id: DEMO_SYNC_ORDER_ID, orderCode: 'D085', nickname: 'Furio',
       items: [{ itemId: 'item-001', name: 'Porchetta', quantity: 1, price: 8.5 }],
       total: 8.5, status: 'received', paymentStatus: 'paid',
       createdAt: minutesAgo(9), note: '', staffNote: '', actionLog: [],

@@ -116,7 +116,6 @@ export default function KitchenOrdersView({ orders, updateOrderStatus }) {
                   return (
                     <div key={order.id} className={`ksd-row ${urgencyClass(timerRef(order))}`}>
                       <div className="ksd-row-left">
-                        <span className="ksd-row-table">{order.table}</span>
                         <span className="ksd-row-nickname">{order.nickname}</span>
                         <span className="ksd-row-time">
                           {formatTime(order.createdAt)}

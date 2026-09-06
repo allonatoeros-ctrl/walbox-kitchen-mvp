@@ -140,7 +140,6 @@ export default function StoricoView({ orders }) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                       <div className="ksd-history-row-left">
                         {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
-                        <span className="ksd-row-table">{order.table}</span>
                         <span className="ksd-row-nickname">{order.nickname}</span>
                         <span className="ksd-row-time">{formatTime(order.createdAt)}</span>
                       </div>

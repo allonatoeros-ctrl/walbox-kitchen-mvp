@@ -233,15 +233,6 @@
   flex-shrink: 0;
   width: 130px;
 }
-.ksd-row-table {
-  background: var(--k-yellow);
-  color: #111;
-  font-size: 15px;
-  font-weight: 900;
-  border-radius: 5px;
-  padding: 2px 8px;
-  line-height: 1.4;
-}
 .ksd-row-nickname {
   font-size: 12px;
   color: #ccc;
