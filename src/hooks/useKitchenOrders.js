@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { demoKitchenOrders } from '../data/kitchenMockData';
 import { supabase } from '../lib/supabaseClient';
+import { nextLocalOperationalCode } from '../lib/kitchenOrderCode';
 
 const LS_KEY = 'walbox_kitchen_orders_demo';
 
@@ -27,7 +28,8 @@ function mapSupabaseOrder(row) {
   return {
     id:            row.id,
     orderCode:     row.order_code,
-    table:         row.table_id,
+    serviceDay:     row.service_day ?? null,
+    serviceSequence: row.service_sequence ?? null,
     nickname:      row.nickname,
     status:        row.status,
     total:         row.total,
@@ -68,6 +70,21 @@ export async function supabaseUpdateOrder(id, patch) {
     console.warn('[Walbox] Supabase update failed — localStorage updated only', err);
     return { ok: false, error: err };
   }
+}
+
+// export solo per il test mirato Sprint 3B (mock.channel/.on/.subscribe); nessun nuovo
+// consumer applicativo oltre a useKitchenOrders.
+export function subscribeToKitchenOrdersRealtime(onChange) {
+  return supabase
+    .channel('realtime:kitchen_orders')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'kitchen_orders', filter: 'venue_id=eq.walrus-main' },
+      onChange
+    )
+    .subscribe((status, err) => {
+      if (err) console.warn('[Walbox] kitchen_orders realtime subscribe error:', err);
+    });
 }
 
 async function supabaseInsertActionLog({ order_id, action, from_status, to_status, reason, metadata, created_at }) {
@@ -162,6 +179,28 @@ export function useKitchenOrders() {
     return () => clearInterval(intervalId);
   }, []);
 
+  // Realtime: rileva nuovi/aggiornati kitchen_orders quasi immediatamente. Il poll 10s sopra
+  // resta come fallback (rete instabile, realtime non disponibile, ecc.). Nessun mapping
+  // parallelo: alla notifica si rilancia lo stesso fetch canonico usato dal poll, così lo
+  // stato resta identico indipendentemente dalla fonte del trigger (nessun doppio inserimento).
+  useEffect(() => {
+    let channel;
+    let cancelled = false;
+
+    async function init() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || cancelled) return;
+      channel = subscribeToKitchenOrdersRealtime(() => fetchSupabaseOrders());
+    }
+
+    init();
+
+    return () => {
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
+
   const applyLocalSyncStatus = (id, syncStatus, syncError) => {
     setOrders((prev) => {
       const next = prev.map((o) => (o.id === id ? { ...o, syncStatus, syncError } : o));
@@ -210,76 +249,78 @@ export function useKitchenOrders() {
   };
 
   const addOrder = async (order) => {
-    setOrders((prev) => {
-      const next = [...prev, { actionLog: [], ...order }];
-      saveOrders(next);
-      return next;
-    });
-
+    const localCode = nextLocalOperationalCode('walrus-main');
+    let createdOrder = {
+      actionLog: [],
+      ...order,
+      ...localCode,
+      orderCode: localCode.orderCode,
+    };
     try {
       let { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         const { data, error } = await supabase.auth.signInAnonymously();
         if (error) throw error;
         session = data.session;
-      }
-      if (!session) return;
+      };
+      if (!session) throw new Error('customer_session_missing');
 
-      const { error: orderError } = await supabase.from('kitchen_orders').insert({
-        id:             order.id,
-        order_code:     order.orderCode,
-        venue_id:       'walrus-main',
-        table_id:       order.table,
-        nickname:       order.nickname,
-        customer_id:    session.user.id,
-        status:         order.status,
-        total:          order.total,
-        payment_status: order.paymentStatus,
-        payment_method: order.paymentMethod,
-        paid_at:        order.paidAt,
-        created_at:     order.createdAt,
-        customer_note:  order.note ?? null,
+      // The DB RPC is the authoritative boundary for operational code allocation and customer
+      // order persistence. No table/fulfillment concept: Kitchen has no tables (product
+      // decision 2026-09-05, see ai-ops/reports/sprint3b-no-tables-correction-audit.md).
+      const { data, error } = await supabase.rpc('kitchen_customer_create_order', {
+        p_venue_id: 'walrus-main',
+        p_nickname: order.nickname,
+        p_customer_note: order.note ?? null,
+        p_items: order.items.map((item) => ({
+          item_id: item.itemId,
+          name: item.name,
+          quantity: item.quantity,
+          price: item.price,
+        })),
       });
-      if (orderError) throw orderError;
+      if (error) throw error;
+      if (!data?.id || !data?.order_code) throw new Error('order_creation_invalid_response');
 
-      if (order.items?.length) {
-        const { error: itemsError } = await supabase.from('kitchen_order_items').insert(
-          order.items.map((item) => ({
-            order_id: order.id,
-            venue_id: 'walrus-main',
-            item_id:  item.itemId,
-            name:     item.name,
-            quantity: item.quantity,
-            price:    item.price,
-          }))
-        );
-        if (itemsError) throw itemsError;
+      createdOrder = {
+        ...createdOrder,
+        id: data.id,
+        orderCode: data.order_code,
+        serviceDay: data.service_day,
+        serviceSequence: data.service_sequence,
+        total: Number(data.total),
+        createdAt: data.created_at,
       }
     } catch (err) {
-      console.warn('[Walbox] Supabase write failed — order saved to localStorage only', err);
+      console.warn('[Walbox] Order RPC unavailable — local-only fallback active', err);
     }
+
+    setOrders((prev) => {
+      const next = [...prev, createdOrder];
+      saveOrders(next);
+      return next;
+    });
+    return createdOrder;
   };
 
-  // Counter/cash confirmation only (all call sites pass 'counter'). Marking an order paid is a
-  // Payment Hub write: it must go through kitchen_payment_record_cash, never a direct table patch,
-  // so payment_status/payment_method/paid_at and the kitchen_payments row stay coherent and RPC
-  // failures don't get shown to staff as a successful payment.
-  const confirmPayment = async (orderId) => {
+  // A counter confirmation is always a Payment Hub write. The amount comes from the order locked
+  // by the server; the client can choose only an explicit counter method.
+  const confirmPayment = async (orderId, method = 'cash') => {
     const current = orders.find((o) => o.id === orderId);
     if (!current) return;
 
     try {
-      const { error } = await supabase.rpc('kitchen_payment_record_cash', {
+      const { error } = await supabase.rpc('kitchen_payment_record_counter', {
         p_order_id: orderId,
-        p_amount: current.total,
+        p_method: method,
       });
-      // order_already_paid = another call already recorded this cash payment (double click /
+      // order_already_paid = another call already recorded this payment (double click /
       // concurrent staff action) — the order IS paid, so this is not a real failure.
       if (error && !error.message?.includes('order_already_paid')) throw error;
     } catch (err) {
-      console.warn('[Walbox] Cash payment RPC failed — order not marked paid', err);
+      console.warn('[Walbox] Counter payment RPC failed — order not marked paid', err);
       applyLocalSyncStatus(orderId, 'error', 'Pagamento non registrato — riprova');
-      return;
+      return { ok: false, error: err };
     }
 
     const now = new Date().toISOString();
@@ -289,7 +330,7 @@ export function useKitchenOrders() {
         const updated = {
           ...o,
           paymentStatus: 'paid',
-          paymentMethod: 'cash',
+          paymentMethod: method,
           paidAt: now,
           status: o.status === 'pending_counter_payment' ? 'received' : o.status,
           syncStatus: 'synced',
@@ -314,6 +355,7 @@ export function useKitchenOrders() {
         created_at:  now,
       });
     }
+    return { ok: true, method };
   };
 
   const cancelOrder = (id, reason) => {

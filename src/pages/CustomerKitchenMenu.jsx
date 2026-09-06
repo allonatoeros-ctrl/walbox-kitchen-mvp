@@ -97,10 +97,6 @@ const HOME_FEATURED = [
 const CUSTOMER_HIDDEN_ITEM_IDS = ['item-001', 'item-002'];
 
 
-function generateOrderCode() {
-  return 'W-' + Math.random().toString(36).slice(2, 5).toUpperCase() + Date.now().toString(36).slice(-2).toUpperCase();
-}
-
 function drawerIcon(name) {
   const n = name.toLowerCase();
   if (n.includes('birra') || n.includes('pils')) return '🍺';
@@ -297,13 +293,11 @@ export default function CustomerKitchenMenu() {
   const total = orderItems.reduce((sum, o) => sum + o.price * o.qty, 0);
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (orderItems.length === 0 || submitting) return;
     setSubmitting(true);
-    const orderCode = generateOrderCode();
     const newOrder = {
       id: `order-${Date.now()}`,
-      table: session.table ? `T${session.table}` : 'T7',
       nickname: session.nickname,
       items: orderItems.map((o) => ({ itemId: o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
@@ -312,13 +306,15 @@ export default function CustomerKitchenMenu() {
       paymentStatus: 'pending_counter_payment',
       paymentMethod: 'counter',
       paidAt: null,
-      orderCode,
       createdAt: new Date().toISOString(),
     };
-    addOrder(newOrder);
-    try { localStorage.setItem('walbox_kitchen_last_order_id', newOrder.id); } catch { }
-    setSubmittedOrderId(newOrder.id);
-    setSubmittedOrderCode(orderCode);
+    // Il codice ordine è sempre quello di ritorno di addOrder() (server-side quando la
+    // RPC è disponibile, altrimenti il fallback locale A01…Z99): mai calcolato qui, per
+    // non mostrare al cliente un codice diverso da quello davvero salvato/mostrato a staff.
+    const createdOrder = await addOrder(newOrder);
+    try { localStorage.setItem('walbox_kitchen_last_order_id', createdOrder.id); } catch { }
+    setSubmittedOrderId(createdOrder.id);
+    setSubmittedOrderCode(createdOrder.orderCode);
     setSubmitted(true);
   };
 
@@ -471,34 +467,6 @@ export default function CustomerKitchenMenu() {
             HAI UN ORDINE ATTIVO → SEGUI IL TUO ORDINE
           </span>
         </button>
-      )}
-
-      {/* Missing table warning */}
-      {!session.table && (
-        <div style={{
-          margin: '12px 16px 0',
-          padding: '12px 14px',
-          background: 'rgba(240,90,36,0.08)',
-          border: '1px solid rgba(240,90,36,0.3)',
-          borderRadius: 8,
-          display: 'flex',
-          alignItems: 'flex-start',
-          gap: 8,
-        }}>
-          <span style={{ flexShrink: 0, fontSize: 15 }}>⚠️</span>
-          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, fontWeight: 600, color: 'rgba(245,234,216,0.8)', lineHeight: 1.4 }}>
-            Nessun tavolo rilevato — l&apos;ordine sarà assegnato al tavolo 7.{' '}
-            <button
-              onClick={() => {
-                window.history.pushState({}, '', '/kitchen/entry');
-                window.dispatchEvent(new PopStateEvent('popstate'));
-              }}
-              style={{ background: 'none', border: 'none', padding: 0, color: '#f05a24', fontWeight: 700, fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
-            >
-              Torna all&apos;ingresso per selezionare il tuo tavolo.
-            </button>
-          </span>
-        </div>
       )}
 
       {/* Header — Figma 111:59 (banner) + 111:63 cornice + 111:60/61/62 claim + 111:64 rule.

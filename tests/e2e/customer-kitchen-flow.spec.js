@@ -88,7 +88,16 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   // Submit the order
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
-  // Verify localStorage: latest order must have T12 and Eros
+  // handleSubmit ora attende addOrder() (sessione anonima + tentativo RPC) prima di mostrare
+  // la conferma: aspettare lo schermo ORDINE RICEVUTO è il segnale reale che l'ordine è stato
+  // scritto (fallback locale incluso), invece di leggere localStorage a tempo fisso subito
+  // dopo il click.
+  await expect(page.getByText('ORDINE RICEVUTO')).toBeVisible();
+
+  // No-tables contract (2026-09-05): Kitchen non ha tavoli/asporto. L'ordine creato
+  // deve preservare l'identità cliente (nickname) e avere un order_code coerente
+  // (fallback locale A01…Z99 quando la RPC server-side non è raggiungibile), senza
+  // richiedere né scrivere alcun campo table/fulfillment.
   const orders = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key) || '[]'),
     LS_ORDERS,
@@ -97,8 +106,10 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
   )[0];
   expect(latest).toBeDefined();
-  expect(latest.table).toBe('T12');
   expect(latest.nickname).toBe('Eros');
+  expect(latest.orderCode).toMatch(/^[A-Z]+\d{2}$/);
+  expect(latest.table).toBeUndefined();
+  expect(latest.fulfillmentType).toBeUndefined();
 });
 
 test('3b. Sold-out item shows ESAURITO overlay and disabled ESAURITO CTA', async ({ page }) => {
