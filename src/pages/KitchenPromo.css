@@ -1,0 +1,668 @@
+/* KitchenPromo.css — /kitchen/promo · Concept A APPROVATO
+   Source of truth visiva: Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED (node 74-2).
+   Palette / tipografia / header ripresi 1:1 dal menu cliente reale
+   (CustomerKitchenMenu.css .kh-* e PesiMassimiSection.css .pm-*): stessi valori
+   esadecimali, stesso font stack, stesso header asset. Prefisso .kp- isolato:
+   nessuna regola qui tocca il menu approvato. Mobile-first 390px. */
+
+.kp-page {
+  --kp-bg: #0e0c08;
+  --kp-card: #1c1a14;
+  --kp-red: #c84020;
+  --kp-red-dark: #b83020;
+  --kp-gold: #c8960a;
+  --kp-cream: #e8ddb8;
+  --kp-cream-hi: #f2d8a7;
+  --kp-sand: #d4c89a;
+  --kp-muted: #8a7e60;
+  --kp-rule: #2e2a1e;
+  --kp-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
+
+  /* Curve fisiche condivise: nessun ease lineare, nessun bounce gratuito. */
+  --kp-ease: cubic-bezier(0.16, 0.84, 0.28, 1);
+  --kp-ease-settle: cubic-bezier(0.22, 1.12, 0.36, 1);
+
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  margin-inline: auto;
+  background: var(--kp-bg);
+  box-shadow: 0 0 0 100vmax var(--kp-bg);
+  color: var(--kp-cream);
+  font-family: var(--kp-font);
+  overflow-x: hidden;
+}
+
+/* ── Motion primitives ──────────────────────────────────────
+   Un solo pattern di reveal (rise + defocus) riusato con delay diversi:
+   è il timing a fare la battuta, non l'effetto. */
+@keyframes kp-rise {
+  from { opacity: 0; transform: translate3d(0, 16px, 0); filter: blur(6px); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0);   filter: blur(0); }
+}
+
+/* Reveal a tendina: il testo si scopre dal basso invece di comparire. */
+@keyframes kp-cut {
+  from { clip-path: inset(0 0 100% 0); transform: translate3d(0, 10px, 0); opacity: 0; }
+  to   { clip-path: inset(0 0 -12% 0); transform: translate3d(0, 0, 0);   opacity: 1; }
+}
+
+/* Foto: tendina laterale + assestamento della scala (nessun fade secco). */
+@keyframes kp-curtain {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes kp-settle-photo {
+  from { transform: scale(1.16); }
+  to   { transform: scale(1); }
+}
+
+@keyframes kp-bar-in {
+  from { clip-path: inset(0 100% 0 0); transform: translate3d(0, -6px, 0); }
+  to   { clip-path: inset(0 0 0 0);    transform: translate3d(0, 0, 0); }
+}
+
+/* Ingresso del blocco menu: sale e si mette a fuoco, non lampeggia. */
+@keyframes kp-body-in {
+  from { opacity: 0; transform: translate3d(0, 26px, 0) scale(0.986); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes kp-wipe {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes kp-stamp {
+  0%   { opacity: 0; transform: scale(1.35) rotate(-4deg); filter: blur(8px); }
+  70%  { opacity: 1; transform: scale(0.97) rotate(-1.2deg); filter: blur(0); }
+  100% { opacity: 1; transform: scale(1) rotate(-1.2deg); }
+}
+
+@keyframes kp-ticket {
+  from { opacity: 0; transform: translate3d(0, 46px, 0) rotate(1.6deg); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) rotate(0); }
+}
+
+@keyframes kp-sheet {
+  from { transform: translate3d(0, 100%, 0); }
+  to   { transform: translate3d(0, 0, 0); }
+}
+
+@keyframes kp-veil {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes kp-scene-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Ogni elemento con .kp-beat parte invisibile e viene rivelato dal proprio
+   --kp-d (delay). Così la sequenza è dichiarativa e leggibile nel JSX. */
+.kp-beat {
+  opacity: 0;
+  animation: kp-rise 620ms var(--kp-ease) forwards;
+  animation-delay: var(--kp-d, 0ms);
+  will-change: opacity, transform;
+}
+
+.kp-cut {
+  opacity: 0;
+  animation: kp-cut 680ms var(--kp-ease) forwards;
+  animation-delay: var(--kp-d, 0ms);
+  will-change: clip-path, transform;
+}
+
+.kp-scene {
+  animation: kp-scene-in 320ms var(--kp-ease) both;
+}
+
+/* ── Scene 1 · HOOK ─────────────────────────────────────── */
+.kp-hook {
+  padding: 26px 20px 40px;
+}
+
+.kp-hook-kicker {
+  margin: 0 0 18px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--kp-muted);
+}
+
+.kp-hook-title {
+  margin: 0;
+  font-size: 46px;
+  font-weight: 900;
+  line-height: 0.94;
+  letter-spacing: -0.01em;
+  text-transform: uppercase;
+  color: var(--kp-cream-hi);
+}
+
+.kp-rule {
+  height: 2px;
+  margin: 22px 0;
+  background: var(--kp-gold);
+  border-radius: 1px;
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: kp-wipe 520ms var(--kp-ease) forwards;
+  animation-delay: var(--kp-d, 0ms);
+}
+
+.kp-hook-line {
+  margin: 0 0 10px;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.34;
+  color: var(--kp-sand);
+}
+
+/* La punchline è la battuta: peso e colore la staccano dal contesto. */
+.kp-hook-punch {
+  margin: 4px 0 0;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.06;
+  text-transform: uppercase;
+  color: var(--kp-red);
+}
+
+/* ── Teaser fotografico Pesi Massimi (Scena 1) ──────────── */
+.kp-teaser {
+  margin-top: 26px;
+}
+
+.kp-teaser-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--kp-rule);
+  border: 1.5px solid var(--kp-rule);
+}
+
+.kp-teaser-cell {
+  position: relative;
+  margin: 0;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--kp-bg);
+  clip-path: inset(0 100% 0 0);
+  animation: kp-curtain 620ms var(--kp-ease) forwards;
+  animation-delay: var(--kp-d, 0ms);
+}
+
+.kp-teaser-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.16);
+  animation: kp-settle-photo 1500ms var(--kp-ease) forwards;
+  animation-delay: var(--kp-d, 0ms);
+}
+
+.kp-teaser-scrim {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 62%;
+  background: linear-gradient(to top, rgba(14, 12, 8, 0.94), rgba(14, 12, 8, 0));
+}
+
+.kp-teaser-name {
+  position: absolute;
+  left: 7px;
+  right: 5px;
+  bottom: 8px;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: 0.01em;
+  color: var(--kp-cream-hi);
+}
+
+.kp-teaser-foot {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 12px 0 0;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--kp-gold);
+}
+
+.kp-teaser-foot-tag {
+  padding: 4px 9px 5px;
+  border-radius: 6px;
+  background: var(--kp-red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+/* ── CTA ────────────────────────────────────────────────── */
+.kp-cta {
+  display: block;
+  width: 100%;
+  margin-top: 34px;
+  padding: 17px 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--kp-red);
+  color: #fff;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 160ms var(--kp-ease), background-color 160ms var(--kp-ease);
+}
+
+.kp-cta:active { transform: scale(0.975); background: var(--kp-red-dark); }
+
+.kp-cta--ghost {
+  background: transparent;
+  border: 1.5px solid var(--kp-rule);
+  color: var(--kp-cream);
+}
+
+.kp-cta--ghost:active { background: #17150f; }
+
+/* ── Scene 2 · REWARD ───────────────────────────────────── */
+.kp-reward {
+  padding: 0 4px 26px;
+  text-align: center;
+}
+
+.kp-reward-brand {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 0.96;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--kp-cream-hi);
+}
+
+.kp-reward-sub {
+  margin: 20px 0 0;
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.34;
+  color: var(--kp-sand);
+}
+
+/* Timbro -10%: entra grande e sfocato, si assesta ruotato come un timbro vero. */
+.kp-stamp {
+  display: inline-block;
+  margin: 44px auto 0;
+  padding: 12px 26px 14px;
+  border: 3px solid var(--kp-red);
+  border-radius: 10px;
+  font-size: 58px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--kp-red);
+  opacity: 0;
+  transform-origin: center;
+  animation: kp-stamp 760ms var(--kp-ease-settle) forwards;
+  animation-delay: var(--kp-d, 0ms);
+}
+
+/* ── Scene 3 · PASS ─────────────────────────────────────── */
+.kp-pass-scene {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* `safe center` evita che, su schermi corti, il centraggio tagli la testa
+     della scena rendendo irraggiungibile il timbro -10%. */
+  justify-content: safe center;
+  /* Il resto del viewport sotto header (130px @390) + promobar (~42px). */
+  min-height: calc(100dvh - 172px);
+  padding: 26px 16px 40px;
+}
+
+.kp-pass {
+  position: relative;
+  border-radius: 16px;
+  background: var(--kp-card);
+  border: 1.5px solid var(--kp-rule);
+  overflow: hidden;
+  opacity: 0;
+  animation: kp-ticket 720ms var(--kp-ease-settle) forwards;
+  animation-delay: var(--kp-d, 0ms);
+}
+
+.kp-pass-accent {
+  height: 6px;
+  background: var(--kp-red);
+}
+
+.kp-pass-head {
+  padding: 20px 18px 16px;
+}
+
+.kp-pass-label {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--kp-gold);
+}
+
+.kp-pass-title {
+  margin: 8px 0 0;
+  font-size: 33px;
+  font-weight: 900;
+  line-height: 0.98;
+  text-transform: uppercase;
+  color: var(--kp-cream-hi);
+}
+
+.kp-pass-benefit {
+  margin: 14px 0 0;
+  font-size: 25px;
+  font-weight: 900;
+  line-height: 1.02;
+  text-transform: uppercase;
+  color: var(--kp-red);
+}
+
+.kp-pass-copy {
+  margin: 14px 0 0;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.36;
+  color: var(--kp-sand);
+}
+
+.kp-pass-copy--punch {
+  margin-top: 6px;
+  color: var(--kp-cream);
+  font-weight: 800;
+}
+
+/* Perforazione ticket: separa il pass dallo slot codice. */
+.kp-pass-perf {
+  position: relative;
+  height: 22px;
+  margin-top: 6px;
+}
+
+.kp-pass-perf::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 50%;
+  border-top: 2px dashed var(--kp-rule);
+}
+
+.kp-pass-perf-notch {
+  position: absolute;
+  top: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  background: var(--kp-bg);
+  border-radius: 50%;
+}
+
+.kp-pass-perf-notch--l { left: -10px; }
+.kp-pass-perf-notch--r { right: -10px; }
+
+/* Slot codice personale: SPAZIO VISIVO riservato, nessun backend promo.
+   I trattini sono placeholder tipografici, non un codice reale. */
+.kp-pass-code {
+  padding: 0 18px 22px;
+}
+
+.kp-pass-code-label {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--kp-muted);
+}
+
+.kp-pass-code-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 58px;
+  border: 2px dashed var(--kp-rule);
+  border-radius: 10px;
+  background: #16140f;
+  font-family: 'Roboto Mono', ui-monospace, monospace;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  color: var(--kp-muted);
+}
+
+/* ── Scene 4 · MENU ─────────────────────────────────────── */
+/* Header: stesso asset e stessa geometria dell'header reale del menu cliente
+   (Figma 111:59/60/61/62/63/64) — replicato con prefisso .kp- per non
+   dipendere dal CSS del menu né poterlo alterare. */
+.kp-header {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 390 / 130;
+  background: var(--kp-bg);
+  overflow: hidden;
+}
+
+.kp-header-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.kp-header-frame {
+  position: absolute;
+  left: 1.538%;
+  top: 6.154%;
+  width: 96.923%;
+  height: 86.154%;
+  border: 1.5px solid var(--kp-rule);
+  border-radius: 14px;
+  pointer-events: none;
+}
+
+.kp-header-claim-cover {
+  position: absolute;
+  left: 27.692%;
+  top: 63.846%;
+  width: 70.256%;
+  height: 26.923%;
+  background: var(--kp-bg);
+}
+
+.kp-header-claim-rule {
+  position: absolute;
+  left: 28.718%;
+  top: 64.615%;
+  width: 63.590%;
+  height: 1.538%;
+  background: var(--kp-gold);
+  border-radius: 1px;
+}
+
+.kp-header-claim {
+  position: absolute;
+  left: 28.718%;
+  top: 70.769%;
+  width: 68.205%;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 16px;
+  text-align: center;
+  color: var(--kp-gold);
+}
+
+.kp-header-baseline {
+  position: absolute;
+  left: 2.051%;
+  top: 93.077%;
+  width: 95.897%;
+  height: 1.538%;
+  background: var(--kp-rule);
+  border-radius: 1px;
+}
+
+/* Barra promo persistente: ricorda il -10% mentre si esplora il menu. */
+.kp-promobar {
+  animation: kp-bar-in 520ms var(--kp-ease) both;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 11px 14px;
+  background: var(--kp-red);
+  color: #fff;
+}
+
+.kp-promobar-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.kp-menu-body {
+  opacity: 0;
+  animation: kp-body-in 720ms var(--kp-ease) forwards;
+  animation-delay: var(--kp-d, 0ms);
+  will-change: opacity, transform;
+}
+
+/* ── Scene 5 · CLOSING (sheet) ──────────────────────────── */
+.kp-closing {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(6, 5, 3, 0.82);
+  animation: kp-veil 260ms var(--kp-ease) both;
+}
+
+.kp-closing-sheet {
+  width: 100%;
+  max-width: 480px;
+  padding: 26px 20px calc(30px + env(safe-area-inset-bottom, 0px));
+  background: var(--kp-card);
+  border-top: 3px solid var(--kp-red);
+  border-radius: 18px 18px 0 0;
+  animation: kp-sheet 520ms var(--kp-ease) both;
+}
+
+.kp-closing-title {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 0.98;
+  text-transform: uppercase;
+  color: var(--kp-cream-hi);
+}
+
+.kp-closing-line {
+  margin: 14px 0 0;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.34;
+  color: var(--kp-sand);
+}
+
+.kp-closing-true {
+  margin: 16px 0 0;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1.06;
+  text-transform: uppercase;
+  color: var(--kp-gold);
+}
+
+.kp-closing-sign {
+  margin: 22px 0 0;
+  padding-top: 16px;
+  border-top: 2px solid var(--kp-rule);
+  font-size: 27px;
+  font-weight: 900;
+  line-height: 1.02;
+  text-transform: uppercase;
+  color: var(--kp-red);
+}
+
+.kp-closing-back {
+  display: block;
+  width: 100%;
+  margin-top: 20px;
+  padding: 14px;
+  border: 1.5px solid var(--kp-rule);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--kp-muted);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+/* Fast-forward: chi ha già capito la battuta tocca lo sfondo e la sequenza
+   collassa a zero delay invece di essere saltata del tutto. */
+.kp-rush .kp-beat,
+.kp-rush .kp-cut,
+.kp-rush .kp-rule,
+.kp-rush .kp-stamp,
+.kp-rush .kp-pass,
+.kp-rush .kp-teaser-cell,
+.kp-rush .kp-teaser-img,
+.kp-rush .kp-menu-body {
+  animation-delay: 0ms !important;
+}
+
+/* ── Reduced motion: la sequenza resta, il movimento no. ── */
+@media (prefers-reduced-motion: reduce) {
+  .kp-beat,
+  .kp-cut,
+  .kp-rule,
+  .kp-stamp,
+  .kp-pass,
+  .kp-scene,
+  .kp-promobar,
+  .kp-teaser-cell,
+  .kp-teaser-img,
+  .kp-menu-body,
+  .kp-closing,
+  .kp-closing-sheet {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+  }
+  .kp-rule { transform: scaleX(1); }
+  .kp-stamp { transform: rotate(-1.2deg); }
+  .kp-teaser-cell { clip-path: none; }
+  .kp-teaser-img { transform: scale(1); }
+}

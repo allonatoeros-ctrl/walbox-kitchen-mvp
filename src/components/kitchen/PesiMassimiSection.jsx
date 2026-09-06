@@ -16,17 +16,29 @@ import './PesiMassimiSection.css';
 
 const CARET_SRC = '/assets/kitchen/pesi-massimi-caret.svg';
 
-function formatPrice(value) {
+function formatPrice(value, forceDecimals = false) {
   if (value == null) return '';
-  return `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`;
+  if (!forceDecimals && Number.isInteger(value)) return `€${value}`;
+  return `€${value.toFixed(2).replace('.', ',')}`;
 }
 
 /**
  * Props opzionali (additive, non cambiano il rendering approvato):
  *  - heroOnly: renderizza SOLO la hero fotografica (128:2), usata nella Home.
  *  - onHeroCta: override del CTA `SCOPRI →` (default: scroll alla lista CLOSED).
+ *  - hideCombo: nasconde il blocco upsell FALLO PESANTE. Serve a /kitchen/promo,
+ *    dove il menu mostra solo panini singoli. Default false = menu invariato.
+ *  - forceDecimals: forza i due decimali anche sui prezzi interi (€15,00 invece
+ *    di €15). Default false = formattazione approvata del menu invariata.
  */
-export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onHeroCta }) {
+export default function PesiMassimiSection({
+  items,
+  onAdd,
+  heroOnly = false,
+  onHeroCta,
+  hideCombo = false,
+  forceDecimals = false,
+}) {
   const [openId, setOpenId] = useState(null);
   const listRef = useRef(null);
   const bodyRefs = useRef({});
@@ -70,7 +82,7 @@ export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onH
             {items.map((item) => (
               <div key={item.id}>
                 <p className="pm-hero-price-label">{item.name.toUpperCase()}</p>
-                <p className="pm-hero-price-value">{formatPrice(item.price)}</p>
+                <p className="pm-hero-price-value">{formatPrice(item.price, forceDecimals)}</p>
               </div>
             ))}
           </div>
@@ -83,7 +95,7 @@ export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onH
         {items.map((item) => {
           const isOpen = openId === item.id;
           const soldOut = item.available === false;
-          const combo = kitchenPesiMassimiCombos[item.id];
+          const combo = hideCombo ? null : kitchenPesiMassimiCombos[item.id];
           return (
             <article
               key={item.id}
@@ -113,7 +125,7 @@ export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onH
                   tabIndex={isOpen ? -1 : 0}
                 >
                   <span className="pm-card-closed-name">{item.name.toUpperCase()}</span>
-                  <span className="pm-card-closed-price">{formatPrice(item.price)}</span>
+                  <span className="pm-card-closed-price">{formatPrice(item.price, forceDecimals)}</span>
                   <span className="pm-card-open-cta">
                     {soldOut ? 'ESAURITO' : 'VEDI IL PANINO'}
                   </span>
@@ -136,7 +148,7 @@ export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onH
                   <div className="pm-card-rule" />
                   <div className="pm-price-row">
                     <span className="pm-price-block">
-                      <span className="pm-price-value">{formatPrice(item.price)}</span>
+                      <span className="pm-price-value">{formatPrice(item.price, forceDecimals)}</span>
                       <span className="pm-price-note">SOLO PANINO</span>
                     </span>
                     <button
@@ -161,7 +173,7 @@ export default function PesiMassimiSection({ items, onAdd, heroOnly = false, onH
                       <p className="pm-upsell-title">FALLO PESANTE</p>
                       <p className="pm-upsell-sub">{combo.subtitle}</p>
                       <div className="pm-upsell-row">
-                        <p className="pm-upsell-price">{formatPrice(combo.price)}</p>
+                        <p className="pm-upsell-price">{formatPrice(combo.price, forceDecimals)}</p>
                         <button
                           type="button"
                           className="pm-btn-heavy"
