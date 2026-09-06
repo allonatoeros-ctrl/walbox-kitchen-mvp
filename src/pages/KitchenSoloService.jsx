@@ -355,7 +355,7 @@ export function KitchenSoloServiceView({
   const matchesSearch = (o) => {
     if (!search.trim()) return true;
     const q = search.trim().toLowerCase();
-    return [o.orderCode, o.table, o.nickname].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
+    return [o.orderCode, o.nickname].filter(Boolean).some((v) => String(v).toLowerCase().includes(q));
   };
 
   const renderGroup = (key, label, list, modifier) => {
