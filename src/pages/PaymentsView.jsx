@@ -8,6 +8,7 @@ const METHOD_LABELS = {
   sumup_pos: 'Carta (POS)',
   satispay_app: 'Satispay',
   cash: 'Contanti',
+  card_counter_manual: 'Carta/POS al banco',
   manual_comp: 'Omaggio',
   manual_other: 'Manuale',
 };
