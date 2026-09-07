@@ -322,6 +322,50 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('next-action')).toContainText('PRONTO');
     await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
   });
+
+  // P0-1 — vedi ai-ops/reports/kitchen-solo-final-operational-review.md: dopo una qualunque
+  // selezione manuale (tap coda, RINVIA, quick-pay, PREC/SUCC) focusId resta "agganciato" a un
+  // id preciso e il vecchio fallback su workOrder[0] smette di far avanzare il focus dopo PRONTO.
+  test('16. P0-1: selezione manuale in coda poi PRONTO — il focus avanza, non resta bloccato', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    // Selezione manuale esplicita (anche sull'ordine già in focus): fissa focusId, come farebbe
+    // uno staff che tocca la coda per orientarsi — precondizione del bug P0-1.
+    await page.locator('.kss-qcard[data-order="W43"]').click();
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+    await expect(page.getByTestId('next-action')).toContainText('PRONTO');
+
+    await page.getByTestId('next-action').click();
+
+    // Il focus deve avanzare al prossimo ordine da fare (W44), non restare bloccato su W43
+    // (ora "pronto"): altrimenti l'operatore vede "RITIRATO" su un ordine già fatto mentre W44
+    // resta ignorato in coda.
+    await expect(page.getByTestId('focus-code')).toHaveText('W44');
+    await expect(page.getByTestId('next-action')).toContainText('INIZIA');
+    // W43 resta in coda, ora tra i PRONTI: nessun ordine perso.
+    await expect(page.locator('.kss-qcard[data-order="W43"]')).toBeVisible();
+  });
+
+  test('17. P0-1: RINVIA, selezione di ritorno, poi PRONTO — il focus avanza comunque', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto('/kitchen/solo');
+
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+    await page.getByRole('button', { name: /RINVIA/ }).click();
+    await expect(page.getByTestId('focus-code')).toHaveText('W44');
+
+    // Lo staff torna manualmente su W43 (rinviato ma ancora attivo) per completarlo.
+    await page.locator('.kss-qcard[data-order="W43"]').click();
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+    await expect(page.getByTestId('next-action')).toContainText('PRONTO');
+
+    await page.getByTestId('next-action').click();
+
+    // Anche dopo RINVIA + selezione di ritorno, il focus avanza al prossimo ordine da fare
+    // (W44), non resta bloccato su W43 appena segnato pronto.
+    await expect(page.getByTestId('focus-code')).toHaveText('W44');
+  });
 });
 
 // Sprint 3A — notifica audio nuovo ordine. Sostituisce il Web Audio reale con un mock

@@ -46,6 +46,29 @@ export function useKitchenAudio() {
     return contextRef.current.state === 'running';
   }, []);
 
+  // P1-1: il primo ordine della giornata può arrivare prima che lo staff tocchi qualunque
+  // elemento della pagina — senza un gesture, i browser tengono l'AudioContext sospeso e
+  // observeOrders() (chiamato da un effect, non da un click) resta silenzioso senza alcun
+  // avviso visivo (vedi ai-ops/reports/kitchen-solo-final-operational-review.md P1-1). Un solo
+  // ascolto one-shot sul primo tap/click qualsiasi sblocca il contesto in anticipo: nessun suono
+  // viene riprodotto qui, solo resume() dell'AudioContext.
+  useEffect(() => {
+    let done = false;
+    const armAudioContext = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener('pointerdown', armAudioContext);
+      window.removeEventListener('click', armAudioContext);
+      unlock();
+    };
+    window.addEventListener('pointerdown', armAudioContext, { once: true });
+    window.addEventListener('click', armAudioContext, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', armAudioContext);
+      window.removeEventListener('click', armAudioContext);
+    };
+  }, [unlock]);
+
   const play = useCallback(async (frequencies) => {
     if (!enabled || !(await unlock())) return false;
     frequencies.forEach((frequency, index) => tone(contextRef.current, frequency, index * 0.14));

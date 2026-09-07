@@ -288,6 +288,17 @@ export function KitchenSoloServiceView({
         expiresAt: Date.now() + 9000,
       });
     }
+    // P0-1: dopo PRONTO il focus deve avanzare al prossimo ordine da lavorare, anche se focusId
+    // era già stato fissato in precedenza da selezione manuale/RINVIA/quick-pay/PREC-SUCC (finora
+    // restava "agganciato" all'ordine appena completato — vedi
+    // ai-ops/reports/kitchen-solo-final-operational-review.md P0-1). Stessa priorità operativa
+    // già esistente (workOrder = da fare → da pagare → pronti), nessuno scheduler nuovo. Se non
+    // resta nessun altro ordine attivo, focusId torna a null: il fallback su workOrder[0] mostra
+    // comunque l'unico ordine rimasto (quello appena segnato pronto) o lo stato vuoto.
+    if (kind === 'ready') {
+      const next = workOrder.find((o) => o.id !== order.id);
+      setFocusId(next?.id ?? null);
+    }
   };
 
   /** Click esplicito ANNULLA: unico modo per ripristinare lo stato precedente. Nessun reverse silenzioso. */
@@ -444,7 +455,7 @@ export function KitchenSoloServiceView({
             {alertCount > 0 && <span className="kss-secondary-badge">{alertCount}</span>}
           </button>
           <button className="kss-secondary-btn" onClick={() => navigate('/kitchen/staff')}>
-            <span className="kss-secondary-label">DASHBOARD</span>
+            <span aria-hidden="true">📊</span><span className="kss-secondary-label">DASHBOARD</span>
             {paymentAlertCount > 0 && (
               <span className="kss-secondary-badge" data-testid="payment-anomaly-badge">
                 {paymentAlertCount}

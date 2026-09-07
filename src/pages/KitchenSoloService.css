@@ -774,11 +774,6 @@
   .kss-header-actions { gap: 2px; }
   .kss-secondary-btn { padding: 7px 8px; }
   .kss-secondary-btn span.kss-secondary-label { display: none; }
-  /* DASHBOARD non ha icona: senza etichetta resterebbe un bottone vuoto */
-  .kss-header-actions .kss-secondary-btn:last-child span.kss-secondary-label {
-    display: inline;
-    font-size: 10px;
-  }
 
   .kss-body { grid-template-columns: 1fr; }
 
@@ -839,4 +834,15 @@
   .kss-focus-sep--min, .kss-focus-min { display: none; }
   .kss-bar-btn { padding: 15px 8px; font-size: 12px; }
   .kss-phone-btn { padding: 13px 6px; }
+}
+
+/* P1-2: a 375-390px l'header (SOLO SERVICE MODE + 5 azioni secondarie) trabocca ancora di
+   qualche pixel oltre il viewport, lasciando DASHBOARD (badge anomalie pagamento incluso)
+   parzialmente tagliato — vedi ai-ops/reports/kitchen-solo-final-operational-review.md P1-2.
+   Nessun cambio di contenuto: solo margini/spaziatura più stretti sui telefoni più piccoli. */
+@media (max-width: 400px) {
+  .kss-header { padding: 8px 6px; gap: 4px; }
+  .kss-mode { font-size: 12px; gap: 4px; letter-spacing: 0.3px; }
+  .kss-header-actions { gap: 0; }
+  .kss-secondary-btn { padding: 7px 6px; }
 }
