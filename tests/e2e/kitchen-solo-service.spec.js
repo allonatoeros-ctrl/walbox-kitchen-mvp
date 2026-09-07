@@ -409,12 +409,14 @@ test.describe('Kitchen — Solo Service Sprint 3A: notifica audio nuovo ordine',
   });
 
   // Nota: la verifica end-to-end del suono di notifyCounterPayment() (invariato, fuori
-  // scope Sprint 3A) richiederebbe un click su CONFERMA PAGAMENTO che in questo ambiente
-  // fallisce per un gap pre-esistente e non correlato (VITE_SUPABASE_URL/ANON_KEY assenti
-  // al server Vite di test — stesso gap che fa fallire anche il test 4 preesistente,
-  // "pagamento rapido"). La distinzione dei due suoni resta comunque garantita a livello di
-  // codice: observeOrders() chiama sempre play([660, 880]), notifyCounterPayment() chiama
-  // sempre play([440, 660, 880]) — vedi src/hooks/useKitchenAudio.js.
+  // scope Sprint 3A / audio UX fix) richiederebbe un click su CONFERMA PAGAMENTO che in
+  // questo ambiente fallisce per un gap pre-esistente e non correlato (VITE_SUPABASE_URL/
+  // ANON_KEY assenti al server Vite di test — stesso gap che fa fallire anche il test 4
+  // preesistente, "pagamento rapido"). La distinzione dei due suoni resta comunque garantita
+  // a livello di codice: observeOrders() chiama sempre notifyNewOrder() — doppio richiamo
+  // 990→1320Hz ripetuto due volte, timbro chime (fondamentale + ottava), ~1.56s totali —,
+  // notifyCounterPayment() chiama sempre play([440, 660, 880]) — vedi
+  // src/hooks/useKitchenAudio.js.
   test('17. un nuovo ordine pending_counter_payment suona "nuovo ordine", senza doppioni sul poll successivo', async ({ page }) => {
     await mockAudioContext(page);
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -440,12 +442,15 @@ test.describe('Kitchen — Solo Service Sprint 3A: notifica audio nuovo ordine',
     }, { key: LS_ORDERS });
 
     await expect(page.getByTestId('kpi-paga')).toHaveText('2');
-    await expect.poll(() => page.evaluate(() => window.__audioEvents.length)).toBe(2);
-    expect(await page.evaluate(() => window.__audioEvents)).toEqual([660, 880]);
+    // notifyNewOrder(): doppio richiamo 990→1320Hz ripetuto due volte, timbro chime — ogni nota
+    // suona fondamentale + ottava superiore (audio UX fix "più udibile, tipo iPhone") — 4 note ×
+    // 2 oscillatori = 8 eventi.
+    await expect.poll(() => page.evaluate(() => window.__audioEvents.length)).toBe(8);
+    expect(await page.evaluate(() => window.__audioEvents)).toEqual([990, 1980, 1320, 2640, 990, 1980, 1320, 2640]);
 
     // Dedup: un secondo refresh senza nuovi ordini non deve riprodurre di nuovo il suono.
     await page.evaluate(() => window.dispatchEvent(new Event('focus')));
     await page.waitForTimeout(300);
-    expect(await page.evaluate(() => window.__audioEvents.length)).toBe(2);
+    expect(await page.evaluate(() => window.__audioEvents.length)).toBe(8);
   });
 });

@@ -7,18 +7,40 @@ function readEnabled() {
   try { return localStorage.getItem(ENABLED_KEY) !== 'false'; } catch { return true; }
 }
 
-function tone(context, frequency, delay = 0) {
+function tone(context, frequency, delay = 0, { peakGain = 0.14, attack = 0.015, duration = 0.22 } = {}) {
   const oscillator = context.createOscillator();
   const gain = context.createGain();
   oscillator.type = 'sine';
   oscillator.frequency.value = frequency;
   gain.gain.setValueAtTime(0.0001, context.currentTime + delay);
-  gain.gain.exponentialRampToValueAtTime(0.14, context.currentTime + delay + 0.015);
-  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + delay + 0.22);
+  gain.gain.exponentialRampToValueAtTime(peakGain, context.currentTime + delay + attack);
+  gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + delay + duration);
   oscillator.connect(gain).connect(context.destination);
   oscillator.start(context.currentTime + delay);
-  oscillator.stop(context.currentTime + delay + 0.24);
+  oscillator.stop(context.currentTime + delay + duration + 0.02);
 }
+
+// Chime: fondamentale + overtone all'ottava superiore a gain ridotto e decadimento più rapido —
+// timbro "glassy"/campanellante (tipo notifica iPhone) invece del sine puro e morbido di tone().
+// Attacco secco (6ms vs 15ms) per un onset più netto e percepito come più presente/udibile.
+// Usato solo da notifyNewOrder(): non tocca tone()/play()/notifyCounterPayment().
+function chime(context, frequency, delay, { peakGain = 0.3, attack = 0.006, duration = 0.35 } = {}) {
+  tone(context, frequency, delay, { peakGain, attack, duration });
+  tone(context, frequency * 2, delay, { peakGain: peakGain * 0.35, attack, duration: duration * 0.55 });
+}
+
+// Nuovo-ordine (Sprint3B T3 UX fix, iterazione "più udibile, tipo iPhone"): doppio richiamo a 2
+// note ascendenti (990→1320Hz, quarta giusta — più brillanti delle 660/880 iniziali), separato da
+// una pausa — pattern "ding-ding ... ding-ding", ~1.56s totali, volume deciso (peakGain 0.3) con
+// timbro a campana (chime, vedi sopra) per restare udibile in un locale rumoroso senza diventare
+// aggressivo. Onset a delay 0: nessun ritardo percepito. Non tocca notifyCounterPayment.
+const NEW_ORDER_CALL_GAP = 1.05;
+const NEW_ORDER_PATTERN = [
+  { frequency: 990, delay: 0 },
+  { frequency: 1320, delay: 0.16 },
+  { frequency: 990, delay: NEW_ORDER_CALL_GAP },
+  { frequency: 1320, delay: NEW_ORDER_CALL_GAP + 0.16 },
+];
 
 // Browser-only pilot audio. Seen IDs persist in sessionStorage so refresh/reconnect/multi-tab
 // never replay historical paid orders as if they were newly received.
@@ -75,6 +97,12 @@ export function useKitchenAudio() {
     return true;
   }, [enabled, unlock]);
 
+  const notifyNewOrder = useCallback(async () => {
+    if (!enabled || !(await unlock())) return false;
+    NEW_ORDER_PATTERN.forEach(({ frequency, delay }) => chime(contextRef.current, frequency, delay));
+    return true;
+  }, [enabled, unlock]);
+
   const toggle = useCallback(async () => {
     const next = !enabled;
     setEnabled(next);
@@ -99,9 +127,9 @@ export function useKitchenAudio() {
     notifiable.forEach((order) => {
       if (seenRef.current.has(order.id)) return;
       remember(order.id);
-      play([660, 880]);
+      notifyNewOrder();
     });
-  }, [play, remember]);
+  }, [notifyNewOrder, remember]);
 
   const notifyCounterPayment = useCallback((orderId) => {
     remember(orderId);
