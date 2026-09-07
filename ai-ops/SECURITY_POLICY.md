@@ -33,6 +33,20 @@ Il router non esegue mai deploy (`vercel deploy` o equivalenti) e non modifica c
 
 Il router non esegue mai scritture dirette su Supabase (insert/update/delete, migrazioni, modifiche a policy/RLS) per proprio conto. Le tabelle e le policy restano area protetta (CLAUDE.md §5).
 
+### 5.1 Regola anti-drift del migration ledger (dal 2026-09-07)
+
+Quando una migration viene approvata e applicata, **l'apply passa esclusivamente da `supabase db push --linked`**.
+Sono vietati come canale di apply `mcp__supabase__apply_migration` e `supabase db query --linked -f <file>`:
+generano una `version` nuova al momento dell'esecuzione invece di riusare quella del filename, quindi ogni
+apply lascia nel ledger una riga che nessun file locale rivendica. È la causa provata dei due disallineamenti
+del 2026-08-28 (8 righe) e del 2026-09-07 (6 righe).
+
+Se un'emergenza approvata da Eros impone comunque un apply fuori da `db push`, la riconciliazione del ledger
+(rinomina del file locale sulla version realmente registrata) va fatta **nello stesso task**, non rimandata.
+
+Verifica minima prima di chiudere qualunque task che tocca `supabase/migrations/`:
+`npx supabase migration list --linked` → zero righe pending e zero righe remote-only.
+
 ## 6. No modifica env/secrets
 
 Il router non legge, stampa, crea o sovrascrive `.env`, `.env.local`, chiavi, token o segreti in nessuna forma, nemmeno parziale o mascherata.

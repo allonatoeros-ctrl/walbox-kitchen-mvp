@@ -1,7 +1,7 @@
-// 20260830150000_kitchen_payment_attempt_claim_checkout_v1.test.js — contratto RPC
+// 20260830143353_kitchen_payment_attempt_claim_checkout_v1.test.js — contratto RPC
 // kitchen_payment_attempt_claim_checkout (P0 duplicate live checkout guard, Layer 2).
 // Stile repo: assert statiche sul sorgente SQL, nessuna connessione DB reale.
-// Eseguire a mano: node --test supabase/migrations/20260830150000_kitchen_payment_attempt_claim_checkout_v1.test.js
+// Eseguire a mano: node --test supabase/migrations/20260830143353_kitchen_payment_attempt_claim_checkout_v1.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
@@ -9,7 +9,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(join(__dirname, '20260830150000_kitchen_payment_attempt_claim_checkout_v1.sql'), 'utf8');
+const src = readFileSync(join(__dirname, '20260830143353_kitchen_payment_attempt_claim_checkout_v1.sql'), 'utf8');
 
 function fnBody() {
   const start = src.indexOf('CREATE OR REPLACE FUNCTION public.kitchen_payment_attempt_claim_checkout');
@@ -55,4 +55,4 @@ test('grant execute solo a service_role (mai a authenticated: nessun input diret
   assert.doesNotMatch(src, /TO authenticated/);
 });
 
-console.log('20260830150000_kitchen_payment_attempt_claim_checkout_v1.test.js: tutti i test passati.');
+console.log('20260830143353_kitchen_payment_attempt_claim_checkout_v1.test.js: tutti i test passati.');

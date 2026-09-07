@@ -1,8 +1,8 @@
-// 20260830130000_kitchen_payment_failed_retry_promotion_v1.test.js — contratto
+// 20260830101227_kitchen_payment_failed_retry_promotion_v1.test.js — contratto
 // kitchen_payment_attempt_start / kitchen_payment_confirm / kitchen_payment_fail dopo la fix
 // "same-checkout retry" (LONG SESSION F).
 // Stile repo: assert statiche sul sorgente SQL, nessuna connessione DB reale.
-// Eseguire a mano: node --test supabase/migrations/20260830130000_kitchen_payment_failed_retry_promotion_v1.test.js
+// Eseguire a mano: node --test supabase/migrations/20260830101227_kitchen_payment_failed_retry_promotion_v1.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(join(__dirname, '20260830130000_kitchen_payment_failed_retry_promotion_v1.sql'), 'utf8');
+const src = readFileSync(join(__dirname, '20260830101227_kitchen_payment_failed_retry_promotion_v1.sql'), 'utf8');
 
 function fnBody(name) {
   const start = src.indexOf(`CREATE OR REPLACE FUNCTION public.${name}`);
@@ -177,4 +177,4 @@ test('grant execute invariati (attempt_start->authenticated, confirm->service_ro
   assert.match(src, /GRANT EXECUTE ON FUNCTION public\.kitchen_payment_fail\(uuid, text, jsonb\)\s+TO authenticated, service_role;/);
 });
 
-console.log('20260830130000_kitchen_payment_failed_retry_promotion_v1.test.js: tutti i test passati.');
+console.log('20260830101227_kitchen_payment_failed_retry_promotion_v1.test.js: tutti i test passati.');
