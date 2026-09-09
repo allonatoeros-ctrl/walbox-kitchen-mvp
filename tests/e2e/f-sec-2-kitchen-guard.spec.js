@@ -5,10 +5,14 @@ import { test, expect } from '@playwright/test';
 // e' solo un redirect di compatibilita' verso /kitchen/solo (KitchenStaffRedirect.jsx), che e'
 // l'unica UI operativa staff e applica il proprio guard identico (getStaffSession/isKitchenStaff).
 // I test qui verificano quindi anche il redirect stesso, non solo il guard a valle.
-// NOTA: lo storageState reale (sessione Supabase) va fornito via env FSEC2_STORAGE_STATE
-// (file JSON fuori repo, non committato). Se assente, i test auth-dependent sono skip
-// (non falliscono) per non esporre credenziali ne' richiedere auth reale in sandbox.
-const STORAGE_STATE = process.env.FSEC2_STORAGE_STATE || '';
+// NOTA: le storageState reali (sessioni Supabase, file JSON fuori repo, mai committati) vanno
+// fornite via env. Il file viene passato al meccanismo nativo Playwright `storageState` in
+// `browser.newContext(...)` (che legge e applica cookie+localStorage per origine da solo,
+// PRIMA del primo load pagina) — non va mai fatto un JSON.parse manuale del path in
+// addInitScript, che tratterebbe il path stesso come contenuto JSON. Se una var e' assente, il
+// test che dipende da quella sessione e' skip (non fallisce), indipendentemente dalle altre.
+const STAFF_STORAGE_STATE = process.env.FSEC2_STORAGE_STATE || '';
+const NONSTAFF_STORAGE_STATE = process.env.FSEC2_NONSTAFF_STORAGE_STATE || '';
 
 test.describe('F-SEC-2 Kitchen staff guard', () => {
   test('T1: /kitchen/staff (redirect compat) anonimo -> /kitchen/solo -> guard -> /kitchen/login', async ({ page }) => {
@@ -20,64 +24,41 @@ test.describe('F-SEC-2 Kitchen staff guard', () => {
     await expect(page).toHaveURL(/\/kitchen\/login/);
   });
 
-  test('T2: authenticated NON-staff -> accesso negato / redirect login', async ({ page }) => {
-    test.skip(!STORAGE_STATE, 'storageState non-staff non fornito (FSEC2_STORAGE_STATE)');
-    await page.goto('/');
-    await page.context().clearCookies();
-    await page.addInitScript((state) => {
-      // inietta la sessione Supabase non-staff dal storageState fornito
-      const parsed = JSON.parse(state);
-      for (const { name, value } of parsed.cookies || []) {
-        document.cookie = `${name}=${value}; path=/`;
-      }
-      for (const { name, value } of parsed.localStorage || []) {
-        localStorage.setItem(name, value);
-      }
-    }, STORAGE_STATE);
+  test('T2: authenticated NON-staff -> accesso negato / redirect login', async ({ browser }) => {
+    test.skip(!NONSTAFF_STORAGE_STATE, 'storageState non-staff non fornito (FSEC2_NONSTAFF_STORAGE_STATE)');
+    const context = await browser.newContext({ storageState: NONSTAFF_STORAGE_STATE });
+    const page = await context.newPage();
     await page.goto('/kitchen/staff');
     await page.waitForURL('**/kitchen/login', { timeout: 10000 });
     await expect(page).toHaveURL(/\/kitchen\/login/);
+    await context.close();
   });
 
-  test('T3: staff autorizzato staff87 -> Solo Service visibile', async ({ page }) => {
-    test.skip(!STORAGE_STATE, 'storageState staff non fornito (FSEC2_STORAGE_STATE)');
-    await page.goto('/');
-    await page.addInitScript((state) => {
-      const parsed = JSON.parse(state);
-      for (const { name, value } of parsed.cookies || []) {
-        document.cookie = `${name}=${value}; path=/`;
-      }
-      for (const { name, value } of parsed.localStorage || []) {
-        localStorage.setItem(name, value);
-      }
-    }, STORAGE_STATE);
+  test('T3: staff autorizzato staff87 -> Solo Service visibile', async ({ browser }) => {
+    test.skip(!STAFF_STORAGE_STATE, 'storageState staff non fornito (FSEC2_STORAGE_STATE)');
+    const context = await browser.newContext({ storageState: STAFF_STORAGE_STATE });
+    const page = await context.newPage();
     await page.goto('/kitchen/staff');
     await page.waitForURL('**/kitchen/solo', { timeout: 10000 });
     // Solo Service e' l'unica UI operativa: nessuna tab BANCONE/CUCINA, header "SOLO SERVICE MODE"
     await expect(page.getByText('SOLO SERVICE MODE')).toBeVisible({ timeout: 10000 });
     await expect(page.getByRole('button', { name: /MENU/i })).toBeVisible();
+    await context.close();
   });
 
-  test('T4: logout -> ritorno al login', async ({ page }) => {
+  test('T4: logout -> ritorno al login', async ({ browser }) => {
     // Solo Service espone LOGOUT nel menu secondario ALTRO... (non nell'header), usando lo stesso
     // auth/logout flow esistente (supabaseAuth.signOut) — vedi KitchenSoloService.jsx handleLogout.
-    test.skip(!STORAGE_STATE, 'storageState staff non fornito (FSEC2_STORAGE_STATE)');
-    await page.goto('/');
-    await page.addInitScript((state) => {
-      const parsed = JSON.parse(state);
-      for (const { name, value } of parsed.cookies || []) {
-        document.cookie = `${name}=${value}; path=/`;
-      }
-      for (const { name, value } of parsed.localStorage || []) {
-        localStorage.setItem(name, value);
-      }
-    }, STORAGE_STATE);
+    test.skip(!STAFF_STORAGE_STATE, 'storageState staff non fornito (FSEC2_STORAGE_STATE)');
+    const context = await browser.newContext({ storageState: STAFF_STORAGE_STATE });
+    const page = await context.newPage();
     await page.goto('/kitchen/staff');
     await expect(page.getByText('SOLO SERVICE MODE')).toBeVisible({ timeout: 10000 });
     await page.getByRole('button', { name: /ALTRO/i }).click();
     await page.getByRole('button', { name: /LOGOUT/i }).click();
     await page.waitForURL('**/kitchen/login', { timeout: 10000 });
     await expect(page).toHaveURL(/\/kitchen\/login/);
+    await context.close();
   });
 
   // T5 (non-staff non puo' aggiornare kitchen_orders) e' coperto dal backstop DB (P0-2-R6):
