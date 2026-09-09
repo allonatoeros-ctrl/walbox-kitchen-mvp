@@ -536,6 +536,20 @@
 .kss-next-btn--yellow { background: var(--kss-yellow); color: #171204; box-shadow: 0 10px 28px rgba(234, 179, 8, 0.24); }
 .kss-next-btn-main { font-size: 28px; font-weight: 900; letter-spacing: 0.6px; line-height: 1.1; }
 .kss-next-btn-sub { margin-top: 7px; font-size: 12px; font-weight: 700; letter-spacing: 0.4px; opacity: 0.75; }
+.kss-next-btn-alt {
+  width: 100%;
+  border: 1px solid var(--kss-yellow);
+  border-radius: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  background: transparent;
+  color: var(--kss-yellow);
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+}
+.kss-next-btn-alt:active { transform: translateY(1px); }
 
 .kss-quickpay {
   background: var(--kss-panel-2);
@@ -576,6 +590,8 @@
   font-family: inherit;
 }
 .kss-quickpay-btn:hover { background: #2b2205; }
+.kss-quickpay-btn--alt { border-color: var(--kss-line); color: #c6d3e0; }
+.kss-quickpay-btn--alt:hover { background: rgba(255, 255, 255, 0.04); }
 
 .kss-focus-empty {
   flex: 1;

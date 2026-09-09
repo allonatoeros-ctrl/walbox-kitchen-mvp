@@ -3,7 +3,7 @@ import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { kitchenMenuItems } from '../data/kitchenMockData';
-import { getStaffSession, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
+import { getStaffSession, onAuthStateChange, isKitchenStaff, signOut } from '../lib/supabaseAuth';
 import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPreviewFixtures';
 import { useKitchenAudio } from '../hooks/useKitchenAudio';
 import MenuView from './MenuView';
@@ -158,6 +158,16 @@ function KitchenSoloServiceLive() {
 
   if (!authChecked) return null;
 
+  // Stesso auth/logout flow esistente (supabaseAuth.signOut, usato da KitchenStaffDashboard.jsx),
+  // nessuna nuova logica: chiude la sessione e torna al login con una navigazione reale.
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } finally {
+      navigate('/kitchen/login');
+    }
+  };
+
   return (
     <KitchenSoloServiceView
       orders={orders}
@@ -169,6 +179,7 @@ function KitchenSoloServiceLive() {
       menuItems={menuItems}
       toggleAvailability={toggleAvailability}
       paymentAnomalies={paymentAnomalies}
+      onLogout={handleLogout}
     />
   );
 }
@@ -197,6 +208,8 @@ export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
   paymentsPath = '/kitchen/payments',
+  // Default per Preview/Demo/Training (nessuna sessione reale da chiudere): solo navigazione.
+  onLogout = () => navigate('/kitchen/login'),
 }) {
   const [focusId, setFocusId]         = useState(null);
   const [checked, setChecked]         = useState({});   // { [orderId]: { [idx]: true } }
@@ -261,10 +274,23 @@ export function KitchenSoloServiceView({
   const allergens = focusOrder ? getAllergens(focusOrder) : [];
   const lateFocus = focusOrder ? minutesSince(focusOrder.createdAt) >= 15 : false;
 
-  const runAction = async (kind, order = focusOrder) => {
+  // Contratto RPC invariato (kitchen_payment_record_counter, p_method: 'cash' | 'card_counter_manual'),
+  // stesso gate di conferma esplicita di CounterOrdersView.jsx per la carta/POS: l'incasso avviene
+  // su hardware esterno e non è verificabile dall'app.
+  const recordCounterPayment = async (order, method) => {
+    if (method === 'card_counter_manual') {
+      const amount = order.total != null ? order.total.toFixed(2) : '?';
+      if (!window.confirm(`Confermi che la carta/POS è stata incassata per € ${amount}?`)) {
+        return { ok: false, cancelled: true };
+      }
+    }
+    return confirmPayment(order.id, method);
+  };
+
+  const runAction = async (kind, order = focusOrder, method = 'cash') => {
     if (!order) return;
     if (kind === 'pay') {
-      const result = await confirmPayment(order.id, 'cash');
+      const result = await recordCounterPayment(order, method);
       if (result?.ok) notifyCounterPayment(order.id);
       // Ritorno al focus precedente se il pagamento era una deviazione.
       if (returnFocusRef.current && returnFocusRef.current !== order.id) {
@@ -310,9 +336,9 @@ export function KitchenSoloServiceView({
   };
 
   /** Pagamento rapido da card laterale: incassa senza perdere il focus corrente. */
-  const quickPay = async (order) => {
+  const quickPay = async (order, method = 'cash') => {
     const keep = focusOrder?.id ?? null;
-    const result = await confirmPayment(order.id, 'cash');
+    const result = await recordCounterPayment(order, method);
     if (result?.ok) notifyCounterPayment(order.id);
     if (keep) setFocusId(keep);
   };
@@ -367,9 +393,6 @@ export function KitchenSoloServiceView({
 
   const alertCount = active.filter((o) => minutesSince(o.createdAt) >= 10).length;
   const unavailableCount = menuItems.filter((i) => !i.available).length;
-  // Badge minimo, nessun dettaglio inline: solo anomalie legate a ordini attivi in questa coda SOLO.
-  const activeIds = new Set(active.map((o) => o.id));
-  const paymentAlertCount = paymentAnomalies.filter((a) => activeIds.has(a.order_id)).length;
 
   const matchesSearch = (o) => {
     if (!search.trim()) return true;
@@ -453,14 +476,6 @@ export function KitchenSoloServiceView({
           <button className="kss-secondary-btn" onClick={() => setOverlay('alert')}>
             <span aria-hidden="true">🔔</span><span className="kss-secondary-label">ALERT</span>
             {alertCount > 0 && <span className="kss-secondary-badge">{alertCount}</span>}
-          </button>
-          <button className="kss-secondary-btn" onClick={() => navigate('/kitchen/staff')}>
-            <span aria-hidden="true">📊</span><span className="kss-secondary-label">DASHBOARD</span>
-            {paymentAlertCount > 0 && (
-              <span className="kss-secondary-badge" data-testid="payment-anomaly-badge">
-                {paymentAlertCount}
-              </span>
-            )}
           </button>
         </div>
       </div>
@@ -635,6 +650,15 @@ export function KitchenSoloServiceView({
                       <div className="kss-next-btn-sub">{action.sub}</div>
                     </button>
                   )}
+                  {action?.kind === 'pay' && (
+                    <button
+                      className="kss-next-btn-alt"
+                      data-testid="next-action-card"
+                      onClick={() => runAction('pay', focusOrder, 'card_counter_manual')}
+                    >
+                      CARTA/POS ✓
+                    </button>
+                  )}
                 </div>
 
                 {quickPayOrder ? (
@@ -654,6 +678,13 @@ export function KitchenSoloServiceView({
                         onClick={() => quickPay(quickPayOrder)}
                       >
                         <span aria-hidden="true">💳</span> PAGA {quickPayOrder.orderCode}
+                      </button>
+                      <button
+                        className="kss-quickpay-btn kss-quickpay-btn--alt"
+                        data-testid="quick-pay-card"
+                        onClick={() => quickPay(quickPayOrder, 'card_counter_manual')}
+                      >
+                        CARTA/POS
                       </button>
                     </div>
                   </div>
@@ -760,6 +791,16 @@ export function KitchenSoloServiceView({
               </button>
               <button className="kss-more-item kss-more-item--danger" disabled={!focusOrder} onClick={askCancel}>
                 Annulla ordine
+              </button>
+              <button
+                className="kss-more-item"
+                data-testid="logout-btn"
+                onClick={() => {
+                  setMoreOpen(false);
+                  onLogout();
+                }}
+              >
+                LOGOUT
               </button>
             </div>
           )}

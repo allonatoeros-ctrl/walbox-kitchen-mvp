@@ -1,22 +1,23 @@
 import { useEffect } from "react";
 
 /**
- * Legacy route /kitchen/entry.
+ * Legacy route /kitchen/staff.
  *
- * Kitchen non ha tavoli: non esiste piu' nessun form di ingresso
- * (numero tavolo / asporto). La route resta solo per compatibilita'
- * con QR o link vecchi e reindirizza subito al menu cliente /kitchen.
+ * Solo Service (/kitchen/solo) e' l'unica UI operativa staff Kitchen (STAFF UX
+ * CONSOLIDATION FASE 1). La route resta solo per compatibilita' con bookmark/
+ * link vecchi e reindirizza a /kitchen/solo, che applica il proprio guard.
  *
  * Usa una navigazione reale (location.replace), non history.replaceState +
  * popstate sintetico: quest'ultimo pattern e' soggetto a una race — l'effect
  * di questo componente (figlio) puo' girare prima dell'effect di App.jsx che
  * registra il listener "popstate" (genitore, montato dopo per via dell'ordine
  * bottom-up degli effect React), lasciando l'evento senza ascoltatori e la
- * pagina bianca sull'URL nuovo (stesso fix di KitchenStaffRedirect.jsx).
+ * pagina bianca sull'URL nuovo. Una navigazione reale non dipende da quel
+ * listener.
  */
-export default function CustomerKitchenEntry() {
+export default function KitchenStaffRedirect() {
   useEffect(() => {
-    window.location.replace("/kitchen");
+    window.location.replace("/kitchen/solo");
   }, []);
 
   return null;

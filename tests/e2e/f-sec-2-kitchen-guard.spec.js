@@ -1,16 +1,21 @@
 import { test, expect } from '@playwright/test';
 
 // F-SEC-2 Runtime QA — Kitchen staff guard (commit bc242b8)
-// Verifica che /kitchen/staff NON consideri "authenticated" == "staff".
+// STAFF UX CONSOLIDATION FASE 1 (2026-09-07): /kitchen/staff non monta piu' una UI propria,
+// e' solo un redirect di compatibilita' verso /kitchen/solo (KitchenStaffRedirect.jsx), che e'
+// l'unica UI operativa staff e applica il proprio guard identico (getStaffSession/isKitchenStaff).
+// I test qui verificano quindi anche il redirect stesso, non solo il guard a valle.
 // NOTA: lo storageState reale (sessione Supabase) va fornito via env FSEC2_STORAGE_STATE
 // (file JSON fuori repo, non committato). Se assente, i test auth-dependent sono skip
 // (non falliscono) per non esporre credenziali ne' richiedere auth reale in sandbox.
 const STORAGE_STATE = process.env.FSEC2_STORAGE_STATE || '';
 
 test.describe('F-SEC-2 Kitchen staff guard', () => {
-  test('T1: anonimo -> redirect /kitchen/login', async ({ page }) => {
+  test('T1: /kitchen/staff (redirect compat) anonimo -> /kitchen/solo -> guard -> /kitchen/login', async ({ page }) => {
     await page.goto('/kitchen/staff');
-    // nessuna sessione: il guard deve rimandare al login
+    // Redirect (navigazione reale, vedi KitchenStaffRedirect.jsx) + guard di Solo Service:
+    // troppo rapidi da osservare separatamente in modo affidabile, si verifica solo l'esito
+    // finale (nessuna sessione -> login).
     await page.waitForURL('**/kitchen/login', { timeout: 10000 });
     await expect(page).toHaveURL(/\/kitchen\/login/);
   });
@@ -34,7 +39,7 @@ test.describe('F-SEC-2 Kitchen staff guard', () => {
     await expect(page).toHaveURL(/\/kitchen\/login/);
   });
 
-  test('T3: staff autorizzato staff87 -> dashboard visibile', async ({ page }) => {
+  test('T3: staff autorizzato staff87 -> Solo Service visibile', async ({ page }) => {
     test.skip(!STORAGE_STATE, 'storageState staff non fornito (FSEC2_STORAGE_STATE)');
     await page.goto('/');
     await page.addInitScript((state) => {
@@ -47,12 +52,15 @@ test.describe('F-SEC-2 Kitchen staff guard', () => {
       }
     }, STORAGE_STATE);
     await page.goto('/kitchen/staff');
-    // la dashboard mostra i tab (BANCONE/CUCINA/MENU/STORICO/ALERT)
-    await expect(page.getByRole('button', { name: /BANCONE/i })).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('button', { name: /CUCINA/i })).toBeVisible();
+    await page.waitForURL('**/kitchen/solo', { timeout: 10000 });
+    // Solo Service e' l'unica UI operativa: nessuna tab BANCONE/CUCINA, header "SOLO SERVICE MODE"
+    await expect(page.getByText('SOLO SERVICE MODE')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('button', { name: /MENU/i })).toBeVisible();
   });
 
   test('T4: logout -> ritorno al login', async ({ page }) => {
+    // Solo Service espone LOGOUT nel menu secondario ALTRO... (non nell'header), usando lo stesso
+    // auth/logout flow esistente (supabaseAuth.signOut) — vedi KitchenSoloService.jsx handleLogout.
     test.skip(!STORAGE_STATE, 'storageState staff non fornito (FSEC2_STORAGE_STATE)');
     await page.goto('/');
     await page.addInitScript((state) => {
@@ -65,8 +73,8 @@ test.describe('F-SEC-2 Kitchen staff guard', () => {
       }
     }, STORAGE_STATE);
     await page.goto('/kitchen/staff');
-    await expect(page.getByRole('button', { name: /BANCONE/i })).toBeVisible({ timeout: 10000 });
-    // click logout (btn-secondary con testo LOGOUT)
+    await expect(page.getByText('SOLO SERVICE MODE')).toBeVisible({ timeout: 10000 });
+    await page.getByRole('button', { name: /ALTRO/i }).click();
     await page.getByRole('button', { name: /LOGOUT/i }).click();
     await page.waitForURL('**/kitchen/login', { timeout: 10000 });
     await expect(page).toHaveURL(/\/kitchen\/login/);

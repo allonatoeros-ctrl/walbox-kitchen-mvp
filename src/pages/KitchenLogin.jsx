@@ -19,7 +19,7 @@ export default function KitchenLogin() {
     const { error: authError } = await signInWithEmail(email, password)
     setLoading(false)
     if (authError) { setError(authError.message); return }
-    navigate('/kitchen/staff')
+    navigate('/kitchen/solo')
   }
 
   return (

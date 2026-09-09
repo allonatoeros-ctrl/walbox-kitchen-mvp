@@ -68,6 +68,20 @@ test('2. Request → Kitchen CTA navigates to /kitchen', async ({ page }) => {
   await expect(page).toHaveURL(/\/kitchen/);
 });
 
+// SOLO SERVICE CONSOLIDATION GAP FIX (2026-09-07): /kitchen/entry (CustomerKitchenEntry.jsx) è un
+// redirect di sola compatibilità verso /kitchen (Kitchen non ha più tavoli/asporto). Prima usava
+// history.replaceState + un evento popstate sintetico, soggetto alla stessa race di blank-page già
+// trovata e corretta su KitchenStaffRedirect.jsx: l'effect del redirect (figlio) può girare prima
+// dell'effect di App.jsx che registra il listener "popstate" (genitore, montato dopo per via
+// dell'ordine bottom-up degli effect React), lasciando l'evento senza ascoltatori e la pagina bianca
+// sull'URL nuovo. Il fix (window.location.replace, navigazione reale) non dipende da quel listener.
+// Questo test verifica il rendering reale della Home Kitchen dopo il redirect, non solo l'URL.
+test('2b. /kitchen/entry redirects to /kitchen and renders the real Kitchen home', async ({ page }) => {
+  await page.goto('/kitchen/entry');
+  await expect(page).toHaveURL(/\/kitchen$/);
+  await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible({ timeout: 10000 });
+});
+
 test('3. Full Kitchen order uses customer identity from entry', async ({ page }) => {
   await page.goto('/entry');
   await page.getByPlaceholder('Es. 12').fill('12');
@@ -325,17 +339,18 @@ test('4b. Back button on /kitchen/status meets 44x44 tap target on mobile viewpo
 });
 
 test('5. Staff dashboard shows Eros', async ({ page }) => {
-  // No-tables contract: la staff dashboard non mostra più il pill tavolo
-  // (rimosso da KitchenOrdersView.jsx), il nickname resta l'identificatore visibile.
-  const orders = makeSeedOrder();
-  await page.evaluate(
-    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
-    { key: LS_ORDERS, data: orders },
-  );
-
-  await page.goto('/kitchen/staff');
-
-  await expect(page.getByText('Eros')).toBeVisible();
+  // GAP NOTO (STAFF UX CONSOLIDATION FASE 1, 2026-09-07): /kitchen/staff ora reindirizza a
+  // /kitchen/solo, l'unica UI operativa. La coda live di Solo Service (KitchenSoloService.jsx)
+  // mostra pero' solo orderCode + articoli nelle card (.kss-qcard-line1/-line2) e nel focus —
+  // il nickname del cliente non e' mai renderizzato li' (verificato: `.nickname` compare in
+  // KitchenSoloService.jsx solo dentro matchesSearch, mai in JSX). Il nickname resta visibile
+  // solo negli overlay condivisi invariati (StoricoView/AlertView, es. test 11/16). Questo test
+  // verificava specificamente la visibilita' del nickname nella vista live: non ha un
+  // equivalente onesto oggi in Solo Service. Non e' un problema di selettori: e' informazione
+  // che la UI non mostra piu' li'. Serve una decisione di prodotto (mostrare il nickname anche
+  // in coda/focus, o confermare che l'orderCode basta per il banco) prima di poter migrare
+  // questo test.
+  test.skip(true, 'Solo Service non mostra il nickname nella coda/focus live — gap noto, serve decisione di prodotto');
 });
 
 test('6. Jukebox shows Segui ordine CTA when active kitchen order exists', async ({ page }) => {
@@ -386,20 +401,31 @@ async function readOrders(page) {
 }
 
 // ── QA-1: Happy Path ───────────────────────────────────────────────
+// STAFF UX CONSOLIDATION FASE 1 (2026-09-07): /kitchen/staff ora reindirizza a /kitchen/solo,
+// l'unica UI operativa. I test 7-17 sono stati riportati sul modello reale di Solo Service:
+// un ordine alla volta in focus (selezionato via `.kss-qcard[data-order]`, l'orderCode del seed
+// — il nickname non e' piu' mostrato in coda live, vedi test 5), azione consigliata via
+// `next-action`, azioni secondarie (RITIRATO manuale, nota staff, annulla) nel menu ALTRO...
+// (window.prompt nativo al posto dei modali CounterOrdersView), overlay MENU/STORICO/ALERT via
+// i bottoni header (stessi componenti MenuView/StoricoView/AlertView, invariati).
 
 test('7. Bancone confirma pagamento → status received', async ({ page }) => {
-  // Il bottone unico "PAGATO" è stato splittato in CONTANTI ✓ / CARTA/POS ✓ (CounterOrdersView).
-  // La conferma chiama la RPC Supabase reale (kitchen_payment_record_counter): l'ordine seed
-  // è locale/demo e non esiste lato server, quindi va mockato il path RPC corrente.
+  // Il bottone principale next-action resta CONTANTI di default (invariato per compatibilità);
+  // il percorso CARTA/POS (next-action-card) è coperto separatamente in
+  // kitchen-service-pressure.spec.js test 2c/2d. Questo test copre solo CONTANTI: resta portabile 1:1.
   await page.route('**/rest/v1/rpc/kitchen_payment_record_counter', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   );
   await seedOrders(page, [makeQAOrder({ status: 'pending_counter_payment' })]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
-  await expect(page.getByText('IN ATTESA PAGAMENTO')).toBeVisible();
-  await page.getByRole('button', { name: /CONTANTI/i }).click();
-  await expect(page.getByText('IN ATTESA PAGAMENTO')).not.toBeVisible();
+  await page.locator('.kss-qcard[data-order="W99"]').click();
+  await expect(page.getByTestId('focus-code')).toHaveText('W99');
+  await expect(page.getByTestId('next-action')).toContainText('CONFERMA PAGAMENTO');
+  await page.getByTestId('next-action').click();
+
+  await expect(page.getByTestId('kpi-paga')).toHaveText('0');
 
   const orders = await readOrders(page);
   const order = orders.find((o) => o.id === 'order-qa-001');
@@ -410,23 +436,25 @@ test('7. Bancone confirma pagamento → status received', async ({ page }) => {
 test('8. Cucina prende in carico → status preparing', async ({ page }) => {
   await seedOrders(page, [makeQAOrder({ status: 'received' })]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
-  await expect(page.getByText('NUOVI')).toBeVisible();
-  await page.getByRole('button', { name: /INIZIA/i }).click();
-  await expect(page.getByText('IN PREPARAZIONE')).toBeVisible();
+  await expect(page.getByTestId('focus-code')).toHaveText('W99');
+  await expect(page.getByTestId('next-action')).toContainText('INIZIA');
+  await page.getByTestId('next-action').click();
+  await expect(page.locator('.kss-qcard[data-order="W99"]')).toContainText('IN PREPARAZIONE');
 
   const orders = await readOrders(page);
   expect(orders.find((o) => o.id === 'order-qa-001').status).toBe('preparing');
 });
 
-test('9. Cucina marca pronto → status ready + badge header', async ({ page }) => {
+test('9. Cucina marca pronto → status ready + KPI pronti', async ({ page }) => {
   await seedOrders(page, [makeQAOrder({ status: 'preparing' })]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
-  await expect(page.getByText('IN PREPARAZIONE')).toBeVisible();
-  await page.getByRole('button', { name: /PRONTO/i }).click();
-  await expect(page.locator('.ksd-section-label', { hasText: 'PRONTI' })).toBeVisible();
-  await expect(page.getByText(/pronti 🟢/)).toBeVisible();
+  await expect(page.getByTestId('next-action')).toContainText('PRONTO');
+  await page.getByTestId('next-action').click();
+  await expect(page.getByTestId('kpi-pronti')).toHaveText('1');
 
   const orders = await readOrders(page);
   expect(orders.find((o) => o.id === 'order-qa-001').status).toBe('ready');
@@ -435,10 +463,13 @@ test('9. Cucina marca pronto → status ready + badge header', async ({ page }) 
 test('10. Bancone marca ritirato → status delivered', async ({ page }) => {
   await seedOrders(page, [makeQAOrder({ status: 'ready' })]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
-  await expect(page.getByText('PRONTI AL BANCO')).toBeVisible();
-  await page.getByRole('button', { name: /RITIRATO/i }).click();
-  await expect(page.getByText('PRONTI AL BANCO')).not.toBeVisible();
+  await expect(page.getByTestId('focus-code')).toHaveText('W99');
+  await expect(page.getByTestId('next-action')).toContainText('RITIRATO');
+  await page.getByTestId('next-action').click();
+  await expect(page.getByTestId('kpi-pronti')).toHaveText('0');
+  await expect(page.locator('.kss-qcard[data-order="W99"]')).toHaveCount(0);
 
   const orders = await readOrders(page);
   expect(orders.find((o) => o.id === 'order-qa-001').status).toBe('delivered');
@@ -447,7 +478,9 @@ test('10. Bancone marca ritirato → status delivered', async ({ page }) => {
 test('11. Storico mostra ordine delivered con metriche', async ({ page }) => {
   await seedOrders(page, [makeQAOrder({ status: 'delivered', total: 4.0 })]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
+  // Overlay STORICO: stesso StoricoView.jsx invariato, riusato identico da Team dashboard.
   await page.getByRole('button', { name: /STORICO/i }).click();
   await expect(page.getByText('QATester')).toBeVisible();
   await expect(page.getByText('RITIRATO')).toBeVisible();
@@ -460,7 +493,9 @@ test('11. Storico mostra ordine delivered con metriche', async ({ page }) => {
 
 test('12. Menu toggle disponibile ↔ esaurito', async ({ page }) => {
   await page.goto('/kitchen/staff');
-  await page.getByRole('button', { name: /MENU/i }).click();
+  await page.waitForURL('**/kitchen/solo');
+  // Overlay MENU: stesso MenuView.jsx invariato, riusato identico da Team dashboard.
+  await page.getByRole('button', { name: /^MENU$/ }).click();
 
   const firstAvailable = page.getByRole('button', { name: /✓ DISPONIBILE/i }).first();
   await expect(firstAvailable).toBeVisible();
@@ -482,12 +517,14 @@ test('12. Menu toggle disponibile ↔ esaurito', async ({ page }) => {
 test('13. Nota interna staff su ordine bancone', async ({ page }) => {
   await seedOrders(page, [makeQAOrder({ status: 'pending_counter_payment' })]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
-  await page.getByRole('button', { name: /nota interna/i }).click();
-  const noteInput = page.getByPlaceholder('Nota interna per cucina...');
-  await expect(noteInput).toBeVisible();
-  await noteInput.fill('Allergia al glutine');
-  await page.getByRole('button', { name: 'OK' }).click();
+  // Solo Service non ha il modale con input + OK di CounterOrdersView: usa window.prompt
+  // (askStaffNote, KitchenSoloService.jsx:361-365). Stessa capacita', meccanismo diverso.
+  await page.locator('.kss-qcard[data-order="W99"]').click();
+  page.once('dialog', (dialog) => dialog.accept('Allergia al glutine'));
+  await page.getByRole('button', { name: /ALTRO/i }).click();
+  await page.getByRole('button', { name: 'Aggiungi nota staff' }).click();
 
   await expect(page.getByText('Allergia al glutine')).toBeVisible();
 
@@ -498,18 +535,20 @@ test('13. Nota interna staff su ordine bancone', async ({ page }) => {
 test('14. Annulla ordine con motivo preset', async ({ page }) => {
   await seedOrders(page, [makeQAOrder({ status: 'pending_counter_payment' })]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
-  await page.getByRole('button', { name: 'ANNULLA', exact: true }).click();
-  await expect(page.getByText('MOTIVO ANNULLAMENTO')).toBeVisible();
+  // Solo Service non ha il modale MOTIVO ANNULLAMENTO (Fuori stock / Altro): usa window.prompt
+  // con default 'Fuori stock' (askCancel, KitchenSoloService.jsx:354-359). dialog.accept() senza
+  // argomento restituirebbe stringa vuota (falsy per askCancel): va passato esplicitamente il
+  // default per confermarlo davvero.
+  await page.locator('.kss-qcard[data-order="W99"]').click();
+  let dialogDefault = '';
+  page.once('dialog', (dialog) => { dialogDefault = dialog.defaultValue(); dialog.accept(dialogDefault); });
+  await page.getByRole('button', { name: /ALTRO/i }).click();
+  await page.getByRole('button', { name: 'Annulla ordine' }).click();
 
-  const confirmBtn = page.getByRole('button', { name: /CONFERMA ANNULLAMENTO/i });
-  await expect(confirmBtn).toBeDisabled();
-
-  await page.getByRole('button', { name: 'Fuori stock' }).click();
-  await expect(confirmBtn).toBeEnabled();
-  await confirmBtn.click();
-
-  await expect(page.getByText('MOTIVO ANNULLAMENTO')).not.toBeVisible();
+  expect(dialogDefault).toBe('Fuori stock');
+  await expect(page.locator('.kss-qcard[data-order="W99"]')).toHaveCount(0);
 
   const orders = await readOrders(page);
   const order = orders.find((o) => o.id === 'order-qa-001');
@@ -517,19 +556,18 @@ test('14. Annulla ordine con motivo preset', async ({ page }) => {
   expect(order.cancelReason).toBe('Fuori stock');
 });
 
-test('15. Annulla con motivo Altro richiede testo personalizzato', async ({ page }) => {
+test('15. Annulla con motivo personalizzato', async ({ page }) => {
+  // Solo Service non distingue un motivo preset ("Fuori stock") da uno libero ("Altro" + testo):
+  // il prompt e' sempre testo libero con quel default. Copre comunque la stessa capacita' reale
+  // del test originale (annullare con un motivo diverso dal default).
   await seedOrders(page, [makeQAOrder({ status: 'pending_counter_payment' })]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
-  await page.getByRole('button', { name: 'ANNULLA', exact: true }).click();
-  await page.getByRole('button', { name: 'Altro' }).click();
-
-  const confirmBtn = page.getByRole('button', { name: /CONFERMA ANNULLAMENTO/i });
-  await expect(confirmBtn).toBeDisabled();
-
-  await page.getByPlaceholder('Specifica il motivo...').fill('Cliente ha cambiato idea');
-  await expect(confirmBtn).toBeEnabled();
-  await confirmBtn.click();
+  await page.locator('.kss-qcard[data-order="W99"]').click();
+  page.once('dialog', (dialog) => dialog.accept('Cliente ha cambiato idea'));
+  await page.getByRole('button', { name: /ALTRO/i }).click();
+  await page.getByRole('button', { name: 'Annulla ordine' }).click();
 
   const orders = await readOrders(page);
   const order = orders.find((o) => o.id === 'order-qa-001');
@@ -537,7 +575,7 @@ test('15. Annulla con motivo Altro richiede testo personalizzato', async ({ page
   expect(order.cancelReason).toBe('Cliente ha cambiato idea');
 });
 
-test('16. Alert tab mostra ordine urgente e allergeni attivi', async ({ page }) => {
+test('16. Alert overlay mostra ordine urgente e allergeni attivi', async ({ page }) => {
   const urgentOrder = makeQAOrder({
     status: 'received',
     items: [{ itemId: 'item-001', name: 'Panino Porcheria Seria', quantity: 1, price: 8.5 }],
@@ -546,15 +584,19 @@ test('16. Alert tab mostra ordine urgente e allergeni attivi', async ({ page }) 
   });
   await seedOrders(page, [urgentOrder]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
-  await expect(page.getByText(/alert ⚠/)).toBeVisible();
+  // Overlay ALERT: stesso AlertView.jsx invariato, riusato identico da Team dashboard.
   await page.getByRole('button', { name: /ALERT/i }).click();
 
   await expect(page.getByText('URGENZA TEMPI')).toBeVisible();
   await expect(page.getByText(/🟠 LENTO/)).toBeVisible();
   await expect(page.getByText('ALLERGENI ATTIVI')).toBeVisible();
-  await expect(page.getByText('GLUTINE')).toBeVisible();
-  await expect(page.getByText('PESCE')).toBeVisible();
+  // Scoped alla sezione overlay: lo stesso ordine e' anche in focus dietro l'overlay, il cui
+  // pannello "ALLERGENI" (focus-allergeni) mostra lo stesso testo "Glutine, Pesce".
+  const allergenSection = page.locator('.ksd-section', { hasText: 'ALLERGENI ATTIVI' });
+  await expect(allergenSection.getByText('GLUTINE', { exact: true })).toBeVisible();
+  await expect(allergenSection.getByText('PESCE', { exact: true })).toBeVisible();
 });
 
 test('17. Alert critico dopo 15 minuti', async ({ page }) => {
@@ -564,6 +606,7 @@ test('17. Alert critico dopo 15 minuti', async ({ page }) => {
   });
   await seedOrders(page, [criticalOrder]);
   await page.goto('/kitchen/staff');
+  await page.waitForURL('**/kitchen/solo');
 
   await page.getByRole('button', { name: /ALERT/i }).click();
   await expect(page.getByText(/🔴 CRITICO/)).toBeVisible();
