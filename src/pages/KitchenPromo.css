@@ -455,6 +455,61 @@
   color: var(--kp-muted);
 }
 
+/* Codice reale arrivato: bordo pieno e colore acceso, si distingue dal
+   placeholder in attesa senza cambiare dimensione/font (nessun layout shift). */
+.kp-pass-code-slot--ready {
+  border-style: solid;
+  border-color: var(--kp-gold);
+  color: var(--kp-cream-hi);
+}
+
+.kp-pass-copy-btn {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  padding: 13px 18px;
+  border: 1.5px solid var(--kp-rule);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--kp-cream);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 160ms var(--kp-ease);
+}
+
+.kp-pass-copy-btn:active { background: #17150f; }
+
+.kp-pass-code-error-text {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--kp-sand);
+}
+
+.kp-pass-code-retry {
+  display: block;
+  width: 100%;
+  padding: 13px 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--kp-red);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 160ms var(--kp-ease);
+}
+
+.kp-pass-code-retry:active { background: var(--kp-red-dark); }
+
 /* ── Scene 4 · MENU ─────────────────────────────────────── */
 /* Header: stesso asset e stessa geometria dell'header reale del menu cliente
    (Figma 111:59/60/61/62/63/64) — replicato con prefisso .kp- per non

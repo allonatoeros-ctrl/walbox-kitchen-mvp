@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { kitchenMenuItems } from '../data/kitchenMockData';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
+import usePromoPassIssue from '../hooks/usePromoPassIssue';
 import './KitchenPromo.css';
 
 /**
@@ -17,8 +18,9 @@ import './KitchenPromo.css';
  *  - foto e prezzi reali da kitchenMockData (13,90 · 14,50 · 15,00)
  *
  * Narrativa LOCKED: non riscrivere le stringhe delle scene senza approvazione.
- * Il Pass mostra uno slot VISIVO per il futuro codice personale: nessun backend
- * promo, nessuna scrittura su Supabase, nessun valore generato lato client.
+ * Il Pass (Scena 2) emette un codice reale via RPC `kitchen_promo_pass_issue`
+ * (ai-ops/reports/kitchen-promo-pass-issuance-v1-spec.md): nessuna redemption,
+ * solo emissione + persistenza server-side.
  */
 
 const SCENES = { hook: 'hook', pass: 'pass', menu: 'menu' };
@@ -27,6 +29,11 @@ export default function KitchenPromo() {
   const [scene, setScene] = useState(SCENES.hook);
   const [rush, setRush] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  // Parte al mount del componente (non della scena): la chiamata è già in
+  // volo mentre l'utente guarda la Scena 1, così il codice è quasi sempre
+  // pronto quando arriva alla Scena 2.
+  const { code: passCode, loading: passLoading, error: passError, retry: retryPassIssue } = usePromoPassIssue();
 
   const pesiMassimiItems = kitchenMenuItems.filter((item) => item.category === 'bbq');
 
@@ -40,6 +47,30 @@ export default function KitchenPromo() {
 
   // Solo LO VOGLIO porta al secondo scherzo: esplorare il menu resta libero.
   const blockProceed = () => setClosing(true);
+
+  const handleCopyCode = async () => {
+    if (!passCode) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(passCode);
+      } else {
+        // Fallback solo per browser senza Clipboard API asincrona (target Kitchen: nessuno rilevato finora,
+        // tenuto come rete di sicurezza minima invece di lasciare "COPIA" silenziosamente rotto).
+        const textarea = document.createElement('textarea');
+        textarea.value = passCode;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Copia fallita: il codice resta comunque visibile e leggibile a schermo, nessun crash.
+    }
+  };
 
   return (
     <div
@@ -161,11 +192,32 @@ export default function KitchenPromo() {
               <span className="kp-pass-perf-notch kp-pass-perf-notch--r" />
             </div>
 
-            {/* Slot codice: spazio riservato al futuro codice personale.
-                Placeholder tipografico, nessun codice generato o persistito. */}
+            {/* Codice reale, emesso server-side da kitchen_promo_pass_issue.
+                Mai un fallback silenzioso che sembri un codice vero in caso di errore. */}
             <div className="kp-pass-code">
               <p className="kp-pass-code-label">IL TUO CODICE</p>
-              <div className="kp-pass-code-slot" aria-hidden="true">••••••</div>
+              {passError ? (
+                <div className="kp-pass-code-error">
+                  <p className="kp-pass-code-error-text">Il codice non è partito. Riprova.</p>
+                  <button type="button" className="kp-pass-code-retry" onClick={retryPassIssue}>
+                    RIPROVA
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div
+                    className={`kp-pass-code-slot${!passLoading ? ' kp-pass-code-slot--ready' : ''}`}
+                    aria-live="polite"
+                  >
+                    {passLoading ? '••••••' : passCode}
+                  </div>
+                  {!passLoading && passCode && (
+                    <button type="button" className="kp-pass-copy-btn" onClick={handleCopyCode}>
+                      {copied ? 'COPIATO ✓' : 'COPIA IL CODICE'}
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </article>
 
