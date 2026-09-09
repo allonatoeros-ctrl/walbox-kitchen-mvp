@@ -31,3 +31,8 @@ ai-ops/reports/
 ai-ops/runs/
 .env*
 .mcp.json
+
+# F-SEC-2 local Playwright auth storage state (Supabase session for staff87 test account).
+# Never commit real staff credentials or session state — see
+# docs/sprint3b-f-sec-2-storage-state-contract.md for how to generate it locally.
+tests/e2e/.auth/
