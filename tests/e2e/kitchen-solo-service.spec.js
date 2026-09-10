@@ -367,27 +367,40 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('focus-code')).toHaveText('W44');
   });
 
-  // Personalità Discutibile Pass — Redemption V2 (Opzione A). La RPC
-  // kitchen_promo_pass_redeem_for_order è mockata via route: questi test verificano solo il
-  // wiring client (prompt → chiamata → badge/messaggio), non la logica server (già coperta da
-  // supabase/migrations/20260910120000_kitchen_promo_pass_redeem_v1.test.js).
-  test('18. Codice promo valido: badge sconto + totale aggiornato, CONFERMA PAGAMENTO resta disponibile', async ({ page }) => {
+  // Personalità Discutibile Pass — Redemption V2, Opzione 2 (2026-09-10): il cliente redime il
+  // proprio codice in CustomerKitchenMenu.jsx PRIMA che l'ordine arrivi in coda staff; lo staff
+  // NON inserisce più codici, vede solo un badge passivo se l'ordine ne ha già uno applicato.
+  test('18. Nessun input promo per lo staff: né su un ordine senza promo né su uno con promo già applicata', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
-    await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ id: 'solo-1', promo_code: 'WALRUS-AB12C', discount_amount: 1.39, total: 17.11 }),
-      })
+    await page.goto('/kitchen/solo');
+
+    // Ordine senza promo (seed di default): nessun bottone/handler d'inserimento.
+    await page.locator('.kss-qcard[data-order="W47"]').click();
+    await expect(page.getByTestId('focus-code')).toHaveText('W47');
+    await expect(page.getByTestId('promo-code-btn')).toHaveCount(0);
+    await expect(page.getByTestId('promo-feedback')).toHaveCount(0);
+    await expect(page.getByTestId('promo-badge')).toHaveCount(0);
+  });
+
+  test('19. Ordine con promo già applicata dal cliente: badge passivo con codice/sconto/totale, nessun controllo interattivo, CONFERMA PAGAMENTO resta disponibile', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    // Sovrascrive il seed di beforeEach solo per questo test: W47 arriva con la promo già
+    // applicata dal cliente (stesso shape di ritorno della RPC, mai scritto dallo staff).
+    await page.evaluate(
+      ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+      {
+        key: LS_ORDERS,
+        data: seedOrders().map((o) => (
+          o.orderCode === 'W47'
+            ? { ...o, promoCode: 'WALRUS-AB12C', discountAmount: 1.39, total: 17.11 }
+            : o
+        )),
+      }
     );
     await page.goto('/kitchen/solo');
 
     await page.locator('.kss-qcard[data-order="W47"]').click();
     await expect(page.getByTestId('focus-code')).toHaveText('W47');
-    await expect(page.getByTestId('promo-code-btn')).toBeVisible();
-
-    page.once('dialog', (dialog) => dialog.accept('walrus-ab12c'));
-    await page.getByTestId('promo-code-btn').click();
 
     const badge = page.getByTestId('promo-badge');
     await expect(badge).toBeVisible();
@@ -395,54 +408,8 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(badge).toContainText('1.39');
     await expect(badge).toContainText('17.11');
     await expect(page.getByTestId('promo-code-btn')).toHaveCount(0);
+    await expect(page.getByTestId('promo-feedback')).toHaveCount(0);
     await expect(page.getByTestId('next-action')).toContainText('CONFERMA PAGAMENTO');
-  });
-
-  test('19. Codice già usato: messaggio inline, nessun blocco del pagamento a prezzo pieno', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
-      route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) })
-    );
-    await page.goto('/kitchen/solo');
-
-    await page.locator('.kss-qcard[data-order="W47"]').click();
-    page.once('dialog', (dialog) => dialog.accept('WALRUS-USED1'));
-    await page.getByTestId('promo-code-btn').click();
-
-    await expect(page.getByTestId('promo-feedback')).toHaveText('Codice già usato');
-    await expect(page.getByTestId('promo-code-btn')).toBeVisible();
-    await expect(page.getByTestId('promo-badge')).toHaveCount(0);
-    await expect(page.getByTestId('next-action')).toContainText('CONFERMA PAGAMENTO');
-  });
-
-  test('20. Ordine senza Pesi Massimi: nessuno sconto, messaggio esplicito', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
-      route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_no_eligible_item' }) })
-    );
-    await page.goto('/kitchen/solo');
-
-    await page.locator('.kss-qcard[data-order="W47"]').click();
-    page.once('dialog', (dialog) => dialog.accept('WALRUS-VALID'));
-    await page.getByTestId('promo-code-btn').click();
-
-    await expect(page.getByTestId('promo-feedback')).toHaveText('Nessun Peso Massimo in questo ordine');
-    await expect(page.getByTestId('promo-badge')).toHaveCount(0);
-  });
-
-  test('21. Ordine già pagato: messaggio esplicito, nessuno sconto applicato', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
-      route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'order_already_paid' }) })
-    );
-    await page.goto('/kitchen/solo');
-
-    await page.locator('.kss-qcard[data-order="W47"]').click();
-    page.once('dialog', (dialog) => dialog.accept('WALRUS-VALID'));
-    await page.getByTestId('promo-code-btn').click();
-
-    await expect(page.getByTestId('promo-feedback')).toHaveText('Ordine già pagato — sconto non applicabile');
-    await expect(page.getByTestId('promo-badge')).toHaveCount(0);
   });
 });
 

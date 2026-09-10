@@ -122,9 +122,29 @@ function getCategorySubtitle(cat) {
   return null;
 }
 
+// Stesso stile dei messaggi d'errore staff (KitchenSoloService.jsx), riformulati in tono
+// cliente: l'RPC è condivisa, i codici errore sono gli stessi.
+const CUSTOMER_PROMO_ERROR_MESSAGES = {
+  invalid_promo_code:       'Codice non valido',
+  order_not_found:          'Ordine non trovato',
+  not_authorized_for_order: 'Codice non applicabile a questo ordine',
+  order_already_has_promo:  'Promo già applicata a questo ordine',
+  order_already_paid:       'Ordine già pagato — sconto non applicabile',
+  promo_code_not_found:     'Codice non trovato',
+  promo_already_redeemed:   'Codice già usato',
+  promo_venue_mismatch:     'Codice non valido per questo locale',
+  promo_no_eligible_item:   'Codice valido solo sui Pesi Massimi',
+};
+
+function customerPromoErrorText(err) {
+  const message = err?.message ?? '';
+  const match = Object.keys(CUSTOMER_PROMO_ERROR_MESSAGES).find((key) => message.includes(key));
+  return match ? CUSTOMER_PROMO_ERROR_MESSAGES[match] : 'Codice promo non applicato — riprova';
+}
+
 export default function CustomerKitchenMenu() {
   const { session } = useCustomerSession();
-  const { addOrder } = useKitchenOrders();
+  const { addOrder, redeemPromo } = useKitchenOrders();
   const { menuItems } = useKitchenMenu();
 
   const CATEGORIES = MENU_CATEGORIES;
@@ -139,6 +159,8 @@ export default function CustomerKitchenMenu() {
   const [customerNote, setCustomerNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [bannerOrderId, setBannerOrderId] = useState(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoResult, setPromoResult] = useState(null); // { ok:true, code, discountAmount, total } | { ok:false, errorText } | null
 
   useEffect(() => {
     try {
@@ -235,6 +257,8 @@ export default function CustomerKitchenMenu() {
         setOrderItems([]);
         setSubmittedOrderId(null);
         setSubmittedOrderCode(null);
+        setPromoCode('');
+        setPromoResult(null);
         setCartOpen(false);
         restoreEntry(event.state);
         return;
@@ -313,6 +337,19 @@ export default function CustomerKitchenMenu() {
     // non mostrare al cliente un codice diverso da quello davvero salvato/mostrato a staff.
     const createdOrder = await addOrder(newOrder);
     try { localStorage.setItem('walbox_kitchen_last_order_id', createdOrder.id); } catch { }
+
+    // Il codice promo si redime solo dopo che l'ordine esiste davvero (mai prima): così il
+    // pass non viene mai consumato per un ordine che poi risulta non creato. Se il redeem
+    // fallisce l'ordine resta comunque valido a prezzo pieno — non blocca mai il cliente.
+    const code = promoCode.trim();
+    setPromoResult(null);
+    if (code && redeemPromo && createdOrder.id) {
+      const result = await redeemPromo(createdOrder.id, code);
+      setPromoResult(result?.ok
+        ? { ok: true, code: result.promoCode, discountAmount: result.discountAmount, total: result.total }
+        : { ok: false, errorText: customerPromoErrorText(result?.error) });
+    }
+
     setSubmittedOrderId(createdOrder.id);
     setSubmittedOrderCode(createdOrder.orderCode);
     setSubmitted(true);
@@ -324,6 +361,8 @@ export default function CustomerKitchenMenu() {
     setSubmittedOrderCode(null);
     setSubmitted(false);
     setSubmitting(false);
+    setPromoCode('');
+    setPromoResult(null);
   };
 
   useEffect(() => {
@@ -371,6 +410,45 @@ export default function CustomerKitchenMenu() {
               }}>
                 {submittedOrderCode}
               </div>
+            </div>
+          )}
+          {promoResult?.ok && (
+            <div
+              data-testid="promo-result-success"
+              style={{
+                margin: '0 20px 20px',
+                padding: '12px 16px',
+                background: 'rgba(69,124,57,0.15)',
+                border: '2px solid #457c39',
+                borderRadius: '12px',
+                textAlign: 'center',
+                color: '#8fd17a',
+                fontFamily: "'Montserrat', sans-serif",
+                fontWeight: 700,
+                fontSize: '14px',
+              }}
+            >
+              PROMO {promoResult.code} APPLICATA · −€{promoResult.discountAmount.toFixed(2).replace('.', ',')}
+              <br />NUOVO TOTALE €{promoResult.total.toFixed(2).replace('.', ',')}
+            </div>
+          )}
+          {promoResult?.ok === false && (
+            <div
+              data-testid="promo-result-error"
+              style={{
+                margin: '0 20px 20px',
+                padding: '12px 16px',
+                background: 'rgba(224,60,44,0.15)',
+                border: '2px solid #e03c2c',
+                borderRadius: '12px',
+                textAlign: 'center',
+                color: '#ff9a8c',
+                fontFamily: "'Montserrat', sans-serif",
+                fontWeight: 700,
+                fontSize: '14px',
+              }}
+            >
+              CODICE PROMO NON APPLICATO: {promoResult.errorText.toUpperCase()}
             </div>
           )}
           <div className="kitch-status-list">
@@ -794,6 +872,31 @@ export default function CustomerKitchenMenu() {
                   outline: 'none',
                   boxSizing: 'border-box',
                   fontFamily: 'inherit',
+                }}
+              />
+            </div>
+
+            <div style={{ padding: '0 16px 12px' }}>
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value)}
+                placeholder="Codice promo (facoltativo)"
+                maxLength={20}
+                disabled={submitting}
+                data-testid="promo-code-input"
+                style={{
+                  width: '100%',
+                  background: '#1a0800',
+                  border: '1.5px solid #3a1800',
+                  borderRadius: 8,
+                  color: '#fff',
+                  fontSize: 14,
+                  padding: '10px 12px',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  fontFamily: 'inherit',
+                  textTransform: 'uppercase',
                 }}
               />
             </div>

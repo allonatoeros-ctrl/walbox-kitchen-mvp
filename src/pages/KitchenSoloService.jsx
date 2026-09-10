@@ -113,7 +113,7 @@ export default function KitchenSoloService() {
 
 /** Live page: real Supabase-backed hooks + real staff auth guard. Unchanged behavior. */
 function KitchenSoloServiceLive() {
-  const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync, redeemPromo } = useKitchenOrders();
+  const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync } = useKitchenOrders();
   const { menuItems, toggleAvailability } = useKitchenMenu();
   // Micro-fase 1 (badge anomalie Payment Hub): read-only, nessuna azione — vedi
   // ai-ops/reports/kitchen-solo-payment-hub-integration-audit.md §5. Non montato in
@@ -176,7 +176,6 @@ function KitchenSoloServiceLive() {
       cancelOrder={cancelOrder}
       updateStaffNote={updateStaffNote}
       retrySync={retrySync}
-      redeemPromo={redeemPromo}
       menuItems={menuItems}
       toggleAvailability={toggleAvailability}
       paymentAnomalies={paymentAnomalies}
@@ -205,25 +204,8 @@ function KitchenSoloServicePreview() {
 }
 
 /** Shared UI for Live, DEV Preview and the isolated Demo Harness. No data source or auth logic lives here. */
-const PROMO_ERROR_MESSAGES = {
-  invalid_promo_code:      'Codice non valido',
-  order_not_found:         'Ordine non trovato',
-  order_already_has_promo: 'Promo già applicata a questo ordine',
-  order_already_paid:      'Ordine già pagato — sconto non applicabile',
-  promo_code_not_found:    'Codice non trovato',
-  promo_already_redeemed:  'Codice già usato',
-  promo_venue_mismatch:    'Codice non valido per questo locale',
-  promo_no_eligible_item:  'Nessun Peso Massimo in questo ordine',
-};
-
-function promoErrorText(err) {
-  const message = err?.message ?? '';
-  const match = Object.keys(PROMO_ERROR_MESSAGES).find((key) => message.includes(key));
-  return match ? PROMO_ERROR_MESSAGES[match] : 'Codice promo non applicato — riprova';
-}
-
 export function KitchenSoloServiceView({
-  orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync, redeemPromo,
+  orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
   paymentsPath = '/kitchen/payments',
   // Default per Preview/Demo/Training (nessuna sessione reale da chiudere): solo navigazione.
@@ -240,9 +222,6 @@ export function KitchenSoloServiceView({
   const [, setTick]                   = useState(0);
   // Undo P0-B: { orderId, orderCode, fromStatus, actionLabel, expiresAt } | null — un solo undo alla volta.
   const [undo, setUndo]               = useState(null);
-  const [promoBusy, setPromoBusy]     = useState(false);
-  // { orderId, ok, text } | null — messaggio inline legato all'ordine in focus, non blocca il pagamento.
-  const [promoFeedback, setPromoFeedback] = useState(null);
   const { enabled: audioEnabled, toggle: toggleAudio, observeOrders, notifyCounterPayment } = useKitchenAudio();
 
   // ritorno al focus precedente dopo un pagamento rapido
@@ -410,20 +389,6 @@ export function KitchenSoloServiceView({
     const note = window.prompt(`Nota staff per ${focusOrder.orderCode}:`, focusOrder.staffNote ?? '');
     if (note !== null) updateStaffNote(focusOrder.id, note);
     setMoreOpen(false);
-  };
-
-  /** Staff inserisce solo il codice: nessun calcolo/selezione manuale, decide tutto la RPC. */
-  const askPromoCode = async () => {
-    if (!focusOrder || !redeemPromo) return;
-    const code = window.prompt('Codice promo (WALRUS-XXXXX):');
-    if (!code || !code.trim()) return;
-    const orderId = focusOrder.id;
-    setPromoBusy(true);
-    const result = await redeemPromo(orderId, code.trim());
-    setPromoBusy(false);
-    setPromoFeedback(result?.ok
-      ? { orderId, ok: true, text: `Promo ${result.promoCode} applicata` }
-      : { orderId, ok: false, text: promoErrorText(result?.error) });
   };
 
   const alertCount = active.filter((o) => minutesSince(o.createdAt) >= 10).length;
@@ -694,32 +659,14 @@ export function KitchenSoloServiceView({
                       CARTA/POS ✓
                     </button>
                   )}
-                  {action?.kind === 'pay' && redeemPromo && (
+                  {/* Sola lettura: il codice si redime lato cliente prima del pagamento
+                      (CustomerKitchenMenu.jsx). Lo staff non inserisce più codici qui. */}
+                  {action?.kind === 'pay' && focusOrder.promoCode && (
                     <div className="kss-promo">
-                      {focusOrder.promoCode ? (
-                        <div className="kss-promo-badge" data-testid="promo-badge">
-                          PROMO {focusOrder.promoCode} · −€{focusOrder.discountAmount.toFixed(2)} ·
-                          TOTALE €{focusOrder.total.toFixed(2)}
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="kss-promo-btn"
-                          data-testid="promo-code-btn"
-                          disabled={promoBusy}
-                          onClick={askPromoCode}
-                        >
-                          {promoBusy ? '...' : 'CODICE PROMO'}
-                        </button>
-                      )}
-                      {promoFeedback?.orderId === focusOrder.id && !focusOrder.promoCode && (
-                        <div
-                          className={`kss-promo-feedback ${promoFeedback.ok ? 'kss-promo-feedback--ok' : 'kss-promo-feedback--error'}`}
-                          data-testid="promo-feedback"
-                        >
-                          {promoFeedback.text}
-                        </div>
-                      )}
+                      <div className="kss-promo-badge" data-testid="promo-badge">
+                        PROMO {focusOrder.promoCode} · −€{focusOrder.discountAmount.toFixed(2)} ·
+                        TOTALE €{focusOrder.total.toFixed(2)}
+                      </div>
                     </div>
                   )}
                 </div>

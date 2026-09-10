@@ -611,3 +611,76 @@ test('17. Alert critico dopo 15 minuti', async ({ page }) => {
   await page.getByRole('button', { name: /ALERT/i }).click();
   await expect(page.getByText(/🔴 CRITICO/)).toBeVisible();
 });
+
+// Personalità Discutibile Pass — Redemption V2, Opzione 2 (2026-09-10): il cliente inserisce il
+// codice nel drawer carrello, non lo staff. `redeemPromo` chiama la stessa RPC già coperta da
+// supabase/migrations/20260910130000_kitchen_promo_pass_redeem_customer_v1.test.js — qui si
+// verifica solo il wiring client (input → addOrder → redeemPromo → esito visibile), mockata via
+// route come già fatto per i test staff-side rimossi da kitchen-solo-service.spec.js.
+test('18. Cliente inserisce un codice promo valido: sconto e nuovo totale mostrati chiaramente su ORDINE RICEVUTO', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ promo_code: 'WALRUS-AB12C', discount_amount: 1.5, total: 13.5 }),
+    })
+  );
+
+  await page.goto('/entry');
+  await page.getByPlaceholder('Es. 12').fill('12');
+  await page.getByPlaceholder('Es. Marco').fill('Eros');
+  await page.getByRole('button', { name: /ENTRA NEL WALBOX/i }).click();
+  await page.getByRole('button', { name: /Cibo/i }).click();
+  await expect(page).toHaveURL(/\/kitchen/);
+
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+
+  await page.getByTestId('promo-code-input').fill('walrus-ab12c');
+  await page.getByRole('button', { name: /Invia ordine/i }).click();
+
+  await expect(page.getByText('ORDINE RICEVUTO')).toBeVisible();
+  const success = page.getByTestId('promo-result-success');
+  await expect(success).toBeVisible();
+  await expect(success).toContainText('WALRUS-AB12C');
+  await expect(success).toContainText('1,50');
+  await expect(success).toContainText('13,50');
+  await expect(page.getByTestId('promo-result-error')).toHaveCount(0);
+});
+
+test('19. Cliente inserisce un codice promo non valido: errore chiaramente visibile, ordine confermato comunque a prezzo pieno', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
+    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) })
+  );
+
+  await page.goto('/entry');
+  await page.getByPlaceholder('Es. 12').fill('12');
+  await page.getByPlaceholder('Es. Marco').fill('Eros');
+  await page.getByRole('button', { name: /ENTRA NEL WALBOX/i }).click();
+  await page.getByRole('button', { name: /Cibo/i }).click();
+  await expect(page).toHaveURL(/\/kitchen/);
+
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+
+  await page.getByTestId('promo-code-input').fill('WALRUS-USED1');
+  await page.getByRole('button', { name: /Invia ordine/i }).click();
+
+  // L'ordine si conferma comunque: un codice sbagliato non deve mai bloccare il cliente.
+  await expect(page.getByText('ORDINE RICEVUTO')).toBeVisible();
+  const error = page.getByTestId('promo-result-error');
+  await expect(error).toBeVisible();
+  await expect(error).toContainText('CODICE GIÀ USATO');
+  await expect(page.getByTestId('promo-result-success')).toHaveCount(0);
+});
+
+// Nota di copertura: l'autorizzazione "cliente redime solo il proprio ordine, non quello di un
+// altro" è applicata interamente lato RPC (gate SQL `is_staff_for_venue(...) OR
+// v_order.customer_id = auth.uid()`), verificata staticamente in
+// supabase/migrations/20260910130000_kitchen_promo_pass_redeem_customer_v1.test.js. Non è
+// verificabile via E2E in questo ambiente: manca un progetto Postgres/Supabase locale reale con
+// due sessioni cliente distinte (nessun `supabase`/`docker` disponibile in questo sandbox), e la
+// UI cliente non espone comunque alcun modo di scegliere un order_id arbitrario — chiama sempre
+// e solo l'id dell'ordine appena creato da lei stessa (vedi handleSubmit sopra).

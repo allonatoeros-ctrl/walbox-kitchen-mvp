@@ -552,21 +552,6 @@
 .kss-next-btn-alt:active { transform: translateY(1px); }
 
 .kss-promo { display: flex; flex-direction: column; gap: 6px; }
-.kss-promo-btn {
-  width: 100%;
-  border: 1px dashed var(--kss-line);
-  border-radius: 10px;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-family: inherit;
-  background: transparent;
-  color: var(--kss-muted);
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: 0.8px;
-}
-.kss-promo-btn:hover { background: rgba(255, 255, 255, 0.04); color: #c6d3e0; }
-.kss-promo-btn:disabled { opacity: 0.6; cursor: default; }
 .kss-promo-badge {
   border: 1px solid rgba(34, 197, 94, 0.4);
   border-radius: 10px;
@@ -577,9 +562,6 @@
   color: var(--kss-green);
   background: rgba(34, 197, 94, 0.08);
 }
-.kss-promo-feedback { font-size: 12px; font-weight: 700; padding: 0 2px; }
-.kss-promo-feedback--ok { color: var(--kss-green); }
-.kss-promo-feedback--error { color: var(--kss-red); }
 
 .kss-quickpay {
   background: var(--kss-panel-2);
