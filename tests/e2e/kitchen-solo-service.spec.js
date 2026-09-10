@@ -366,6 +366,84 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     // (W44), non resta bloccato su W43 appena segnato pronto.
     await expect(page.getByTestId('focus-code')).toHaveText('W44');
   });
+
+  // Personalità Discutibile Pass — Redemption V2 (Opzione A). La RPC
+  // kitchen_promo_pass_redeem_for_order è mockata via route: questi test verificano solo il
+  // wiring client (prompt → chiamata → badge/messaggio), non la logica server (già coperta da
+  // supabase/migrations/20260910120000_kitchen_promo_pass_redeem_v1.test.js).
+  test('18. Codice promo valido: badge sconto + totale aggiornato, CONFERMA PAGAMENTO resta disponibile', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ id: 'solo-1', promo_code: 'WALRUS-AB12C', discount_amount: 1.39, total: 17.11 }),
+      })
+    );
+    await page.goto('/kitchen/solo');
+
+    await page.locator('.kss-qcard[data-order="W47"]').click();
+    await expect(page.getByTestId('focus-code')).toHaveText('W47');
+    await expect(page.getByTestId('promo-code-btn')).toBeVisible();
+
+    page.once('dialog', (dialog) => dialog.accept('walrus-ab12c'));
+    await page.getByTestId('promo-code-btn').click();
+
+    const badge = page.getByTestId('promo-badge');
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText('WALRUS-AB12C');
+    await expect(badge).toContainText('1.39');
+    await expect(badge).toContainText('17.11');
+    await expect(page.getByTestId('promo-code-btn')).toHaveCount(0);
+    await expect(page.getByTestId('next-action')).toContainText('CONFERMA PAGAMENTO');
+  });
+
+  test('19. Codice già usato: messaggio inline, nessun blocco del pagamento a prezzo pieno', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
+      route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) })
+    );
+    await page.goto('/kitchen/solo');
+
+    await page.locator('.kss-qcard[data-order="W47"]').click();
+    page.once('dialog', (dialog) => dialog.accept('WALRUS-USED1'));
+    await page.getByTestId('promo-code-btn').click();
+
+    await expect(page.getByTestId('promo-feedback')).toHaveText('Codice già usato');
+    await expect(page.getByTestId('promo-code-btn')).toBeVisible();
+    await expect(page.getByTestId('promo-badge')).toHaveCount(0);
+    await expect(page.getByTestId('next-action')).toContainText('CONFERMA PAGAMENTO');
+  });
+
+  test('20. Ordine senza Pesi Massimi: nessuno sconto, messaggio esplicito', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
+      route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_no_eligible_item' }) })
+    );
+    await page.goto('/kitchen/solo');
+
+    await page.locator('.kss-qcard[data-order="W47"]').click();
+    page.once('dialog', (dialog) => dialog.accept('WALRUS-VALID'));
+    await page.getByTestId('promo-code-btn').click();
+
+    await expect(page.getByTestId('promo-feedback')).toHaveText('Nessun Peso Massimo in questo ordine');
+    await expect(page.getByTestId('promo-badge')).toHaveCount(0);
+  });
+
+  test('21. Ordine già pagato: messaggio esplicito, nessuno sconto applicato', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
+      route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'order_already_paid' }) })
+    );
+    await page.goto('/kitchen/solo');
+
+    await page.locator('.kss-qcard[data-order="W47"]').click();
+    page.once('dialog', (dialog) => dialog.accept('WALRUS-VALID'));
+    await page.getByTestId('promo-code-btn').click();
+
+    await expect(page.getByTestId('promo-feedback')).toHaveText('Ordine già pagato — sconto non applicabile');
+    await expect(page.getByTestId('promo-badge')).toHaveCount(0);
+  });
 });
 
 // Sprint 3A — notifica audio nuovo ordine. Sostituisce il Web Audio reale con un mock

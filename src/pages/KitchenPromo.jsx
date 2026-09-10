@@ -178,7 +178,7 @@ export default function KitchenPromo() {
             <div className="kp-pass-head">
               <p className="kp-pass-label">WALRUS KITCHEN</p>
               <h2 className="kp-pass-title">PERSONALITÀ DISCUTIBILE PASS</h2>
-              <p className="kp-pass-benefit">-10% SUL PRIMO PANINO</p>
+              <p className="kp-pass-benefit">-10% SUL TUO PRIMO PESO MASSIMO</p>
               <p className="kp-pass-copy">
                 Hai trasformato una pessima decisione in uno sconto.
               </p>

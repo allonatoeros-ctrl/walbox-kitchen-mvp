@@ -42,6 +42,8 @@ function mapSupabaseOrder(row) {
     note:          row.customer_note ?? null,
     cancelReason:  row.cancel_reason ?? null,
     cancelledAt:   row.cancelled_at ?? null,
+    promoCode:     row.promo_code ?? null,
+    discountAmount: row.discount_amount != null ? Number(row.discount_amount) : 0,
     actionLog:     [],
     items: (row.kitchen_order_items ?? []).map((i) => ({
       itemId:   i.item_id,
@@ -358,6 +360,35 @@ export function useKitchenOrders() {
     return { ok: true, method };
   };
 
+  // Redemption staff-side del Personalità Discutibile Pass (V2, Opzione A). La RPC è l'unica
+  // fonte di verità: sceglie lei il Peso Massimo eleggibile, calcola lo sconto e aggiorna
+  // kitchen_orders.total in una sola transazione atomica — qui si riflette solo il risultato.
+  const redeemPromo = async (orderId, code) => {
+    try {
+      const { data, error } = await supabase.rpc('kitchen_promo_pass_redeem_for_order', {
+        p_code: code,
+        p_order_id: orderId,
+      });
+      if (error) throw error;
+      if (!data) throw new Error('promo_redeem_invalid_response');
+
+      setOrders((prev) => {
+        const next = prev.map((o) => (o.id !== orderId ? o : {
+          ...o,
+          promoCode: data.promo_code ?? null,
+          discountAmount: data.discount_amount != null ? Number(data.discount_amount) : 0,
+          total: data.total != null ? Number(data.total) : o.total,
+        }));
+        saveOrders(next);
+        return next;
+      });
+      return { ok: true, promoCode: data.promo_code, discountAmount: Number(data.discount_amount ?? 0), total: Number(data.total) };
+    } catch (err) {
+      console.warn('[Walbox] Promo redeem RPC failed', err);
+      return { ok: false, error: err };
+    }
+  };
+
   const cancelOrder = (id, reason) => {
     const now = new Date().toISOString();
     const fromOrder = orders.find((o) => o.id === id);
@@ -389,5 +420,5 @@ export function useKitchenOrders() {
     setOrders(fresh);
   };
 
-  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote, retrySync };
+  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote, retrySync, redeemPromo };
 }
