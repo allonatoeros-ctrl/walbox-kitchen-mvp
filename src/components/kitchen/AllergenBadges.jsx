@@ -14,6 +14,7 @@ export const ALLERGEN_LABEL = {
   frutta_secca: '🥜 Frutta secca',
   crostacei:    '🦐 Crostacei',
   sedano:       '🌿 Sedano',
+  sesamo:       '🔸 Sesamo',
 };
 
 export default function AllergenBadges({ allergens }) {

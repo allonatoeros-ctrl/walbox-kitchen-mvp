@@ -75,6 +75,23 @@ const CATEGORY_SVGS = {
   ),
 };
 
+// Icona categoria TAGLIERI (fallback coerente, nessun asset fotografico generato):
+// tagliere + 3 fette — 1 sola tab cliente, raggruppa i 3 taglieri (decisione Eros 2026-09-10).
+CATEGORY_SVGS.tagliere = (
+  <svg width="36" height="26" viewBox="0 0 36 26" fill="none">
+    <rect x="1" y="3" width="34" height="20" rx="7" fill="currentColor" />
+    <circle cx="10" cy="13" r="3.2" fill="currentColor" opacity="0.45" />
+    <circle cx="18" cy="10" r="3.2" fill="currentColor" opacity="0.45" />
+    <circle cx="26" cy="14" r="3.2" fill="currentColor" opacity="0.45" />
+  </svg>
+);
+CATEGORY_SVGS.bevande = (
+  <svg width="24" height="34" viewBox="0 0 24 34" fill="none">
+    <path d="M4,8 L20,8 L18,32 C17.8,33 17,33.5 12,33.5 C7,33.5 6.2,33 6,32 Z" fill="currentColor" />
+    <rect x="13" y="1" width="2.4" height="12" rx="1.2" transform="rotate(12 14.2 7)" fill="currentColor" />
+  </svg>
+);
+
 // Categorie del menu completo — Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED, Page 4
 // (`MENU — CATEGORIE` 166:2). PATATINE / BIRRE / BEVANDE / COMBO non sono più
 // navigazione primaria: restano nei dati, non nel menu.
@@ -84,6 +101,8 @@ const MENU_CATEGORIES = [
   { key: 'cicchetti', label: 'CICCHETTI', icon: CATEGORY_SVGS.cicchetti },
   { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.insalatone },
   { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.tartare },
+  { key: 'tagliere', label: 'TAGLIERI', icon: CATEGORY_SVGS.tagliere },
+  { key: 'bevande', label: 'BEVANDE', icon: CATEGORY_SVGS.bevande },
 ];
 
 // Panini in evidenza sulla Home (Figma 140:2 / 140:12). `photoBg` = PHOTO BG del frame.
@@ -110,6 +129,8 @@ function getCategoryTitle(cat) {
   if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
   if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
   if (cat === 'bbq') return <>PESI <span style={{ color: 'var(--k-orange)' }}>MASSIMI</span></>;
+  if (cat === 'tagliere') return <>TAGLI<span style={{ color: 'var(--k-orange)' }}>ERI</span></>;
+  if (cat === 'bevande') return <>BEVANDE</>;
   return cat.toUpperCase();
 }
 
@@ -118,7 +139,9 @@ function getCategorySubtitle(cat) {
   if (cat === 'panini') return 'Quelli seri. Almeno loro.';
   if (cat === 'cicchetti') return 'MORTAZZA · LARDO & NOCI · SCAMORZA & CIPOLLE · CIAPPI VEG';
   if (cat === 'insalatone') return 'CAESAR · SALMON · VEGGY';
-  if (cat === 'tartare') return 'TARTARE 1 · TARTARE 2';
+  if (cat === 'tartare') return 'CRUDA E CONTENTA · DOLCE MA CRUDA';
+  if (cat === 'tagliere') return 'SALUMI SERISSIMI · FORMAGGI DISCUTIBILI · PACE FATTA';
+  if (cat === 'bevande') return 'ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · SCHWEPPES LEMON · SCHWEPPES TONICA';
   return null;
 }
 
@@ -620,7 +643,7 @@ export default function CustomerKitchenMenu() {
 
           <div className="kh-menu-block">
             <p className="kh-menu-block-title">ADESSO ENTRA NEL MENU.</p>
-            <p className="kh-menu-block-sub">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare</p>
+            <p className="kh-menu-block-sub">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Bevande</p>
             <button type="button" className="kh-btn-menu" onClick={enterMenu}>
               ENTRA NEL MENU →
             </button>
@@ -643,7 +666,7 @@ export default function CustomerKitchenMenu() {
           </div>
 
           <h2 className="kh-cat-title">IL MENU</h2>
-          <p className="kh-cat-subtitle">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare</p>
+          <p className="kh-cat-subtitle">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Bevande</p>
 
           <div className="kh-cat-list">
             {categoryRows.map((cat) => (
@@ -760,7 +783,7 @@ export default function CustomerKitchenMenu() {
               <AllergenBadges allergens={item.allergens} />
               <div className="kitch-card-footer">
                 <div className={`kitch-card-price${item.price == null ? ' kitch-card-price--soon' : ''}`}>
-                  {item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2)}`}
+                  {item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2).replace('.', ',')}`}
                 </div>
                 <button
                   className="kitch-btn-lo-voglio"
