@@ -431,6 +431,11 @@ export function KitchenSoloServiceView({
                 <span className="kss-qcard-line2">{itemsLine(o)}</span>
               </span>
               <span className="kss-qcard-right">
+                {o.fulfillmentType && (
+                  <span className="kss-qcard-tag" data-testid={`fulfillment-tag-${o.orderCode}`}>
+                    {o.fulfillmentType === 'takeaway' ? 'VIA' : 'QUI'}
+                  </span>
+                )}
                 {isPending(o) && o.total != null && (
                   <span className="kss-qcard-amount">€{o.total.toFixed(2)}</span>
                 )}
@@ -554,6 +559,11 @@ export function KitchenSoloServiceView({
                   <span className={`kss-status-pill kss-status-pill--${STATUS_PILL[focusOrder.status]?.cls ?? 'received'}`}>
                     {STATUS_PILL[focusOrder.status]?.label ?? focusOrder.status}
                   </span>
+                  {focusOrder.fulfillmentType && (
+                    <span className="kss-qcard-tag" data-testid="focus-fulfillment">
+                      {focusOrder.fulfillmentType === 'takeaway' ? 'VIA' : 'QUI'}
+                    </span>
+                  )}
                   <div className="kss-focus-code">
                     <span data-testid="focus-code">{focusOrder.orderCode}</span>
                     <span className="kss-focus-sep kss-focus-sep--min">·</span>

@@ -165,6 +165,15 @@ function customerPromoErrorText(err) {
   return match ? CUSTOMER_PROMO_ERROR_MESSAGES[match] : 'Codice promo non applicato — riprova';
 }
 
+// Stesso pattern SPA-navigate di CustomerOrderStatus.jsx (pushState + popstate sintetico, letto
+// dal router in App.jsx): unica destinazione post-ordine (Il Sacco Pulito, 2026-09-13) — il
+// pagamento (online o al banco) si sceglie sempre lì, mai qui.
+function navigateToOrderStatus(orderId) {
+  const path = `/kitchen/status?orderId=${orderId}`;
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
 export default function CustomerKitchenMenu() {
   const { session } = useCustomerSession();
   const { addOrder, redeemPromo } = useKitchenOrders();
@@ -175,16 +184,18 @@ export default function CustomerKitchenMenu() {
   const [view, setView] = useState('home');
   const [activeCategory, setActiveCategory] = useState('panini');
   const [orderItems, setOrderItems] = useState([]);
-  const [submitted, setSubmitted] = useState(false);
-  const [submittedOrderId, setSubmittedOrderId] = useState(null);
-  const [submittedOrderCode, setSubmittedOrderCode] = useState(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [customerNote, setCustomerNote] = useState('');
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [promoOpen, setPromoOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bannerOrderId, setBannerOrderId] = useState(null);
   const [promoCode, setPromoCode] = useState('');
-  const [promoResult, setPromoResult] = useState(null); // { ok:true, code, discountAmount, total } | { ok:false, errorText } | null
   const [orderError, setOrderError] = useState(null);
+  // Customer Checkout V1 (2026-09-13): unica scelta obbligatoria nel drawer, nessun default —
+  // l'invio resta disabilitato finché il cliente non la sceglie esplicitamente. Il pagamento non
+  // si sceglie più qui: vive interamente su /kitchen/status (Il Sacco Pulito, 2026-09-13).
+  const [fulfillmentType, setFulfillmentType] = useState(null); // 'eat_here' | 'takeaway'
 
   useEffect(() => {
     try {
@@ -237,11 +248,9 @@ export default function CustomerKitchenMenu() {
   // lo stato corrente, non quello catturato al mount.
   const viewRef = useRef(view);
   const cartOpenRef = useRef(cartOpen);
-  const submittedRef = useRef(submitted);
   const activeCategoryRef = useRef(activeCategory);
   viewRef.current = view;
   cartOpenRef.current = cartOpen;
-  submittedRef.current = submitted;
   activeCategoryRef.current = activeCategory;
 
   useEffect(() => {
@@ -270,23 +279,6 @@ export default function CustomerKitchenMenu() {
 
     const handlePopState = (event) => {
       if (window.location.pathname !== '/kitchen') return;
-
-      // La schermata ORDINE RICEVUTO è renderizzata a prescindere da `view`:
-      // senza questo il back verrebbe consumato a vuoto finché non si esce dal
-      // sito. Va controllata PRIMA del drawer, perché si invia l'ordine dal
-      // drawer aperto e `cartOpen` è ancora true quando appare la conferma.
-      if (submittedRef.current) {
-        setSubmitted(false);
-        setSubmitting(false);
-        setOrderItems([]);
-        setSubmittedOrderId(null);
-        setSubmittedOrderCode(null);
-        setPromoCode('');
-        setPromoResult(null);
-        setCartOpen(false);
-        restoreEntry(event.state);
-        return;
-      }
 
       // Con il drawer aperto il back lo chiude e basta (gesture standard per una
       // bottom sheet): rimettiamo la entry appena consumata così la schermata
@@ -342,7 +334,9 @@ export default function CustomerKitchenMenu() {
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
 
   const handleSubmit = async () => {
-    if (orderItems.length === 0 || submitting) return;
+    // Invio bloccato finché il cliente non sceglie esplicitamente dove mangia — nessun default
+    // silenzioso. Il pagamento non è più un gate qui: si sceglie su /kitchen/status.
+    if (orderItems.length === 0 || submitting || !fulfillmentType) return;
     setSubmitting(true);
     setOrderError(null);
     const newOrder = {
@@ -352,10 +346,10 @@ export default function CustomerKitchenMenu() {
       note: customerNote.trim() || null,
       status: 'pending_counter_payment',
       paymentStatus: 'pending_counter_payment',
-      paymentMethod: 'counter',
       paidAt: null,
+      fulfillmentType,
     };
-    // "ORDINE RICEVUTO" è mostrato solo se addOrder() conferma una persistenza server reale
+    // "ORDINE PRESO" è mostrato solo se addOrder() conferma una persistenza server reale
     // (id/order_code arrivano dalla RPC): se fallisce, il carrello resta intatto per il retry
     // e non viene mai mostrato un ordine fantasma (F02 — Phantom Order).
     const result = await addOrder(newOrder);
@@ -370,184 +364,27 @@ export default function CustomerKitchenMenu() {
     // Il codice promo si redime solo dopo che l'ordine esiste davvero (mai prima): così il
     // pass non viene mai consumato per un ordine che poi risulta non creato. Se il redeem
     // fallisce l'ordine resta comunque valido a prezzo pieno — non blocca mai il cliente.
+    // L'esito non è mostrato in questo task (Promo Redemption UI su /kitchen/status fuori scope,
+    // vedi ai-ops/reports/kitchen-customer-journey-ux-deep-dive.md P0-1).
     const code = promoCode.trim();
-    setPromoResult(null);
     if (code && redeemPromo && createdOrder.id) {
-      const promoOutcome = await redeemPromo(createdOrder.id, code);
-      setPromoResult(promoOutcome?.ok
-        ? { ok: true, code: promoOutcome.promoCode, discountAmount: promoOutcome.discountAmount, total: promoOutcome.total }
-        : { ok: false, errorText: customerPromoErrorText(promoOutcome?.error) });
+      await redeemPromo(createdOrder.id, code);
     }
 
-    setSubmittedOrderId(createdOrder.id);
-    setSubmittedOrderCode(createdOrder.orderCode);
-    setSubmitted(true);
-  };
-
-  const handleReset = () => {
-    setOrderItems([]);
-    setSubmittedOrderId(null);
-    setSubmittedOrderCode(null);
-    setSubmitted(false);
+    // Destinazione post-ordine unica (Il Sacco Pulito, 2026-09-13): il pagamento — online o al
+    // banco — si sceglie sempre su /kitchen/status, mai in una schermata di conferma in-page.
     setSubmitting(false);
-    setPromoCode('');
-    setPromoResult(null);
-    setOrderError(null);
+    navigateToOrderStatus(createdOrder.id);
   };
 
   useEffect(() => {
     if (cartOpen && orderItems.length === 0) setCartOpen(false);
   }, [orderItems.length, cartOpen]);
 
-  // ── Confirm screen ────────────────────────────────────────────────────
-  if (submitted) {
-    return (
-      <div className="kitch-page">
-        <div className="kitch-confirm">
-          <div className="kitch-confirm-logo"><img src="/assets/kitchen/walrus-chef.png" className="kitch-confirm-logo-img" /></div>
-          <div className="kitch-confirm-title">
-            <p style={{ margin: 0 }}>ORDINE RICEVUTO</p>
-            <p style={{ margin: 0, color: '#f05a24' }}>PASSA AL BANCO</p>
-          </div>
-          <div className="kitch-confirm-subtitle" style={{ fontSize: '32px', margin: '4px 0 16px' }}>PORTA QUESTO CODICE:</div>
-          {submittedOrderCode && (
-            <div style={{
-              margin: '0 20px 20px',
-              padding: '16px 24px',
-              background: 'rgba(200,150,10,0.12)',
-              border: '2px solid #c8960a',
-              borderRadius: '12px',
-              textAlign: 'center',
-            }}>
-              <div style={{
-                fontFamily: "'Montserrat', sans-serif",
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '1.5px',
-                color: 'rgba(245,234,216,0.55)',
-                textTransform: 'uppercase',
-                marginBottom: '4px'
-              }}>
-                MOSTRA QUESTO CODICE ALLA CASSA
-              </div>
-              <div style={{
-                fontFamily: "'Anton', sans-serif",
-                fontSize: '44px',
-                fontWeight: 900,
-                letterSpacing: '3px',
-                color: '#c8960a',
-                lineHeight: 1
-              }}>
-                {submittedOrderCode}
-              </div>
-            </div>
-          )}
-          {promoResult?.ok && (
-            <div
-              data-testid="promo-result-success"
-              style={{
-                margin: '0 20px 20px',
-                padding: '12px 16px',
-                background: 'rgba(69,124,57,0.15)',
-                border: '2px solid #457c39',
-                borderRadius: '12px',
-                textAlign: 'center',
-                color: '#8fd17a',
-                fontFamily: "'Montserrat', sans-serif",
-                fontWeight: 700,
-                fontSize: '14px',
-              }}
-            >
-              PROMO {promoResult.code} APPLICATA · −€{promoResult.discountAmount.toFixed(2).replace('.', ',')}
-              <br />NUOVO TOTALE €{promoResult.total.toFixed(2).replace('.', ',')}
-            </div>
-          )}
-          {promoResult?.ok === false && (
-            <div
-              data-testid="promo-result-error"
-              style={{
-                margin: '0 20px 20px',
-                padding: '12px 16px',
-                background: 'rgba(224,60,44,0.15)',
-                border: '2px solid #e03c2c',
-                borderRadius: '12px',
-                textAlign: 'center',
-                color: '#ff9a8c',
-                fontFamily: "'Montserrat', sans-serif",
-                fontWeight: 700,
-                fontSize: '14px',
-              }}
-            >
-              CODICE PROMO NON APPLICATO: {promoResult.errorText.toUpperCase()}
-            </div>
-          )}
-          <div className="kitch-status-list">
-            <div className="kitch-status-row">
-              <div className="kitch-status-col">
-                <div className="kitch-status-icon-done">✓</div>
-                <div className="kitch-status-connector" />
-              </div>
-              <div className="kitch-status-text">
-                <div className="kitch-status-label-done">RICEVUTO</div>
-                <div className="kitch-status-desc">Il tuo ordine è stato ricevuto.</div>
-              </div>
-            </div>
-            <div className="kitch-status-row">
-              <div className="kitch-status-col">
-                <div className="kitch-status-icon-pending">+</div>
-                <div className="kitch-status-connector" />
-              </div>
-              <div className="kitch-status-text">
-                <div className="kitch-status-label-pending">IN ATTESA PAGAMENTO</div>
-                <div className="kitch-status-desc">Mostra il codice e paga in cassa.</div>
-              </div>
-            </div>
-            <div className="kitch-status-row">
-              <div className="kitch-status-col">
-                <div className="kitch-status-icon-inactive" />
-                <div className="kitch-status-connector" />
-              </div>
-              <div className="kitch-status-text">
-                <div className="kitch-status-label-inactive">IN PREPARAZIONE</div>
-                <div className="kitch-status-desc-inactive">La cucina partirà appena lo staff conferma.</div>
-              </div>
-            </div>
-            <div className="kitch-status-row">
-              <div className="kitch-status-col">
-                <div className="kitch-status-icon-inactive" />
-              </div>
-              <div className="kitch-status-text">
-                <div className="kitch-status-label-inactive">PRONTO AL BANCO</div>
-                <div className="kitch-status-desc-inactive">Vieni al banco e spacca tutto.</div>
-              </div>
-            </div>
-          </div>
-          <div className="kitch-follow-hint">
-            <span className="kitch-follow-hint-icon">🔔</span>
-            <div className="kitch-follow-hint-text">
-              <strong>QUANDO È PRONTO TI AVVISIAMO NOI</strong>
-              <small>Rimani nei paraggi, non sparire.</small>
-            </div>
-          </div>
-          <button
-            className="kitch-btn-follow"
-            onClick={() => {
-              const url = submittedOrderId ? `/kitchen/status?orderId=${submittedOrderId}` : '/kitchen/status';
-              window.history.pushState({}, '', url);
-              window.dispatchEvent(new PopStateEvent('popstate'));
-            }}
-          >
-            SEGUI IL TUO ORDINE
-          </button>
-          <button className="kitch-btn-secondary" onClick={handleReset}>
-            NUOVO ORDINE
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // ── Main menu ─────────────────────────────────────────────────────────
+  // La schermata di conferma in-page "ORDINE RICEVUTO" è stata rimossa (Il Sacco Pulito,
+  // 2026-09-13): dopo l'invio si va sempre su /kitchen/status (vedi handleSubmit), che copre
+  // già lo stesso contenuto (codice, timeline, pagamento) senza duplicarlo.
   return (
     <div className="kitch-page">
       <style>{`
@@ -883,52 +720,74 @@ export default function CustomerKitchenMenu() {
               ))}
             </div>
 
-            <div style={{ padding: '0 16px 12px' }}>
-              <textarea
-                value={customerNote}
-                onChange={(e) => setCustomerNote(e.target.value)}
-                placeholder="Note per la cucina (allergie, variazioni…)"
-                maxLength={200}
-                rows={3}
-                style={{
-                  width: '100%',
-                  background: '#1a0800',
-                  border: '1.5px solid #3a1800',
-                  borderRadius: 8,
-                  color: '#fff',
-                  fontSize: 14,
-                  padding: '10px 12px',
-                  resize: 'none',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit',
-                }}
-              />
+            {/* DOVE LO MANGI? — unica domanda del drawer (Il Sacco Pulito, 2026-09-13).
+                Il pagamento non si sceglie più qui: vive su /kitchen/status. */}
+            <div className="kitch-fulfillment-wrap" data-testid="checkout-fulfillment">
+              <div className="kitch-fulfillment-label">DOVE LO MANGI?</div>
+              <div className="kitch-fulfillment-grid">
+                {[
+                  { value: 'eat_here', label: 'MANGIO QUI', sub: 'ti chiamiamo', emoji: '🍽️' },
+                  { value: 'takeaway', label: 'PORTO VIA', sub: 'impacchettiamo', emoji: '🥡' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    data-testid={`fulfillment-${opt.value}`}
+                    onClick={() => setFulfillmentType(opt.value)}
+                    disabled={submitting}
+                    className={`kitch-fulfillment-card ${fulfillmentType === opt.value ? 'kitch-fulfillment-card--selected' : ''}`}
+                  >
+                    <span className="kitch-fulfillment-card-emoji" aria-hidden="true">{opt.emoji}</span>
+                    <span className="kitch-fulfillment-card-title">{opt.label}</span>
+                    <span className="kitch-fulfillment-card-sub">{opt.sub}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div style={{ padding: '0 16px 12px' }}>
-              <input
-                type="text"
-                value={promoCode}
-                onChange={(e) => setPromoCode(e.target.value)}
-                placeholder="Codice promo (facoltativo)"
-                maxLength={20}
-                disabled={submitting}
-                data-testid="promo-code-input"
-                style={{
-                  width: '100%',
-                  background: '#1a0800',
-                  border: '1.5px solid #3a1800',
-                  borderRadius: 8,
-                  color: '#fff',
-                  fontSize: 14,
-                  padding: '10px 12px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                  fontFamily: 'inherit',
-                  textTransform: 'uppercase',
-                }}
-              />
+            {/* EXTRA — note e codice promo, secondarie e collassate di default. */}
+            <div className="kitch-extra-wrap">
+              <button
+                type="button"
+                className={`kitch-extra-chip ${notesOpen ? 'kitch-extra-chip--open' : ''}`}
+                onClick={() => setNotesOpen((v) => !v)}
+              >
+                <span aria-hidden="true">{notesOpen ? '⊖' : '⊕'}</span> NOTE PER LA CUCINA
+              </button>
+              {notesOpen && (
+                <div>
+                  <textarea
+                    className="kitch-extra-field"
+                    value={customerNote}
+                    onChange={(e) => setCustomerNote(e.target.value)}
+                    placeholder="Allergie, variazioni…"
+                    maxLength={200}
+                    rows={3}
+                    style={{ resize: 'none' }}
+                  />
+                  <div className="kitch-extra-counter">{customerNote.length}/200</div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                className={`kitch-extra-chip ${promoOpen ? 'kitch-extra-chip--open' : ''}`}
+                onClick={() => setPromoOpen((v) => !v)}
+              >
+                <span aria-hidden="true">{promoOpen ? '⊖' : '⊕'}</span> HO UN CODICE
+              </button>
+              {promoOpen && (
+                <input
+                  type="text"
+                  className="kitch-extra-field kitch-extra-field--promo"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Il tuo codice"
+                  maxLength={20}
+                  disabled={submitting}
+                  data-testid="promo-code-input"
+                />
+              )}
             </div>
 
             <div className="kitch-drawer-footer">
@@ -955,8 +814,19 @@ export default function CustomerKitchenMenu() {
                 <div className="kitch-drawer-total-label">TOTALE</div>
                 <div className="kitch-drawer-total-value">€{total.toFixed(2).replace('.', ',')}</div>
               </div>
-              <button className="kitch-btn-submit" onClick={handleSubmit} aria-label="Invia ordine" disabled={submitting} style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}>{submitting ? 'INVIO IN CORSO…' : "VAI ALL'ORDINE"}</button>
-              <div className="kitch-secure-hint">🔒 Ordine sicuro e veloce</div>
+              <button
+                className="kitch-btn-submit"
+                onClick={handleSubmit}
+                aria-label="Invia ordine"
+                disabled={submitting || !fulfillmentType}
+                data-testid="submit-order-btn"
+                style={(submitting || !fulfillmentType) ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+              >
+                {submitting ? 'INVIO IN CORSO…' : 'CONFERMA ORDINE'}
+              </button>
+              <div className="kitch-secure-hint">
+                {fulfillmentType ? 'Paghi dopo: al banco o dal telefono.' : 'Prima dicci: qui o via?'}
+              </div>
             </div>
           </div>
         </div>

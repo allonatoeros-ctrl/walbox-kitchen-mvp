@@ -47,6 +47,54 @@ async function addFirstOrderableItem(page) {
   await page.getByRole('button', { name: 'LO VOGLIO' }).first().click();
 }
 
+// Il Sacco Pulito (2026-09-13): unica scelta obbligatoria nel drawer prima che "Invia ordine"
+// sia cliccabile — il pagamento non si sceglie più qui, vive su /kitchen/status.
+async function chooseFulfillment(page, fulfillment) {
+  await page.getByTestId(`fulfillment-${fulfillment}`).click();
+}
+
+// kitchen_customer_create_order a 5 argomenti (20260913130000_kitchen_checkout_fulfillment_v1.sql)
+// è "LOCAL BUILD ONLY — NOT APPLIED TO REMOTE" per decisione esplicita di questo task (NON: apply
+// remoto). Questo ambiente E2E punta al progetto Supabase reale via .env.local, dove PostgREST non
+// ha ancora la nuova overload in schema cache (PGRST202: "Could not find the function ... with
+// parameters ... p_fulfillment_type ..."). La RPC va quindi mockata qui — stesso pattern già in uso
+// per kitchen_promo_pass_redeem_for_order (test 18/19) — verificando anche che il client invii
+// davvero p_fulfillment_type nel payload, non solo che l'ordine appaia creato lato UI.
+async function mockCreateOrderRpc(page, { fulfillmentType, orderId = 'order-e2e-checkout-mock', orderCode = 'A01' } = {}) {
+  const sent = { body: null };
+  await page.route('**/rest/v1/rpc/kitchen_customer_create_order', async (route) => {
+    sent.body = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: orderId,
+        order_code: orderCode,
+        venue_id: 'walrus-main',
+        table_id: null,
+        nickname: sent.body?.p_nickname ?? 'Eros',
+        status: 'pending_counter_payment',
+        total: 13.9,
+        payment_status: 'pending_counter_payment',
+        payment_method: null,
+        fulfillment_type: fulfillmentType,
+        service_day: new Date().toISOString().slice(0, 10),
+        service_sequence: 1,
+        created_at: new Date().toISOString(),
+      }),
+    });
+  });
+  // Il Sacco Pulito (2026-09-13) reindirizza sempre a /kitchen/status subito dopo la creazione,
+  // il cui mount rilancia fetchSupabaseOrders() (useKitchenOrders.js:203-235) verso il progetto
+  // Supabase reale: senza questo mock la select reale (dati di produzione, non legati a questo
+  // test) sovrascriverebbe l'intero stato locale (`if (!data?.length) return` — un risultato
+  // vuoto lascia invece invariato l'ordine appena creato via mock RPC, vedi riga 217-227).
+  await page.route('**/rest/v1/kitchen_orders*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  );
+  return sent;
+}
+
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
@@ -92,6 +140,8 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   await page.getByRole('button', { name: /Cibo/i }).click();
   await expect(page).toHaveURL(/\/kitchen/);
 
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'A02' });
+
   // Home → menu completo → primo prodotto ordinabile (Pesi Massimi)
   await openFullMenu(page);
   await addFirstOrderableItem(page);
@@ -99,19 +149,20 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   // Open cart bottom sheet via the floating pill
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
 
+  // Il Sacco Pulito (2026-09-13): fulfillment obbligatorio prima dell'invio, il pagamento no.
+  await chooseFulfillment(page, 'eat_here');
+
   // Submit the order
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
-  // handleSubmit ora attende addOrder() (sessione anonima + tentativo RPC) prima di mostrare
-  // la conferma: aspettare lo schermo ORDINE RICEVUTO è il segnale reale che l'ordine è stato
-  // scritto (fallback locale incluso), invece di leggere localStorage a tempo fisso subito
-  // dopo il click.
-  await expect(page.getByText('ORDINE RICEVUTO')).toBeVisible();
+  // handleSubmit ora attende addOrder() (sessione anonima + tentativo RPC) prima di redirigere:
+  // aspettare /kitchen/status è il segnale reale che l'ordine è stato scritto (fallback locale
+  // incluso), invece di leggere localStorage a tempo fisso subito dopo il click.
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page.getByText('IN ATTESA DI PAGAMENTO')).toBeVisible();
 
-  // No-tables contract (2026-09-05): Kitchen non ha tavoli/asporto. L'ordine creato
-  // deve preservare l'identità cliente (nickname) e avere un order_code coerente
-  // (fallback locale A01…Z99 quando la RPC server-side non è raggiungibile), senza
-  // richiedere né scrivere alcun campo table/fulfillment.
+  // No-tables contract (2026-09-05): Kitchen non ha tavoli/asporto — invariato. Customer Checkout
+  // V1 (2026-09-13) aggiunge fulfillment_type (eat_here/takeaway), ma nessun table/numero tavolo.
   const orders = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key) || '[]'),
     LS_ORDERS,
@@ -123,7 +174,74 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   expect(latest.nickname).toBe('Eros');
   expect(latest.orderCode).toMatch(/^[A-Z]+\d{2}$/);
   expect(latest.table).toBeUndefined();
-  expect(latest.fulfillmentType).toBeUndefined();
+  expect(latest.fulfillmentType).toBe('eat_here');
+
+  // Verifica diretta del payload inviato alla RPC (5 argomenti, no table_id/tavolo).
+  expect(sent.body.p_fulfillment_type).toBe('eat_here');
+  expect(sent.body.p_venue_id).toBe('walrus-main');
+  expect('p_table_id' in sent.body).toBe(false);
+});
+
+test('3h. Invio ordine disabilitato finché "dove lo mangi" non è scelto', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+
+  const submitBtn = page.getByTestId('submit-order-btn');
+  await expect(submitBtn).toBeDisabled();
+
+  await page.getByTestId('fulfillment-takeaway').click();
+  await expect(submitBtn).toBeEnabled();
+});
+
+test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redirect a /kitchen/status, resta pending_counter_payment', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'takeaway', orderCode: 'A03' });
+
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'takeaway');
+  await page.getByRole('button', { name: /Invia ordine/i }).click();
+
+  // Il Sacco Pulito (2026-09-13): destinazione post-ordine unica, sempre /kitchen/status —
+  // nessuna schermata statica di conferma in-page, il pagamento (online o al banco) si sceglie lì.
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page.locator('.kitch-confirm')).toHaveCount(0);
+
+  expect(sent.body.p_fulfillment_type).toBe('takeaway');
+
+  const orders = await page.evaluate(
+    (key) => JSON.parse(localStorage.getItem(key) || '[]'),
+    LS_ORDERS,
+  );
+  const latest = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
+  expect(latest.fulfillmentType).toBe('takeaway');
+  // Il pagamento (online o al banco) si sceglie solo su /kitchen/status: l'ordine resta
+  // pending_counter_payment finché una conferma reale non lo avanza — nessun phantom success.
+  expect(latest.status).toBe('pending_counter_payment');
+  expect(latest.paymentStatus).toBe('pending_counter_payment');
+});
+
+// F02 (Phantom Order) invariato: se la RPC di creazione ordine fallisce, il cliente non deve mai
+// essere redirezionato a /kitchen/status per un ordine che non esiste.
+test('3k. RPC di creazione ordine fallita: nessun ordine fantasma, carrello resta intatto per il retry', async ({ page }) => {
+  await page.route('**/rest/v1/rpc/kitchen_customer_create_order', (route) =>
+    route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'internal_error' }) })
+  );
+
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'eat_here');
+  await page.getByRole('button', { name: /Invia ordine/i }).click();
+
+  await expect(page).not.toHaveURL(/\/kitchen\/status/);
+  await expect(page.getByTestId('order-submit-error')).toBeVisible();
+  // Il carrello resta intatto per il retry: il pulsante di invio è di nuovo cliccabile.
+  await expect(page.getByRole('button', { name: /Invia ordine/i })).toBeEnabled();
 });
 
 test('3b. Sold-out item shows ESAURITO overlay and disabled ESAURITO CTA', async ({ page }) => {
@@ -617,14 +735,23 @@ test('17. Alert critico dopo 15 minuti', async ({ page }) => {
 // supabase/migrations/20260910130000_kitchen_promo_pass_redeem_customer_v1.test.js — qui si
 // verifica solo il wiring client (input → addOrder → redeemPromo → esito visibile), mockata via
 // route come già fatto per i test staff-side rimossi da kitchen-solo-service.spec.js.
-test('18. Cliente inserisce un codice promo valido: sconto e nuovo totale mostrati chiaramente su ORDINE RICEVUTO', async ({ page }) => {
-  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
-    route.fulfill({
+// Il Sacco Pulito (2026-09-13): il codice promo resta un campo collassato ("HO UN CODICE") nel
+// drawer, invariato lato redeem (RPC chiamata dopo addOrder, mai prima). L'esito non è più
+// mostrato da nessuna parte in questo task — la Promo Redemption UI su /kitchen/status è
+// esplicitamente fuori scope (vedi ai-ops/reports/kitchen-customer-journey-ux-deep-dive.md P0-1) —
+// quindi qui si verifica solo che il redeem parta con il codice giusto e che l'ordine si confermi
+// comunque, non più un banner di successo/errore.
+test('18. Cliente inserisce un codice promo valido: il redeem parte con il codice giusto, ordine confermato', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'A05' });
+  const promoSent = { body: null };
+  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', async (route) => {
+    promoSent.body = route.request().postDataJSON();
+    await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ promo_code: 'WALRUS-AB12C', discount_amount: 1.5, total: 13.5 }),
-    })
-  );
+    });
+  });
 
   await page.goto('/entry');
   await page.getByPlaceholder('Es. 12').fill('12');
@@ -636,23 +763,23 @@ test('18. Cliente inserisce un codice promo valido: sconto e nuovo totale mostra
   await openFullMenu(page);
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'eat_here');
 
+  await page.getByRole('button', { name: /HO UN CODICE/i }).click();
   await page.getByTestId('promo-code-input').fill('walrus-ab12c');
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
-  await expect(page.getByText('ORDINE RICEVUTO')).toBeVisible();
-  const success = page.getByTestId('promo-result-success');
-  await expect(success).toBeVisible();
-  await expect(success).toContainText('WALRUS-AB12C');
-  await expect(success).toContainText('1,50');
-  await expect(success).toContainText('13,50');
-  await expect(page.getByTestId('promo-result-error')).toHaveCount(0);
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  expect(promoSent.body?.p_code).toBe('walrus-ab12c');
 });
 
-test('19. Cliente inserisce un codice promo non valido: errore chiaramente visibile, ordine confermato comunque a prezzo pieno', async ({ page }) => {
-  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
-    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) })
-  );
+test('19. Cliente inserisce un codice promo non valido: ordine confermato comunque a prezzo pieno', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'A06' });
+  const promoSent = { body: null };
+  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', async (route) => {
+    promoSent.body = route.request().postDataJSON();
+    await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) });
+  });
 
   await page.goto('/entry');
   await page.getByPlaceholder('Es. 12').fill('12');
@@ -664,16 +791,15 @@ test('19. Cliente inserisce un codice promo non valido: errore chiaramente visib
   await openFullMenu(page);
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'eat_here');
 
+  await page.getByRole('button', { name: /HO UN CODICE/i }).click();
   await page.getByTestId('promo-code-input').fill('WALRUS-USED1');
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
-  // L'ordine si conferma comunque: un codice sbagliato non deve mai bloccare il cliente.
-  await expect(page.getByText('ORDINE RICEVUTO')).toBeVisible();
-  const error = page.getByTestId('promo-result-error');
-  await expect(error).toBeVisible();
-  await expect(error).toContainText('CODICE GIÀ USATO');
-  await expect(page.getByTestId('promo-result-success')).toHaveCount(0);
+  // Un codice sbagliato non deve mai bloccare il cliente: l'ordine si conferma comunque.
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  expect(promoSent.body?.p_code).toBe('WALRUS-USED1');
 });
 
 // Nota di copertura: l'autorizzazione "cliente redime solo il proprio ordine, non quello di un

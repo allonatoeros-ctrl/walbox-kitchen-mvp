@@ -465,7 +465,7 @@ export default function CustomerOrderStatus() {
                   ? 'AVVIO PAGAMENTO…'
                   : sumup.state === 'redirecting'
                     ? 'REINDIRIZZAMENTO A SUMUP…'
-                    : '💳 PAGA CON SUMUP'}
+                    : '💳 PAGA ONLINE'}
               </button>
               {sumup.state === 'error' && (
                 <div style={{
