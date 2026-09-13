@@ -320,20 +320,34 @@ export function useKitchenOrders() {
     const current = orders.find((o) => o.id === orderId);
     if (!current) return;
 
+    let data;
     try {
-      const { error } = await supabase.rpc('kitchen_payment_record_counter', {
+      const rpcResult = await supabase.rpc('kitchen_payment_record_counter', {
         p_order_id: orderId,
         p_method: method,
       });
-      // order_already_paid = another call already recorded this payment (double click /
-      // concurrent staff action) — the order IS paid, so this is not a real failure.
-      if (error && !error.message?.includes('order_already_paid')) throw error;
+      const { error } = rpcResult;
+      // F03: a live/retry-eligible SumUp attempt blocks this order from being paid at the counter
+      // (see kitchen_payment_record_counter, migration 20260913120000) — this is a real block, not
+      // a "someone else already paid" idempotent case, so it must surface as a distinct failure and
+      // the UI must NOT show "pagato".
+      if (error?.message?.includes('online_payment_in_progress')) {
+        console.warn('[Walbox] Counter payment blocked — online payment in progress', error);
+        applyLocalSyncStatus(orderId, 'error', 'Pagamento online in corso per questo ordine — verifica prima di incassare');
+        return { ok: false, error, reason: 'online_payment_in_progress' };
+      }
+      if (error) throw error;
+      data = rpcResult.data;
     } catch (err) {
       console.warn('[Walbox] Counter payment RPC failed — order not marked paid', err);
       applyLocalSyncStatus(orderId, 'error', 'Pagamento non registrato — riprova');
       return { ok: false, error: err };
     }
 
+    // Semantic check, not just "error == null": the RPC can return an idempotent pre-existing
+    // succeeded payment (e.g. already paid via a different method/channel) instead of the counter
+    // charge just requested. Trust the server-returned row, never the locally-clicked method.
+    const resolvedMethod = data?.method ?? method;
     const now = new Date().toISOString();
     setOrders((prev) => {
       const next = prev.map((o) => {
@@ -341,7 +355,7 @@ export function useKitchenOrders() {
         const updated = {
           ...o,
           paymentStatus: 'paid',
-          paymentMethod: method,
+          paymentMethod: resolvedMethod,
           paidAt: now,
           status: o.status === 'pending_counter_payment' ? 'received' : o.status,
           syncStatus: 'synced',
@@ -366,7 +380,7 @@ export function useKitchenOrders() {
         created_at:  now,
       });
     }
-    return { ok: true, method };
+    return { ok: true, method: resolvedMethod };
   };
 
   // Redemption staff-side del Personalità Discutibile Pass (V2, Opzione A). La RPC è l'unica

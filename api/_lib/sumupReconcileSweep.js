@@ -107,6 +107,13 @@ export async function runReconcileSweep({ supabaseAdmin, sumupApiKey, fetchImpl 
       if (result.outcome === 'confirmed') summary.confirmed += 1;
       else if (result.outcome === 'failed') summary.failed += 1;
       else if (result.outcome === 'pending') summary.pending += 1;
+      else if (result.outcome === 'lost_race') {
+        // F03: SumUp captured money on this checkout, but a counter payment already won the
+        // succeeded-charge slot for this order — never count as 'confirmed', flag for staff review
+        // same as the other manual-reconciliation cases above.
+        summary.unknown += 1;
+        summary.needsManualReconciliation.push(attempt.id);
+      }
       else summary.unknown += 1; // already_resolved (race with webhook/on-demand reconcile mid-sweep)
     } catch (err) {
       summary.errors.push({ attemptId: attempt.id, error: err?.message || String(err) });

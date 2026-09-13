@@ -106,6 +106,15 @@ export default async function handler(req, res) {
         attemptId, attemptAmount: attempt.amount, checkoutAmount: checkout.amount, provider: attempt.provider,
       });
     }
+    if (result.outcome === 'lost_race') {
+      // F03: SumUp really captured money on this checkout, but a counter payment already won the
+      // one-succeeded-charge-per-order slot — logged server-side (kitchen_action_log,
+      // 'payment_confirm_lost_race') by the RPC itself; surface it here too so it is not silent in
+      // this process's own logs.
+      console.error('[kitchen-sumup-webhook] SumUp confirmed PAID but lost the succeeded-charge race — needs manual reconciliation', {
+        attemptId, orderId: attempt.order_id, winningPaymentId: result.winning_payment_id,
+      });
+    }
   } catch (err) {
     console.error('[kitchen-sumup-webhook] confirm/fail RPC failed', err);
     return res.status(500).json({ error: 'rpc_failed' });

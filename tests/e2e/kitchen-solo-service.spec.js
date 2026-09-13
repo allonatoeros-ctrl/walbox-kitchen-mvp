@@ -116,6 +116,35 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('kpi-dafare')).toHaveText('3');
   });
 
+  test('4b. F03: pagamento rapido bloccato (SumUp online in corso) — nessun "pagato", errore semantico visibile', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    // kitchen_payment_record_counter (migration 20260913120000) risponde con
+    // online_payment_in_progress: la UI deve leggere il risultato semantico dell'RPC (non solo
+    // "error == null") e NON deve mai marcare l'ordine come pagato.
+    await page.route('**/rest/v1/rpc/kitchen_payment_record_counter', (route) =>
+      route.fulfill({
+        status: 400,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 'P0001', message: 'online_payment_in_progress', details: null, hint: null }),
+      })
+    );
+    await page.goto('/kitchen/solo');
+
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+
+    const quickPay = page.getByTestId('quick-pay');
+    await expect(quickPay).toContainText('W47');
+    await quickPay.click();
+
+    // L'ordine NON risulta pagato: resta nella coda "da incassare", KPI invariato, focus invariato.
+    await expect(page.getByTestId('kpi-paga')).toHaveText('1');
+    await expect(page.getByTestId('kpi-dafare')).toHaveText('2');
+    await expect(page.getByTestId('focus-code')).toHaveText('W43');
+
+    // L'errore semantico è visibile in coda sull'ordine bloccato (non un generico "successo").
+    await expect(page.getByTestId('sync-error-tag-W47')).toBeVisible();
+  });
+
   test('5. deviazione manuale sul banco: dopo l\'incasso torna a W43', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/kitchen/solo');

@@ -58,12 +58,23 @@ export async function applySumupCheckoutResult(supabaseAdmin, attempt, checkout)
       return { outcome: 'failed', reason: 'amount_mismatch' };
     }
 
-    const { error } = await supabaseAdmin.rpc('kitchen_payment_confirm', {
+    const { data, error } = await supabaseAdmin.rpc('kitchen_payment_confirm', {
       p_attempt_id: attempt.id,
       p_provider_ref: checkout.id ?? attempt.id,
       p_raw_payload: checkout,
     });
     if (error) throw error;
+
+    // F03: `error === null` alone is not proof that THIS attempt got confirmed. When a counter
+    // cash/card payment already won the "one succeeded charge per order" race (kitchen_payments_
+    // one_succeeded_charge_per_order, kitchen_payment_confirm's unique_violation branch,
+    // migration 20260913120000), the RPC still returns success but hands back the WINNING row, not
+    // this attempt's own row — SumUp really did capture money on this checkout, but Walbox never
+    // recorded it as the succeeded charge. Never report 'confirmed' for that case: the caller must
+    // not tell the customer/staff "paid" when this specific attempt is still unresolved.
+    if (!data || data.id !== attempt.id) {
+      return { outcome: 'lost_race', winning_payment_id: data?.id ?? null };
+    }
     return { outcome: 'confirmed' };
   }
 

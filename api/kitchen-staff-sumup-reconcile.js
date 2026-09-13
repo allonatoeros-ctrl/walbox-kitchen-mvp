@@ -191,6 +191,16 @@ export default async function handler(req, res) {
       }
       return res.status(200).json({ outcome: 'pending', retryable: false });
     }
+    if (result.outcome === 'lost_race') {
+      // F03: SumUp really captured money on this checkout, but a counter payment already won the
+      // succeeded-charge slot for this order (kitchen_action_log has 'payment_confirm_lost_race').
+      // Never report 'confirmed' to staff here — same safe default as every other inconclusive
+      // case below, until a dedicated staff UI for this conflict exists.
+      console.error('[kitchen-staff-sumup-reconcile] SumUp confirmed PAID but lost the succeeded-charge race — needs manual reconciliation', {
+        attemptId: attempt.id, orderId: attempt.order_id, winningPaymentId: result.winning_payment_id,
+      });
+      return res.status(200).json({ outcome: 'pending', retryable: false });
+    }
     // 'pending'
     return res.status(200).json({ outcome: 'pending', retryable: false });
   } catch (err) {
