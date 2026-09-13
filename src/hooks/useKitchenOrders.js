@@ -34,6 +34,7 @@ function mapSupabaseOrder(row) {
     total:         row.total,
     paymentStatus: row.payment_status,
     paymentMethod: row.payment_method ?? null,
+    fulfillmentType: row.fulfillment_type ?? null,
     paidAt:        row.paid_at ?? null,
     createdAt:     row.created_at,
     readyAt:       row.ready_at ?? null,
@@ -127,8 +128,13 @@ export async function createOrderOnServer(order) {
     if (!session) throw new Error('customer_session_missing');
 
     // The DB RPC is the authoritative boundary for operational code allocation and customer
-    // order persistence. No table/fulfillment concept: Kitchen has no tables (product
-    // decision 2026-09-05, see ai-ops/reports/sprint3b-no-tables-correction-audit.md).
+    // order persistence. Still no table/tavolo concept: Kitchen has no tables (product decision
+    // 2026-09-05, see ai-ops/reports/sprint3b-no-tables-correction-audit.md) — fulfillment_type
+    // (Customer Checkout V1, 2026-09-13) only carries eat_here/takeaway, never a table number.
+    //
+    // Calls the 5-argument overload (20260913130000_kitchen_checkout_fulfillment_v1.sql), which
+    // requires p_fulfillment_type explicitly (no DEFAULT — see design doc AMBIGUITY_RISK): every
+    // current-build client always passes 'eat_here' or 'takeaway' here, never omits the argument.
     const { data, error } = await supabase.rpc('kitchen_customer_create_order', {
       p_venue_id: 'walrus-main',
       p_nickname: order.nickname,
@@ -139,6 +145,7 @@ export async function createOrderOnServer(order) {
         quantity: item.quantity,
         price: item.price,
       })),
+      p_fulfillment_type: order.fulfillmentType,
     });
     if (error) throw error;
     if (!data?.id || !data?.order_code) throw new Error('order_creation_invalid_response');
@@ -154,6 +161,7 @@ export async function createOrderOnServer(order) {
         serviceSequence: data.service_sequence,
         total: Number(data.total),
         createdAt: data.created_at,
+        fulfillmentType: data.fulfillment_type ?? order.fulfillmentType ?? null,
       },
     };
   } catch (err) {
