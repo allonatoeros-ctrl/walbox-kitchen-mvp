@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { demoKitchenOrders } from '../data/kitchenMockData';
 import { supabase } from '../lib/supabaseClient';
-import { nextLocalOperationalCode } from '../lib/kitchenOrderCode';
 
 const LS_KEY = 'walbox_kitchen_orders_demo';
 
@@ -108,6 +107,57 @@ async function supabaseInsertActionLog({ order_id, action, from_status, to_statu
     if (error) throw error;
   } catch (err) {
     console.warn('[Walbox] Supabase action log insert failed', err);
+  }
+}
+
+// export solo per il test mirato F02 (mock.module su ../lib/supabaseClient); nessun nuovo
+// consumer applicativo oltre a useKitchenOrders.addOrder.
+//
+// La RPC server è l'unica fonte di verità per id/order_code: nessun fallback locale. Un
+// ordine che non ha superato questa chiamata non esiste per la cucina/staff, quindi non deve
+// mai risultare in un successo silenzioso (F02 — Phantom Order).
+export async function createOrderOnServer(order) {
+  try {
+    let { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      const { data, error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
+      session = data.session;
+    }
+    if (!session) throw new Error('customer_session_missing');
+
+    // The DB RPC is the authoritative boundary for operational code allocation and customer
+    // order persistence. No table/fulfillment concept: Kitchen has no tables (product
+    // decision 2026-09-05, see ai-ops/reports/sprint3b-no-tables-correction-audit.md).
+    const { data, error } = await supabase.rpc('kitchen_customer_create_order', {
+      p_venue_id: 'walrus-main',
+      p_nickname: order.nickname,
+      p_customer_note: order.note ?? null,
+      p_items: order.items.map((item) => ({
+        item_id: item.itemId,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price,
+      })),
+    });
+    if (error) throw error;
+    if (!data?.id || !data?.order_code) throw new Error('order_creation_invalid_response');
+
+    return {
+      ok: true,
+      order: {
+        actionLog: [],
+        ...order,
+        id: data.id,
+        orderCode: data.order_code,
+        serviceDay: data.service_day,
+        serviceSequence: data.service_sequence,
+        total: Number(data.total),
+        createdAt: data.created_at,
+      },
+    };
+  } catch (err) {
+    return { ok: false, error: err };
   }
 }
 
@@ -251,58 +301,17 @@ export function useKitchenOrders() {
   };
 
   const addOrder = async (order) => {
-    const localCode = nextLocalOperationalCode('walrus-main');
-    let createdOrder = {
-      actionLog: [],
-      ...order,
-      ...localCode,
-      orderCode: localCode.orderCode,
-    };
-    try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) throw error;
-        session = data.session;
-      };
-      if (!session) throw new Error('customer_session_missing');
-
-      // The DB RPC is the authoritative boundary for operational code allocation and customer
-      // order persistence. No table/fulfillment concept: Kitchen has no tables (product
-      // decision 2026-09-05, see ai-ops/reports/sprint3b-no-tables-correction-audit.md).
-      const { data, error } = await supabase.rpc('kitchen_customer_create_order', {
-        p_venue_id: 'walrus-main',
-        p_nickname: order.nickname,
-        p_customer_note: order.note ?? null,
-        p_items: order.items.map((item) => ({
-          item_id: item.itemId,
-          name: item.name,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-      });
-      if (error) throw error;
-      if (!data?.id || !data?.order_code) throw new Error('order_creation_invalid_response');
-
-      createdOrder = {
-        ...createdOrder,
-        id: data.id,
-        orderCode: data.order_code,
-        serviceDay: data.service_day,
-        serviceSequence: data.service_sequence,
-        total: Number(data.total),
-        createdAt: data.created_at,
-      }
-    } catch (err) {
-      console.warn('[Walbox] Order RPC unavailable — local-only fallback active', err);
+    const result = await createOrderOnServer(order);
+    if (!result.ok) {
+      console.warn('[Walbox] Order creation failed — order NOT persisted', result.error);
+      return result;
     }
-
     setOrders((prev) => {
-      const next = [...prev, createdOrder];
+      const next = [...prev, result.order];
       saveOrders(next);
       return next;
     });
-    return createdOrder;
+    return result;
   };
 
   // A counter confirmation is always a Payment Hub write. The amount comes from the order locked

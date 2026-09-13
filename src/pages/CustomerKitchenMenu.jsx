@@ -184,6 +184,7 @@ export default function CustomerKitchenMenu() {
   const [bannerOrderId, setBannerOrderId] = useState(null);
   const [promoCode, setPromoCode] = useState('');
   const [promoResult, setPromoResult] = useState(null); // { ok:true, code, discountAmount, total } | { ok:false, errorText } | null
+  const [orderError, setOrderError] = useState(null);
 
   useEffect(() => {
     try {
@@ -343,8 +344,8 @@ export default function CustomerKitchenMenu() {
   const handleSubmit = async () => {
     if (orderItems.length === 0 || submitting) return;
     setSubmitting(true);
+    setOrderError(null);
     const newOrder = {
-      id: `order-${Date.now()}`,
       nickname: session.nickname,
       items: orderItems.map((o) => ({ itemId: o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
@@ -353,12 +354,17 @@ export default function CustomerKitchenMenu() {
       paymentStatus: 'pending_counter_payment',
       paymentMethod: 'counter',
       paidAt: null,
-      createdAt: new Date().toISOString(),
     };
-    // Il codice ordine è sempre quello di ritorno di addOrder() (server-side quando la
-    // RPC è disponibile, altrimenti il fallback locale A01…Z99): mai calcolato qui, per
-    // non mostrare al cliente un codice diverso da quello davvero salvato/mostrato a staff.
-    const createdOrder = await addOrder(newOrder);
+    // "ORDINE RICEVUTO" è mostrato solo se addOrder() conferma una persistenza server reale
+    // (id/order_code arrivano dalla RPC): se fallisce, il carrello resta intatto per il retry
+    // e non viene mai mostrato un ordine fantasma (F02 — Phantom Order).
+    const result = await addOrder(newOrder);
+    if (!result.ok) {
+      setOrderError('Ordine non inviato — riprova');
+      setSubmitting(false);
+      return;
+    }
+    const createdOrder = result.order;
     try { localStorage.setItem('walbox_kitchen_last_order_id', createdOrder.id); } catch { }
 
     // Il codice promo si redime solo dopo che l'ordine esiste davvero (mai prima): così il
@@ -367,10 +373,10 @@ export default function CustomerKitchenMenu() {
     const code = promoCode.trim();
     setPromoResult(null);
     if (code && redeemPromo && createdOrder.id) {
-      const result = await redeemPromo(createdOrder.id, code);
-      setPromoResult(result?.ok
-        ? { ok: true, code: result.promoCode, discountAmount: result.discountAmount, total: result.total }
-        : { ok: false, errorText: customerPromoErrorText(result?.error) });
+      const promoOutcome = await redeemPromo(createdOrder.id, code);
+      setPromoResult(promoOutcome?.ok
+        ? { ok: true, code: promoOutcome.promoCode, discountAmount: promoOutcome.discountAmount, total: promoOutcome.total }
+        : { ok: false, errorText: customerPromoErrorText(promoOutcome?.error) });
     }
 
     setSubmittedOrderId(createdOrder.id);
@@ -386,6 +392,7 @@ export default function CustomerKitchenMenu() {
     setSubmitting(false);
     setPromoCode('');
     setPromoResult(null);
+    setOrderError(null);
   };
 
   useEffect(() => {
@@ -925,11 +932,30 @@ export default function CustomerKitchenMenu() {
             </div>
 
             <div className="kitch-drawer-footer">
+              {orderError && (
+                <div
+                  data-testid="order-submit-error"
+                  style={{
+                    margin: '0 0 12px',
+                    padding: '12px 16px',
+                    background: 'rgba(224,60,44,0.15)',
+                    border: '2px solid #e03c2c',
+                    borderRadius: '12px',
+                    textAlign: 'center',
+                    color: '#ff9a8c',
+                    fontFamily: "'Montserrat', sans-serif",
+                    fontWeight: 700,
+                    fontSize: '14px',
+                  }}
+                >
+                  {orderError.toUpperCase()}
+                </div>
+              )}
               <div className="kitch-drawer-total-row">
                 <div className="kitch-drawer-total-label">TOTALE</div>
                 <div className="kitch-drawer-total-value">€{total.toFixed(2).replace('.', ',')}</div>
               </div>
-              <button className="kitch-btn-submit" onClick={handleSubmit} aria-label="Invia ordine" disabled={submitting} style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}>VAI ALL'ORDINE</button>
+              <button className="kitch-btn-submit" onClick={handleSubmit} aria-label="Invia ordine" disabled={submitting} style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}>{submitting ? 'INVIO IN CORSO…' : "VAI ALL'ORDINE"}</button>
               <div className="kitch-secure-hint">🔒 Ordine sicuro e veloce</div>
             </div>
           </div>
