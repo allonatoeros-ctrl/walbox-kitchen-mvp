@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { EventEmitter } from 'node:events';
 import {
   CHECKS,
   CONSECUTIVE_FAILURE_THRESHOLD,
@@ -241,6 +242,158 @@ test('runOnce persists state and only alerts once the threshold is crossed, zero
 
     const finalState = await loadState(stateFile);
     assert.equal(finalState['create-checkout'].consecutiveFailures, 3);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('runOnce with HERMES_ENABLED=false (default) behaves exactly like Watchdog V1, no Hermes invocation', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'watchdog-test-'));
+  try {
+    const stateFile = path.join(dir, 'state.json');
+    const fetchImpl = fakeFetch({ 'kitchen-sumup-webhook': 500 });
+    const config = {
+      baseUrl: 'https://example.com',
+      stateFile,
+      fetchImpl,
+      hermes: resolveConfig({ KITCHEN_WATCHDOG_BASE_URL: 'https://example.com' }).hermes,
+      hermesSpawnImpl: () => {
+        throw new Error('Hermes must not be invoked when disabled');
+      },
+    };
+    // Only the webhook check exists in this run's fetchImpl; other 2 checks throw (unmocked url)
+    // which is fine here, we only care about the webhook alert episode + Hermes gating.
+    const permissiveFetch = async (url, init) => {
+      if (url.includes('kitchen-sumup-webhook')) return fetchImpl(url, init);
+      return { ok: true, status: url.includes('reconcile-sweep') ? 401 : 400 };
+    };
+    config.fetchImpl = permissiveFetch;
+
+    await runOnce(config);
+    const run2 = await runOnce(config); // crosses threshold for webhook
+    assert.equal(run2.toAlert.some((r) => r.name === 'webhook'), true);
+    // No throw means hermesSpawnImpl was never called — HERMES_ENABLED=false gates it off.
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('runOnce persists state BEFORE running Hermes, so a crash never causes a duplicate alert', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'watchdog-test-'));
+  try {
+    const stateFile = path.join(dir, 'state.json');
+    const permissiveFetch = async (url) => {
+      if (url.includes('kitchen-sumup-webhook')) return { ok: false, status: 500 };
+      return { ok: true, status: url.includes('reconcile-sweep') ? 401 : 400 };
+    };
+
+    const config = {
+      baseUrl: 'https://example.com',
+      stateFile,
+      fetchImpl: permissiveFetch,
+      hermes: { enabled: true, pythonPath: 'python3', timeoutMs: 20, opsThreadId: '777' },
+      hermesSpawnImpl: () => {
+        // Hermes "crashes" — throws synchronously, as a real ENOENT spawn failure would.
+        throw new Error('ENOENT: python3 not found');
+      },
+    };
+
+    await runOnce(config); // 1st failure, no alert yet
+    const run2 = await runOnce(config); // crosses threshold -> Hermes crashes here
+    assert.equal(run2.toAlert.some((r) => r.name === 'webhook'), true);
+
+    // State was persisted before the crash, so the episode is recorded exactly once —
+    // a 3rd consecutive failure must NOT alert again (no duplicate caused by the crash).
+    const run3 = await runOnce(config);
+    assert.equal(run3.toAlert.length, 0);
+    const finalState = await loadState(stateFile);
+    assert.equal(finalState.webhook.consecutiveFailures, 3);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('runOnce: Hermes timeout does not throw and Watchdog run still completes (PASS)', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'watchdog-test-'));
+  try {
+    const stateFile = path.join(dir, 'state.json');
+    const permissiveFetch = async (url) => {
+      if (url.includes('kitchen-sumup-webhook')) return { ok: false, status: 500 };
+      return { ok: true, status: url.includes('reconcile-sweep') ? 401 : 400 };
+    };
+
+    const config = {
+      baseUrl: 'https://example.com',
+      stateFile,
+      fetchImpl: permissiveFetch,
+      hermes: { enabled: true, pythonPath: 'python3', timeoutMs: 20, opsThreadId: '777' },
+      hermesSpawnImpl: () => {
+        // A process that never emits close/error — forces the internal timeout path.
+        const child = new EventEmitter();
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        child.kill = () => {};
+        return child;
+      },
+    };
+
+    await runOnce(config);
+    let run2;
+    await assert.doesNotReject(async () => {
+      run2 = await runOnce(config);
+    });
+    assert.equal(run2.toAlert.some((r) => r.name === 'webhook'), true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('runOnce sends the Hermes diagnosis on the HERMES_OPS_THREAD_ID, separate from the alert thread', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'watchdog-test-'));
+  try {
+    const stateFile = path.join(dir, 'state.json');
+    const permissiveFetch = async (url) => {
+      if (url.includes('kitchen-sumup-webhook')) return { ok: false, status: 500 };
+      return { ok: true, status: url.includes('reconcile-sweep') ? 401 : 400 };
+    };
+
+    const capturedPayloads = [];
+    const telegramFetch = async (url, init) => {
+      if (url.includes('api.telegram.org')) {
+        capturedPayloads.push(JSON.parse(init.body));
+        return { ok: true, status: 200 };
+      }
+      return permissiveFetch(url);
+    };
+
+    const config = {
+      baseUrl: 'https://example.com',
+      stateFile,
+      fetchImpl: telegramFetch,
+      telegramBotToken: 'tok',
+      telegramChatId: 'chat',
+      telegramMessageThreadId: '1',
+      hermes: { enabled: true, pythonPath: 'python3', timeoutMs: 5000, opsThreadId: '777' },
+      hermesSpawnImpl: () => {
+        const child = new EventEmitter();
+        child.stdout = new EventEmitter();
+        child.stderr = new EventEmitter();
+        child.kill = () => {};
+        queueMicrotask(() => {
+          child.stdout.emit('data', Buffer.from('causa probabile: SumUp webhook 5xx'));
+          child.emit('close', 0);
+        });
+        return child;
+      },
+    };
+
+    await runOnce(config);
+    await runOnce(config); // crosses threshold -> alert + Hermes diagnosis both sent
+
+    assert.equal(capturedPayloads.length, 2);
+    assert.equal(capturedPayloads[0].message_thread_id, '1'); // normal alert, existing thread
+    assert.equal(capturedPayloads[1].message_thread_id, '777'); // Hermes OPS thread
+    assert.match(capturedPayloads[1].text, /SumUp webhook 5xx/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

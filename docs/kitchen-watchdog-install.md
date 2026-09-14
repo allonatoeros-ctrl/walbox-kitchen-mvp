@@ -79,8 +79,26 @@ Canonical env var name — use exactly this one, no aliases:
 | `TELEGRAM_BOT_TOKEN` | no | If set together with `TELEGRAM_CHAT_ID`, alerts are sent via Telegram |
 | `TELEGRAM_CHAT_ID` | no | Telegram chat/user id to send alerts to |
 | `TELEGRAM_MESSAGE_THREAD_ID` | no | If set, alerts are sent into this forum topic/thread within the chat (`message_thread_id`); if unset, behavior is unchanged (message sent to the chat's default thread) |
+| `HERMES_ENABLED` | no | `true` to enable Incident Auto-Diagnosis V1 (see below); default is disabled, V1 behavior unchanged |
+| `HERMES_PYTHON_PATH` | no | Python interpreter used to invoke Hermes, default `python3` — not tied to any specific VPS layout |
+| `HERMES_TIMEOUT_MS` | no | Hard kill timeout (ms) for the Hermes one-shot process, default `60000` |
+| `HERMES_OPS_THREAD_ID` | no | Telegram forum topic/thread id ("HERMES OPS") where the diagnosis is posted — separate from `TELEGRAM_MESSAGE_THREAD_ID` |
 
 Never commit `kitchen-watchdog.env` or any real token/URL to the repo.
+
+## Incident Auto-Diagnosis V1 (`ai-ops/watchdog/incident-bridge.js`)
+
+Optional, gated by `HERMES_ENABLED=true`. Flow: a new alert episode (threshold just crossed, same
+place `toAlert` is populated — not on every failing run) → existing Telegram alert is sent → state is
+already persisted at this point → Hermes is invoked one-shot and read-only
+(`<HERMES_PYTHON_PATH> -m hermes_cli.main --safe-mode -z <prompt>`, no shell) → the compact diagnosis
+(causa probabile, evidence, impatto, next safe check, escalation) is posted to the same Telegram
+`chat_id`, on the `HERMES_OPS_THREAD_ID` topic.
+
+Hard constraints: zero n8n/DB/Claude/deploy calls, zero automated remediation, Hermes path/runtime
+configurable via env only. A Hermes timeout or crash never breaks the Watchdog run — it is caught and
+reported as a failed-diagnosis message, and cannot cause a duplicate alert on the next run because the
+episode state is saved before Hermes runs.
 
 ## Install (systemd — user units, no sudo)
 

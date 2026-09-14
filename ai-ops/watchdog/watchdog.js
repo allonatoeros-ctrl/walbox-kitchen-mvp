@@ -17,10 +17,15 @@
 //   TELEGRAM_BOT_TOKEN          optional — if unset, alerts are only printed to stdout/stderr
 //   TELEGRAM_CHAT_ID            optional — required together with TELEGRAM_BOT_TOKEN to actually send
 //   TELEGRAM_MESSAGE_THREAD_ID  optional — if set, alerts are sent into this forum topic/thread
+//
+// Incident Auto-Diagnosis V1 (see incident-bridge.js) — fires only on a new alert episode,
+// read-only Hermes investigation, no remediation. Config: HERMES_ENABLED, HERMES_PYTHON_PATH,
+// HERMES_TIMEOUT_MS, HERMES_OPS_THREAD_ID.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveHermesConfig, runIncidentDiagnosis } from './incident-bridge.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -61,6 +66,7 @@ export function resolveConfig(env = process.env) {
     telegramBotToken: env.TELEGRAM_BOT_TOKEN || null,
     telegramChatId: env.TELEGRAM_CHAT_ID || null,
     telegramMessageThreadId: env.TELEGRAM_MESSAGE_THREAD_ID || null,
+    hermes: resolveHermesConfig(env),
   };
 }
 
@@ -183,11 +189,31 @@ export async function runOnce(config) {
 
   const prevState = await loadState(config.stateFile);
   const { nextState, toAlert } = updateState(prevState, results);
+  // State is persisted BEFORE any Telegram/Hermes side effect: a Hermes timeout or crash below
+  // must never cause the same episode to be (mis)counted or re-alerted on the next run.
   await saveState(config.stateFile, nextState);
 
   for (const result of toAlert) {
     const message = formatAlertMessage(result, config.baseUrl);
     await sendTelegramAlert(message, config);
+
+    if (config.hermes?.enabled) {
+      const checkPath = CHECKS.find((c) => c.name === result.name)?.path;
+      try {
+        await runIncidentDiagnosis(result, {
+          baseUrl: config.baseUrl,
+          checkPath,
+          hermesConfig: config.hermes,
+          sendMessage: (opsMessage, threadId) =>
+            sendTelegramAlert(opsMessage, { ...config, telegramMessageThreadId: threadId }),
+          spawnImpl: config.hermesSpawnImpl,
+        });
+      } catch (err) {
+        // Belt-and-suspenders: runIncidentDiagnosis already catches internally, but the
+        // Watchdog's own run must never fail because of Hermes regardless.
+        console.error('[Kitchen Watchdog] Incident Auto-Diagnosis failed (ignored)', err.message || err);
+      }
+    }
   }
 
   return { results, toAlert };
