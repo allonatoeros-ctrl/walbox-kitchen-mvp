@@ -78,36 +78,22 @@ Accedere a [supabase.com](https://supabase.com) → progetto Walbox.
 
 ## 3. QR Code Manual Check
 
-Ogni tavolo deve avere un QR che punta a:
+Il QR cliente Kitchen punta direttamente al menu (Kitchen non ha tavoli):
 
 ```
-https://<dominio-prod>/kitchen/entry?table=X
+https://<dominio-prod>/kitchen
 ```
-
-### Checklist tavoli (esempio per 10 tavoli):
-- [ ] T1 → `/kitchen/entry?table=1`
-- [ ] T2 → `/kitchen/entry?table=2`
-- [ ] T3 → `/kitchen/entry?table=3`
-- [ ] T4 → `/kitchen/entry?table=4`
-- [ ] T5 → `/kitchen/entry?table=5`
-- [ ] T6 → `/kitchen/entry?table=6`
-- [ ] T7 → `/kitchen/entry?table=7`
-- [ ] T8 → `/kitchen/entry?table=8`
-- [ ] T9 → `/kitchen/entry?table=9`
-- [ ] T10 → `/kitchen/entry?table=10`
 
 ### Verifica:
-- Scansionare ogni QR con iPhone (Safari)
-- Verificare che la pagina di entry si apra correttamente
-- Verificare che il numero tavolo sia pre-compilato nella form
-- Verificare che il flusso arrivi fino a `/kitchen` (menu visibile)
+- Scansionare il QR con iPhone (Safari)
+- Verificare che il menu si apra direttamente su `/kitchen`, senza passare per nessuna form nome/tavolo
 
 ---
 
 ## 4. Device Reali
 
 ### iPhone cliente (customer flow):
-- [ ] `/kitchen/entry` si apre e carica il menu
+- [ ] `/kitchen` si apre e carica il menu direttamente
 - [ ] Ordine completabile in meno di 90 secondi
 - [ ] `/kitchen/status` mostra stato aggiornato
 - [ ] CTA verde "IL TUO ORDINE È PRONTO" visibile quando status = `ready`
@@ -161,9 +147,8 @@ https://<dominio-prod>/kitchen/entry?table=X
 3. Fallback: usare il bypass E2E solo in sviluppo (`VITE_E2E_BYPASS_STAFF_AUTH=true`), **mai in produzione**
 
 ### Se QR sbagliato / rotto:
-1. Rimandare il QR corretto da `/kitchen/entry?table=X` via WhatsApp al tavolo
-2. Cliente può inserire manualmente il numero tavolo nella form entry
-3. Aggiornare il QR fisico dopo la serata
+1. Rimandare il link corretto `/kitchen` via WhatsApp al tavolo
+2. Aggiornare il QR fisico dopo la serata
 
 ### Se menu non si aggiorna (item esauriti non visibili ai clienti):
 1. Staff toglie manualmente dalla tab MENU
