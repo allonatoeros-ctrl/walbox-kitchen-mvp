@@ -160,22 +160,58 @@ export async function collectEvidence(
 // Builds the Hermes prompt from already-collected evidence only. Hermes is explicitly instructed
 // to analyze this static text and nothing else — no tool calls, no commands, no remediation —
 // which is what keeps the one-shot invocation fast instead of timing out.
+//
+// Structural split (see docs/kitchen-watchdog-install.md — "evidence-first" incident diagnosis):
+// CURRENT INCIDENT is the only authoritative source for check/target/status — it must never be
+// overridden by BACKGROUND CONTEXT. systemctl/journal/git are BACKGROUND CONTEXT only: the journal
+// tail in particular can contain older, unrelated failures (e.g. a past create-checkout episode)
+// that must never be mistaken for the incident actually being diagnosed right now.
 export function buildHermesPrompt(evidence) {
   return (
-    `Kitchen Watchdog incident — analizza SOLO l'evidence qui sotto, che è testo statico già raccolto.\n` +
+    `Kitchen Watchdog incident — analizza SOLO la sezione CURRENT INCIDENT qui sotto, che è testo\n` +
+    `statico già raccolto. La sezione BACKGROUND CONTEXT è di supporto e NON è l'incidente da\n` +
+    `diagnosticare.\n` +
     `Non eseguire comandi, non usare tool/funzioni: nessuna remediation, è un'investigazione read-only.\n` +
     `\n` +
+    `Regole vincolanti:\n` +
+    `- Analizza ESCLUSIVAMENTE il check, il target e lo status/error riportati in CURRENT INCIDENT.\n` +
+    `- Usa BACKGROUND CONTEXT (systemctl/journal/git) solo per corroborare la diagnosi del\n` +
+    `  CURRENT INCIDENT, mai per sostituirlo.\n` +
+    `- Non inventare un check o un target diverso da quello indicato in CURRENT INCIDENT, anche se\n` +
+    `  BACKGROUND CONTEXT menziona altri check o incidenti (anche recenti o ripetuti).\n` +
+    `- Se l'evidence disponibile non è sufficiente per determinare una causa, rispondi\n` +
+    `  "causa non determinabile" invece di indovinare o riusare un incidente storico.\n` +
+    `\n` +
+    `=== CURRENT INCIDENT (autoritativo) ===\n` +
     `Check: ${evidence.check}\n` +
     `Target: ${evidence.target}\n` +
+    `Status/Error: ${evidence.detail}\n` +
     `Timestamp: ${evidence.timestamp}\n` +
-    `Detail: ${evidence.detail}\n` +
+    `\n` +
+    `=== BACKGROUND CONTEXT (solo corroborazione, non sostituisce il CURRENT INCIDENT) ===\n` +
     `Runtime git SHA: ${evidence.gitSha}\n` +
     `\n` +
     `--- systemctl --user status ${SERVICE_NAME} ---\n${evidence.systemctlStatus}\n` +
     `\n` +
-    `--- journalctl --user -u ${SERVICE_NAME} -n ${JOURNAL_LINE_COUNT} (ultime righe) ---\n${evidence.journalTail}\n` +
+    `--- journalctl --user -u ${SERVICE_NAME} -n ${JOURNAL_LINE_COUNT} (ultime righe, può contenere\n` +
+    `    incidenti storici diversi da quello corrente) ---\n${evidence.journalTail}\n` +
     `\n` +
-    `Rispondi compattamente con: causa probabile, evidence, impatto, next safe check, escalation.`
+    `Rispondi SEMPRE con esattamente questo formato, in italiano semplice e senza gergo tecnico\n` +
+    `inutile — è per Eros, non per un altro ingegnere:\n` +
+    `\n` +
+    `COSA HO TROVATO\n` +
+    `PERCHÉ LO PENSO\n` +
+    `IMPATTO\n` +
+    `COSA VA CONTROLLATO\n` +
+    `SERVE UN FIX? → SI / NO / DA VERIFICARE\n` +
+    `PROSSIMA MOSSA\n` +
+    `ESCALATION → NONE / HUMAN / CLAUDE\n` +
+    `\n` +
+    `Regole per la risposta:\n` +
+    `- separa sempre i fatti (quello che è in CURRENT INCIDENT/BACKGROUND CONTEXT) dalle ipotesi;\n` +
+    `- non dichiarare un fix certo senza evidence a supporto;\n` +
+    `- se la causa non è supportata dall'evidence, scrivi "causa non determinabile" in\n` +
+    `  COSA HO TROVATO / PERCHÉ LO PENSO, invece di indovinare.`
   );
 }
 

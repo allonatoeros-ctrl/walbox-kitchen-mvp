@@ -260,10 +260,12 @@ test('buildHermesPrompt embeds the evidence fields and forbids tools/commands/re
   assert.match(prompt, /abc1234/);
   assert.match(prompt, /Active: active \(running\)/);
   assert.match(prompt, /line1\nline2/);
-  assert.match(prompt, /SOLO l'evidence/);
+  assert.match(prompt, /SOLO la sezione CURRENT INCIDENT/);
   assert.match(prompt, /Non eseguire comandi, non usare tool/i);
   assert.match(prompt, /nessuna remediation/i);
   assert.match(prompt, /read-only/i);
+  assert.match(prompt, /COSA HO TROVATO/);
+  assert.match(prompt, /ESCALATION → NONE \/ HUMAN \/ CLAUDE/);
 });
 
 test('runHermesDiagnosis invokes python -m hermes_cli.main --safe-mode -z <prompt> with shell:false', async () => {

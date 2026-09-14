@@ -19,6 +19,7 @@ import {
   sendTelegramAlert,
   runOnce,
 } from '../../ai-ops/watchdog/watchdog.js';
+import { buildHermesPrompt } from '../../ai-ops/watchdog/incident-bridge.js';
 
 // Fakes git/systemctl/journalctl for evidence collection so Hermes-enabled tests never shell out
 // to real commands (which may not exist, e.g. systemctl on macOS/CI).
@@ -416,6 +417,51 @@ test('runOnce sends the Hermes diagnosis on the HERMES_OPS_THREAD_ID, separate f
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('buildHermesPrompt keeps CURRENT INCIDENT authoritative even when BACKGROUND CONTEXT (journal) mentions a different, historical check', () => {
+  const evidence = {
+    check: 'TEST-CONTROL-TOWER',
+    target: 'https://example.com/api/test-control-tower',
+    timestamp: '2026-09-14T00:00:00.000Z',
+    detail: 'error: manual control-tower test trigger',
+    gitSha: 'abc123',
+    systemctlStatus: 'active (running)',
+    journalTail:
+      'Sep 13 23:55:00 host watchdog[1]: [Kitchen Watchdog] FAIL create-checkout — expected 400, got 500 (ECONNREFUSED)\n' +
+      'Sep 13 23:55:00 host watchdog[1]: [Kitchen Watchdog] ALERT — "create-checkout" failed 2x in a row',
+  };
+
+  const prompt = buildHermesPrompt(evidence);
+
+  const currentSectionMatch = prompt.match(/=== CURRENT INCIDENT[\s\S]*?(?=\n=== BACKGROUND CONTEXT)/);
+  assert.ok(currentSectionMatch, 'prompt must contain a CURRENT INCIDENT section');
+  const currentSection = currentSectionMatch[0];
+  assert.match(currentSection, /Check: TEST-CONTROL-TOWER/);
+  assert.doesNotMatch(currentSection, /create-checkout/);
+
+  // The journal's historical create-checkout failure must appear only inside BACKGROUND CONTEXT,
+  // strictly after the CURRENT INCIDENT section — never mixed into or replacing it.
+  const backgroundIndex = prompt.indexOf('=== BACKGROUND CONTEXT');
+  const createCheckoutIndex = prompt.indexOf('create-checkout');
+  assert.ok(backgroundIndex > -1);
+  assert.ok(createCheckoutIndex > backgroundIndex);
+
+  // Explicit anti-contamination instructions must be present.
+  assert.match(prompt, /SOLO la sezione CURRENT INCIDENT/);
+  assert.match(prompt, /Non inventare un check o un target diverso/);
+  assert.match(prompt, /causa non determinabile/);
+
+  // Mandatory plain-language output format for Eros.
+  assert.match(prompt, /COSA HO TROVATO/);
+  assert.match(prompt, /PERCHÉ LO PENSO/);
+  assert.match(prompt, /IMPATTO/);
+  assert.match(prompt, /COSA VA CONTROLLATO/);
+  assert.match(prompt, /SERVE UN FIX\? → SI \/ NO \/ DA VERIFICARE/);
+  assert.match(prompt, /PROSSIMA MOSSA/);
+  assert.match(prompt, /ESCALATION → NONE \/ HUMAN \/ CLAUDE/);
+  assert.match(prompt, /separa sempre i fatti.*dalle ipotesi/);
+  assert.match(prompt, /non dichiarare un fix certo senza evidence/);
 });
 
 test('runOnce resets alert episode after a recovery (fail, fail, pass, fail, fail alerts again)', async () => {
