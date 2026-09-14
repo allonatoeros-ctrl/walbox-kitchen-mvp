@@ -35,13 +35,16 @@ This install runs entirely as the `eros` **user**, under user systemd — no roo
 | Item | Value |
 |---|---|
 | VPS user | `eros` |
-| Repo path | `/home/eros/projects/walbox` |
+| Repo path (dedicated worktree) | `/home/eros/projects/walbox-watchdog` |
 | Node binary | `/home/eros/.local/bin/node` |
 | User systemd unit dir | `/home/eros/.config/systemd/user/` |
 | Linger | `yes` (user units keep running after logout/without an active session) |
 | Env file | `/home/eros/.config/walbox/kitchen-watchdog.env` |
 
-Adjust the paths in `kitchen-watchdog.service` if any of the above differs on the actual box.
+This install uses a dedicated git worktree at `/home/eros/projects/walbox-watchdog` (not the main
+`/home/eros/projects/walbox` checkout) — `WorkingDirectory` in `kitchen-watchdog.service` points there,
+and all `cp`/`node` commands below assume you're running them from inside that worktree. Adjust the
+paths in `kitchen-watchdog.service` if any of the above differs on the actual box.
 
 ## Configuration — env var (no secrets in the repo)
 
