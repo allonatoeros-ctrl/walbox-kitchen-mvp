@@ -1,0 +1,12 @@
+[Unit]
+Description=Kitchen Watchdog V1 — HTTP synthetic check (create-checkout/reconcile-sweep/webhook)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# EnvironmentFile holds KITCHEN_WATCHDOG_BASE_URL / TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID.
+# Never commit this file's contents to the repo — see docs/kitchen-watchdog-install.md.
+EnvironmentFile=/home/eros/.config/walbox/kitchen-watchdog.env
+WorkingDirectory=/home/eros/projects/walbox
+ExecStart=/home/eros/.local/bin/node ai-ops/watchdog/watchdog.js

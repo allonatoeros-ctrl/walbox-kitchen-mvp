@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Kitchen Watchdog V1 every 5 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+Unit=kitchen-watchdog.service
+Persistent=true
+
+[Install]
+WantedBy=timers.target
