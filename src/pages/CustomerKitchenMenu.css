@@ -662,13 +662,11 @@
 .kitch-drawer-body {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
   flex: 1;
 }
 
 .kitch-drawer-items-list {
-  overflow-y: auto;
-  flex: 1;
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
