@@ -64,6 +64,8 @@ KITCHEN_WATCHDOG_BASE_URL=https://<your-production-domain>
 # Optional — omit both to only log alerts to stdout/stderr (captured by journald --user):
 TELEGRAM_BOT_TOKEN=<telegram-bot-token>
 TELEGRAM_CHAT_ID=<telegram-chat-id>
+# Optional — only needed if the chat is a forum/topic chat and alerts should land in one topic:
+TELEGRAM_MESSAGE_THREAD_ID=<telegram-message-thread-id>
 EOF
 chmod 600 /home/eros/.config/walbox/kitchen-watchdog.env
 ```
@@ -76,6 +78,7 @@ Canonical env var name — use exactly this one, no aliases:
 | `WATCHDOG_STATE_FILE` | no | Overrides where consecutive-failure counters are persisted (default: `ai-ops/watchdog/.watchdog-state.json` next to the script) |
 | `TELEGRAM_BOT_TOKEN` | no | If set together with `TELEGRAM_CHAT_ID`, alerts are sent via Telegram |
 | `TELEGRAM_CHAT_ID` | no | Telegram chat/user id to send alerts to |
+| `TELEGRAM_MESSAGE_THREAD_ID` | no | If set, alerts are sent into this forum topic/thread within the chat (`message_thread_id`); if unset, behavior is unchanged (message sent to the chat's default thread) |
 
 Never commit `kitchen-watchdog.env` or any real token/URL to the repo.
 

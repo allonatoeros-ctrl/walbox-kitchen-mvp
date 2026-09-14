@@ -43,6 +43,17 @@ test('resolveConfig strips trailing slash and reads optional Telegram env', () =
   assert.equal(config.baseUrl, 'https://example.com');
   assert.equal(config.telegramBotToken, 'tok');
   assert.equal(config.telegramChatId, 'chat');
+  assert.equal(config.telegramMessageThreadId, null);
+});
+
+test('resolveConfig reads optional TELEGRAM_MESSAGE_THREAD_ID', () => {
+  const config = resolveConfig({
+    KITCHEN_WATCHDOG_BASE_URL: 'https://example.com',
+    TELEGRAM_BOT_TOKEN: 'tok',
+    TELEGRAM_CHAT_ID: 'chat',
+    TELEGRAM_MESSAGE_THREAD_ID: '42',
+  });
+  assert.equal(config.telegramMessageThreadId, '42');
 });
 
 test('CHECKS covers exactly the 3 V1 endpoints with their expected status', () => {
@@ -173,6 +184,37 @@ test('sendTelegramAlert posts to the Telegram API when configured', async () => 
   assert.equal(capturedUrl, 'https://api.telegram.org/bottok/sendMessage');
   assert.equal(capturedBody.chat_id, 'chat');
   assert.equal(capturedBody.text, 'hello');
+  assert.equal('message_thread_id' in capturedBody, false);
+});
+
+test('sendTelegramAlert includes message_thread_id when configured', async () => {
+  let capturedBody = null;
+  const fetchImpl = async (url, init) => {
+    capturedBody = JSON.parse(init.body);
+    return { ok: true, status: 200 };
+  };
+  const result = await sendTelegramAlert('hello', {
+    telegramBotToken: 'tok',
+    telegramChatId: 'chat',
+    telegramMessageThreadId: '42',
+    fetchImpl,
+  });
+  assert.equal(result.sent, true);
+  assert.equal(capturedBody.message_thread_id, '42');
+});
+
+test('sendTelegramAlert omits message_thread_id when not configured', async () => {
+  let capturedBody = null;
+  const fetchImpl = async (url, init) => {
+    capturedBody = JSON.parse(init.body);
+    return { ok: true, status: 200 };
+  };
+  await sendTelegramAlert('hello', {
+    telegramBotToken: 'tok',
+    telegramChatId: 'chat',
+    fetchImpl,
+  });
+  assert.equal('message_thread_id' in capturedBody, false);
 });
 
 test('runOnce persists state and only alerts once the threshold is crossed, zero DB/n8n/AI calls', async () => {

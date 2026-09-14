@@ -16,6 +16,7 @@
 //   WATCHDOG_STATE_FILE         optional, default ai-ops/watchdog/.watchdog-state.json
 //   TELEGRAM_BOT_TOKEN          optional — if unset, alerts are only printed to stdout/stderr
 //   TELEGRAM_CHAT_ID            optional — required together with TELEGRAM_BOT_TOKEN to actually send
+//   TELEGRAM_MESSAGE_THREAD_ID  optional — if set, alerts are sent into this forum topic/thread
 
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -59,6 +60,7 @@ export function resolveConfig(env = process.env) {
     stateFile: env.WATCHDOG_STATE_FILE || path.join(__dirname, '.watchdog-state.json'),
     telegramBotToken: env.TELEGRAM_BOT_TOKEN || null,
     telegramChatId: env.TELEGRAM_CHAT_ID || null,
+    telegramMessageThreadId: env.TELEGRAM_MESSAGE_THREAD_ID || null,
   };
 }
 
@@ -140,18 +142,25 @@ export function formatAlertMessage(result, baseUrl) {
   );
 }
 
-export async function sendTelegramAlert(message, { telegramBotToken, telegramChatId, fetchImpl = fetch }) {
+export async function sendTelegramAlert(
+  message,
+  { telegramBotToken, telegramChatId, telegramMessageThreadId, fetchImpl = fetch }
+) {
   if (!telegramBotToken || !telegramChatId) {
     console.error(message);
     return { sent: false, reason: 'telegram_not_configured' };
   }
 
   const url = `https://api.telegram.org/bot${telegramBotToken}/sendMessage`;
+  const payload = { chat_id: telegramChatId, text: message };
+  if (telegramMessageThreadId) {
+    payload.message_thread_id = telegramMessageThreadId;
+  }
   try {
     const res = await fetchImpl(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: telegramChatId, text: message }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) {
       console.error(`[Kitchen Watchdog] Telegram send failed with status ${res.status}`);
