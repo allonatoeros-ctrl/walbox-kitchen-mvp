@@ -190,11 +190,11 @@
 /* A 390px i 5 tab non entrano: 5×68 + gap + padding fa ~412px, e la strip non
    portava mai il tab attivo in vista — con TARTARE attiva il cerchio arancione
    restava tagliato sul bordo destro. Non si risolve stringendo il gap: le
-   etichette lunghe ("CICCHETTI" 67px, "INSALATONE" 79px, +8% quando il tab è
-   attivo per lo `scale(1.08)`) sono più larghe dei 68px del tab, quindi sotto
-   ~16px di gap si toccano e si leggono come una parola sola. Gap e padding
-   restano quelli approvati: è il tab attivo a essere portato in vista via
-   `scrollIntoView` (KitchenCategoryTabs.jsx), con `scroll-padding-inline` che
+   etichette lunghe ("CICCHETTI" 67px, "INSALATONE" 79px) sono più larghe dei
+   68px del tab, quindi sotto ~16px di gap si toccano e si leggono come una
+   parola sola. Gap e padding restano quelli approvati: è il tab attivo a
+   essere portato in vista via `scrollIntoView` (KitchenCategoryTabs.jsx,
+   solo se non già interamente visibile), con `scroll-padding-inline` che
    evita di incollarlo al bordo. */
 .kitch-tabs {
   display: flex;
@@ -204,6 +204,7 @@
   padding: 18px 12px 12px;
   background: var(--k-bg);
   overflow-x: auto;
+  scroll-snap-type: x proximity;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
   margin-bottom: 0;
@@ -223,7 +224,7 @@
   gap: 8px;
   cursor: pointer;
   padding: 0;
-  transition: var(--k-transition);
+  scroll-snap-align: center;
   flex: 0 0 auto;
 }
 
@@ -237,8 +238,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: var(--k-transition);
-  box-shadow: inset 0px 2px 4px rgba(255,255,255,0.08), inset 0px -2px 4px rgba(0,0,0,0.35);
+  background: var(--k-surface);
+  color: var(--k-text-muted);
+  box-shadow: none;
+  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease;
+}
+
+.kitch-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.kitch-tab.is-active .kitch-tab-circle {
+  background: var(--k-orange);
+  border-color: var(--k-yellow);
+  color: var(--k-cream);
+  box-shadow: 0 8px 20px rgba(240, 90, 36, 0.35);
 }
 
 .kitch-tab-label {
@@ -251,9 +267,14 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  transition: var(--k-transition);
+  color: var(--k-text-muted);
+  transition: color .15s ease;
   letter-spacing: 0.3px;
   text-transform: uppercase;
+}
+
+.kitch-tab.is-active .kitch-tab-label {
+  color: var(--k-cream);
 }
 
 /* ── Section title ───────────────────────────────── */
@@ -962,6 +983,9 @@
   .kitch-tabs {
     padding: 12px 16px 0;
   }
+  .kitch-tab {
+    width: 62px;
+  }
   .kitch-tab-circle {
     width: 62px;
     height: 62px;
@@ -1016,6 +1040,9 @@
     padding: 6px 8px;
     min-height: 40px;
     font-size: 12px;
+  }
+  .kitch-tab {
+    width: 56px;
   }
   .kitch-tab-circle {
     width: 56px;
