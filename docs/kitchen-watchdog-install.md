@@ -83,22 +83,43 @@ Canonical env var name — use exactly this one, no aliases:
 | `HERMES_PYTHON_PATH` | no | Python interpreter used to invoke Hermes, default `python3` — not tied to any specific VPS layout |
 | `HERMES_TIMEOUT_MS` | no | Hard kill timeout (ms) for the Hermes one-shot process, default `60000` |
 | `HERMES_OPS_THREAD_ID` | no | Telegram forum topic/thread id ("HERMES OPS") where the diagnosis is posted — separate from `TELEGRAM_MESSAGE_THREAD_ID` |
+| `EVIDENCE_TIMEOUT_MS` | no | Hard kill timeout (ms) for EACH local evidence command (`git`, `systemctl`, `journalctl`), default `5000` |
 
 Never commit `kitchen-watchdog.env` or any real token/URL to the repo.
 
 ## Incident Auto-Diagnosis V1 (`ai-ops/watchdog/incident-bridge.js`)
 
-Optional, gated by `HERMES_ENABLED=true`. Flow: a new alert episode (threshold just crossed, same
-place `toAlert` is populated — not on every failing run) → existing Telegram alert is sent → state is
-already persisted at this point → Hermes is invoked one-shot and read-only
-(`<HERMES_PYTHON_PATH> -m hermes_cli.main --safe-mode -z <prompt>`, no shell) → the compact diagnosis
-(causa probabile, evidence, impatto, next safe check, escalation) is posted to the same Telegram
-`chat_id`, on the `HERMES_OPS_THREAD_ID` topic.
+Optional, gated by `HERMES_ENABLED=true`. Evidence-first pattern: Hermes never investigates live —
+it only ever analyzes a static evidence block the Watchdog already collected. This is a deliberate
+fix over an earlier version where Hermes reached the "HERMES OPS" thread but then timed out at 60s
+on the real VPS, because it was left to explore/act rather than being handed the facts up front.
+Raising the timeout would have hidden the symptom, not the cause, so V1 keeps `HERMES_TIMEOUT_MS`
+at its existing default and instead removes the need for Hermes to do any investigation itself.
+
+Flow, on a new alert episode (threshold just crossed, same place `toAlert` is populated — not on
+every failing run):
+
+1. Existing Telegram alert is sent; state is already persisted at this point.
+2. **Evidence collection** (`collectEvidence`, local only, no network calls): check/result, target,
+   timestamp, the runtime git SHA (`git rev-parse HEAD` in the service's `WorkingDirectory`),
+   `systemctl --user status kitchen-watchdog.service`, and the last ~30 lines of
+   `journalctl --user -u kitchen-watchdog.service`. Each command runs with its own
+   `EVIDENCE_TIMEOUT_MS` timeout and is isolated from the others — a missing or hanging command
+   reports as "non disponibile" instead of blocking evidence collection or the Watchdog run. Raw
+   output is best-effort redacted (Telegram-bot-token-shaped strings, `Authorization:` header
+   values) before it is used anywhere.
+3. The evidence is embedded as static text in the Hermes prompt (`buildHermesPrompt`), which
+   explicitly instructs Hermes to analyze **only** that evidence — no tool calls, no commands, no
+   remediation.
+4. Hermes is invoked one-shot and read-only (`<HERMES_PYTHON_PATH> -m hermes_cli.main --safe-mode -z
+   <prompt>`, no shell) → the compact diagnosis (causa probabile, evidence, impatto, next safe
+   check, escalation) is posted to the same Telegram `chat_id`, on the `HERMES_OPS_THREAD_ID` topic.
 
 Hard constraints: zero n8n/DB/Claude/deploy calls, zero automated remediation, Hermes path/runtime
-configurable via env only. A Hermes timeout or crash never breaks the Watchdog run — it is caught and
-reported as a failed-diagnosis message, and cannot cause a duplicate alert on the next run because the
-episode state is saved before Hermes runs.
+configurable via env only, no secrets in evidence by design. A failure at either step (evidence
+collection or Hermes itself) never breaks the Watchdog run — it is caught and reported as a
+failed-diagnosis message, and cannot cause a duplicate alert on the next run because the episode
+state is saved before evidence collection and Hermes run.
 
 ## Install (systemd — user units, no sudo)
 

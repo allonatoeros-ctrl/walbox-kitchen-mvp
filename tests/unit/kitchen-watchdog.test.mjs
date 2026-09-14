@@ -20,6 +20,22 @@ import {
   runOnce,
 } from '../../ai-ops/watchdog/watchdog.js';
 
+// Fakes git/systemctl/journalctl for evidence collection so Hermes-enabled tests never shell out
+// to real commands (which may not exist, e.g. systemctl on macOS/CI).
+function fakeEvidenceSpawn() {
+  return (command) => {
+    const child = new EventEmitter();
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.kill = () => {};
+    queueMicrotask(() => {
+      child.stdout.emit('data', Buffer.from(`fake-${command}-output`));
+      child.emit('close', 0);
+    });
+    return child;
+  };
+}
+
 function fakeFetch(statusByUrl) {
   return async (url) => {
     for (const [match, status] of Object.entries(statusByUrl)) {
@@ -296,6 +312,7 @@ test('runOnce persists state BEFORE running Hermes, so a crash never causes a du
         // Hermes "crashes" — throws synchronously, as a real ENOENT spawn failure would.
         throw new Error('ENOENT: python3 not found');
       },
+      evidenceSpawnImpl: fakeEvidenceSpawn(),
     };
 
     await runOnce(config); // 1st failure, no alert yet
@@ -335,6 +352,7 @@ test('runOnce: Hermes timeout does not throw and Watchdog run still completes (P
         child.kill = () => {};
         return child;
       },
+      evidenceSpawnImpl: fakeEvidenceSpawn(),
     };
 
     await runOnce(config);
@@ -385,6 +403,7 @@ test('runOnce sends the Hermes diagnosis on the HERMES_OPS_THREAD_ID, separate f
         });
         return child;
       },
+      evidenceSpawnImpl: fakeEvidenceSpawn(),
     };
 
     await runOnce(config);

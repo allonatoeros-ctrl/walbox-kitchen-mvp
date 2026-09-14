@@ -19,8 +19,9 @@
 //   TELEGRAM_MESSAGE_THREAD_ID  optional — if set, alerts are sent into this forum topic/thread
 //
 // Incident Auto-Diagnosis V1 (see incident-bridge.js) — fires only on a new alert episode,
-// read-only Hermes investigation, no remediation. Config: HERMES_ENABLED, HERMES_PYTHON_PATH,
-// HERMES_TIMEOUT_MS, HERMES_OPS_THREAD_ID.
+// collects minimal local evidence (git SHA, systemctl status, journal tail), then Hermes analyzes
+// ONLY that evidence read-only, no tool calls, no remediation. Config: HERMES_ENABLED,
+// HERMES_PYTHON_PATH, HERMES_TIMEOUT_MS, HERMES_OPS_THREAD_ID, EVIDENCE_TIMEOUT_MS.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -207,6 +208,7 @@ export async function runOnce(config) {
           sendMessage: (opsMessage, threadId) =>
             sendTelegramAlert(opsMessage, { ...config, telegramMessageThreadId: threadId }),
           spawnImpl: config.hermesSpawnImpl,
+          evidenceSpawnImpl: config.evidenceSpawnImpl,
         });
       } catch (err) {
         // Belt-and-suspenders: runIncidentDiagnosis already catches internally, but the
