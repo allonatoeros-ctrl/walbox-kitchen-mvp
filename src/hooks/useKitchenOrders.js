@@ -261,9 +261,9 @@ export function useKitchenOrders() {
     };
   }, []);
 
-  const applyLocalSyncStatus = (id, syncStatus, syncError) => {
+  const applyLocalSyncStatus = (id, syncStatus, syncError, syncRetryable = true) => {
     setOrders((prev) => {
-      const next = prev.map((o) => (o.id === id ? { ...o, syncStatus, syncError } : o));
+      const next = prev.map((o) => (o.id === id ? { ...o, syncStatus, syncError, syncRetryable } : o));
       saveOrders(next);
       return next;
     });
@@ -420,20 +420,52 @@ export function useKitchenOrders() {
     }
   };
 
-  const cancelOrder = (id, reason) => {
-    const now = new Date().toISOString();
-    const fromOrder = orders.find((o) => o.id === id);
+  // Cancel is a Payment Hub-guarded write (kitchen_order_cancel RPC rejects a currently-paid
+  // order with order_already_paid_cannot_cancel) — like confirmPayment, the server call must
+  // happen and succeed BEFORE the local state reflects "cancelled", never optimistically first,
+  // or a rejected cancel would still show as cancelled locally.
+  const cancelOrder = async (id, reason) => {
+    const current = orders.find((o) => o.id === id);
+    if (!current) return;
+
+    let data;
+    try {
+      const rpcResult = await supabase.rpc('kitchen_order_cancel', {
+        p_order_id: id,
+        p_reason: reason ?? null,
+      });
+      const { error } = rpcResult;
+      if (error?.message?.includes('order_already_paid_cannot_cancel')) {
+        console.warn('[Walbox] Cancel blocked — order already paid', error);
+        applyLocalSyncStatus(id, 'error', 'Ordine già pagato — rimborsa prima di annullare', false);
+        return { ok: false, error, reason: 'order_already_paid_cannot_cancel' };
+      }
+      if (error) throw error;
+      data = rpcResult.data;
+    } catch (err) {
+      console.warn('[Walbox] Cancel order RPC failed — order not cancelled', err);
+      applyLocalSyncStatus(id, 'error', 'Annullamento non riuscito — riprova');
+      return { ok: false, error: err };
+    }
+
+    const now = data?.cancelled_at ?? new Date().toISOString();
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== id) return o;
-        const updated = { ...o, status: 'cancelled', cancelReason: reason, cancelledAt: now };
+        const updated = {
+          ...o,
+          status: 'cancelled',
+          cancelReason: data?.cancel_reason ?? reason,
+          cancelledAt: now,
+          syncStatus: 'synced',
+          syncError: null,
+        };
         return appendLog(updated, 'annullato');
       });
       saveOrders(next);
       return next;
     });
-    runOrderSync(id, { status: 'cancelled', cancel_reason: reason, cancelled_at: now });
-    supabaseInsertActionLog({ order_id: id, action: 'cancelled', from_status: fromOrder?.status ?? null, to_status: 'cancelled', reason: reason ?? null, created_at: now });
+    return { ok: true };
   };
 
   const updateStaffNote = (id, note) => {

@@ -582,13 +582,15 @@ export function KitchenSoloServiceView({
               {focusOrder.syncStatus === 'error' && (
                 <div className="kss-sync-error" data-testid="sync-error-banner">
                   <span>⚠ Salvataggio non riuscito — {focusOrder.syncError ?? 'riprova'}</span>
-                  <button
-                    type="button"
-                    className="kss-sync-error-retry"
-                    onClick={() => retrySync?.(focusOrder.id)}
-                  >
-                    RIPROVA
-                  </button>
+                  {focusOrder.syncRetryable !== false && (
+                    <button
+                      type="button"
+                      className="kss-sync-error-retry"
+                      onClick={() => retrySync?.(focusOrder.id)}
+                    >
+                      RIPROVA
+                    </button>
+                  )}
                 </div>
               )}
 
