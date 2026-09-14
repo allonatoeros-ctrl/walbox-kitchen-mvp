@@ -131,19 +131,6 @@ export const kitchenMenuItems = [
     ingredients: 'Porchetta, peperoni, melanzane, scamorza, salsa BBQ.',
     allergens: ['latte'],
   },
-  {
-    id: 'item-033',
-    name: 'Panino Straccetti',
-    category: 'panini',
-    description: 'Carne, verdure e zero bisogno di complicarla.',
-    price: 8.0,
-    points: null,
-    tags: ['v2'],
-    image: '/assets/kitchen/menu/panini/panino_straccetti.webp',
-    available: true,
-    ingredients: 'Straccetti, pomodoro, zucchine, melanzane, maionese al basilico.',
-    allergens: ['uova'],
-  },
   // legacy patatine/birre
   {
     id: 'item-003',
@@ -195,6 +182,137 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-birra-scura-problematica.webp',
     available: true,
     ingredients: 'Acqua purificata, malto d\'orzo tostato, luppoli ad alto amaro, lievito.',
+    allergens: ['glutine'],
+  },
+  // BIRRE — BEER SPRINT V1 (2026-09-14, ai-ops/current/BEER_SPRINT_V1.md §2/§3).
+  // Dati confermati (prezzo/formato): 6 bottiglie, tutte disponibili tutto il giorno
+  // (`availability: 'all_day'`). `choiceLabel`/`tasteSignals` sono copy di prodotto
+  // per la choice architecture (decisione Eros §3), non dati di business: modificabili
+  // senza migration. Asset fotografici reali in `public/assets/kitchen/beers/`
+  // (BEER_SPRINT_V1, wiring 2026-09-14).
+  {
+    id: 'item-051',
+    name: 'Keiler Helles',
+    category: 'birre',
+    description: 'Bionda classica, morbida e facile da bere. Non delude mai.',
+    price: 6.0,
+    points: null,
+    tags: ['drink', 'v2', 'birre-v1'],
+    image: '/assets/kitchen/beers/keiler-helles.png',
+    available: true,
+    format: '50 cl',
+    choiceLabel: 'VAI SUL SICURO',
+    tasteSignals: ['Morbida', 'Fresca'],
+    availability: 'all_day',
+    ingredients: 'Birra in bottiglia, 50 cl.',
+    allergens: ['glutine'],
+  },
+  {
+    id: 'item-052',
+    name: 'Keiler Land-Pils',
+    category: 'birre',
+    description: 'Pils più secca, per chi non cerca la via morbida.',
+    price: 6.0,
+    points: null,
+    tags: ['drink', 'v2', 'birre-v1'],
+    image: '/assets/kitchen/beers/keiler-land-pils.png',
+    available: true,
+    format: '50 cl',
+    choiceLabel: 'PIÙ SECCA',
+    tasteSignals: ['Secca', 'Pulita'],
+    availability: 'all_day',
+    ingredients: 'Birra in bottiglia, 50 cl.',
+    allergens: ['glutine'],
+  },
+  {
+    id: 'item-053',
+    name: 'Keiler Kellerbier',
+    category: 'birre',
+    description: 'Non filtrata, grezza il giusto.',
+    price: 6.0,
+    points: null,
+    tags: ['drink', 'v2', 'birre-v1'],
+    image: '/assets/kitchen/beers/keiler-kellerbier.png',
+    available: true,
+    format: '50 cl',
+    choiceLabel: 'NON FILTRATA',
+    tasteSignals: ['Non filtrata', 'Rustica'],
+    availability: 'all_day',
+    ingredients: 'Birra in bottiglia, 50 cl.',
+    allergens: ['glutine'],
+  },
+  {
+    id: 'item-054',
+    name: 'Keiler Weisse',
+    category: 'birre',
+    description: 'Frutta in superficie, niente di tecnico.',
+    price: 6.0,
+    points: null,
+    tags: ['drink', 'v2', 'birre-v1'],
+    image: '/assets/kitchen/beers/keiler-weisse.png',
+    available: true,
+    format: '50 cl',
+    choiceLabel: 'FRUTTATA',
+    tasteSignals: ['Fruttata', 'Leggera'],
+    availability: 'all_day',
+    ingredients: 'Birra in bottiglia, 50 cl.',
+    allergens: ['glutine'],
+  },
+  {
+    id: 'item-055',
+    name: 'Keiler Dunkel Weisse',
+    category: 'birre',
+    description: 'Scura e corposa. Non per un assaggio veloce.',
+    price: 6.0,
+    points: null,
+    tags: ['drink', 'v2', 'birre-v1'],
+    image: '/assets/kitchen/beers/keiler-dunkel-weisse.png',
+    available: true,
+    format: '50 cl',
+    choiceLabel: 'SCURA & CORPOSA',
+    tasteSignals: ['Scura', 'Corposa'],
+    availability: 'all_day',
+    ingredients: 'Birra in bottiglia, 50 cl.',
+    allergens: ['glutine'],
+  },
+  {
+    id: 'item-056',
+    name: 'Lupulus',
+    category: 'birre',
+    description: 'Intensa, luppolata, senza sconti.',
+    price: 6.0,
+    points: null,
+    tags: ['drink', 'v2', 'birre-v1'],
+    image: '/assets/kitchen/beers/lupulus-blonde.png',
+    available: true,
+    format: '33 cl',
+    choiceLabel: 'INTENSA',
+    tasteSignals: ['Intensa', 'Luppolata'],
+    availability: 'all_day',
+    ingredients: 'Birra in bottiglia, 33 cl.',
+    allergens: ['glutine'],
+  },
+  // Krombacher alla spina — solo la sera (§3 missione, BEER SPRINT V1 Fase E, 2026-09-14).
+  // Prezzo confermato da Eros: €6. Formato in cl NON confermato: `format` resta null
+  // (nessun dato inventato), `choiceLabel: 'ALLA SPINA'` copre la richiesta di mostrare
+  // "alla spina" dove il formato non c'è (unico punto che rende `item.format` in
+  // BirreSection.jsx). Orderable ora solo la sera (gate 18:00 già esistente da Fase B,
+  // confermato come soglia definitiva da Eros in questa fase).
+  {
+    id: 'item-057',
+    name: 'Krombacher Pils',
+    category: 'birre',
+    description: 'Alla spina, solo la sera.',
+    price: 6.0,
+    points: null,
+    tags: ['drink', 'v2', 'birre-v1'],
+    image: '/assets/kitchen/beers/krombacher-pils.png',
+    available: true,
+    format: null,
+    choiceLabel: 'ALLA SPINA',
+    tasteSignals: [],
+    availability: 'evening_only',
+    ingredients: 'Birra alla spina.',
     allergens: ['glutine'],
   },
   // legacy combo (mantenute temporaneamente — nascoste nel menu cliente)
@@ -645,4 +763,24 @@ export const kitchenCategoryPromos = {
   insalatone: null,
   bruschette: null,
   cicchetti: null,
+};
+
+// AUTO-SELLING V1 — BEER SPRINT V1 (ai-ops/current/BEER_SPRINT_V1.md §5/§7-D).
+// Matrice configurabile food/categoria → birra consigliata. "1 contesto → 1
+// suggerimento principale": nessun motore di raccomandazione, nessuna lista di
+// alternative. Priorità di lookup: `byItem[itemId]` (override puntuale) prima di
+// `byCategory[category]` (default). I pairing sono un'ipotesi prodotto iniziale
+// (§5 missione), non verità immutabile — cambiabili qui senza toccare la logica
+// che li legge (CustomerKitchenMenu.jsx). Krombacher (item-057) volutamente
+// assente: non ordinabile finché formato/prezzo non sono confermati.
+export const kitchenBeerPairing = {
+  byItem: {},
+  byCategory: {
+    panini: 'item-051',      // Helles — panini standard
+    cicchetti: 'item-052',   // Land-Pils — prodotti più grassi/intensi
+    bbq: 'item-056',         // Lupulus — Pesi Massimi
+    tagliere: 'item-053',    // Kellerbier — salumi/taglieri
+    insalatone: 'item-054',  // Weisse — piatti più freschi
+    tartare: 'item-054',     // Weisse — piatti più freschi
+  },
 };

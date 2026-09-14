@@ -28,7 +28,6 @@ const PANINI_LIST_ORDER = [
   'item-015', // SPECKTACOLO
   'item-016', // WRAPTOR
   'item-032', // PORCA FIGURA
-  'item-033', // PANINO STRACCETTI
   'item-013', // VEGETARIANO
 ];
 
