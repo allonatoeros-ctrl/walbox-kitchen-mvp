@@ -196,6 +196,10 @@
    essere portato in vista via `scrollIntoView` (KitchenCategoryTabs.jsx,
    solo se non già interamente visibile), con `scroll-padding-inline` che
    evita di incollarlo al bordo. */
+.kitch-tabs-wrap {
+  position: relative;
+}
+
 .kitch-tabs {
   display: flex;
   justify-content: flex-start;
@@ -212,6 +216,35 @@
 
 .kitch-tabs::-webkit-scrollbar {
   display: none;
+}
+
+/* Edge fade dinamico (BUILD CATEGORY NAV DISCOVERABILITY V1, decisione Eros,
+   Option A): segnala che la strip continua oltre il bordo, visibile solo sul
+   lato dove c'è overflow residuo reale (JS in KitchenCategoryTabs.jsx tramite
+   `.is-visible`). Non tocca width/gap/padding dei tab. */
+.kitch-tabs-fade {
+  position: absolute;
+  top: 18px;
+  bottom: 0;
+  width: 28px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s ease;
+  z-index: 1;
+}
+
+.kitch-tabs-fade--left {
+  left: 0;
+  background: linear-gradient(to right, var(--k-bg), transparent);
+}
+
+.kitch-tabs-fade--right {
+  right: 0;
+  background: linear-gradient(to left, var(--k-bg), transparent);
+}
+
+.kitch-tabs-fade.is-visible {
+  opacity: 1;
 }
 
 .kitch-tab {

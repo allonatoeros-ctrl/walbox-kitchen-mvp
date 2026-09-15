@@ -541,7 +541,7 @@ export default function CustomerKitchenMenu() {
 
           <div className="kh-menu-block">
             <p className="kh-menu-block-title">ADESSO ENTRA NEL MENU.</p>
-            <p className="kh-menu-block-sub">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Bevande</p>
+            <p className="kh-menu-block-sub">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande</p>
             <button type="button" className="kh-btn-menu" onClick={enterMenu}>
               ENTRA NEL MENU →
             </button>
@@ -564,7 +564,7 @@ export default function CustomerKitchenMenu() {
           </div>
 
           <h2 className="kh-cat-title">IL MENU</h2>
-          <p className="kh-cat-subtitle">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Bevande</p>
+          <p className="kh-cat-subtitle">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande</p>
 
           <div className="kh-cat-list">
             {categoryRows.map((cat) => (
