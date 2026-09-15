@@ -24,7 +24,7 @@ const CICCHETTI_LIST_ORDER = [
   'item-034', // MORTAZZA
   'item-035', // LARDO & NOCI
   'item-036', // SCAMORZA & CIPOLLE
-  'item-037', // CIAPPI VEG
+  'item-037', // CICCHETTO VEG
 ];
 
 function formatPrice(value) {

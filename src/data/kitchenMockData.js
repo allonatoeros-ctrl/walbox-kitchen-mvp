@@ -382,6 +382,20 @@ export const kitchenMenuItems = [
     ingredients: '120 g brisket · provola affumicata · coleslaw · cetrioli sott’aceto · salsa BBQ',
     allergens: ['latte', 'uova'],
   },
+  // BOX (standalone speciale, categoria bbq — no FALLO PESANTE: nessuna entry in kitchenPesiMassimiCombos)
+  {
+    id: 'item-018',
+    name: 'Box Pulled Pork',
+    category: 'bbq',
+    description: 'Pulled Pork in box take away.',
+    price: null,
+    points: null,
+    tags: ['v2'],
+    image: '/assets/kitchen/menu/box/box-pulled-pork.png',
+    available: true,
+    ingredients: 'Pulled pork senza pane · patate al forno · anelli di cipolla · salsa cheddar · maionese al pepe',
+    allergens: [],
+  },
   // TARTARE
   {
     id: 'item-020',
@@ -451,7 +465,7 @@ export const kitchenMenuItems = [
   },
   {
     id: 'item-037',
-    name: 'Ciappi Veg',
+    name: 'Cicchetto Veg',
     category: 'cicchetti',
     description: 'Vegano sì, ma con grinta.',
     price: null,
