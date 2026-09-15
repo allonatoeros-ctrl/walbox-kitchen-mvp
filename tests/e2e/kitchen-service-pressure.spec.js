@@ -12,7 +12,7 @@ function generateDemoNightOrders() {
       id: 'demo-order-1',
       orderCode: 'D01',
       nickname: 'Alice',
-      items: [{ itemId: 'item-003', name: 'Patatine da Banco', quantity: 2, price: 4.0 }],
+      items: [{ itemId: 'item-058', name: 'Patatine da Banco', quantity: 2, price: 4.0 }],
       total: 8.0,
       status: 'pending_counter_payment',
       paymentStatus: 'pending',
@@ -24,7 +24,7 @@ function generateDemoNightOrders() {
       id: 'demo-order-2',
       orderCode: 'D02',
       nickname: 'Bob',
-      items: [{ itemId: 'item-001', name: 'Porchetta', quantity: 1, price: 8.5 }],
+      items: [{ itemId: 'item-016', name: 'Porchetta', quantity: 1, price: 8.5 }],
       total: 8.5,
       status: 'pending_counter_payment',
       paymentStatus: 'pending',
@@ -32,12 +32,13 @@ function generateDemoNightOrders() {
       note: 'Senza salse',
       staffNote: 'Allergia al glutine',
     },
-    // 3. Paid/new kitchen order
+    // 3. Paid/new kitchen order — item-016 (Wraptor) porta 'glutine' tra gli allergeni reali
+    // (vedi kitchenMockData.js), richiesto dal test "ALERT" (badge GLUTINE).
     {
       id: 'demo-order-3',
       orderCode: 'D03',
       nickname: 'Charlie',
-      items: [{ itemId: 'item-002', name: 'Walrus Smash Burger', quantity: 1, price: 9.0 }],
+      items: [{ itemId: 'item-016', name: 'Walrus Smash Burger', quantity: 1, price: 9.0 }],
       total: 9.0,
       status: 'received',
       paymentStatus: 'paid',
@@ -49,7 +50,7 @@ function generateDemoNightOrders() {
       id: 'demo-order-4',
       orderCode: 'D04',
       nickname: 'Diana',
-      items: [{ itemId: 'item-004', name: 'Birra Media', quantity: 3, price: 5.0 }],
+      items: [{ itemId: 'item-058', name: 'Birra Media', quantity: 3, price: 5.0 }],
       total: 15.0,
       status: 'preparing',
       paymentStatus: 'paid',
@@ -61,19 +62,20 @@ function generateDemoNightOrders() {
       id: 'demo-order-5',
       orderCode: 'D05',
       nickname: 'Eve',
-      items: [{ itemId: 'item-003', name: 'Patatine da Banco', quantity: 1, price: 4.0 }],
+      items: [{ itemId: 'item-058', name: 'Patatine da Banco', quantity: 1, price: 4.0 }],
       total: 4.0,
       status: 'ready',
       paymentStatus: 'paid',
       createdAt: new Date(now - 10 * 60 * 1000).toISOString(),
       note: '',
     },
-    // 6. Ready order waiting for pickup
+    // 6. Ready order waiting for pickup — item-025 (Salmon) porta 'pesce' tra gli allergeni
+    // reali (vedi kitchenMockData.js), richiesto dal test "ALERT" (badge PESCE).
     {
       id: 'demo-order-6',
       orderCode: 'D06',
       nickname: 'Frank',
-      items: [{ itemId: 'item-001', name: 'Porchetta', quantity: 2, price: 8.5 }],
+      items: [{ itemId: 'item-025', name: 'Porchetta', quantity: 2, price: 8.5 }],
       total: 17.0,
       status: 'ready',
       paymentStatus: 'paid',
@@ -85,7 +87,7 @@ function generateDemoNightOrders() {
       id: 'demo-order-7',
       orderCode: 'D07',
       nickname: 'Grace',
-      items: [{ itemId: 'item-002', name: 'Walrus Smash Burger', quantity: 1, price: 9.0 }],
+      items: [{ itemId: 'item-016', name: 'Walrus Smash Burger', quantity: 1, price: 9.0 }],
       total: 9.0,
       status: 'delivered',
       paymentStatus: 'paid',
@@ -97,7 +99,7 @@ function generateDemoNightOrders() {
       id: 'demo-order-8',
       orderCode: 'D08',
       nickname: 'Hank',
-      items: [{ itemId: 'item-003', name: 'Patatine da Banco', quantity: 1, price: 4.0 }],
+      items: [{ itemId: 'item-058', name: 'Patatine da Banco', quantity: 1, price: 4.0 }],
       total: 4.0,
       status: 'cancelled',
       paymentStatus: 'pending',
@@ -105,12 +107,13 @@ function generateDemoNightOrders() {
       note: '',
       cancelReason: 'Fuori stock',
     },
-    // 9. Slow/critical order older than 15 minutes
+    // 9. Slow/critical order older than 15 minutes — item-025 (Salmon) mantiene PESCE anche se
+    // demo-order-6 dovesse cambiare stato.
     {
       id: 'demo-order-9',
       orderCode: 'D09',
       nickname: 'Ivy',
-      items: [{ itemId: 'item-001', name: 'Porchetta', quantity: 1, price: 8.5 }],
+      items: [{ itemId: 'item-025', name: 'Porchetta', quantity: 1, price: 8.5 }],
       total: 8.5,
       status: 'received',
       paymentStatus: 'paid',

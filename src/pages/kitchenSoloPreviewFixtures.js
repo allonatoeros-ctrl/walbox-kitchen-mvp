@@ -15,26 +15,26 @@ function seedOrders() {
   return [
     {
       id: 'preview-1', orderCode: 'P47', nickname: 'Gamba Lunga',
-      items: [{ itemId: 'item-002', name: 'Panino del Tricheco', quantity: 2, price: 9.0 }],
-      total: 18.0, status: 'pending_counter_payment', paymentStatus: 'pending',
+      items: [{ itemId: 'item-032', name: 'Porca Figura', quantity: 2, price: 8.0 }],
+      total: 16.0, status: 'pending_counter_payment', paymentStatus: 'pending',
       createdAt: minutesAgo(3), note: '', actionLog: [],
     },
     {
       id: 'preview-2', orderCode: 'P44', nickname: 'IlCapo',
-      items: [{ itemId: 'item-001', name: 'Porchetta', quantity: 1, price: 8.5 }],
-      total: 8.5, status: 'received', paymentStatus: 'paid',
+      items: [{ itemId: 'item-016', name: 'Wraptor', quantity: 1, price: 8.0 }],
+      total: 8.0, status: 'received', paymentStatus: 'paid',
       createdAt: minutesAgo(6), note: 'Senza cipolla', staffNote: 'Allergia dichiarata al glutine', actionLog: [],
     },
     {
       id: 'preview-3', orderCode: 'P43', nickname: 'Sabrina87',
-      items: [{ itemId: 'item-007', name: 'Combo CAVALLOOOO', quantity: 1, price: 16.0 }],
-      total: 16.0, status: 'preparing', paymentStatus: 'paid',
+      items: [{ itemId: 'item-018', name: 'Box Pulled Pork', quantity: 1, price: 11.5 }],
+      total: 11.5, status: 'preparing', paymentStatus: 'paid',
       createdAt: minutesAgo(11), note: '', staffNote: '', actionLog: [],
     },
     {
       id: 'preview-4', orderCode: 'P41', nickname: 'FuriosaDelBanco',
-      items: [{ itemId: 'item-004', name: 'Patatine Fuori di Testa', quantity: 1, price: 5.5 }],
-      total: 5.5, status: 'ready', paymentStatus: 'paid',
+      items: [{ itemId: 'item-058', name: 'Patate al Forno', quantity: 1, price: 5.0 }],
+      total: 5.0, status: 'ready', paymentStatus: 'paid',
       createdAt: minutesAgo(20), readyAt: minutesAgo(2), note: '', actionLog: [],
     },
   ];

@@ -9,28 +9,29 @@ function seedOrders() {
     // Da pagare al banco
     {
       id: 'solo-1', orderCode: 'W47', table: 'T1', nickname: 'Alice',
-      items: [{ itemId: 'item-002', name: 'Panino del Tricheco', quantity: 2, price: 9.0 }],
+      items: [{ itemId: 'item-032', name: 'Panino del Tricheco', quantity: 2, price: 9.0 }],
       total: 18.5, status: 'pending_counter_payment', paymentStatus: 'pending',
       createdAt: ago(2), note: '',
     },
-    // In preparazione (focus atteso: il più vecchio dei "da fare")
+    // In preparazione (focus atteso: il più vecchio dei "da fare") — item-016 (Wraptor) porta
+    // 'glutine' tra gli allergeni reali (vedi kitchenMockData.js), richiesto dal test 3.
     {
       id: 'solo-2', orderCode: 'W43', table: 'T3', nickname: 'Bruno',
-      items: [{ itemId: 'item-002', name: 'Combo Cavallo', quantity: 2, price: 16.0 }],
+      items: [{ itemId: 'item-016', name: 'Combo Cavallo', quantity: 2, price: 16.0 }],
       total: 32.0, status: 'preparing', paymentStatus: 'paid',
       createdAt: ago(7), note: '', staffNote: '',
     },
     // Nuovo, pagato
     {
       id: 'solo-3', orderCode: 'W44', table: 'T4', nickname: 'Carla',
-      items: [{ itemId: 'item-001', name: 'Smash Burger', quantity: 1, price: 9.0 }],
+      items: [{ itemId: 'item-016', name: 'Smash Burger', quantity: 1, price: 9.0 }],
       total: 9.0, status: 'received', paymentStatus: 'paid',
       createdAt: ago(4), note: 'Senza cipolla', staffNote: 'Allergia dichiarata',
     },
     // Pronto per il ritiro
     {
       id: 'solo-4', orderCode: 'W41', table: 'T1', nickname: 'Dario',
-      items: [{ itemId: 'item-002', name: 'Pulled Pork', quantity: 1, price: 9.0 }],
+      items: [{ itemId: 'item-032', name: 'Pulled Pork', quantity: 1, price: 9.0 }],
       total: 9.0, status: 'ready', paymentStatus: 'paid',
       createdAt: ago(20), readyAt: ago(1), note: '',
     },
@@ -507,7 +508,7 @@ test.describe('Kitchen — Solo Service Sprint 3A: notifica audio nuovo ordine',
       const current = JSON.parse(localStorage.getItem(key));
       current.push({
         id: 'solo-5', orderCode: 'W48', table: 'T6', nickname: 'Elisa',
-        items: [{ itemId: 'item-001', name: 'Smash Burger', quantity: 1, price: 9.0 }],
+        items: [{ itemId: 'item-016', name: 'Smash Burger', quantity: 1, price: 9.0 }],
         total: 9.0, status: 'pending_counter_payment', paymentStatus: 'pending',
         createdAt: new Date().toISOString(), note: '',
       });

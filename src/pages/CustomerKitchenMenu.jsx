@@ -115,12 +115,10 @@ const HOME_FEATURED = [
   { id: 'item-017', photoBg: '#f9f0e8' }, // 146:3
 ];
 
-// Panini legacy: restano nei dati e negli ordini storici, ma non sono più
-// esposti al cliente (decisione approvata: la UI cliente usa gli 8 panini V2).
-// Birre legacy (item-005/006): nomi/prezzi demo pre-BEER_SPRINT_V1, restano nei dati
-// e negli ordini storici demo, ma non più esposte ora che `birre` è navigazione
-// primaria — sostituite dal catalogo reale (item-051..057).
-const CUSTOMER_HIDDEN_ITEM_IDS = ['item-001', 'item-002', 'item-005', 'item-006'];
+// Panini/birre legacy pre-menu-attuale rimossi da kitchenMockData.js (cleanup 2026-09-15):
+// nessun id da nascondere oggi. Array tenuto vuoto (non rimosso) come meccanismo pronto per
+// futuri item da nascondere al cliente senza toccarli in kitchenMenuItems.
+const CUSTOMER_HIDDEN_ITEM_IDS = [];
 
 
 // AUTO-SELLING V1 (BEER SPRINT V1 §5/§7-D): ordine di priorità quando il sacco
@@ -253,8 +251,7 @@ export default function CustomerKitchenMenu() {
 
   // BEER SPRINT V1 Fase E (2026-09-14, decisione Eros): catalogo reale delle birre
   // scelte incluse in FALLO PESANTE — le 6 bottiglie + Krombacher (evening_only,
-  // gate lato UI in PesiMassimiSection). Filtro per tag `birre-v1`, non per id: mai
-  // le birre legacy nascoste (item-005/006).
+  // gate lato UI in PesiMassimiSection). Filtro per tag `birre-v1`, non per id.
   const falloPesanteBeerOptions = menuItems.filter(
     (i) => i.category === 'birre' && i.tags?.includes('birre-v1'),
   );

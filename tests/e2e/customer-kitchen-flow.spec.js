@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 
 const LS_ORDERS = 'walbox_kitchen_orders_demo';
 
-// Panini V2 esposti al cliente (item-001 / item-002 legacy sono nascosti nella UI cliente).
+// Panini V2 esposti al cliente (i panini legacy pre-menu-attuale sono stati rimossi da
+// kitchenMockData.js, cleanup 2026-09-15).
 const PANINI_IDS = [
   'item-012', 'item-013', 'item-014',
   'item-015', 'item-016', 'item-017', 'item-032',
@@ -14,7 +15,7 @@ function makeSeedOrder() {
       id: 'order-seed-t12',
       table: 'T12',
       nickname: 'Eros',
-      items: [{ itemId: 'item-001', name: 'Walrus Smash Burger', quantity: 1, price: 9 }],
+      items: [{ itemId: 'item-016', name: 'Walrus Smash Burger', quantity: 1, price: 9 }],
       total: 9,
       status: 'received',
       createdAt: new Date().toISOString(),
@@ -498,7 +499,7 @@ function makeQAOrder(overrides = {}) {
     orderCode: 'W99',
     table: 'T5',
     nickname: 'QATester',
-    items: [{ itemId: 'item-003', name: 'Patatine da Banco', quantity: 1, price: 4.0 }],
+    items: [{ itemId: 'item-058', name: 'Patatine da Banco', quantity: 1, price: 4.0 }],
     total: 4.0,
     status: 'pending_counter_payment',
     createdAt: new Date().toISOString(),
@@ -694,10 +695,16 @@ test('15. Annulla con motivo personalizzato', async ({ page }) => {
 });
 
 test('16. Alert overlay mostra ordine urgente e allergeni attivi', async ({ page }) => {
+  // item-016 (Wraptor, glutine) + item-025 (Salmon, pesce): nessun item corrente porta
+  // glutine+pesce insieme (vedi kitchenMockData.js), servono due righe per riprodurre lo
+  // stesso "Glutine, Pesce" atteso dal test.
   const urgentOrder = makeQAOrder({
     status: 'received',
-    items: [{ itemId: 'item-001', name: 'Panino Porcheria Seria', quantity: 1, price: 8.5 }],
-    total: 8.5,
+    items: [
+      { itemId: 'item-016', name: 'Panino Porcheria Seria', quantity: 1, price: 8.0 },
+      { itemId: 'item-025', name: 'Salmon', quantity: 1, price: 12.0 },
+    ],
+    total: 20.0,
     createdAt: new Date(Date.now() - 11 * 60 * 1000).toISOString(),
   });
   await seedOrders(page, [urgentOrder]);
