@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { kitchenPesiMassimiCombos } from '../../data/kitchenMockData';
+import { isEveningServiceActive } from '../../lib/kitchenServiceRules';
 import AllergenBadges from './AllergenBadges';
 import './PesiMassimiSection.css';
 
@@ -12,6 +13,20 @@ import './PesiMassimiSection.css';
  * LO VOGLIO aggiunge il panino singolo, FALLO PESANTE aggiunge il combo relativo:
  * entrambi passano dallo stesso `onAdd` (= addItem del menu), quindi il payload
  * ordine resta invariato.
+ *
+ * Scelta birra inclusa (BEER SPRINT V1 Fase E, 2026-09-14, decisione Eros): il
+ * prezzo del combo NON cambia in base alla birra scelta — resta lo stesso
+ * `combo.price` fisso di sempre, nessuna logica prezzo nuova. La birra scelta va
+ * solo nel `name` della riga carrello (comanda cucina), mentre `itemId` inviato
+ * all'ordine resta il vero id del combo (`combo.id`, es. `item-040`) invariato:
+ * è quello che il redeem promo (`kitchen_promo_pass_redeem_for_order`) e ogni
+ * altra logica lato server già riconoscono — cambiarlo avrebbe rotto quella
+ * allowlist. Per distinguere comunque le quantità quando lo stesso combo viene
+ * scelto due volte con birre diverse, la riga carrello usa un id composito
+ * (`combo.id::beerId`, campo `baseId` = `combo.id` per il payload reale), gestito
+ * in `CustomerKitchenMenu.jsx` (`addItem`/`handleSubmit`). Krombacher segue la
+ * stessa regola `evening_only` di BirreSection (§3 missione, soglia 18:00 in
+ * `kitchenServiceRules.js`).
  */
 
 const CARET_SRC = '/assets/kitchen/pesi-massimi-caret.svg';
@@ -30,6 +45,9 @@ function formatPrice(value, forceDecimals = false) {
  *    dove il menu mostra solo panini singoli. Default false = menu invariato.
  *  - forceDecimals: forza i due decimali anche sui prezzi interi (€15,00 invece
  *    di €15). Default false = formattazione approvata del menu invariata.
+ *  - beerOptions: catalogo birre reali (categoria `birre`, tag `birre-v1`) tra cui
+ *    scegliere per FALLO PESANTE. Default `[]` = nessuna birra disponibile, il
+ *    selettore non appare (stesso comportamento di prima di Fase E).
  */
 export default function PesiMassimiSection({
   items,
@@ -38,8 +56,10 @@ export default function PesiMassimiSection({
   onHeroCta,
   hideCombo = false,
   forceDecimals = false,
+  beerOptions = [],
 }) {
   const [openId, setOpenId] = useState(null);
+  const [selectedBeerByItem, setSelectedBeerByItem] = useState({});
   const listRef = useRef(null);
   const bodyRefs = useRef({});
 
@@ -172,19 +192,50 @@ export default function PesiMassimiSection({
                       <div className="pm-upsell-accent" />
                       <p className="pm-upsell-title">FALLO PESANTE</p>
                       <p className="pm-upsell-sub">{combo.subtitle}</p>
+
+                      {beerOptions.length > 0 && (
+                        <div className="pm-upsell-beer-picker" role="group" aria-label="Scegli la birra inclusa">
+                          <p className="pm-upsell-beer-label">SCEGLI LA BIRRA INCLUSA</p>
+                          <div className="pm-upsell-beer-list">
+                            {beerOptions.map((beer) => {
+                              const beerLocked = beer.availability === 'evening_only' && !isEveningServiceActive();
+                              const isSelected = selectedBeerByItem[item.id] === beer.id;
+                              return (
+                                <button
+                                  key={beer.id}
+                                  type="button"
+                                  className={`pm-beer-pill${isSelected ? ' pm-beer-pill--selected' : ''}`}
+                                  disabled={beerLocked}
+                                  tabIndex={isOpen ? 0 : -1}
+                                  onClick={() => setSelectedBeerByItem((prev) => ({ ...prev, [item.id]: beer.id }))}
+                                >
+                                  {beer.name}
+                                  {beerLocked && <span className="pm-beer-pill-lock"> · SOLO LA SERA</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="pm-upsell-row">
                         <p className="pm-upsell-price">{formatPrice(combo.price, forceDecimals)}</p>
                         <button
                           type="button"
                           className="pm-btn-heavy"
-                          disabled={soldOut}
+                          disabled={soldOut || (beerOptions.length > 0 && !selectedBeerByItem[item.id])}
                           tabIndex={isOpen ? 0 : -1}
-                          onClick={() => onAdd({
-                            id: combo.id,
-                            name: combo.name,
-                            price: combo.price,
-                            image: combo.image,
-                          })}
+                          onClick={() => {
+                            const chosenBeer = beerOptions.find((b) => b.id === selectedBeerByItem[item.id]);
+                            onAdd({
+                              id: chosenBeer ? `${combo.id}::${chosenBeer.id}` : combo.id,
+                              baseId: combo.id,
+                              name: chosenBeer ? `${combo.name} · ${chosenBeer.name}` : combo.name,
+                              price: combo.price,
+                              image: combo.image,
+                              includesBeerId: chosenBeer?.id,
+                            });
+                          }}
                         >
                           FALLO PESANTE
                         </button>

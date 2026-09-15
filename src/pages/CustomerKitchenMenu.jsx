@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { kitchenCategoryPromos } from '../data/kitchenMockData';
+import { kitchenCategoryPromos, kitchenBeerPairing } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
@@ -9,6 +9,7 @@ import PaniniSection from '../components/kitchen/PaniniSection';
 import CicchettiSection from '../components/kitchen/CicchettiSection';
 import InsalatoneSection from '../components/kitchen/InsalatoneSection';
 import TartareSection from '../components/kitchen/TartareSection';
+import BirreSection from '../components/kitchen/BirreSection';
 import AllergenBadges from '../components/kitchen/AllergenBadges';
 import './CustomerKitchenMenu.css';
 
@@ -93,8 +94,10 @@ CATEGORY_SVGS.bevande = (
 );
 
 // Categorie del menu completo — Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED, Page 4
-// (`MENU — CATEGORIE` 166:2). PATATINE / BIRRE / BEVANDE / COMBO non sono più
-// navigazione primaria: restano nei dati, non nel menu.
+// (`MENU — CATEGORIE` 166:2). PATATINE / COMBO non sono più navigazione primaria:
+// restano nei dati, non nel menu. BIRRE riesposta come categoria primaria cliente
+// (BEER SPRINT V1, 2026-09-14, decisione Eros: posizionata prima di BEVANDE, nessun
+// frame Figma dedicato per questa voce di nav).
 const MENU_CATEGORIES = [
   { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
   { key: 'bbq', label: 'PESI MASSIMI', icon: CATEGORY_SVGS.bbq },
@@ -102,6 +105,7 @@ const MENU_CATEGORIES = [
   { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.insalatone },
   { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.tartare },
   { key: 'tagliere', label: 'TAGLIERI', icon: CATEGORY_SVGS.tagliere },
+  { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
   { key: 'bevande', label: 'BEVANDE', icon: CATEGORY_SVGS.bevande },
 ];
 
@@ -113,8 +117,43 @@ const HOME_FEATURED = [
 
 // Panini legacy: restano nei dati e negli ordini storici, ma non sono più
 // esposti al cliente (decisione approvata: la UI cliente usa gli 8 panini V2).
-const CUSTOMER_HIDDEN_ITEM_IDS = ['item-001', 'item-002'];
+// Birre legacy (item-005/006): nomi/prezzi demo pre-BEER_SPRINT_V1, restano nei dati
+// e negli ordini storici demo, ma non più esposte ora che `birre` è navigazione
+// primaria — sostituite dal catalogo reale (item-051..057).
+const CUSTOMER_HIDDEN_ITEM_IDS = ['item-001', 'item-002', 'item-005', 'item-006'];
 
+
+// AUTO-SELLING V1 (BEER SPRINT V1 §5/§7-D): ordine di priorità quando il sacco
+// contiene più categorie food mappate — un solo suggerimento principale, mai
+// una lista. Stesso ordine delle categorie nel menu (panini prima, tartare per
+// ultima), scelta arbitraria ma stabile e prevedibile.
+const BEER_PAIRING_CATEGORY_PRIORITY = ['panini', 'bbq', 'cicchetti', 'tagliere', 'insalatone', 'tartare'];
+
+// Nessun suggerimento se il sacco ha già una birra (standalone o già inclusa in
+// un FALLO PESANTE via `includesBeerId`), se nessuna categoria food nel sacco ha
+// un pairing configurato, o se la birra consigliata non è ordinabile (prezzo non
+// confermato / esaurita) — mai un CTA morto, mai un doppione della birra già presa.
+function findRecommendedBeer(orderItems, menuItems) {
+  if (orderItems.some((o) => o.includesBeerId)) return null;
+
+  const cartCategories = orderItems
+    .map((o) => menuItems.find((i) => i.id === o.id)?.category)
+    .filter(Boolean);
+  if (cartCategories.includes('birre')) return null;
+
+  const byItemBeerId = orderItems
+    .map((o) => kitchenBeerPairing.byItem[o.id])
+    .find(Boolean);
+  const beerId = byItemBeerId
+    || kitchenBeerPairing.byCategory[
+      BEER_PAIRING_CATEGORY_PRIORITY.find((cat) => cartCategories.includes(cat))
+    ];
+  if (!beerId) return null;
+
+  const beer = menuItems.find((i) => i.id === beerId);
+  if (!beer || beer.price == null || beer.available === false) return null;
+  return beer;
+}
 
 function drawerIcon(name) {
   const n = name.toLowerCase();
@@ -141,6 +180,7 @@ function getCategorySubtitle(cat) {
   if (cat === 'insalatone') return 'CAESAR · SALMON · VEGGY';
   if (cat === 'tartare') return 'CRUDA E CONTENTA · DOLCE MA CRUDA';
   if (cat === 'tagliere') return 'SALUMI SERISSIMI · FORMAGGI DISCUTIBILI · PACE FATTA';
+  if (cat === 'birre') return 'KEILER HELLES · LAND-PILS · KELLERBIER · WEISSE · DUNKEL WEISSE · LUPULUS · KROMBACHER (SOLO SERA)';
   if (cat === 'bevande') return 'ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · SCHWEPPES LEMON · SCHWEPPES TONICA';
   return null;
 }
@@ -210,6 +250,14 @@ export default function CustomerKitchenMenu() {
   const visibleItems = customerItems.filter((i) => i.category === activeCategory);
 
   const pesiMassimiItems = customerItems.filter((i) => i.category === 'bbq');
+
+  // BEER SPRINT V1 Fase E (2026-09-14, decisione Eros): catalogo reale delle birre
+  // scelte incluse in FALLO PESANTE — le 6 bottiglie + Krombacher (evening_only,
+  // gate lato UI in PesiMassimiSection). Filtro per tag `birre-v1`, non per id: mai
+  // le birre legacy nascoste (item-005/006).
+  const falloPesanteBeerOptions = menuItems.filter(
+    (i) => i.category === 'birre' && i.tags?.includes('birre-v1'),
+  );
   const featuredItems = HOME_FEATURED
     .map(({ id, photoBg }) => {
       const item = customerItems.find((i) => i.id === id);
@@ -309,13 +357,18 @@ export default function CustomerKitchenMenu() {
 
 
 
+  // `baseId`: id reale da inviare a Supabase (`itemId`, vedi handleSubmit). Per la
+  // maggior parte dei prodotti coincide con `id`; FALLO PESANTE con birra scelta
+  // (BEER SPRINT V1 Fase E) usa un `id` composito solo per distinguere le righe
+  // carrello per birra, ma `baseId` resta il vero id del combo — vedi
+  // PesiMassimiSection.jsx per il razionale completo.
   const addItem = (item) => {
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === item.id);
       if (existing) {
         return prev.map((o) => o.id === item.id ? { ...o, qty: o.qty + 1 } : o);
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1, image: item.image }];
+      return [...prev, { id: item.id, baseId: item.baseId || item.id, name: item.name, price: item.price, qty: 1, image: item.image, includesBeerId: item.includesBeerId }];
     });
   };
 
@@ -332,6 +385,7 @@ export default function CustomerKitchenMenu() {
 
   const total = orderItems.reduce((sum, o) => sum + o.price * o.qty, 0);
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
+  const recommendedBeer = findRecommendedBeer(orderItems, menuItems);
 
   const handleSubmit = async () => {
     // Invio bloccato finché il cliente non sceglie esplicitamente dove mangia — nessun default
@@ -341,7 +395,7 @@ export default function CustomerKitchenMenu() {
     setOrderError(null);
     const newOrder = {
       nickname: session.nickname,
-      items: orderItems.map((o) => ({ itemId: o.id, name: o.name, quantity: o.qty, price: o.price })),
+      items: orderItems.map((o) => ({ itemId: o.baseId || o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
       note: customerNote.trim() || null,
       status: 'pending_counter_payment',
@@ -575,7 +629,7 @@ export default function CustomerKitchenMenu() {
 
       {/* Menu items */}
       {activeCategory === 'bbq' && visibleItems.length > 0 && (
-        <PesiMassimiSection items={visibleItems} onAdd={addItem} />
+        <PesiMassimiSection items={visibleItems} onAdd={addItem} beerOptions={falloPesanteBeerOptions} />
       )}
       {activeCategory === 'panini' && visibleItems.length > 0 && (
         <PaniniSection items={visibleItems} onAdd={addItem} />
@@ -589,13 +643,16 @@ export default function CustomerKitchenMenu() {
       {activeCategory === 'tartare' && visibleItems.length > 0 && (
         <TartareSection items={visibleItems} onAdd={addItem} />
       )}
+      {activeCategory === 'birre' && visibleItems.length > 0 && (
+        <BirreSection items={visibleItems} onAdd={addItem} />
+      )}
       {visibleItems.length === 0 && (
         <div className="kitch-menu-empty">NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA</div>
       )}
-      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
+      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && activeCategory !== 'birre' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
         <div className="kitch-menu-soldout-banner">AL MOMENTO È TUTTO ESAURITO</div>
       )}
-      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && (
+      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && activeCategory !== 'birre' && (
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>
@@ -719,6 +776,29 @@ export default function CustomerKitchenMenu() {
                 </div>
               ))}
             </div>
+
+            {/* AUTO-SELLING V1 — suggerimento birra contestuale (BEER SPRINT V1 §5/§7-D).
+                Un solo suggerimento, mai un motore di raccomandazione: aggiungere è un
+                click esplicito del cliente, nessun add automatico. */}
+            {recommendedBeer && (
+              <div className="kitch-pairing-banner" data-testid="beer-pairing-banner">
+                <div className="kitch-pairing-copy">
+                  <span className="kitch-pairing-label">CI STA BENE UNA BIRRA?</span>
+                  <span className="kitch-pairing-name">
+                    {recommendedBeer.name.toUpperCase()}
+                    {recommendedBeer.choiceLabel ? ` · ${recommendedBeer.choiceLabel}` : ''}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="kitch-pairing-add"
+                  onClick={() => addItem(recommendedBeer)}
+                  data-testid="beer-pairing-add"
+                >
+                  +€{recommendedBeer.price.toFixed(2).replace('.', ',')}
+                </button>
+              </div>
+            )}
 
             {/* DOVE LO MANGI? — unica domanda del drawer (Il Sacco Pulito, 2026-09-13).
                 Il pagamento non si sceglie più qui: vive su /kitchen/status. */}
