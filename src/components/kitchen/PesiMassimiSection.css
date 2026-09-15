@@ -500,6 +500,55 @@
   color: var(--pm-cream);
 }
 
+/* ── FALLO PESANTE — selettore birra inclusa (BEER SPRINT V1 Fase E) ────── */
+.pm-upsell-beer-picker {
+  margin-top: 12px;
+}
+
+.pm-upsell-beer-label {
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--pm-sand);
+}
+
+.pm-upsell-beer-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pm-beer-pill {
+  border: 1px solid var(--pm-sand);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--pm-cream);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 16px;
+  padding: 7px 12px;
+  cursor: pointer;
+}
+
+.pm-beer-pill--selected {
+  background: var(--pm-gold);
+  border-color: var(--pm-gold);
+  color: var(--pm-bg);
+}
+
+.pm-beer-pill:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pm-beer-pill-lock {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
 .pm-btn-heavy {
   flex-shrink: 0;
   width: 146px;

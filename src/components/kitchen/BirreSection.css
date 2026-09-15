@@ -1,0 +1,164 @@
+/* BirreSection.css — blocco BIRRE (categoria birre), BEER SPRINT V1.
+   Nessun frame Figma dedicato: token colore/font riusati da CicchettiSection.css
+   per coerenza visiva col resto del menu cliente. Stili isolati con prefisso .br- :
+   nessuna regola tocca le altre categorie. */
+
+.br-list {
+  --br-card: #1c1a14;
+  --br-red: #c84020;
+  --br-cream: #e8ddb8;
+  --br-sand: #d4c89a;
+  --br-muted: #8a7e60;
+  --br-amber: #c8960a;
+  --br-photo-bg: #2e2a1e;
+  --br-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 4px 8px;
+  font-family: var(--br-font);
+}
+
+.br-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--br-card);
+}
+
+.br-card--soldout {
+  opacity: 0.7;
+}
+
+.br-card-photo-wrap {
+  position: relative;
+  width: 96px;
+  background: var(--br-photo-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.br-card-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.br-card-photo-placeholder {
+  font-size: 34px;
+  line-height: 1;
+}
+
+.br-card-soldout-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(14, 12, 8, 0.55);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--br-cream);
+  text-align: center;
+}
+
+.br-card-evening-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  padding: 3px 6px;
+  border-radius: 20px;
+  background: var(--br-amber);
+  color: #1c1a14;
+}
+
+.br-card-body {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.br-card-name {
+  font-size: 20px;
+  line-height: 22px;
+  font-weight: 900;
+  color: var(--br-cream);
+}
+
+.br-card-choice {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--br-red);
+}
+
+.br-card-taste {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 600;
+  color: var(--br-sand);
+}
+
+.br-card-bottom-row {
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.br-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.br-card-format {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--br-muted);
+}
+
+.br-card-price {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--br-cream);
+}
+
+.br-card-price--soon {
+  color: var(--br-red);
+  font-size: 12px;
+}
+
+.br-btn-want {
+  height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: var(--br-red);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.br-btn-want:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
