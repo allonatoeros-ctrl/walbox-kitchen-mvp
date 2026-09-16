@@ -216,7 +216,8 @@ function navigateToOrderStatus(orderId) {
 
 export default function CustomerKitchenMenu() {
   const { session } = useCustomerSession();
-  const { addOrder, redeemPromo } = useKitchenOrders();
+  // scope cliente: vedi CustomerOrderStatus — persistenza locale limitata agli ordini propri.
+  const { addOrder, redeemPromo } = useKitchenOrders({ scope: 'customer' });
   const { menuItems } = useKitchenMenu();
 
   const CATEGORIES = MENU_CATEGORIES;

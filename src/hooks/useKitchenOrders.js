@@ -2,9 +2,25 @@ import { useState, useEffect, useRef } from 'react';
 import { demoKitchenOrders } from '../data/kitchenMockData';
 import { supabase } from '../lib/supabaseClient';
 
-const LS_KEY = 'walbox_kitchen_orders_demo';
+// Storage cliente vs storage staff/cassa (privacy client-side, 2026-09-16).
+//
+// `walbox_kitchen_orders_demo` e' la cache della lista ordini DEL LOCALE: su un device staff la
+// sessione autenticata vede (giustamente) tutti gli ordini, quindi quella chiave contiene
+// nickname, piatti, totali, note e stato pagamento di ogni cliente. Finche' cliente e staff
+// hanno condiviso quella chiave, un device usato prima dal banco e poi da un cliente si portava
+// dietro quei dati: il filtro P0 impediva di mostrarli, ma restavano scritti sul dispositivo.
+//
+// Da qui in poi le due superfici sono separate per costruzione:
+//   - staff / cassa / solo / TV  -> LS_VENUE_KEY   (lista del locale, invariata)
+//   - cliente                    -> LS_CUSTOMER_KEY (SOLO gli ordini creati da questo device)
+// La chiave cliente e' filtrata per proprieta' sia in lettura sia in scrittura, quindi non puo'
+// contenere l'ordine di un altro cliente nemmeno per errore.
+const LS_VENUE_KEY = 'walbox_kitchen_orders_demo';
+const LS_CUSTOMER_KEY = 'walbox_kitchen_my_orders';
 const LS_OWNED_IDS_KEY = 'walbox_kitchen_my_order_ids';
 const OWNED_IDS_MAX = 20;
+
+const SCOPE_CUSTOMER = 'customer';
 
 // Identità ordine lato cliente (P0 privacy, 2026-09-16). L'unico titolo per vedere un ordine su
 // /kitchen/status è averlo creato da QUESTO dispositivo: nickname e tavolo sono condivisi e
@@ -27,18 +43,72 @@ export function rememberOwnedOrderId(id) {
   } catch { }
 }
 
-function loadOrders() {
+function storageKeyFor(scope) {
+  return scope === SCOPE_CUSTOMER ? LS_CUSTOMER_KEY : LS_VENUE_KEY;
+}
+
+function readOrdersFromKey(key) {
   try {
-    const saved = localStorage.getItem(LS_KEY);
-    if (saved) return JSON.parse(saved);
+    const saved = localStorage.getItem(key);
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeOrdersToKey(key, orders) {
+  try {
+    localStorage.setItem(key, JSON.stringify(orders));
   } catch { }
+}
+
+function onlyOwned(orders) {
+  const owned = new Set(getOwnedOrderIds());
+  return orders.filter((o) => o?.id && owned.has(o.id));
+}
+
+// Un device che passa al contesto cliente non deve conservare la cache del locale lasciata da
+// una sessione staff/cassa: si adottano solo gli ordini gia' riconosciuti come propri (cosi' una
+// sessione cliente aperta prima di questo cambio non perde il suo ordine) e la cache del locale
+// viene rimossa dal dispositivo. E' pura cache: staff/cassa la ricostruiscono da Supabase al
+// primo fetch, nessun dato di servizio va perso.
+function adoptAndClearVenueCacheForCustomer() {
+  const legacy = readOrdersFromKey(LS_VENUE_KEY);
+  if (legacy === null) return;
+  const mine = onlyOwned(legacy);
+  if (mine.length) {
+    const byId = new Map((readOrdersFromKey(LS_CUSTOMER_KEY) ?? []).map((o) => [o.id, o]));
+    mine.forEach((o) => { if (!byId.has(o.id)) byId.set(o.id, o); });
+    writeOrdersToKey(LS_CUSTOMER_KEY, [...byId.values()]);
+  }
+  try { localStorage.removeItem(LS_VENUE_KEY); } catch { }
+}
+
+function loadOrders(scope) {
+  if (scope === SCOPE_CUSTOMER) {
+    adoptAndClearVenueCacheForCustomer();
+    // Nessun fallback ai demo order lato cliente: i demo sono ordini di altre persone, e il
+    // cliente non deve avere sul proprio device niente che non abbia ordinato lui.
+    const stored = readOrdersFromKey(LS_CUSTOMER_KEY) ?? [];
+    const mine = onlyOwned(stored);
+    // Non basta filtrare in lettura: cio' che non e' di questo dispositivo va anche tolto dal
+    // dispositivo (device passato da un cliente all'altro, o storage manomesso).
+    if (mine.length !== stored.length) writeOrdersToKey(LS_CUSTOMER_KEY, mine);
+    return mine;
+  }
+  const saved = readOrdersFromKey(LS_VENUE_KEY);
+  if (saved) return saved;
   return demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
 }
 
-function saveOrders(orders) {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(orders));
-  } catch { }
+function saveOrders(scope, orders) {
+  if (scope === SCOPE_CUSTOMER) {
+    writeOrdersToKey(LS_CUSTOMER_KEY, onlyOwned(orders));
+    return;
+  }
+  writeOrdersToKey(LS_VENUE_KEY, orders);
 }
 
 function appendLog(order, action) {
@@ -198,17 +268,30 @@ export async function createOrderOnServer(order) {
  *
  * Used by KitchenStaffDashboard and CustomerOrderStatus.
  * Replaces duplicated localStorage read/write blocks in both files.
+ *
+ * `scope` sceglie la superficie di storage locale (vedi LS_VENUE_KEY / LS_CUSTOMER_KEY in testa
+ * al file): 'staff' (default) per Solo Service / cassa / TV, 'customer' per le pagine cliente,
+ * che persistono solo gli ordini creati da quel dispositivo. Non cambia nulla lato Supabase:
+ * fetch, realtime, RPC e RLS sono identici nei due scope.
  */
-export function useKitchenOrders() {
-  const [orders, setOrders] = useState(loadOrders);
+export function useKitchenOrders({ scope = 'staff' } = {}) {
+  const isCustomer = scope === SCOPE_CUSTOMER;
+  const storageKey = storageKeyFor(scope);
+  const [orders, setOrders] = useState(() => loadOrders(scope));
+  // Unico punto di scrittura su localStorage dell'hook: in scope cliente filtra per proprieta',
+  // in scope staff scrive la lista del locale come sempre.
+  const persist = (next) => saveOrders(scope, next);
   // orderId -> last patch sent to Supabase, present while a write is in-flight or failed.
   // Used to (a) skip clobbering that order on the next poll and (b) support retry.
   const pendingWritesRef = useRef(new Map());
 
   useEffect(() => {
-    const refresh = () => setOrders(loadOrders());
+    const refresh = () => setOrders(loadOrders(scope));
 
-    const onStorage    = (e) => { if (e.key === LS_KEY) refresh(); };
+    // `e.newValue` nullo = chiave svuotata da un'altra tab (es. il passaggio al contesto cliente
+    // che rimuove la cache del locale): non deve far rimbalzare una vista staff viva sui demo
+    // order. Il fetch Supabase resta l'unica fonte che puo' azzerare davvero la lista.
+    const onStorage    = (e) => { if (e.key === storageKey && e.newValue) refresh(); };
     const onFocus      = () => refresh();
     const onVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
 
@@ -221,7 +304,7 @@ export function useKitchenOrders() {
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, []);
+  }, [scope, storageKey]);
 
   const fetchSupabaseOrders = async () => {
     try {
@@ -287,7 +370,7 @@ export function useKitchenOrders() {
   const applyLocalSyncStatus = (id, syncStatus, syncError, syncRetryable = true) => {
     setOrders((prev) => {
       const next = prev.map((o) => (o.id === id ? { ...o, syncStatus, syncError, syncRetryable } : o));
-      saveOrders(next);
+      persist(next);
       return next;
     });
   };
@@ -323,7 +406,7 @@ export function useKitchenOrders() {
         const updated = { ...o, status: newStatus, ...extra };
         return actionMap[newStatus] ? appendLog(updated, actionMap[newStatus]) : updated;
       });
-      saveOrders(next);
+      persist(next);
       return next;
     });
     const patch = { status: newStatus, ...(newStatus === 'ready' ? { ready_at: now } : {}) };
@@ -337,18 +420,23 @@ export function useKitchenOrders() {
       console.warn('[Walbox] Order creation failed — order NOT persisted', result.error);
       return result;
     }
+    // Un ordine creato da QUESTO dispositivo e', per definizione, di questo dispositivo: la
+    // registrazione di proprieta' avviene qui, prima di qualunque persistenza, altrimenti lo
+    // storage cliente (filtrato per proprieta') scarterebbe l'ordine appena creato. In scope
+    // staff/cassa non si registra nulla: il tablet del banco non e' il device del cliente.
+    if (isCustomer) rememberOwnedOrderId(result.order.id);
     // Persistenza sincrona su localStorage PRIMA del setState: chi chiama addOrder naviga subito
     // dopo (CustomerKitchenMenu → /kitchen/status) e lo unmount di quella pagina scarta l'update
     // React in coda — con esso anche il saveOrders dentro l'updater. Senza questa riga l'ordine
     // appena creato non sopravvive alla navigazione né a un reload.
-    const persistedBase = loadOrders();
+    const persistedBase = loadOrders(scope);
     if (!persistedBase.some((o) => o.id === result.order.id)) {
-      saveOrders([...persistedBase, result.order]);
+      persist([...persistedBase, result.order]);
     }
     setOrders((prev) => {
       if (prev.some((o) => o.id === result.order.id)) return prev;
       const next = [...prev, result.order];
-      saveOrders(next);
+      persist(next);
       return next;
     });
     return result;
@@ -403,7 +491,7 @@ export function useKitchenOrders() {
         };
         return appendLog(updated, 'pagato');
       });
-      saveOrders(next);
+      persist(next);
       return next;
     });
 
@@ -442,7 +530,7 @@ export function useKitchenOrders() {
           discountAmount: data.discount_amount != null ? Number(data.discount_amount) : 0,
           total: data.total != null ? Number(data.total) : o.total,
         }));
-        saveOrders(next);
+        persist(next);
         return next;
       });
       return { ok: true, promoCode: data.promo_code, discountAmount: Number(data.discount_amount ?? 0), total: Number(data.total) };
@@ -494,7 +582,7 @@ export function useKitchenOrders() {
         };
         return appendLog(updated, 'annullato');
       });
-      saveOrders(next);
+      persist(next);
       return next;
     });
     return { ok: true };
@@ -503,7 +591,7 @@ export function useKitchenOrders() {
   const updateStaffNote = (id, note) => {
     setOrders((prev) => {
       const next = prev.map((o) => o.id !== id ? o : { ...o, staffNote: note });
-      saveOrders(next);
+      persist(next);
       return next;
     });
     runOrderSync(id, { staff_note: note });
@@ -511,7 +599,7 @@ export function useKitchenOrders() {
 
   const resetToDemo = () => {
     const fresh = demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
-    saveOrders(fresh);
+    persist(fresh);
     setOrders(fresh);
   };
 

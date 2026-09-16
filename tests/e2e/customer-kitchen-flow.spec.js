@@ -1,8 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+// Storage STAFF/CASSA: cache della lista ordini del locale. Usata solo dagli scenari staff
+// (/kitchen/staff, /kitchen/solo); nessuna pagina cliente la legge piu'.
 const LS_ORDERS = 'walbox_kitchen_orders_demo';
+// Storage CLIENTE: solo gli ordini creati da QUESTO dispositivo (privacy client-side,
+// 2026-09-16). E' la chiave che alimentano /kitchen, /kitchen/status e la CTA jukebox.
+const LS_MY_ORDERS = 'walbox_kitchen_my_orders';
 // P0 privacy (2026-09-16): registro degli ordini creati da QUESTO dispositivo — unica prova di
-// proprieta' accettata da /kitchen/status (vedi scenari 25-28 in fondo al file).
+// proprieta' accettata da /kitchen/status (vedi scenari 25-29 in fondo al file).
 const LS_OWNED_IDS = 'walbox_kitchen_my_order_ids';
 
 async function seedOwnedOrderIds(page, ids) {
@@ -10,6 +15,19 @@ async function seedOwnedOrderIds(page, ids) {
     ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
     { key: LS_OWNED_IDS, data: ids },
   );
+}
+
+// Seed di un ordine gia' "di questo dispositivo": storage cliente + registro di proprieta',
+// che e' esattamente cio' che il flusso reale scrive al submit.
+async function seedMyOrders(page, orders) {
+  await page.evaluate(
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    { key: LS_MY_ORDERS, data: orders },
+  );
+}
+
+async function readMyOrders(page) {
+  return page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '[]'), LS_MY_ORDERS);
 }
 
 // Panini V2 esposti al cliente (i panini legacy pre-menu-attuale sono stati rimossi da
@@ -224,7 +242,7 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   // V1 (2026-09-13) aggiunge fulfillment_type (eat_here/takeaway), ma nessun table/numero tavolo.
   const orders = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key) || '[]'),
-    LS_ORDERS,
+    LS_MY_ORDERS,
   );
   const latest = [...orders].sort(
     (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
@@ -273,7 +291,7 @@ test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redire
 
   const orders = await page.evaluate(
     (key) => JSON.parse(localStorage.getItem(key) || '[]'),
-    LS_ORDERS,
+    LS_MY_ORDERS,
   );
   const latest = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
   expect(latest.fulfillmentType).toBe('takeaway');
@@ -476,7 +494,7 @@ test('4. Kitchen status → Jukebox bridge preserves table', async ({ page }) =>
   const orders = makeSeedOrder();
   await page.evaluate(
     ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
-    { key: LS_ORDERS, data: orders },
+    { key: LS_MY_ORDERS, data: orders },
   );
   // P0 privacy (2026-09-16): /kitchen/status mostra solo ordini creati da questo dispositivo.
   // Il seed simula un ordine del locale, quindi va anche dichiarato come proprio — altrimenti la
@@ -497,8 +515,11 @@ test('4b. Back button on /kitchen/status meets 44x44 tap target on mobile viewpo
   const orders = makeSeedOrder();
   await page.evaluate(
     ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
-    { key: LS_ORDERS, data: orders },
+    { key: LS_MY_ORDERS, data: orders },
   );
+  // Come nel test 4: l'ordine seedato deve risultare di questo dispositivo, altrimenti la
+  // pagina mostra (correttamente) l'empty state e non c'e' nessuna card da misurare.
+  await seedOwnedOrderIds(page, [orders[0].id]);
 
   const viewports = [
     { width: 360, height: 800 },
@@ -538,7 +559,7 @@ test('6. Jukebox shows Segui ordine CTA when active kitchen order exists', async
   const orders = makeSeedOrder();
   await page.evaluate(
     ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
-    { key: LS_ORDERS, data: orders },
+    { key: LS_MY_ORDERS, data: orders },
   );
 
   await page.goto('/request?table=12&nickname=Eros');
@@ -1194,7 +1215,7 @@ test('26. P0 privacy: il dispositivo di un altro cliente non vede il mio ordine,
   await expect(page.locator('.ost-status-banner-label')).toHaveText('IN ATTESA DI PAGAMENTO');
   await expect(page.locator('.ost-info-value--muted')).toHaveText('A07');
 
-  const ordersA = await readOrders(page);
+  const ordersA = await readMyOrders(page);
   expect(ordersA.some((o) => o.id === 'order-cliente-a')).toBe(true);
 
   // Cliente B: dispositivo diverso (contesto browser separato, storage vuoto). Riceve dal locale
@@ -1204,10 +1225,14 @@ test('26. P0 privacy: il dispositivo di un altro cliente non vede il mio ordine,
   try {
     await mockVenueOrdersSelect(pageB);
     await pageB.goto('/');
-    await pageB.evaluate(({ key, data }) => {
-      localStorage.setItem(key, JSON.stringify(data));
+    // Il device di B riceve l'ordine di A da ENTRAMBE le strade possibili: la cache della lista
+    // ordini del locale (quella che una sessione staff/cassa lascerebbe sul device) e lo storage
+    // cliente. Nessuna delle due e' una prova di proprieta'.
+    await pageB.evaluate(({ venueKey, myKey, data }) => {
+      localStorage.setItem(venueKey, JSON.stringify(data));
+      localStorage.setItem(myKey, JSON.stringify(data));
       localStorage.setItem('walboxCustomerSession', JSON.stringify({ table: '12', nickname: 'Alice' }));
-    }, { key: LS_ORDERS, data: ordersA });
+    }, { venueKey: LS_ORDERS, myKey: LS_MY_ORDERS, data: ordersA });
 
     await pageB.goto('/kitchen/status?orderId=order-cliente-a');
     await expect(pageB.getByTestId('order-status-empty')).toBeVisible();
@@ -1231,8 +1256,8 @@ test('27. P0 privacy: dopo il reload il cliente ritrova il PROPRIO ordine, non l
 
   // Nel frattempo il locale riceve un ordine piu' recente del mio: e' esattamente il caso che
   // prima "rubava" la pagina al cliente (ordine piu' recente del locale).
-  const orders = await readOrders(page);
-  await seedOrders(page, [...orders, makeOtherCustomerOrder({ createdAt: new Date().toISOString() })]);
+  const orders = await readMyOrders(page);
+  await seedMyOrders(page, [...orders, makeOtherCustomerOrder({ createdAt: new Date().toISOString() })]);
 
   await page.reload();
   await expect(page.locator('.ost-info-value--muted')).toHaveText('A08');
@@ -1244,10 +1269,53 @@ test('27. P0 privacy: dopo il reload il cliente ritrova il PROPRIO ordine, non l
   await expect(page.getByText('Pirata')).toHaveCount(0);
 });
 
+test('29. Privacy client-side: la cache ordini di staff/cassa non contamina il cliente sullo stesso device', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+
+  // Stato lasciato da una sessione staff/cassa sul tablet condiviso: la cache contiene la lista
+  // ordini DEL LOCALE (nickname, piatti, totali, note di clienti qualunque).
+  await page.evaluate(
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    {
+      key: LS_ORDERS,
+      data: [
+        makeOtherCustomerOrder({ id: 'order-staff-1', orderCode: 'S01', nickname: 'Pirata' }),
+        makeOtherCustomerOrder({ id: 'order-staff-2', orderCode: 'S02', nickname: 'IlCapo' }),
+      ],
+    },
+  );
+
+  await page.goto('/kitchen/status');
+
+  // 1) niente di quei dati e' visibile al cliente
+  await expect(page.getByTestId('order-status-empty')).toBeVisible();
+  await expect(page.locator('.ost-order-card')).toHaveCount(0);
+  await expect(page.getByText('Pirata')).toHaveCount(0);
+  await expect(page.getByText('IlCapo')).toHaveCount(0);
+
+  // 2) e non resta nemmeno SCRITTO sul dispositivo: il contesto cliente rimuove la cache del
+  //    locale e non la ricrea (lo storage cliente resta vuoto, non c'e' nessun ordine proprio).
+  const after = await page.evaluate(
+    ({ venueKey, myKey }) => ({
+      venue: localStorage.getItem(venueKey),
+      mine: JSON.parse(localStorage.getItem(myKey) || '[]'),
+    }),
+    { venueKey: LS_ORDERS, myKey: LS_MY_ORDERS },
+  );
+  expect(after.venue).toBeNull();
+  expect(after.mine).toEqual([]);
+
+  // 3) anche il ponte jukebox legge solo lo storage cliente: nessuna CTA "Segui ordine"
+  //    generata da un ordine altrui rimasto in cache.
+  await page.goto('/request?table=12&nickname=Alice');
+  await expect(page.getByRole('button', { name: /Segui ordine/i })).toHaveCount(0);
+});
+
 test('28. P0 privacy: lo switcher "I MIEI ORDINI" elenca solo gli ordini di questo dispositivo', async ({ page }) => {
   await mockVenueOrdersSelect(page);
   await page.goto('/');
-  await seedOrders(page, [
+  await seedMyOrders(page, [
     // Stesso nickname del cliente: col vecchio raggruppamento per nickname sarebbe finito
     // nello switcher come se fosse suo.
     makeOtherCustomerOrder({ id: 'order-altrui-nick', orderCode: 'Z01', nickname: 'Eros', createdAt: minutesAgoIso(3) }),

@@ -102,7 +102,9 @@ function resolveUrlOrderId(ownedIds) {
 }
 
 export default function CustomerOrderStatus() {
-  const { orders } = useKitchenOrders();
+  // scope cliente: lo storage locale di questa pagina contiene solo gli ordini creati da
+  // questo dispositivo, mai la cache della lista ordini del locale lasciata da staff/cassa.
+  const { orders } = useKitchenOrders({ scope: 'customer' });
   const [ownedIds, setOwnedIds] = useState(readOwnedOrderIds);
   const [selectedId, setSelectedId] = useState(() => resolveUrlOrderId(readOwnedOrderIds()));
   const [devOpen, setDevOpen] = useState(false);

@@ -82,7 +82,9 @@ export default function CustomerRequest() {
 
     // Check for active kitchen order for this table (read-only)
     try {
-      const kitchenOrders = JSON.parse(localStorage.getItem('walbox_kitchen_orders_demo') || '[]');
+      // Superficie cliente: si legge lo storage ordini DEL CLIENTE (solo ordini creati da
+      // questo dispositivo), non la cache della lista ordini del locale usata da staff/cassa.
+      const kitchenOrders = JSON.parse(localStorage.getItem('walbox_kitchen_my_orders') || '[]');
       const active = kitchenOrders.some(
         (o) => o.table === `T${tableParam}` &&
                ['received', 'preparing', 'ready'].includes(o.status)
