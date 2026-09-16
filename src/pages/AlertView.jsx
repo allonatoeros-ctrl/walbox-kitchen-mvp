@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { kitchenMenuItems } from '../data/kitchenMockData';
+import { resolveOrderAllergens } from '../lib/kitchenAllergens';
 
 function elapsedMinutes(isoString) {
   return Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
@@ -18,14 +18,7 @@ function urgencyClass(isoString) {
   return '';
 }
 
-function getAllergens(order) {
-  const set = new Set();
-  order.items.forEach((item) => {
-    const mi = kitchenMenuItems.find((m) => m.id === item.itemId);
-    if (mi?.allergens) mi.allergens.forEach((a) => set.add(a));
-  });
-  return [...set];
-}
+// P0-3: derivazione condivisa in ../lib/kitchenAllergens — vedi il commento in testa a quel file.
 
 export default function AlertView({ orders }) {
   const [, setTick] = useState(0);
@@ -41,9 +34,14 @@ export default function AlertView({ orders }) {
   const urgentOrders = activeOrders.filter((o) => elapsedMinutes(o.createdAt) >= 10);
 
   // Allergen summary: one row per ordine attivo con allergeni (no tavoli nel contratto Kitchen).
+  // P0-3: entra in ALLERGENI ATTIVI anche un ordine con righe fuori catalogo, che prima usciva
+  // dalla lista in silenzio (allergens vuoto) esattamente come un ordine davvero senza allergeni.
   const allergenRows = activeOrders
-    .map((o) => ({ orderCode: o.orderCode, nickname: o.nickname, allergens: getAllergens(o) }))
-    .filter((r) => r.allergens.length > 0);
+    .map((o) => {
+      const { allergens, unknownItems, hasUnknown } = resolveOrderAllergens(o);
+      return { orderCode: o.orderCode, nickname: o.nickname, allergens, unknownItems, hasUnknown };
+    })
+    .filter((r) => r.allergens.length > 0 || r.hasUnknown);
 
   const hasAlerts = urgentOrders.length > 0 || allergenRows.length > 0;
 
@@ -140,6 +138,20 @@ export default function AlertView({ orders }) {
                         {a.toUpperCase()}
                       </span>
                     ))}
+                    {row.hasUnknown && (
+                      <span data-testid="alert-allergeni-unverified" style={{
+                        fontSize: '11px',
+                        fontWeight: 900,
+                        background: '#000000',
+                        color: '#ffc107',
+                        borderRadius: '4px',
+                        padding: '2px 7px',
+                        border: '1px solid #ffc107',
+                        letterSpacing: '0.3px',
+                      }}>
+                        NON VERIFICATI: {row.unknownItems.map((u) => (u.name || u.itemId).toUpperCase()).join(', ')}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

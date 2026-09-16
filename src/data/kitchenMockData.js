@@ -307,7 +307,14 @@ export const kitchenMenuItems = [
     detailCtaLabel: 'VEDI IL BOX',
     priceNote: 'SOLO BOX',
     ingredients: 'Pulled pork senza pane · patate al forno · anelli di cipolla · salsa cheddar · maionese al pepe',
+    // Fix prudenziale allergeni (2026-09-16, pre-apertura 18/09). `allergens: []` NON e' una
+    // dichiarazione affidabile qui: gli ingredienti includono salsa cheddar e maionese, gli
+    // stessi di item-009 (Pulled Pork) che dichiara ['uova', 'latte']. Non inventiamo quei due
+    // valori al posto di Eros, ma non li presentiamo nemmeno come "nessun allergene": con
+    // `allergensVerified: false` la UI staff mostra ALLERGENI NON VERIFICATI.
+    // Rimuovere questo flag (e scrivere gli allergeni reali) quando Eros conferma ricetta/etichetta.
     allergens: [],
+    allergensVerified: false,
   },
   // TARTARE
   {
@@ -464,7 +471,14 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/tagliere/tagliere_salumi_serissimi.webp',
     available: true,
     ingredients: 'Crudo, lardo, mortadella, speck.',
+    // Fix prudenziale allergeni (2026-09-16, pre-apertura 18/09). Il tagliere contiene
+    // mortadella, che in questo stesso menu e' dichiarata con allergeni da entrambe le altre
+    // voci che la usano (item-017 ['latte', 'frutta_secca'], item-034 ['glutine', 'latte']):
+    // `allergens: []` qui e' incoerente col catalogo, non una dichiarazione di assenza.
+    // Nessun allergene inventato: si dichiara "non verificato" finche' Eros non conferma
+    // ricetta/etichetta dei salumi effettivamente serviti.
     allergens: [],
+    allergensVerified: false,
   },
   {
     id: 'item-044',

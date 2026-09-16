@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
-import { kitchenMenuItems } from '../data/kitchenMockData';
+import { resolveOrderAllergens } from '../lib/kitchenAllergens';
 import { getStaffSession, onAuthStateChange, isKitchenStaff, signOut } from '../lib/supabaseAuth';
 import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPreviewFixtures';
 import { useKitchenAudio } from '../hooks/useKitchenAudio';
@@ -55,14 +55,9 @@ function itemsLine(order) {
   return order.items.map((i) => `${i.quantity} × ${i.name.toUpperCase()}`).join(' · ');
 }
 
-function getAllergens(order) {
-  const set = new Set();
-  order.items.forEach((item) => {
-    const mi = kitchenMenuItems.find((m) => m.id === item.itemId);
-    if (mi?.allergens) mi.allergens.forEach((a) => set.add(a));
-  });
-  return [...set];
-}
+// P0-3: la derivazione vive in ../lib/kitchenAllergens (unica fonte, condivisa con AlertView).
+// Qui si usa solo il risultato, inclusa la distinzione fra "nessun allergene dichiarato" e
+// "questa riga non e' nel catalogo di questo device, non posso garantire nulla".
 
 const STATUS_PILL = {
   pending_counter_payment: { label: 'DA INCASSARE',   cls: 'pending' },
@@ -271,7 +266,8 @@ export function KitchenSoloServiceView({
   const quickPayOrder = daPagare.find((o) => o.id !== focusOrder?.id) ?? null;
 
   const action    = nextActionFor(focusOrder);
-  const allergens = focusOrder ? getAllergens(focusOrder) : [];
+  const allergenInfo = focusOrder ? resolveOrderAllergens(focusOrder) : { allergens: [], unknownItems: [], hasUnknown: false };
+  const allergens = allergenInfo.allergens;
   const lateFocus = focusOrder ? minutesSince(focusOrder.createdAt) >= 15 : false;
 
   // Contratto RPC invariato (kitchen_payment_record_counter, p_method: 'cash' | 'card_counter_manual'),
@@ -631,14 +627,22 @@ export function KitchenSoloServiceView({
                 <div className="kss-side-stack">
                   <div className="kss-card kss-card--allergeni">
                     <div className="kss-card-title"><span aria-hidden="true">⚠️</span> ALLERGENI</div>
-                    {allergens.length > 0 ? (
-                      <>
-                        <div className="kss-allergen-list" data-testid="focus-allergeni">
-                          {allergens.map((a) => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')}
-                        </div>
-                        <div className="kss-allergen-warn"><span aria-hidden="true">⚠</span> ATTENZIONE</div>
-                      </>
-                    ) : (
+                    {allergens.length > 0 && (
+                      <div className="kss-allergen-list" data-testid="focus-allergeni">
+                        {allergens.map((a) => a.charAt(0).toUpperCase() + a.slice(1)).join(', ')}
+                      </div>
+                    )}
+                    {/* P0-3: un item fuori catalogo NON e' un item senza allergeni. Lo staff deve
+                        vedere che su quella riga l'informazione manca, e su quali righe. */}
+                    {allergenInfo.hasUnknown && (
+                      <div className="kss-allergen-list" data-testid="focus-allergeni-unverified">
+                        ALLERGENI NON VERIFICATI: {allergenInfo.unknownItems.map((u) => u.name || u.itemId).join(', ')} — CHIEDI AL CLIENTE
+                      </div>
+                    )}
+                    {(allergens.length > 0 || allergenInfo.hasUnknown) && (
+                      <div className="kss-allergen-warn"><span aria-hidden="true">⚠</span> ATTENZIONE</div>
+                    )}
+                    {allergens.length === 0 && !allergenInfo.hasUnknown && (
                       <div className="kss-card-text">Nessun allergene dichiarato</div>
                     )}
                   </div>
