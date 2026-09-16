@@ -14,6 +14,8 @@ import TagliereSection from '../components/kitchen/TagliereSection';
 import BevandeSection from '../components/kitchen/BevandeSection';
 import AllergenBadges from '../components/kitchen/AllergenBadges';
 import { buildIncludedBeersNote } from '../lib/kitchenServiceRules';
+import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
+import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
 import './CustomerKitchenMenu.css';
 
 // Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
@@ -225,10 +227,17 @@ export default function CustomerKitchenMenu() {
 
   const [view, setView] = useState('home');
   const [activeCategory, setActiveCategory] = useState('panini');
+  // IL SACCO sopravvive a refresh, back/forward e riapertura pagina (2026-09-16). Si parte dallo
+  // snapshot salvato: righe, quantita', birra scelta del FALLO PESANTE, nota e scelta di ritiro.
+  // Nome/prezzo NON vengono dallo snapshot, li rimette il catalogo (vedi l'effect di riconciliazione).
+  const restoredCart = useRef(loadCart()).current;
   const [orderItems, setOrderItems] = useState([]);
+  const [cartRestored, setCartRestored] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
-  const [customerNote, setCustomerNote] = useState('');
-  const [notesOpen, setNotesOpen] = useState(false);
+  const [customerNote, setCustomerNote] = useState(restoredCart.note);
+  // Se il sacco ripristinato porta con se' una nota, il pannello parte aperto: una nota salvata
+  // ma nascosta dietro un accordion chiuso, per il cliente, e' una nota persa.
+  const [notesOpen, setNotesOpen] = useState(Boolean(restoredCart.note));
   const [promoOpen, setPromoOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bannerOrderId, setBannerOrderId] = useState(null);
@@ -237,7 +246,7 @@ export default function CustomerKitchenMenu() {
   // Customer Checkout V1 (2026-09-13): unica scelta obbligatoria nel drawer, nessun default —
   // l'invio resta disabilitato finché il cliente non la sceglie esplicitamente. Il pagamento non
   // si sceglie più qui: vive interamente su /kitchen/status (Il Sacco Pulito, 2026-09-13).
-  const [fulfillmentType, setFulfillmentType] = useState(null); // 'eat_here' | 'takeaway'
+  const [fulfillmentType, setFulfillmentType] = useState(restoredCart.fulfillmentType); // 'eat_here' | 'takeaway'
 
   useEffect(() => {
     try {
@@ -245,6 +254,24 @@ export default function CustomerKitchenMenu() {
       if (lastId) setBannerOrderId(lastId);
     } catch { }
   }, []);
+
+  // Ripristino del SACCO: si aspetta il catalogo e si ricostruisce ogni riga dai dati CORRENTI,
+  // cosi' un prezzo cambiato o un piatto esaurito non rientrano dal carrello vecchio. Il totale
+  // e' sempre ricalcolato da queste righe, mai letto dallo snapshot.
+  useEffect(() => {
+    if (cartRestored || !menuItems?.length) return;
+    const { items } = reconcileCartItems(restoredCart.items, menuItems, kitchenPesiMassimiCombos);
+    if (items.length) setOrderItems(items);
+    setCartRestored(true);
+  }, [cartRestored, menuItems, restoredCart]);
+
+  // Persistenza: ogni modifica al sacco viene salvata. Parte solo dopo il ripristino, altrimenti
+  // il primo render (carrello ancora vuoto) sovrascriverebbe lo snapshot che sta per essere letto.
+  // Un carrello svuotato a mano viene salvato vuoto: e' un'azione esplicita del cliente.
+  useEffect(() => {
+    if (!cartRestored) return;
+    saveCart({ items: orderItems, note: customerNote, fulfillmentType }, undefined);
+  }, [cartRestored, orderItems, customerNote, fulfillmentType]);
 
   // I piatti senza prezzo restano visibili con `PREZZO IN ARRIVO` (CTA disabilitata):
   // nessun prezzo inventato, nessuna categoria vuota nel menu approvato.
@@ -417,6 +444,9 @@ export default function CustomerKitchenMenu() {
       return;
     }
     const createdOrder = result.order;
+    // Unico punto in cui il sacco viene svuotato in automatico: ordine confermato dal server.
+    // Su fallimento (sopra) il carrello resta intatto, com'e' sempre stato.
+    clearCart();
     try { localStorage.setItem('walbox_kitchen_last_order_id', createdOrder.id); } catch { }
     // P0 privacy (2026-09-16): registra l'ordine come proprio di QUESTO dispositivo. È l'unica
     // prova di proprietà che /kitchen/status accetta — senza, la pagina mostra l'empty state,
@@ -442,6 +472,16 @@ export default function CustomerKitchenMenu() {
   useEffect(() => {
     if (cartOpen && orderItems.length === 0) setCartOpen(false);
   }, [orderItems.length, cartOpen]);
+
+  // Sacco svuotato (cestino, o ultima riga rimossa): cadono anche nota e scelta di ritiro.
+  // Sono contestuali a QUEL sacco — una nota "senza cipolla" sopravvissuta a un carrello
+  // buttato finirebbe sull'ordine successivo, che magari la cipolla non ce l'ha nemmeno.
+  useEffect(() => {
+    if (!cartRestored || orderItems.length > 0) return;
+    setCustomerNote((prev) => (prev ? '' : prev));
+    setFulfillmentType((prev) => (prev ? null : prev));
+    setNotesOpen(false);
+  }, [cartRestored, orderItems.length]);
 
   // ── Main menu ─────────────────────────────────────────────────────────
   // La schermata di conferma in-page "ORDINE RICEVUTO" è stata rimossa (Il Sacco Pulito,

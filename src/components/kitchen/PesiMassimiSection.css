@@ -548,11 +548,18 @@
   cursor: pointer;
 }
 
+/* Immagini birra (2026-09-16): gli asset sono bottiglie 512x1024 (ratio 1:2). Con object-fit:
+   cover dentro un frame quadrato se ne vedeva solo la meta' centrale, tagliata sopra e sotto.
+   Ora contain + centratura: la bottiglia si vede sempre intera, piu' piccola dentro lo stesso
+   frame. Il padding evita che tocchi il bordo del cerchio/riquadro. */
 .pm-beer-pill-photo {
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   border-radius: 999px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 1px;
+  box-sizing: border-box;
   flex-shrink: 0;
   background: var(--pm-bg);
 }
@@ -596,10 +603,13 @@
 }
 
 .pm-beer-chosen-photo {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 999px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 1px;
+  box-sizing: border-box;
   flex-shrink: 0;
   background: var(--pm-bg);
 }
@@ -654,7 +664,10 @@
 .pm-beer-detail-photo {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
+  padding: 4px;
+  box-sizing: border-box;
   display: block;
 }
 
@@ -712,9 +725,6 @@
   color: var(--pm-muted);
 }
 
-.pm-beer-detail-listino {
-  font-weight: 700;
-}
 
 .pm-beer-detail-actions {
   display: flex;

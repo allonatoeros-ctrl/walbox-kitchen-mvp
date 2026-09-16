@@ -1021,8 +1021,14 @@ test('21. FALLO PESANTE (BEER SPRINT V1 Fase E): birra inclusa obbligatoria, pre
 
   await eveningHeavyCta.click();
   await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
-  await expect(page.locator('.kitch-drawer-row-name', { hasText: 'PULLED PORK — FALLO PESANTE · KROMBACHER PILS' })).toBeVisible();
-  await expect(page.locator('.kitch-drawer-row-price', { hasText: '€19,00' })).toBeVisible();
+  // Il prezzo va letto sulla RIGA di Krombacher, non con un match globale su "€19,00": da quando
+  // IL SACCO sopravvive al reload (fix carrello 2026-09-16) il secondo `page.goto` non svuota piu'
+  // il carrello, quindi nel drawer convivono la riga Keiler Helles e quella Krombacher, entrambe
+  // a €19,00. L'assert per riga e' piu' stretto del precedente, non piu' lasco: verifica che sia
+  // QUELLA riga a costare quanto il combo.
+  const krombacherRow = page.locator('.kitch-drawer-row', { hasText: 'PULLED PORK — FALLO PESANTE · KROMBACHER PILS' });
+  await expect(krombacherRow.locator('.kitch-drawer-row-name')).toHaveText('PULLED PORK — FALLO PESANTE · KROMBACHER PILS');
+  await expect(krombacherRow.locator('.kitch-drawer-row-price')).toHaveText('€19,00');
 });
 
 // Nota di copertura: l'autorizzazione "cliente redime solo il proprio ordine, non quello di un

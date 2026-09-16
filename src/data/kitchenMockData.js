@@ -260,7 +260,7 @@ export const kitchenMenuItems = [
     tags: ['special', 'v2'],
     image: '/assets/kitchen/photo-pulled-pork-special.webp',
     available: true,
-    ingredients: '100 g carne · coleslaw · anelli di cipolla · salsa cheddar · maionese al pepe',
+    ingredients: 'Carne · coleslaw · anelli di cipolla · salsa cheddar · maionese al pepe',
     allergens: ['uova', 'latte'],
   },
   {
@@ -273,7 +273,7 @@ export const kitchenMenuItems = [
     tags: ['special', 'v2'],
     image: '/assets/kitchen/photo-pastrami-special.webp',
     available: true,
-    ingredients: '120 g carne · cetriolo sott’aceto · cheddar · honey mustard',
+    ingredients: 'Carne · cetriolo sott’aceto · cheddar · honey mustard',
     allergens: ['latte', 'senape'],
   },
   {
@@ -286,7 +286,7 @@ export const kitchenMenuItems = [
     tags: ['special', 'v2'],
     image: '/assets/kitchen/photo-brisket-special.webp',
     available: true,
-    ingredients: '120 g brisket · provola affumicata · coleslaw · cetrioli sott’aceto · salsa BBQ',
+    ingredients: 'Brisket · provola affumicata · coleslaw · cetrioli sott’aceto · salsa BBQ',
     allergens: ['latte', 'uova'],
   },
   // BOX (standalone speciale, categoria bbq — no FALLO PESANTE: nessuna entry in kitchenPesiMassimiCombos)

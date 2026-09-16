@@ -35,7 +35,7 @@ import './PesiMassimiSection.css';
  *     conferma la riga "BIRRA INCLUSA SCELTA" rende esplicita la selezione, con "CAMBIA"
  *     per riaprire il dettaglio. Zero duplicazione dati: legge gli stessi campi di
  *     `kitchenMockData` già usati da BirreSection. Il prezzo del combo resta invariato —
- *     il dettaglio mostra "INCLUSA NEL COMBO" e il listino solo come riferimento — e il
+ *     il dettaglio mostra solo formato + "INCLUSA NEL COMBO" (nessun prezzo di listino) — e il
  *     payload di `onAdd` (id composito, `baseId`, `includesBeerId`) non cambia.
  *  2. HERO — il badge "WALRUS SPECIAL" non è più in overlay sulle foto dei panini: vive
  *     nel blocco contenuto, sopra il titolo PESI MASSIMI (vedi PesiMassimiSection.css).
@@ -289,14 +289,13 @@ export default function PesiMassimiSection({
                                     {previewBeer.tasteSignals.slice(0, 2).join(' · ')}
                                   </p>
                                 )}
+                                {/* Il prezzo di listino della birra e' stato rimosso (2026-09-16,
+                                    decisione Eros): dentro il combo la birra e' inclusa, mostrarne
+                                    il prezzo suggeriva un costo aggiuntivo che non esiste. Resta il
+                                    formato + INCLUSA NEL COMBO. */}
                                 <p className="pm-beer-detail-meta">
                                   {previewBeer.format ? `${previewBeer.format.toUpperCase()} · ` : ''}
                                   INCLUSA NEL COMBO
-                                  {previewBeer.price != null && (
-                                    <span className="pm-beer-detail-listino">
-                                      {` · a listino ${formatPrice(previewBeer.price, forceDecimals)}`}
-                                    </span>
-                                  )}
                                 </p>
                                 <div className="pm-beer-detail-actions">
                                   <button
