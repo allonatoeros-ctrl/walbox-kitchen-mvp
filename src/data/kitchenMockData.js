@@ -333,8 +333,12 @@ export const kitchenMenuItems = [
     tags: ['v2'],
     image: '/assets/kitchen/menu/tartare/tartare_2.webp',
     available: true,
-    ingredients: 'Carne, maionese al miele, rucola, raspadura.',
-    allergens: ['latte', 'uova'],
+    // FINAL UX POLISH (2026-09-16, correzione Eros): la "maionese al miele" non esiste in
+    // carta — le uniche due salse reali sono senape al miele e maionese al basilico.
+    // `senape` aggiunta agli allergeni di conseguenza; `uova` resta in attesa di conferma
+    // di Eros sulla ricetta reale della senape al miele (over-declaration prudenziale).
+    ingredients: 'Carne, senape al miele, rucola, raspadura.',
+    allergens: ['latte', 'uova', 'senape'],
   },
   // CICCHETTI
   {

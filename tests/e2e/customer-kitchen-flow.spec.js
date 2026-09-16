@@ -979,7 +979,20 @@ test('21. FALLO PESANTE (BEER SPRINT V1 Fase E): birra inclusa obbligatoria, pre
   await expect(krombacherPill).toBeDisabled();
   await expect(krombacherPill).toContainText('SOLO LA SERA');
 
+  // BEER DISCOVERY (FINAL UX POLISH): il tap sulla birra apre il dettaglio, non seleziona.
   await openCard.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
+  const beerDetail = openCard.locator('.pm-beer-detail');
+  await expect(beerDetail.locator('.pm-beer-detail-name')).toHaveText('KEILER HELLES');
+  await expect(beerDetail.locator('.pm-beer-detail-story')).toContainText('Morbida');
+  await expect(beerDetail.locator('.pm-beer-detail-meta')).toContainText('50 CL');
+  await expect(beerDetail.locator('.pm-beer-detail-meta')).toContainText('INCLUSA NEL COMBO');
+  // Finché non si conferma, FALLO PESANTE resta disabilitato.
+  await expect(heavyCta).toBeDisabled();
+
+  await beerDetail.getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
+  // Selezione finale esplicita, dettaglio richiuso.
+  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('KEILER HELLES');
+  await expect(openCard.locator('.pm-beer-detail')).toHaveCount(0);
   await expect(heavyCta).toBeEnabled();
   // Scegliere la birra non cambia il prezzo del combo.
   await expect(openCard.locator('.pm-upsell-price')).toHaveText('€19');
@@ -1000,6 +1013,8 @@ test('21. FALLO PESANTE (BEER SPRINT V1 Fase E): birra inclusa obbligatoria, pre
   const eveningKrombacherPill = eveningCard.locator('.pm-beer-pill', { hasText: 'Krombacher Pils' });
   await expect(eveningKrombacherPill).toBeEnabled();
   await eveningKrombacherPill.click();
+  await eveningCard.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
+  await expect(eveningCard.locator('.pm-beer-chosen-name')).toHaveText('KROMBACHER PILS');
   const eveningHeavyCta = eveningCard.locator('.pm-btn-heavy');
   await expect(eveningHeavyCta).toBeEnabled();
   await expect(eveningCard.locator('.pm-upsell-price')).toHaveText('€19');

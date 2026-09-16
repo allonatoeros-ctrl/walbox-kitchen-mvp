@@ -28,6 +28,18 @@ import './PesiMassimiSection.css';
  * stessa regola `evening_only` di BirreSection (§3 missione, soglia 18:00 in
  * `kitchenServiceRules.js`).
  *
+ * FINAL UX POLISH (2026-09-16): due interventi.
+ *  1. BEER DISCOVERY — il selettore birra di FALLO PESANTE non sceglie più "alla cieca":
+ *     tap su una birra apre il suo dettaglio in-place (foto, nome, `choiceLabel`, `story`,
+ *     taste signals, formato) e la scelta si conferma con "SCEGLI QUESTA BIRRA". Dopo la
+ *     conferma la riga "BIRRA INCLUSA SCELTA" rende esplicita la selezione, con "CAMBIA"
+ *     per riaprire il dettaglio. Zero duplicazione dati: legge gli stessi campi di
+ *     `kitchenMockData` già usati da BirreSection. Il prezzo del combo resta invariato —
+ *     il dettaglio mostra "INCLUSA NEL COMBO" e il listino solo come riferimento — e il
+ *     payload di `onAdd` (id composito, `baseId`, `includesBeerId`) non cambia.
+ *  2. HERO — il badge "WALRUS SPECIAL" non è più in overlay sulle foto dei panini: vive
+ *     nel blocco contenuto, sopra il titolo PESI MASSIMI (vedi PesiMassimiSection.css).
+ *
  * MENU POLISH SPRINT (2026-09-16): la CTA della card chiusa e la nota prezzo dell'EXPANDED
  * accettano un override per-item (`item.detailCtaLabel` / `item.priceNote`). Serve al
  * Box Pulled Pork (`item-018`), che sta in PESI MASSIMI per decisione di Eros ma non è un
@@ -66,6 +78,7 @@ export default function PesiMassimiSection({
 }) {
   const [openId, setOpenId] = useState(null);
   const [selectedBeerByItem, setSelectedBeerByItem] = useState({});
+  const [previewBeerByItem, setPreviewBeerByItem] = useState({});
   const listRef = useRef(null);
   const bodyRefs = useRef({});
 
@@ -84,8 +97,8 @@ export default function PesiMassimiSection({
         </div>
         <div className="pm-hero-scrim" />
         <div className="pm-accent-bar" />
-        <div className="pm-hero-badge">WALRUS SPECIAL</div>
         <div className="pm-hero-body">
+          <p className="pm-hero-badge">WALRUS SPECIAL</p>
           <h2 className="pm-hero-title">PESI MASSIMI</h2>
           <p className="pm-hero-sub">
             {items.map((i) => i.name.toUpperCase()).join(' · ')}
@@ -122,6 +135,10 @@ export default function PesiMassimiSection({
           const isOpen = openId === item.id;
           const soldOut = item.available === false;
           const combo = hideCombo ? null : kitchenPesiMassimiCombos[item.id];
+          const chosenBeer = beerOptions.find((b) => b.id === selectedBeerByItem[item.id]) ?? null;
+          const previewBeer = beerOptions.find((b) => b.id === previewBeerByItem[item.id]) ?? null;
+          const previewLocked =
+            previewBeer?.availability === 'evening_only' && !isEveningServiceActive();
           return (
             <article
               key={item.id}
@@ -201,26 +218,111 @@ export default function PesiMassimiSection({
 
                       {beerOptions.length > 0 && (
                         <div className="pm-upsell-beer-picker" role="group" aria-label="Scegli la birra inclusa">
-                          <p className="pm-upsell-beer-label">SCEGLI LA BIRRA INCLUSA</p>
+                          <p className="pm-upsell-beer-label">
+                            {chosenBeer ? 'BIRRA INCLUSA SCELTA' : 'SCEGLI LA BIRRA INCLUSA'}
+                          </p>
+
+                          {chosenBeer && (
+                            <div className="pm-beer-chosen">
+                              {chosenBeer.image && (
+                                <img className="pm-beer-chosen-photo" src={chosenBeer.image} alt="" />
+                              )}
+                              <span className="pm-beer-chosen-name">{chosenBeer.name.toUpperCase()}</span>
+                              <button
+                                type="button"
+                                className="pm-beer-chosen-change"
+                                tabIndex={isOpen ? 0 : -1}
+                                onClick={() => setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: chosenBeer.id }))}
+                              >
+                                CAMBIA
+                              </button>
+                            </div>
+                          )}
+
                           <div className="pm-upsell-beer-list">
                             {beerOptions.map((beer) => {
                               const beerLocked = beer.availability === 'evening_only' && !isEveningServiceActive();
                               const isSelected = selectedBeerByItem[item.id] === beer.id;
+                              const isPreview = previewBeer?.id === beer.id;
                               return (
                                 <button
                                   key={beer.id}
                                   type="button"
-                                  className={`pm-beer-pill${isSelected ? ' pm-beer-pill--selected' : ''}`}
+                                  className={`pm-beer-pill${isSelected ? ' pm-beer-pill--selected' : ''}${isPreview ? ' pm-beer-pill--preview' : ''}`}
                                   disabled={beerLocked}
+                                  aria-expanded={isPreview}
                                   tabIndex={isOpen ? 0 : -1}
-                                  onClick={() => setSelectedBeerByItem((prev) => ({ ...prev, [item.id]: beer.id }))}
+                                  onClick={() => setPreviewBeerByItem((prev) => ({
+                                    ...prev,
+                                    [item.id]: prev[item.id] === beer.id ? null : beer.id,
+                                  }))}
                                 >
-                                  {beer.name}
+                                  {beer.image && (
+                                    <img className="pm-beer-pill-photo" src={beer.image} alt="" />
+                                  )}
+                                  <span className="pm-beer-pill-name">{beer.name}</span>
                                   {beerLocked && <span className="pm-beer-pill-lock"> · SOLO LA SERA</span>}
                                 </button>
                               );
                             })}
                           </div>
+
+                          {previewBeer && (
+                            <div className="pm-beer-detail">
+                              <div className="pm-beer-detail-media">
+                                {previewBeer.image ? (
+                                  <img className="pm-beer-detail-photo" src={previewBeer.image} alt={previewBeer.name} />
+                                ) : (
+                                  <span className="pm-beer-detail-placeholder" aria-hidden="true">🍺</span>
+                                )}
+                              </div>
+                              <div className="pm-beer-detail-body">
+                                <h4 className="pm-beer-detail-name">{previewBeer.name.toUpperCase()}</h4>
+                                {previewBeer.choiceLabel && (
+                                  <p className="pm-beer-detail-choice">{previewBeer.choiceLabel}</p>
+                                )}
+                                {previewBeer.story && (
+                                  <p className="pm-beer-detail-story">{previewBeer.story}</p>
+                                )}
+                                {previewBeer.tasteSignals && previewBeer.tasteSignals.length > 0 && (
+                                  <p className="pm-beer-detail-taste">
+                                    {previewBeer.tasteSignals.slice(0, 2).join(' · ')}
+                                  </p>
+                                )}
+                                <p className="pm-beer-detail-meta">
+                                  {previewBeer.format ? `${previewBeer.format.toUpperCase()} · ` : ''}
+                                  INCLUSA NEL COMBO
+                                  {previewBeer.price != null && (
+                                    <span className="pm-beer-detail-listino">
+                                      {` · a listino ${formatPrice(previewBeer.price, forceDecimals)}`}
+                                    </span>
+                                  )}
+                                </p>
+                                <div className="pm-beer-detail-actions">
+                                  <button
+                                    type="button"
+                                    className="pm-beer-detail-cta"
+                                    disabled={previewLocked}
+                                    tabIndex={isOpen ? 0 : -1}
+                                    onClick={() => {
+                                      setSelectedBeerByItem((prev) => ({ ...prev, [item.id]: previewBeer.id }));
+                                      setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: null }));
+                                    }}
+                                  >
+                                    {previewLocked ? 'SOLO LA SERA' : 'SCEGLI QUESTA BIRRA'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="pm-beer-detail-close"
+                                    tabIndex={isOpen ? 0 : -1}
+                                    onClick={() => setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: null }))}
+                                  >
+                                    CHIUDI
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -232,7 +334,6 @@ export default function PesiMassimiSection({
                           disabled={soldOut || (beerOptions.length > 0 && !selectedBeerByItem[item.id])}
                           tabIndex={isOpen ? 0 : -1}
                           onClick={() => {
-                            const chosenBeer = beerOptions.find((b) => b.id === selectedBeerByItem[item.id]);
                             onAdd({
                               id: chosenBeer ? `${combo.id}::${chosenBeer.id}` : combo.id,
                               baseId: combo.id,

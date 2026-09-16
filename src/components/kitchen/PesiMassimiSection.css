@@ -21,20 +21,28 @@
 }
 
 /* ── HERO FOTOGRAFICA (128:2) ─────────────────────────────── */
+/* Layout in flusso (FINAL UX POLISH 2026-09-16): le foto occupano una fascia propria e
+   il blocco contenuto vive sotto, così il badge WALRUS SPECIAL — ora primo elemento del
+   contenuto — non copre mai le fotografie dei panini e l'hero non ha più altezza fissa
+   da cui il testo possa uscire (nessun clipping a 360px). */
 .pm-hero {
   position: relative;
-  height: 352px;
+  display: flex;
+  flex-direction: column;
   border-radius: 14px;
   overflow: hidden;
   background: var(--pm-bg);
 }
 
+/* Una sola riga di foto qualunque sia il numero di Pesi Massimi (oggi 4 col Box):
+   grid-auto-flow column evita la seconda riga orfana che il vecchio repeat(3, 1fr)
+   produceva e che la scrim nascondeva solo per caso. */
 .pm-hero-photos {
-  position: absolute;
-  inset: 0 0 auto 0;
-  height: 248px;
+  position: relative;
+  height: 176px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   gap: 2px;
   background: rgba(14, 12, 8, 0.9);
 }
@@ -50,9 +58,9 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 118px;
-  height: 130px;
-  background: linear-gradient(180deg, rgba(14, 12, 8, 0) 0%, rgba(14, 12, 8, 0.78) 52%, #0e0c08 100%);
+  top: 0;
+  height: 176px;
+  background: linear-gradient(180deg, rgba(14, 12, 8, 0) 42%, rgba(14, 12, 8, 0.55) 74%, rgba(14, 12, 8, 0.94) 100%);
   pointer-events: none;
 }
 
@@ -65,29 +73,28 @@
   background: var(--pm-red);
 }
 
+/* Badge: in flusso, dentro .pm-hero-body e sopra il titolo. Niente overlay sulle foto. */
 .pm-hero-badge {
-  position: absolute;
-  left: 16px;
-  top: 16px;
+  margin: 0 0 10px;
+  align-self: flex-start;
   height: 28px;
-  min-width: 120px;
-  padding: 0 10px;
+  padding: 0 12px;
   border-radius: 9px;
   background: var(--pm-red-dark);
   color: var(--pm-cream);
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .pm-hero-body {
-  position: absolute;
-  left: 18px;
-  right: 18px;
-  top: 160px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 18px 18px;
 }
 
 .pm-hero-title {
@@ -111,7 +118,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 27px;
+  margin-top: 20px;
 }
 
 .pm-hero-tagline {
@@ -141,12 +148,15 @@
 .pm-hero-rule {
   height: 1px;
   background: var(--pm-rule);
-  margin: 22px 0 0;
+  margin: 18px 0 0;
 }
 
+/* flex-wrap invece di 3 colonne fisse: con 4 Pesi Massimi la griglia rigida lasciava
+   un buco e schiacciava le etichette lunghe (BOX PULLED PORK). */
 .pm-hero-prices {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
   margin-top: 12px;
 }
 
@@ -521,6 +531,11 @@
 }
 
 .pm-beer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  min-height: 34px;
   border: 1px solid var(--pm-sand);
   border-radius: 999px;
   background: transparent;
@@ -529,14 +544,33 @@
   font-size: 12px;
   font-weight: 800;
   line-height: 16px;
-  padding: 7px 12px;
+  padding: 5px 12px 5px 5px;
   cursor: pointer;
+}
+
+.pm-beer-pill-photo {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--pm-bg);
+}
+
+.pm-beer-pill-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .pm-beer-pill--selected {
   background: var(--pm-gold);
   border-color: var(--pm-gold);
   color: var(--pm-bg);
+}
+
+.pm-beer-pill--preview:not(.pm-beer-pill--selected) {
+  border-color: var(--pm-gold);
+  color: var(--pm-cream-hi);
 }
 
 .pm-beer-pill:disabled {
@@ -547,6 +581,182 @@
 .pm-beer-pill-lock {
   font-weight: 700;
   opacity: 0.85;
+}
+
+/* ── Birra scelta: stato finale esplicito ── */
+.pm-beer-chosen {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--pm-gold);
+  background: rgba(200, 150, 10, 0.12);
+}
+
+.pm-beer-chosen-photo {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--pm-bg);
+}
+
+.pm-beer-chosen-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 16px;
+  color: var(--pm-cream-hi);
+  overflow-wrap: anywhere;
+}
+
+.pm-beer-chosen-change {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 4px 2px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--pm-gold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ── Dettaglio birra (discovery) ── */
+.pm-beer-detail {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--pm-rule);
+  background: rgba(14, 12, 8, 0.72);
+}
+
+.pm-beer-detail-media {
+  flex-shrink: 0;
+  width: 78px;
+  height: 78px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--pm-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pm-beer-detail-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pm-beer-detail-placeholder {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.pm-beer-detail-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.pm-beer-detail-name {
+  margin: 0;
+  font-size: 16px;
+  line-height: 18px;
+  font-weight: 900;
+  color: var(--pm-cream-hi);
+  overflow-wrap: anywhere;
+}
+
+.pm-beer-detail-choice {
+  margin: 2px 0 0;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--pm-gold);
+}
+
+.pm-beer-detail-story {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 17px;
+  font-weight: 600;
+  color: var(--pm-cream);
+}
+
+.pm-beer-detail-taste {
+  margin: 5px 0 0;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--pm-sand);
+}
+
+.pm-beer-detail-meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--pm-muted);
+}
+
+.pm-beer-detail-listino {
+  font-weight: 700;
+}
+
+.pm-beer-detail-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.pm-beer-detail-cta {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  background: var(--pm-gold);
+  color: var(--pm-bg);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 16px;
+  cursor: pointer;
+}
+
+.pm-beer-detail-cta:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pm-beer-detail-close {
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--pm-sand);
+  cursor: pointer;
 }
 
 .pm-btn-heavy {
