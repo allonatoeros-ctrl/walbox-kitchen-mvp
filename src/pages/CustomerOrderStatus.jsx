@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
-import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { useKitchenOrders, getOwnedOrderIds, rememberOwnedOrderId } from '../hooks/useKitchenOrders';
 import { supabase } from '../lib/supabaseClient';
 import KitchenOrderCard from '../components/kitchen/KitchenOrderCard';
 import './CustomerOrderStatus.css';
 
-function getMostRecentId(orders) {
+function getMostRecentOrder(orders) {
   if (!orders || orders.length === 0) return null;
   return orders.reduce((best, o) =>
     new Date(o.createdAt) > new Date(best.createdAt) ? o : best
-  ).id;
+  );
 }
 
 const TIMELINE_STEPS = ['pending_counter_payment', 'received', 'preparing', 'ready', 'delivered'];
@@ -77,31 +77,34 @@ function friendlySumupError(err) {
   return code ? SUMUP_ERROR_MESSAGES[code] : 'Pagamento con SumUp non disponibile ora. Riprova o paga alla cassa.';
 }
 
-function resolveInitialId(orders) {
-  const urlParams  = new URLSearchParams(window.location.search);
-  const urlOrderId = urlParams.get('orderId');
-  if (urlOrderId && orders.some((o) => o.id === urlOrderId)) return urlOrderId;
+// P0 privacy (2026-09-16). `useKitchenOrders` legge TUTTI gli ordini del locale (stessa hook
+// dello staff): la selezione qui è quindi l'unico confine fra il cliente e gli ordini altrui.
+// Regola unica: è mio solo l'ordine creato da questo dispositivo (registro
+// `walbox_kitchen_my_order_ids`, scritto al submit in CustomerKitchenMenu).
+// Vietati e rimossi i vecchi fallback: `orders[0]`, l'ordine più recente del locale, e il match
+// per nickname/tavolo — entrambi condivisi fra clienti diversi e quindi non una prova di proprietà.
+function readOwnedOrderIds() {
+  const ids = getOwnedOrderIds();
   try {
-    const lastId = localStorage.getItem('walbox_kitchen_last_order_id');
-    if (lastId && orders.some((o) => o.id === lastId)) return lastId;
+    // Retro-compatibilità: sessione cliente aperta prima di questo fix, quando l'unica traccia
+    // dell'ordine proprio era `walbox_kitchen_last_order_id` (scritto dallo stesso submit).
+    const legacyId = localStorage.getItem('walbox_kitchen_last_order_id');
+    if (legacyId && !ids.includes(legacyId)) ids.push(legacyId);
   } catch { }
-  try {
-    const sessionRaw = localStorage.getItem('walboxCustomerSession');
-    if (sessionRaw) {
-      const session = JSON.parse(sessionRaw);
-      const filtered = orders.filter((o) =>
-        (session.table && o.table === `T${session.table}`) ||
-        (session.nickname && o.nickname === session.nickname)
-      );
-      return getMostRecentId(filtered);
-    }
-  } catch { }
-  return null;
+  return ids;
+}
+
+// Un orderId in querystring non è una prova di proprietà (è condivisibile e ispezionabile):
+// vale solo se quell'ordine risulta già di questo dispositivo.
+function resolveUrlOrderId(ownedIds) {
+  const urlOrderId = new URLSearchParams(window.location.search).get('orderId');
+  return urlOrderId && ownedIds.includes(urlOrderId) ? urlOrderId : null;
 }
 
 export default function CustomerOrderStatus() {
   const { orders } = useKitchenOrders();
-  const [selectedId, setSelectedId] = useState(() => resolveInitialId(orders));
+  const [ownedIds, setOwnedIds] = useState(readOwnedOrderIds);
+  const [selectedId, setSelectedId] = useState(() => resolveUrlOrderId(readOwnedOrderIds()));
   const [devOpen, setDevOpen] = useState(false);
   const [tick, setTick] = useState(0);
   const [readyFlash, setReadyFlash] = useState(false);
@@ -118,27 +121,24 @@ export default function CustomerOrderStatus() {
     return () => clearInterval(timer);
   }, []);
 
-  // Keep selectedId in sync when orders update (e.g. cross-tab) or URL changes
-  useEffect(() => {
-    setSelectedId((prev) => {
-      const stillExists = orders.find((o) => o.id === prev);
-      return stillExists ? prev : getMostRecentId(orders);
-    });
-  }, [orders]);
-
   useEffect(() => {
     const handleNav = () => {
-      const urlParams  = new URLSearchParams(window.location.search);
-      const urlOrderId = urlParams.get('orderId');
-      if (urlOrderId && orders.some((o) => o.id === urlOrderId)) {
-        setSelectedId(urlOrderId);
-      }
+      const ids = readOwnedOrderIds();
+      setOwnedIds(ids);
+      const urlOrderId = resolveUrlOrderId(ids);
+      if (urlOrderId) setSelectedId(urlOrderId);
     };
     window.addEventListener('popstate', handleNav);
     return () => window.removeEventListener('popstate', handleNav);
-  }, [orders]);
+  }, []);
 
-  const order      = orders.find((o) => o.id === selectedId) ?? orders[0];
+  // Unico insieme di ordini che questa pagina può leggere. Tutto ciò che sta sotto (ordine in
+  // primo piano, switcher, pagamento SumUp, bridge jukebox) parte da qui: nessun ramo risale mai
+  // a `orders`, che contiene anche gli ordini degli altri clienti del locale.
+  const myOrders = orders.filter((o) => ownedIds.includes(o.id));
+  // Il fallback resta dentro myOrders: se l'ordine selezionato non è (ancora) caricato si mostra
+  // il proprio più recente, mai quello di un altro. Senza ordini propri → empty state.
+  const order = myOrders.find((o) => o.id === selectedId) ?? getMostRecentOrder(myOrders);
   const isPendingPayment = order ? (order.status === 'pending_counter_payment' || order.paymentStatus === 'pending_counter_payment') : false;
   const displayStatus = isPendingPayment ? 'pending_counter_payment' : (order ? order.status : 'received');
   const statusInfo = order ? kitchenOrderStatuses[displayStatus] : null;
@@ -270,9 +270,12 @@ export default function CustomerOrderStatus() {
           <span className="ost-topbar-title">STATO ORDINE</span>
           <span className="ost-topbar-bell">🔔</span>
         </div>
-        <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+        <div style={{ padding: '60px 20px', textAlign: 'center' }} data-testid="order-status-empty">
           <h2 className="ost-empty-title">Nessun ordine trovato</h2>
-          <p className="ost-empty-sub">Non abbiamo trovato nessun ordine attivo da mostrare.</p>
+          <p className="ost-empty-sub">
+            Non abbiamo trovato nessun ordine inviato da questo dispositivo. Gli ordini restano
+            visibili solo sul telefono da cui li hai inviati.
+          </p>
           <button className="ost-topbar-back-btn" onClick={() => navigate('/kitchen')}>
             ← Torna al menu
           </button>
@@ -281,12 +284,7 @@ export default function CustomerOrderStatus() {
     );
   }
 
-  const relevantOrders = orders.filter((o) => {
-    if (o.id === order.id) return true;
-    return !!(order.table && o.table === order.table) || !!(order.nickname && o.nickname === order.nickname);
-  });
-
-  const sortedOrders = [...relevantOrders]
+  const sortedOrders = [...myOrders]
     .filter((o) => o.id === order.id || (o.status !== 'delivered' && o.status !== 'cancelled'))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 5);
@@ -626,7 +624,7 @@ export default function CustomerOrderStatus() {
               <KitchenOrderCard
                 key={o.id}
                 order={o}
-                isSelected={o.id === selectedId}
+                isSelected={o.id === order.id}
                 onClick={() => handleSelectOrder(o.id)}
               />
             ))}
@@ -673,8 +671,15 @@ export default function CustomerOrderStatus() {
               {orders.map((o) => (
                 <button
                   key={o.id}
-                  className={`ost-dev-btn${o.id === selectedId ? ' ost-dev-btn--active' : ''}`}
-                  onClick={() => setSelectedId(o.id)}
+                  className={`ost-dev-btn${o.id === order.id ? ' ost-dev-btn--active' : ''}`}
+                  onClick={() => {
+                    // Solo DEV (rimosso dal bundle di produzione): simulare un ordine significa
+                    // adottarlo esplicitamente come proprio, così il percorso di lettura resta
+                    // sempre e solo `myOrders` — nessuna scorciatoia che bypassa il filtro.
+                    rememberOwnedOrderId(o.id);
+                    setOwnedIds(readOwnedOrderIds());
+                    setSelectedId(o.id);
+                  }}
                 >
                   {o.nickname} · {kitchenOrderStatuses[o.status]?.label}
                 </button>

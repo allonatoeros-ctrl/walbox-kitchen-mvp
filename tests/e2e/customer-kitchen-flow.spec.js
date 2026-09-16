@@ -1,6 +1,16 @@
 import { test, expect } from '@playwright/test';
 
 const LS_ORDERS = 'walbox_kitchen_orders_demo';
+// P0 privacy (2026-09-16): registro degli ordini creati da QUESTO dispositivo — unica prova di
+// proprieta' accettata da /kitchen/status (vedi scenari 25-28 in fondo al file).
+const LS_OWNED_IDS = 'walbox_kitchen_my_order_ids';
+
+async function seedOwnedOrderIds(page, ids) {
+  await page.evaluate(
+    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
+    { key: LS_OWNED_IDS, data: ids },
+  );
+}
 
 // Panini V2 esposti al cliente (i panini legacy pre-menu-attuale sono stati rimossi da
 // kitchenMockData.js, cleanup 2026-09-15).
@@ -61,7 +71,48 @@ async function chooseFulfillment(page, fulfillment) {
 // parameters ... p_fulfillment_type ..."). La RPC va quindi mockata qui — stesso pattern già in uso
 // per kitchen_promo_pass_redeem_for_order (test 18/19) — verificando anche che il client invii
 // davvero p_fulfillment_type nel payload, non solo che l'ordine appaia creato lato UI.
+// Ogni creazione ordine passa da supabase.auth.signInAnonymously() (createOrderOnServer):
+// sul progetto Supabase reale puntato da .env.local quella chiamata ha un rate limit orario per
+// IP che una suite intera esaurisce, facendo fallire i test con "Request rate limit reached" per
+// motivi ambientali e non di prodotto. La sessione anonima viene quindi mockata insieme al resto
+// del data layer gia' mockato in questi test; il client fa comunque la sua richiesta di login.
+async function mockAnonymousSession(page) {
+  const userId = '11111111-1111-1111-1111-111111111111';
+  const expiresIn = 3600;
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+  const accessToken = [
+    b64({ alg: 'HS256', typ: 'JWT' }),
+    b64({
+      sub: userId, aud: 'authenticated', role: 'authenticated',
+      iat: nowSeconds, exp: nowSeconds + expiresIn, is_anonymous: true,
+      session_id: '22222222-2222-2222-2222-222222222222',
+    }),
+    'e2e-not-a-real-signature',
+  ].join('.');
+  const user = {
+    id: userId, aud: 'authenticated', role: 'authenticated', email: '', phone: '',
+    is_anonymous: true, app_metadata: {}, user_metadata: {}, identities: [],
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+  };
+  await page.route('**/auth/v1/signup*', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        access_token: accessToken,
+        token_type: 'bearer',
+        expires_in: expiresIn,
+        expires_at: nowSeconds + expiresIn,
+        refresh_token: 'e2e-refresh-token',
+        user,
+      }),
+    })
+  );
+}
+
 async function mockCreateOrderRpc(page, { fulfillmentType, orderId = 'order-e2e-checkout-mock', orderCode = 'A01' } = {}) {
+  await mockAnonymousSession(page);
   const sent = { body: null };
   await page.route('**/rest/v1/rpc/kitchen_customer_create_order', async (route) => {
     sent.body = route.request().postDataJSON();
@@ -160,7 +211,14 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   // aspettare /kitchen/status è il segnale reale che l'ordine è stato scritto (fallback locale
   // incluso), invece di leggere localStorage a tempo fisso subito dopo il click.
   await expect(page).toHaveURL(/\/kitchen\/status/);
-  await expect(page.getByText('IN ATTESA DI PAGAMENTO')).toBeVisible();
+  // 'IN ATTESA DI PAGAMENTO' compare in hero + banner + bottom bar: si ancora al banner di stato,
+  // l'unico che rappresenta lo stato dell'ordine mostrato.
+  await expect(page.locator('.ost-status-banner-label')).toHaveText('IN ATTESA DI PAGAMENTO');
+  // P0 privacy (2026-09-16): /kitchen/status mostra l'ordine appena inviato da QUESTO device,
+  // non l'ordine piu' recente del locale (i demo orders Gamba Lunga/IlCapo/... sono in
+  // localStorage ma non sono di questo cliente).
+  await expect(page.getByText('IlCapo')).toHaveCount(0);
+  await expect(page.locator('.ost-info-value--orange')).toHaveText('Eros');
 
   // No-tables contract (2026-09-05): Kitchen non ha tavoli/asporto — invariato. Customer Checkout
   // V1 (2026-09-13) aggiunge fulfillment_type (eat_here/takeaway), ma nessun table/numero tavolo.
@@ -420,6 +478,10 @@ test('4. Kitchen status → Jukebox bridge preserves table', async ({ page }) =>
     ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
     { key: LS_ORDERS, data: orders },
   );
+  // P0 privacy (2026-09-16): /kitchen/status mostra solo ordini creati da questo dispositivo.
+  // Il seed simula un ordine del locale, quindi va anche dichiarato come proprio — altrimenti la
+  // pagina risponde (correttamente) con l'empty state e il bridge jukebox non esiste.
+  await seedOwnedOrderIds(page, [orders[0].id]);
 
   await page.goto('/kitchen/status');
 
@@ -517,6 +579,28 @@ async function seedOrders(page, orders) {
 
 async function readOrders(page) {
   return page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '[]'), LS_ORDERS);
+}
+
+// Come per kitchen_payment_record_counter nel test 7: l'annullamento è RPC-autoritativo
+// (`cancelOrder`, useKitchenOrders.js — lo stato locale diventa 'cancelled' solo se il server
+// conferma, mai ottimisticamente). Gli ordini di questi test sono fixture seedate in
+// localStorage e non esistono nel progetto Supabase reale puntato da .env.local, quindi la RPC
+// vera risponde 400 `order_not_found` e il test misurerebbe quello, non la UI di Solo Service.
+// Il mock restituisce la riga come farebbe il server, riflettendo il motivo davvero inviato.
+async function mockCancelOrderRpc(page) {
+  await page.route('**/rest/v1/rpc/kitchen_order_cancel', async (route) => {
+    const body = route.request().postDataJSON();
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: body?.p_order_id,
+        status: 'cancelled',
+        cancel_reason: body?.p_reason ?? null,
+        cancelled_at: new Date().toISOString(),
+      }),
+    });
+  });
 }
 
 // ── QA-1: Happy Path ───────────────────────────────────────────────
@@ -652,6 +736,7 @@ test('13. Nota interna staff su ordine bancone', async ({ page }) => {
 });
 
 test('14. Annulla ordine con motivo preset', async ({ page }) => {
+  await mockCancelOrderRpc(page);
   await seedOrders(page, [makeQAOrder({ status: 'pending_counter_payment' })]);
   await page.goto('/kitchen/staff');
   await page.waitForURL('**/kitchen/solo');
@@ -679,6 +764,7 @@ test('15. Annulla con motivo personalizzato', async ({ page }) => {
   // Solo Service non distingue un motivo preset ("Fuori stock") da uno libero ("Altro" + testo):
   // il prompt e' sempre testo libero con quel default. Copre comunque la stessa capacita' reale
   // del test originale (annullare con un motivo diverso dal default).
+  await mockCancelOrderRpc(page);
   await seedOrders(page, [makeQAOrder({ status: 'pending_counter_payment' })]);
   await page.goto('/kitchen/staff');
   await page.waitForURL('**/kitchen/solo');
@@ -687,6 +773,11 @@ test('15. Annulla con motivo personalizzato', async ({ page }) => {
   page.once('dialog', (dialog) => dialog.accept('Cliente ha cambiato idea'));
   await page.getByRole('button', { name: /ALTRO/i }).click();
   await page.getByRole('button', { name: 'Annulla ordine' }).click();
+
+  // L'annullamento passa dalla RPC (await) prima di toccare lo stato locale: la scomparsa della
+  // card e' il segnale che la conferma server e' arrivata. Senza, localStorage viene letto
+  // mentre la RPC e' ancora in volo.
+  await expect(page.locator('.kss-qcard[data-order="W99"]')).toHaveCount(0);
 
   const orders = await readOrders(page);
   const order = orders.find((o) => o.id === 'order-qa-001');
@@ -1024,4 +1115,151 @@ test('24. BEVANDE (MENU POLISH SPRINT): sezione dedicata non-accordion, nessuna 
   await pepsi.locator('.bv-btn-want').click();
   await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
   await expect(page.locator('.kitch-drawer-row-name', { hasText: 'PEPSI 33CL' })).toBeVisible();
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// P0 PRIVACY — ordini cliente su /kitchen/status  (scenari 25–28)
+// ═══════════════════════════════════════════════════════════════════
+// Regressione coperta (audit ai-ops/reports/final-release-sprint-18-09.md): senza sessione
+// valida la pagina cadeva su `orders[0]` / sull'ordine piu' recente del locale / sul match per
+// nickname-tavolo, mostrando nickname, piatti, totale e note di un cliente qualunque.
+// Regola oggi: e' visibile solo cio' che questo dispositivo ha davvero ordinato
+// (`walbox_kitchen_my_order_ids`).
+
+// /kitchen/status monta useKitchenOrders, che legge da Supabase TUTTI gli ordini del locale.
+// Nei test di privacy quella select va neutralizzata, altrimenti l'esito dipenderebbe dai dati
+// di produzione del momento: la "lista ordini del locale" arriva solo dal seed localStorage.
+async function mockVenueOrdersSelect(page) {
+  await page.route('**/rest/v1/kitchen_orders*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+  );
+}
+
+function minutesAgoIso(n) {
+  return new Date(Date.now() - n * 60000).toISOString();
+}
+
+function makeOtherCustomerOrder(overrides = {}) {
+  return {
+    id: 'order-altrui-1',
+    orderCode: 'Z99',
+    nickname: 'Pirata',
+    items: [{ itemId: 'item-058', name: 'Patate al Forno', quantity: 1, price: 5.0 }],
+    total: 5.0,
+    status: 'received',
+    createdAt: minutesAgoIso(2),
+    note: 'Nota privata di un altro cliente.',
+    ...overrides,
+  };
+}
+
+test('25. P0 privacy: browser pulito su /kitchen/status non mostra nessun ordine altrui', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  // Nessun seed: la hook carica i demo orders (Gamba Lunga / IlCapo / ...) esattamente come
+  // caricherebbe gli ordini reali del locale da Supabase. Nessuno e' di questo dispositivo.
+  await page.goto('/kitchen/status');
+  await expect(page.getByTestId('order-status-empty')).toBeVisible();
+  await expect(page.getByText('IlCapo')).toHaveCount(0);
+  await expect(page.locator('.ost-order-card')).toHaveCount(0);
+
+  // Indovinare l'id nell'URL non e' una prova di proprieta'.
+  await page.goto('/kitchen/status?orderId=order-003');
+  await expect(page.getByTestId('order-status-empty')).toBeVisible();
+  await expect(page.getByText('IlCapo')).toHaveCount(0);
+
+  // Nemmeno avere la sessione "giusta": nickname e tavolo sono condivisi fra clienti e non
+  // possono piu' sbloccare un ordine (era il fallback rimosso in resolveInitialId).
+  await page.evaluate(() =>
+    localStorage.setItem('walboxCustomerSession', JSON.stringify({ table: '12', nickname: 'IlCapo' }))
+  );
+  await page.goto('/kitchen/status');
+  await expect(page.getByTestId('order-status-empty')).toBeVisible();
+  await expect(page.getByText('IlCapo')).toHaveCount(0);
+});
+
+test('26. P0 privacy: il dispositivo di un altro cliente non vede il mio ordine, nemmeno col link diretto', async ({ page, browser }) => {
+  // Cliente A: ordine creato dal flusso reale, quindi registrato come proprio di questo device.
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderId: 'order-cliente-a', orderCode: 'A07' });
+  await page.goto('/');
+  await page.evaluate(() =>
+    localStorage.setItem('walboxCustomerSession', JSON.stringify({ table: '12', nickname: 'Alice' }))
+  );
+  await page.goto('/kitchen');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'eat_here');
+  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page.locator('.ost-status-banner-label')).toHaveText('IN ATTESA DI PAGAMENTO');
+  await expect(page.locator('.ost-info-value--muted')).toHaveText('A07');
+
+  const ordersA = await readOrders(page);
+  expect(ordersA.some((o) => o.id === 'order-cliente-a')).toBe(true);
+
+  // Cliente B: dispositivo diverso (contesto browser separato, storage vuoto). Riceve dal locale
+  // la stessa lista ordini, ha lo stesso nickname e lo stesso tavolo di A e prova il link diretto.
+  const contextB = await browser.newContext({ baseURL: test.info().project.use.baseURL });
+  const pageB = await contextB.newPage();
+  try {
+    await mockVenueOrdersSelect(pageB);
+    await pageB.goto('/');
+    await pageB.evaluate(({ key, data }) => {
+      localStorage.setItem(key, JSON.stringify(data));
+      localStorage.setItem('walboxCustomerSession', JSON.stringify({ table: '12', nickname: 'Alice' }));
+    }, { key: LS_ORDERS, data: ordersA });
+
+    await pageB.goto('/kitchen/status?orderId=order-cliente-a');
+    await expect(pageB.getByTestId('order-status-empty')).toBeVisible();
+    await expect(pageB.locator('.ost-order-card')).toHaveCount(0);
+    await expect(pageB.getByText('A07')).toHaveCount(0);
+  } finally {
+    await contextB.close();
+  }
+});
+
+test('27. P0 privacy: dopo il reload il cliente ritrova il PROPRIO ordine, non l\'ultimo del locale', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'takeaway', orderId: 'order-mio-reload', orderCode: 'A08' });
+  await page.goto('/kitchen');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'takeaway');
+  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page.locator('.ost-info-value--muted')).toHaveText('A08');
+
+  // Nel frattempo il locale riceve un ordine piu' recente del mio: e' esattamente il caso che
+  // prima "rubava" la pagina al cliente (ordine piu' recente del locale).
+  const orders = await readOrders(page);
+  await seedOrders(page, [...orders, makeOtherCustomerOrder({ createdAt: new Date().toISOString() })]);
+
+  await page.reload();
+  await expect(page.locator('.ost-info-value--muted')).toHaveText('A08');
+  await expect(page.getByText('Pirata')).toHaveCount(0);
+
+  // Anche senza querystring: l'ordine proprio si ritrova dal registro del dispositivo.
+  await page.goto('/kitchen/status');
+  await expect(page.locator('.ost-info-value--muted')).toHaveText('A08');
+  await expect(page.getByText('Pirata')).toHaveCount(0);
+});
+
+test('28. P0 privacy: lo switcher "I MIEI ORDINI" elenca solo gli ordini di questo dispositivo', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedOrders(page, [
+    // Stesso nickname del cliente: col vecchio raggruppamento per nickname sarebbe finito
+    // nello switcher come se fosse suo.
+    makeOtherCustomerOrder({ id: 'order-altrui-nick', orderCode: 'Z01', nickname: 'Eros', createdAt: minutesAgoIso(3) }),
+    makeOtherCustomerOrder({ id: 'order-altrui-2', orderCode: 'Z02', createdAt: minutesAgoIso(1) }),
+    makeOtherCustomerOrder({ id: 'order-mio-1', orderCode: 'M01', nickname: 'Eros', createdAt: minutesAgoIso(20), note: '' }),
+    makeOtherCustomerOrder({ id: 'order-mio-2', orderCode: 'M02', nickname: 'Eros', createdAt: minutesAgoIso(10), note: '' }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-mio-2', 'order-mio-1']);
+
+  await page.goto('/kitchen/status');
+  await expect(page.locator('.ost-order-card')).toHaveCount(2);
+  await expect(page.locator('.ost-order-card-id')).toHaveText(['M02', 'M01']);
+  await expect(page.getByText('Pirata')).toHaveCount(0);
+  await expect(page.getByText('Z01')).toHaveCount(0);
 });

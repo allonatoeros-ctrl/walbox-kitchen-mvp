@@ -3,6 +3,29 @@ import { demoKitchenOrders } from '../data/kitchenMockData';
 import { supabase } from '../lib/supabaseClient';
 
 const LS_KEY = 'walbox_kitchen_orders_demo';
+const LS_OWNED_IDS_KEY = 'walbox_kitchen_my_order_ids';
+const OWNED_IDS_MAX = 20;
+
+// Identità ordine lato cliente (P0 privacy, 2026-09-16). L'unico titolo per vedere un ordine su
+// /kitchen/status è averlo creato da QUESTO dispositivo: nickname e tavolo sono condivisi e
+// indovinabili, quindi non possono essere una prova di proprietà. Il registro vive solo nel
+// browser del cliente (nessuno schema/RLS toccato) ed è scritto al submit in CustomerKitchenMenu.
+export function getOwnedOrderIds() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LS_OWNED_IDS_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === 'string' && id) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function rememberOwnedOrderId(id) {
+  if (!id) return;
+  try {
+    const next = [id, ...getOwnedOrderIds().filter((x) => x !== id)].slice(0, OWNED_IDS_MAX);
+    localStorage.setItem(LS_OWNED_IDS_KEY, JSON.stringify(next));
+  } catch { }
+}
 
 function loadOrders() {
   try {
@@ -314,7 +337,16 @@ export function useKitchenOrders() {
       console.warn('[Walbox] Order creation failed — order NOT persisted', result.error);
       return result;
     }
+    // Persistenza sincrona su localStorage PRIMA del setState: chi chiama addOrder naviga subito
+    // dopo (CustomerKitchenMenu → /kitchen/status) e lo unmount di quella pagina scarta l'update
+    // React in coda — con esso anche il saveOrders dentro l'updater. Senza questa riga l'ordine
+    // appena creato non sopravvive alla navigazione né a un reload.
+    const persistedBase = loadOrders();
+    if (!persistedBase.some((o) => o.id === result.order.id)) {
+      saveOrders([...persistedBase, result.order]);
+    }
     setOrders((prev) => {
+      if (prev.some((o) => o.id === result.order.id)) return prev;
       const next = [...prev, result.order];
       saveOrders(next);
       return next;

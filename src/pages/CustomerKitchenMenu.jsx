@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { kitchenCategoryPromos, kitchenBeerPairing } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
-import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { useKitchenOrders, rememberOwnedOrderId } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
@@ -413,6 +413,10 @@ export default function CustomerKitchenMenu() {
     }
     const createdOrder = result.order;
     try { localStorage.setItem('walbox_kitchen_last_order_id', createdOrder.id); } catch { }
+    // P0 privacy (2026-09-16): registra l'ordine come proprio di QUESTO dispositivo. È l'unica
+    // prova di proprietà che /kitchen/status accetta — senza, la pagina mostra l'empty state,
+    // mai l'ordine di un altro cliente.
+    rememberOwnedOrderId(createdOrder.id);
 
     // Il codice promo si redime solo dopo che l'ordine esiste davvero (mai prima): così il
     // pass non viene mai consumato per un ordine che poi risulta non creato. Se il redeem
