@@ -482,6 +482,10 @@ export function KitchenSoloServiceView({
             <span aria-hidden="true">🔔</span><span className="kss-secondary-label">ALERT</span>
             {alertCount > 0 && <span className="kss-secondary-badge">{alertCount}</span>}
           </button>
+          {/* Ordine assistito al banco per il cliente che non usa l'app (/kitchen/cassa). */}
+          <button className="kss-secondary-btn" data-testid="go-cassa" onClick={() => navigate('/kitchen/cassa')}>
+            <span aria-hidden="true">🧾</span><span className="kss-secondary-label">CASSA</span>
+          </button>
         </div>
       </div>
 

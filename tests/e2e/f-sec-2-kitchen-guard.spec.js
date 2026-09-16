@@ -61,6 +61,35 @@ test.describe('F-SEC-2 Kitchen staff guard', () => {
     await context.close();
   });
 
+  // MODALITA' CASSA (/kitchen/cassa, ordine assistito al banco) usa lo stesso guard fail-closed
+  // di Solo Service: nessuna sessione -> login, sessione non-staff -> login. E' una superficie che
+  // crea ordini e registra incassi, quindi il guard va verificato qui, senza bypass.
+  test('T6: /kitchen/cassa anonimo -> /kitchen/login', async ({ page }) => {
+    await page.goto('/kitchen/cassa');
+    await page.waitForURL('**/kitchen/login', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/kitchen\/login/);
+  });
+
+  test('T7: /kitchen/cassa authenticated NON-staff -> /kitchen/login', async ({ browser }) => {
+    test.skip(!NONSTAFF_STORAGE_STATE, 'storageState non-staff non fornito (FSEC2_NONSTAFF_STORAGE_STATE)');
+    const context = await browser.newContext({ storageState: NONSTAFF_STORAGE_STATE });
+    const page = await context.newPage();
+    await page.goto('/kitchen/cassa');
+    await page.waitForURL('**/kitchen/login', { timeout: 10000 });
+    await expect(page).toHaveURL(/\/kitchen\/login/);
+    await context.close();
+  });
+
+  test('T8: /kitchen/cassa staff autorizzato -> MODALITA CASSA visibile', async ({ browser }) => {
+    test.skip(!STAFF_STORAGE_STATE, 'storageState staff non fornito (FSEC2_STORAGE_STATE)');
+    const context = await browser.newContext({ storageState: STAFF_STORAGE_STATE });
+    const page = await context.newPage();
+    await page.goto('/kitchen/cassa');
+    await expect(page.getByTestId('cassa-page')).toBeVisible({ timeout: 10000 });
+    await expect(page).not.toHaveURL(/\/kitchen\/login/);
+    await context.close();
+  });
+
   // T5 (non-staff non puo' aggiornare kitchen_orders) e' coperto dal backstop DB (P0-2-R6):
   // la policy RLS kitchen_orders UPDATE richiede is_staff_for_venue. Verifica a livello DB, non E2E UI.
   // Qui si assume verificato via MCP in P0-2-R6 (kitchen_orders UPDATE/SELECT staff = is_staff_for_venue).

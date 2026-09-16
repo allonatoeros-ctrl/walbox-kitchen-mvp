@@ -9,6 +9,7 @@ import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import KitchenStaffRedirect from "./pages/KitchenStaffRedirect";
 import KitchenPayments from "./pages/KitchenPayments";
 import KitchenSoloService from "./pages/KitchenSoloService";
+import CounterAssistedOrder from "./pages/CounterAssistedOrder";
 import KitchenSoloServiceDemo from "./pages/KitchenSoloServiceDemo";
 import KitchenStaffDashboardDemo from "./pages/KitchenStaffDashboardDemo";
 import KitchenTrainingDemo from "./pages/KitchenTrainingDemo";
@@ -186,6 +187,10 @@ export default function App() {
         return <KitchenPayments />;
       case "/kitchen/solo":
         return <KitchenSoloService />;
+      // Ordine assistito al banco (cliente senza app): stesso catalogo, stessa RPC di
+      // creazione ordine e stesso Payment Hub del flusso cliente, guard staff proprio.
+      case "/kitchen/cassa":
+        return <CounterAssistedOrder />;
       case "/kitchen/solo-demo":
         return <KitchenSoloServiceDemo />;
       case "/kitchen/staff-payments-demo":
