@@ -817,11 +817,18 @@ test('20. Krombacher (evening_only, BEER SPRINT V1 Fase E): CTA "SOLO LA SERA" p
 
   const krombacherCard = page.locator('.br-card', { hasText: 'KROMBACHER PILS' });
   await expect(krombacherCard.getByText('SOLO LA SERA').first()).toBeVisible();
+  // Nessun formato inventato: "ALLA SPINA" resta il solo indicatore al posto del cl.
+  await expect(krombacherCard.getByText('ALLA SPINA').first()).toBeVisible();
+
+  // MENU POLISH SPRINT (2026-09-16): le card birra sono accordion. La CTA d'ordine
+  // vive nell'EXPANDED, quindi va aperta la card prima di verificarla.
+  await krombacherCard.locator('.br-card-closed').click();
+  await expect(krombacherCard).toHaveClass(/br-card--open/);
+  // Storytelling approvato visibile solo da aperta.
+  await expect(krombacherCard.getByText('Una Pils dritta e senza complicazioni', { exact: false })).toBeVisible();
   const lockedCta = krombacherCard.locator('.br-btn-want');
   await expect(lockedCta).toHaveText('SOLO LA SERA');
   await expect(lockedCta).toBeDisabled();
-  // Nessun formato inventato: "ALLA SPINA" resta il solo indicatore al posto del cl.
-  await expect(krombacherCard.getByText('ALLA SPINA').first()).toBeVisible();
 
   // Dopo le 18:00 locali: servizio serale attivo, ordinabile a prezzo pieno.
   await page.clock.setFixedTime(new Date('2026-09-14T19:00:00'));
@@ -829,6 +836,8 @@ test('20. Krombacher (evening_only, BEER SPRINT V1 Fase E): CTA "SOLO LA SERA" p
   await openCategoryList(page, 'BIRRE');
 
   const krombacherCardEvening = page.locator('.br-card', { hasText: 'KROMBACHER PILS' });
+  await krombacherCardEvening.locator('.br-card-closed').click();
+  await expect(krombacherCardEvening).toHaveClass(/br-card--open/);
   const eveningCta = krombacherCardEvening.locator('.br-btn-want');
   await expect(eveningCta).toHaveText('LO VOGLIO');
   await expect(eveningCta).toBeEnabled();
@@ -897,3 +906,122 @@ test('21. FALLO PESANTE (BEER SPRINT V1 Fase E): birra inclusa obbligatoria, pre
 // due sessioni cliente distinte (nessun `supabase`/`docker` disponibile in questo sandbox), e la
 // UI cliente non espone comunque alcun modo di scegliere un order_id arbitrario — chiama sempre
 // e solo l'id dell'ordine appena creato da lei stessa (vedi handleSubmit sopra).
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MENU POLISH SPRINT (2026-09-16) — TAGLIERI · BOX · BEVANDE
+// ─────────────────────────────────────────────────────────────────────────────
+
+test('22. TAGLIERI (MENU POLISH SPRINT): accordion coerente con Panini — storytelling, ingredienti e allergeni solo da aperta, CTA "VEDI IL TAGLIERE"', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  // Tab label = 'TAGLIERI' (MENU_CATEGORIES), la category key resta 'tagliere'.
+  await openCategoryList(page, 'TAGLIERI');
+
+  // Le 3 voci sono nella sezione dedicata, non più nel fallback generico `kitch-menu-list`.
+  await expect(page.locator('.tg-card')).toHaveCount(3);
+  await expect(page.locator('.kitch-menu-list')).toHaveCount(0);
+
+  const salumi = page.locator('.tg-card', { hasText: 'SALUMI SERISSIMI' });
+  // CLOSED: mai "VEDI IL PANINO" — non sono panini.
+  await expect(salumi.locator('.tg-card-open-cta')).toHaveText(/VEDI IL TAGLIERE/);
+  await expect(salumi.locator('.tg-card-closed-body .tg-card-price')).toHaveText('€8');
+  await expect(salumi).not.toHaveClass(/tg-card--open/);
+
+  await salumi.locator('.tg-card-closed').click();
+  await expect(salumi).toHaveClass(/tg-card--open/);
+  // Storytelling approvato + riga ingredienti tecnica, visibili solo da aperta.
+  await expect(salumi.locator('.tg-card-microcopy')).toContainText('Serissimi solo nel nome');
+  await expect(salumi.locator('.tg-card-ingredients')).toHaveText('Crudo, lardo, mortadella, speck.');
+  await expect(salumi.locator('.tg-btn-want')).toBeEnabled();
+
+  // Una sola card aperta alla volta (stessa regola di Panini/Pesi Massimi).
+  const formaggi = page.locator('.tg-card', { hasText: 'FORMAGGI DISCUTIBILI' });
+  await formaggi.locator('.tg-card-closed').click();
+  await expect(formaggi).toHaveClass(/tg-card--open/);
+  await expect(salumi).not.toHaveClass(/tg-card--open/);
+  // Gli allergeni del tagliere formaggi restano esposti nell'EXPANDED.
+  await expect(formaggi.getByText('LATTE', { exact: false }).first()).toBeVisible();
+
+  // L'ordine finisce nel carrello col nome reale del tagliere.
+  await formaggi.locator('.tg-btn-want').click();
+  await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+  await expect(page.locator('.kitch-drawer-row-name', { hasText: 'FORMAGGI DISCUTIBILI' })).toBeVisible();
+});
+
+test('23. Box Pulled Pork (MENU POLISH SPRINT): copy "VEDI IL BOX" / "SOLO BOX", i panini smoked restano su "VEDI IL PANINO"', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openCategoryList(page, 'PESI MASSIMI');
+
+  const box = page.locator('.pm-card', { hasText: 'BOX PULLED PORK' });
+  await expect(box.locator('.pm-card-open-cta')).toHaveText('VEDI IL BOX');
+
+  await box.locator('.pm-card-closed').click();
+  await expect(box.locator('.pm-price-note')).toHaveText('SOLO BOX');
+  // Nessun upsell FALLO PESANTE sul box (non ha entry in kitchenPesiMassimiCombos).
+  await expect(box.locator('.pm-btn-heavy')).toHaveCount(0);
+
+  // Fallback invariato sugli altri item bbq: nessun id hardcoded nel componente.
+  const panino = page.locator('.pm-card', { hasText: 'PULLED PORK' }).filter({ hasNotText: 'BOX' }).first();
+  await expect(panino.locator('.pm-card-open-cta')).toHaveText('VEDI IL PANINO');
+});
+
+test('24. BEVANDE (MENU POLISH SPRINT): sezione dedicata non-accordion, nessuna foto rotta, nessun formato inventato', async ({ page }) => {
+  const missing404 = [];
+  page.on('response', (res) => {
+    if (res.status() === 404 && res.url().includes('/assets/kitchen/menu/bevande/')) {
+      missing404.push(res.url());
+    }
+  });
+
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openCategoryList(page, 'BEVANDE');
+
+  // 6 card nella sezione dedicata, nessun fallback `kitch-menu-list`.
+  await expect(page.locator('.bv-card')).toHaveCount(6);
+  await expect(page.locator('.kitch-menu-list')).toHaveCount(0);
+
+  // Non-accordion: tutta l'anatomia è già visibile, nessuna CTA "VEDI ..." da aprire.
+  await expect(page.getByText(/VEDI LA BEVANDA|VEDI IL PANINO/)).toHaveCount(0);
+
+  const acqua = page.locator('.bv-card', { hasText: 'ACQUA' });
+  await expect(acqua.locator('.bv-card-format')).toHaveText('0,5 L');
+  await expect(acqua.locator('.bv-card-price')).toHaveText('€1');
+  await expect(acqua.locator('.bv-btn-want')).toHaveText('LO VOGLIO');
+
+  // Pepsi: il formato sta nella sua riga, non ripetuto nel titolo.
+  const pepsi = page.locator('.bv-card', { hasText: 'PEPSI' }).first();
+  await expect(pepsi.locator('.bv-card-name')).toHaveText('PEPSI');
+  await expect(pepsi.locator('.bv-card-format')).toHaveText('33 CL');
+
+  // Formato non confermato → riga vuota, mai un cl inventato.
+  const tonica = page.locator('.bv-card', { hasText: 'SCHWEPPES TONICA' });
+  await expect(tonica.locator('.bv-card-format')).toHaveText('');
+  await expect(tonica.locator('.bv-card-price')).toHaveText('€4');
+
+  // Batch fotografico importato (2026-09-16): 6 <img> reali, nessun placeholder residuo,
+  // nessun 404. `naturalWidth > 0` e' l'unica prova che il file e' stato decodificato
+  // davvero: un <img> con src rotto resta nel DOM e passerebbe un toHaveCount().
+  await expect(page.locator('.bv-card-photo')).toHaveCount(6);
+  await expect(page.locator('.bv-card-photo-placeholder')).toHaveCount(0);
+
+  const photos = await page.locator('.bv-card-photo').evaluateAll((imgs) =>
+    imgs.map((img) => ({
+      src: new URL(img.getAttribute('src'), location.origin).pathname,
+      decoded: img.complete && img.naturalWidth > 0,
+    }))
+  );
+  expect(photos.every((p) => p.decoded)).toBe(true);
+  expect(photos.map((p) => p.src)).toEqual([
+    '/assets/kitchen/menu/bevande/bevanda_acqua.webp',
+    '/assets/kitchen/menu/bevande/bevanda_pepsi.webp',
+    '/assets/kitchen/menu/bevande/bevanda_pepsi_zero.webp',
+    '/assets/kitchen/menu/bevande/bevanda_seven_up.webp',
+    '/assets/kitchen/menu/bevande/bevanda_schweppes_lemon.webp',
+    '/assets/kitchen/menu/bevande/bevanda_schweppes_tonica.webp',
+  ]);
+  expect(missing404).toEqual([]);
+
+  // L'ordine usa il nome reale (`name`), non il `displayName` della card.
+  await pepsi.locator('.bv-btn-want').click();
+  await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+  await expect(page.locator('.kitch-drawer-row-name', { hasText: 'PEPSI 33CL' })).toBeVisible();
+});

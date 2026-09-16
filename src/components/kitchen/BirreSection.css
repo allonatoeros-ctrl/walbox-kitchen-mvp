@@ -1,7 +1,13 @@
 /* BirreSection.css — blocco BIRRE (categoria birre), BEER SPRINT V1.
    Nessun frame Figma dedicato: token colore/font riusati da CicchettiSection.css
    per coerenza visiva col resto del menu cliente. Stili isolati con prefisso .br- :
-   nessuna regola tocca le altre categorie. */
+   nessuna regola tocca le altre categorie.
+
+   MENU POLISH & STORYTELLING SPRINT (2026-09-16): aggiunto lo stato EXPANDED con lo
+   stesso meccanismo approvato altrove (`.br-card-closed` che collassa in max-height,
+   `.br-card-body` in grid-template-rows 0fr→1fr — vedi PaniniSection.css). La riga
+   riassuntiva chiusa passa da `.br-card-bottom-row` a `.br-card-closed-meta`; la CTA
+   d'ordine `.br-btn-want` vive ora dentro l'EXPANDED, non più nella card chiusa. */
 
 .br-list {
   --br-card: #1c1a14;
@@ -10,6 +16,7 @@
   --br-sand: #d4c89a;
   --br-muted: #8a7e60;
   --br-amber: #c8960a;
+  --br-rule: #2e2a1e;
   --br-photo-bg: #2e2a1e;
   --br-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
 
@@ -22,8 +29,6 @@
 
 .br-card {
   position: relative;
-  display: grid;
-  grid-template-columns: 96px 1fr;
   border-radius: 14px;
   overflow: hidden;
   background: var(--br-card);
@@ -33,6 +38,36 @@
   opacity: 0.7;
 }
 
+/* ── CLOSED: foto 96px + nome/choice/formato/prezzo/CTA dettaglio ── */
+.br-card-closed {
+  display: grid;
+  grid-template-columns: 96px 3px 1fr;
+  align-items: stretch;
+  width: 100%;
+  border: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  /* Il blocco chiuso birra è più alto di quello panini/taglieri (nome + choiceLabel +
+     formato/prezzo + CTA dettaglio): a 360px di viewport misura 192px. Valore tenuto
+     largo (240px) perché il max-height serve solo ad animare il collasso, non a fissare
+     l'altezza: le card restano alte quanto il loro contenuto. */
+  max-height: 240px;
+  opacity: 1;
+  transition: max-height 320ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 200ms ease;
+}
+
+.br-card--open .br-card-closed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .br-card-photo-wrap {
   position: relative;
   width: 96px;
@@ -40,6 +75,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .br-card-photo {
@@ -81,7 +117,11 @@
   color: #1c1a14;
 }
 
-.br-card-body {
+.br-card-accent {
+  background: var(--br-red);
+}
+
+.br-card-closed-body {
   padding: 12px 14px;
   display: flex;
   flex-direction: column;
@@ -103,27 +143,11 @@
   color: var(--br-red);
 }
 
-.br-card-taste {
-  margin-top: 6px;
-  font-size: 13px;
-  line-height: 16px;
-  font-weight: 600;
-  color: var(--br-sand);
-}
-
-.br-card-bottom-row {
-  margin-top: auto;
-  padding-top: 10px;
+.br-card-closed-meta {
+  margin-top: 8px;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
   gap: 8px;
-}
-
-.br-card-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
 }
 
 .br-card-format {
@@ -144,15 +168,175 @@
   font-size: 12px;
 }
 
+.br-card-open-cta {
+  margin-top: 10px;
+  width: 148px;
+  max-width: 100%;
+  height: 30px;
+  border-radius: 10px;
+  background: var(--br-red);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 15px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.br-caret {
+  width: 12px;
+  height: 8px;
+  flex-shrink: 0;
+  background: url('/assets/kitchen/pesi-massimi-caret.svg') center / contain no-repeat;
+}
+
+.br-caret--up {
+  transform: rotate(180deg);
+}
+
+/* ── EXPANDED: bottiglia intera + storytelling + dettaglio ─────── */
+.br-card-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.br-card--open .br-card-body {
+  grid-template-rows: 1fr;
+}
+
+/* Unico figlio grid di .br-card-body, così 0fr collassa tutto il contenuto.
+   Stesso pattern di .pn-card-body-content in PaniniSection.css. */
+.br-card-body-content {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Le foto birra sono 512×1024 (bottiglia verticale): `contain` su fondo scuro,
+   mai `cover` — taglierebbe collo/etichetta. Altezza fissa così tutte le card
+   aperte hanno la stessa misura a prescindere dal formato bottiglia. */
+.br-card-body-photo-wrap {
+  position: relative;
+  height: 220px;
+  background: var(--br-photo-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.br-card-body-photo {
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.br-card-accent-line {
+  height: 3px;
+  background: var(--br-red);
+}
+
+.br-card-body-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.br-card-body-name {
+  margin: 0;
+  padding: 18px 18px 0;
+  font-size: 24px;
+  line-height: 26px;
+  font-weight: 900;
+  color: var(--br-cream);
+}
+
+.br-card-body-choice {
+  margin: 4px 0 0;
+  padding: 0 18px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: var(--br-red);
+}
+
+.br-card-story {
+  margin: 10px 0 0;
+  padding: 0 18px;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--br-sand);
+}
+
+.br-card-taste {
+  margin: 8px 0 0;
+  padding: 0 18px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--br-muted);
+}
+
+.br-card-service-rule {
+  margin: 10px 18px 0;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border-left: 3px solid var(--br-amber);
+  background: rgba(200, 150, 10, 0.12);
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
+  color: var(--br-cream);
+}
+
+.br-rule {
+  margin: 16px 18px 0;
+  height: 1px;
+  background: var(--br-rule);
+}
+
+.br-price-row {
+  margin: 14px 18px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.br-price-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.br-price-value {
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--br-cream);
+}
+
+.br-price-note {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--br-muted);
+}
+
 .br-btn-want {
-  height: 36px;
-  padding: 0 14px;
+  height: 38px;
+  padding: 0 16px;
+  min-width: 144px;
   border: none;
   border-radius: 10px;
   background: var(--br-red);
   color: #fff;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
@@ -161,4 +345,22 @@
 .br-btn-want:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.br-card-close {
+  margin: 18px 18px 22px;
+  height: 32px;
+  width: 114px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(232, 221, 184, 0.3);
+  border-radius: 10px;
+  background: rgba(14, 12, 8, 0.72);
+  color: var(--br-cream);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
 }

@@ -1,0 +1,153 @@
+/* BevandeSection.css — blocco BEVANDE (categoria bevande)
+   MENU POLISH SPRINT (2026-09-16).
+   Nessun frame Figma dedicato. Stessi token colore/font di PaniniSection.css /
+   TagliereSection.css, ma layout a 2 colonne e card a stato unico: le bevande non
+   sono accordion (niente storytelling/ingredienti/allergeni da rivelare).
+   Stili isolati con prefisso .bv- : nessuna regola tocca le altre categorie. */
+
+.bv-grid {
+  --bv-card: #1c1a14;
+  --bv-red: #c84020;
+  --bv-cream: #e8ddb8;
+  --bv-sand: #d4c89a;
+  --bv-muted: #8a7e60;
+  /* Fondo visibile solo durante il caricamento della foto. Le 6 foto consegnate
+     (2026-09-16) sono su banco caldo chiaro, non sul fondo scuro che il README
+     chiedeva: campionando i bordi dei file reali si ottiene ~#d9bd9c. Tenerlo su
+     quel tono evita il flash scuro→chiaro al primo paint. Stessa convenzione di
+     --cc-photo-bg-open / --tg-photo-bg-open. Mai bianco puro. */
+  --bv-photo-bg: #d9bd9c;
+  --bv-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
+
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 0 4px 8px;
+  font-family: var(--bv-font);
+}
+
+.bv-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bv-card);
+}
+
+.bv-card--soldout {
+  opacity: 0.7;
+}
+
+/* ── FOTO ────────────────────────────────────────────────────── */
+.bv-card-photo-wrap {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  background: var(--bv-photo-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.bv-card-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.bv-card-photo-placeholder {
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--bv-muted);
+  text-align: center;
+}
+
+.bv-card-soldout-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(200, 64, 32, 0.9);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.bv-card-accent-line {
+  height: 3px;
+  background: var(--bv-red);
+}
+
+/* ── NOME → FORMATO → PREZZO → CTA ───────────────────────────── */
+.bv-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px 14px;
+  min-width: 0;
+}
+
+.bv-card-name {
+  margin: 0;
+  font-size: 17px;
+  line-height: 20px;
+  font-weight: 900;
+  color: var(--bv-cream);
+}
+
+/* Riga sempre presente anche quando `format` manca (Pepsi Zero / Seven Up /
+   Schweppes: formato non confermato, mai inventato): senza altezza riservata le
+   card della stessa riga si disallineerebbero. */
+.bv-card-format {
+  margin: 4px 0 0;
+  min-height: 15px;
+  font-size: 13px;
+  line-height: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--bv-muted);
+}
+
+.bv-card-price {
+  /* margin-bottom = distanza minima dalla CTA, che e' su `margin-top: auto`. */
+  margin: 6px 0 10px;
+  font-size: 18px;
+  line-height: 20px;
+  font-weight: 900;
+  color: var(--bv-sand);
+}
+
+.bv-card-price--soon {
+  font-size: 13px;
+  color: var(--bv-red);
+}
+
+/* `margin-top: auto` + le celle grid che si stirano ad altezza uguale: la CTA resta
+   sul fondo e allineata fra le due colonne anche se un nome va su due righe
+   ("SCHWEPPES TONICA" a 360px) o se il formato manca. */
+.bv-btn-want {
+  margin-top: auto;
+  width: 100%;
+  height: 36px;
+  border: none;
+  border-radius: 10px;
+  background: var(--bv-red);
+  color: #fff;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bv-btn-want:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

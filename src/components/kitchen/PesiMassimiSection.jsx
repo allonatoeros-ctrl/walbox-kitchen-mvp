@@ -27,6 +27,12 @@ import './PesiMassimiSection.css';
  * in `CustomerKitchenMenu.jsx` (`addItem`/`handleSubmit`). Krombacher segue la
  * stessa regola `evening_only` di BirreSection (§3 missione, soglia 18:00 in
  * `kitchenServiceRules.js`).
+ *
+ * MENU POLISH SPRINT (2026-09-16): la CTA della card chiusa e la nota prezzo dell'EXPANDED
+ * accettano un override per-item (`item.detailCtaLabel` / `item.priceNote`). Serve al
+ * Box Pulled Pork (`item-018`), che sta in PESI MASSIMI per decisione di Eros ma non è un
+ * panino: mostra "VEDI IL BOX" / "SOLO BOX". Senza override, i 3 panini smoked restano su
+ * "VEDI IL PANINO" / "SOLO PANINO" — nessun id hardcoded qui dentro.
  */
 
 const CARET_SRC = '/assets/kitchen/pesi-massimi-caret.svg';
@@ -147,7 +153,7 @@ export default function PesiMassimiSection({
                   <span className="pm-card-closed-name">{item.name.toUpperCase()}</span>
                   <span className="pm-card-closed-price">{formatPrice(item.price, forceDecimals)}</span>
                   <span className="pm-card-open-cta">
-                    {soldOut ? 'ESAURITO' : 'VEDI IL PANINO'}
+                    {soldOut ? 'ESAURITO' : (item.detailCtaLabel ?? 'VEDI IL PANINO')}
                   </span>
                   <img className="pm-caret pm-card-caret" src={CARET_SRC} alt="" />
                 </button>
@@ -169,7 +175,7 @@ export default function PesiMassimiSection({
                   <div className="pm-price-row">
                     <span className="pm-price-block">
                       <span className="pm-price-value">{formatPrice(item.price, forceDecimals)}</span>
-                      <span className="pm-price-note">SOLO PANINO</span>
+                      <span className="pm-price-note">{item.priceNote ?? 'SOLO PANINO'}</span>
                     </span>
                     <button
                       type="button"

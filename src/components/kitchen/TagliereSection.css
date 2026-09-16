@@ -1,0 +1,289 @@
+/* TagliereSection.css — blocco TAGLIERI (categoria tagliere)
+   MENU POLISH & STORYTELLING SPRINT (2026-09-16).
+   Nessun frame Figma dedicato: stessi token colore/font/misure di PaniniSection.css
+   (a sua volta allineato a PesiMassimiSection, stesso file/pagina Figma approvata),
+   così l'accordion TAGLIERI è visivamente indistinguibile da quello dei PANINI.
+   Stili isolati con prefisso .tg- : nessuna regola tocca le altre categorie. */
+
+.tg-list {
+  --tg-card: #1c1a14;
+  --tg-red: #c84020;
+  --tg-gold: #c8960a;
+  --tg-cream: #e8ddb8;
+  --tg-sand: #d4c89a;
+  --tg-muted: #8a7e60;
+  --tg-rule: #2e2a1e;
+  --tg-photo-bg: #fdf7f1;
+  /* Fondo della foto EXPANDED durante il caricamento: tono medio del tagliere reale
+     (legno/salumi), mai bianco puro. Le foto sono 1254×1254 come panini/cicchetti,
+     quindi il box 4:3 + object-fit:cover non lascia bande visibili. */
+  --tg-photo-bg-open: #d9bfa9;
+  --tg-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 4px 8px;
+  font-family: var(--tg-font);
+}
+
+.tg-card {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--tg-card);
+}
+
+.tg-card--soldout {
+  opacity: 0.7;
+}
+
+/* ── CLOSED: foto 132×132 + nome/prezzo/CTA ─────────────────── */
+.tg-card-closed {
+  display: grid;
+  grid-template-columns: 132px 3px 1fr;
+  align-items: stretch;
+  width: 100%;
+  border: none;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  /* 168px invece dei 132px dei PANINI (= altezza della foto): i nomi dei taglieri sono
+     più lunghi e a 360px di viewport "FORMAGGI DISCUTIBILI" va su due righe, portando il
+     body a 138px. Con max-height 132px la CTA veniva tagliata di 6px. Il max-height non
+     forza l'altezza: le card col nome su una riga restano a 132px. */
+  max-height: 168px;
+  opacity: 1;
+  transition: max-height 320ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 200ms ease;
+}
+
+.tg-card--open .tg-card-closed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tg-card-photo-wrap {
+  width: 132px;
+  height: 132px;
+  flex-shrink: 0;
+  background: var(--tg-photo-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.tg-card-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.tg-card-photo-placeholder {
+  width: 120px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--tg-muted);
+  text-align: center;
+}
+
+.tg-card-accent {
+  background: var(--tg-red);
+}
+
+.tg-card-closed-body {
+  position: relative;
+  padding: 16px 40px 16px 18px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tg-card-name {
+  font-size: 20px;
+  line-height: 24px;
+  font-weight: 900;
+  color: var(--tg-cream);
+}
+
+.tg-card-price {
+  margin-top: 8px;
+  font-size: 15px;
+  line-height: 18px;
+  font-weight: 800;
+  color: var(--tg-cream);
+}
+
+.tg-card-price--soon {
+  color: var(--tg-red);
+}
+
+/* 160px invece dei 140px dei PANINI: "VEDI IL TAGLIERE" è più lungo di
+   "VEDI IL PANINO" e a 360px di viewport andava a capo dentro la pill. */
+.tg-card-open-cta {
+  margin-top: auto;
+  width: 160px;
+  max-width: 100%;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--tg-red);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 15px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tg-caret {
+  width: 12px;
+  height: 8px;
+  flex-shrink: 0;
+  background: url('/assets/kitchen/pesi-massimi-caret.svg') center / contain no-repeat;
+}
+
+.tg-caret--up {
+  transform: rotate(180deg);
+}
+
+/* ── EXPANDED: foto piena larghezza + dettaglio ─────────────── */
+.tg-card-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.tg-card--open .tg-card-body {
+  grid-template-rows: 1fr;
+}
+
+/* Unico figlio grid di .tg-card-body: così `grid-template-rows: 0fr` collassa TUTTO
+   il contenuto (foto + accent + dettaglio), non solo il primo figlio.
+   Stesso pattern di .pn-card-body-content in PaniniSection.css. */
+.tg-card-body-content {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.tg-card-body-photo-wrap {
+  aspect-ratio: 4 / 3;
+  max-width: 100%;
+  background: var(--tg-photo-bg-open);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.tg-card-body-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+.tg-card-accent-line {
+  height: 3px;
+  background: var(--tg-red);
+}
+
+.tg-card-body-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.tg-card-body-name {
+  margin: 0;
+  padding: 22px 18px 0;
+  font-size: 26px;
+  line-height: 28px;
+  font-weight: 900;
+  color: var(--tg-cream);
+}
+
+.tg-card-ingredients {
+  margin: 8px 0 0;
+  padding: 0 18px;
+  font-size: 15px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--tg-sand);
+}
+
+.tg-card-microcopy {
+  margin: 6px 0 0;
+  padding: 0 18px;
+  font-size: 14px;
+  line-height: 18px;
+  font-weight: 600;
+  color: var(--tg-muted);
+}
+
+.tg-rule {
+  margin: 16px 18px 0;
+  height: 1px;
+  background: var(--tg-rule);
+}
+
+.tg-price-row {
+  margin: 16px 18px 0;
+  padding: 0 18px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tg-price-value {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--tg-cream);
+}
+
+.tg-btn-want {
+  width: 144px;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  background: var(--tg-red);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.tg-btn-want:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.tg-card-close {
+  margin: 18px 18px 22px;
+  height: 32px;
+  width: 114px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(232, 221, 184, 0.3);
+  border-radius: 10px;
+  background: rgba(14, 12, 8, 0.72);
+  color: var(--tg-cream);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}

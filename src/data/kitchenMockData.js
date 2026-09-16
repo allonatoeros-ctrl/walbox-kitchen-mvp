@@ -110,6 +110,13 @@ export const kitchenMenuItems = [
   // per la choice architecture (decisione Eros §3), non dati di business: modificabili
   // senza migration. Asset fotografici reali in `public/assets/kitchen/beers/`
   // (BEER_SPRINT_V1, wiring 2026-09-14).
+  //
+  // MENU POLISH & STORYTELLING SPRINT (2026-09-16): aggiunto il campo `story` —
+  // copy approvato da Eros, mostrato solo nello stato EXPANDED della card
+  // (BirreSection.jsx). Puramente descrittivo/sensoriale: nessun dato tecnico
+  // (ABV, IBU, birrificio, stile ufficiale) perché non confermato da nessuna fonte.
+  // `format`, `price`, `availability` e `allergens` restano i dati reali di servizio
+  // e non sono stati toccati.
   {
     id: 'item-051',
     name: 'Keiler Helles',
@@ -122,6 +129,7 @@ export const kitchenMenuItems = [
     available: true,
     format: '50 cl',
     choiceLabel: 'VAI SUL SICURO',
+    story: 'Morbida, pulita, facile da bere. La bionda che non deve dimostrare niente.',
     tasteSignals: ['Morbida', 'Fresca'],
     availability: 'all_day',
     ingredients: 'Birra in bottiglia, 50 cl.',
@@ -139,6 +147,7 @@ export const kitchenMenuItems = [
     available: true,
     format: '50 cl',
     choiceLabel: 'PIÙ SECCA',
+    story: 'Più secca e più dritta. Finale amaro pulito.',
     tasteSignals: ['Secca', 'Pulita'],
     availability: 'all_day',
     ingredients: 'Birra in bottiglia, 50 cl.',
@@ -156,6 +165,7 @@ export const kitchenMenuItems = [
     available: true,
     format: '50 cl',
     choiceLabel: 'NON FILTRATA',
+    story: 'Rustica, maltata, da pub. Pane e carattere.',
     tasteSignals: ['Non filtrata', 'Rustica'],
     availability: 'all_day',
     ingredients: 'Birra in bottiglia, 50 cl.',
@@ -173,6 +183,7 @@ export const kitchenMenuItems = [
     available: true,
     format: '50 cl',
     choiceLabel: 'FRUTTATA',
+    story: 'Morbida e aromatica, tipica birra di frumento.',
     tasteSignals: ['Fruttata', 'Leggera'],
     availability: 'all_day',
     ingredients: 'Birra in bottiglia, 50 cl.',
@@ -190,6 +201,7 @@ export const kitchenMenuItems = [
     available: true,
     format: '50 cl',
     choiceLabel: 'SCURA & CORPOSA',
+    story: 'Più maltata e profonda, ma ancora facile da bere.',
     tasteSignals: ['Scura', 'Corposa'],
     availability: 'all_day',
     ingredients: 'Birra in bottiglia, 50 cl.',
@@ -207,6 +219,7 @@ export const kitchenMenuItems = [
     available: true,
     format: '33 cl',
     choiceLabel: 'INTENSA',
+    story: 'Belga, profumata e più intensa. Parte elegante, poi si fa sentire.',
     tasteSignals: ['Intensa', 'Luppolata'],
     availability: 'all_day',
     ingredients: 'Birra in bottiglia, 33 cl.',
@@ -230,6 +243,7 @@ export const kitchenMenuItems = [
     available: true,
     format: null,
     choiceLabel: 'ALLA SPINA',
+    story: 'Alla spina, fresca e secca. Una Pils dritta e senza complicazioni.',
     tasteSignals: [],
     availability: 'evening_only',
     ingredients: 'Birra alla spina.',
@@ -276,6 +290,10 @@ export const kitchenMenuItems = [
     allergens: ['latte', 'uova'],
   },
   // BOX (standalone speciale, categoria bbq — no FALLO PESANTE: nessuna entry in kitchenPesiMassimiCombos)
+  // MENU POLISH SPRINT (2026-09-16, decisione Eros): resta dentro PESI MASSIMI ma non va
+  // MAI chiamato panino. `detailCtaLabel`/`priceNote` sono override di copy opzionali letti
+  // da PesiMassimiSection.jsx: assenti sugli altri item bbq → fallback "VEDI IL PANINO" /
+  // "SOLO PANINO" invariato. Nessun id hardcoded nel componente.
   {
     id: 'item-018',
     name: 'Box Pulled Pork',
@@ -286,6 +304,8 @@ export const kitchenMenuItems = [
     tags: ['v2'],
     image: '/assets/kitchen/menu/box/box-pulled-pork.png',
     available: true,
+    detailCtaLabel: 'VEDI IL BOX',
+    priceNote: 'SOLO BOX',
     ingredients: 'Pulled pork senza pane · patate al forno · anelli di cipolla · salsa cheddar · maionese al pepe',
     allergens: [],
   },
@@ -417,18 +437,23 @@ export const kitchenMenuItems = [
     price: 1.0,
     points: null,
     tags: ['drink'],
-    image: null,
+    image: '/assets/kitchen/menu/bevande/bevanda_acqua.webp',
+    format: '0,5 L',
     available: true,
     ingredients: 'Acqua.',
     allergens: [],
   },
   // TAGLIERI — 1 sola categoria/tab cliente ('tagliere', decisione Eros 2026-09-10: niente tab
   // separate), 3 voci raggruppate insieme in MENU_CATEGORIES (CustomerKitchenMenu.jsx).
+  // MENU POLISH & STORYTELLING SPRINT (2026-09-16): `description` sostituita con il copy
+  // approvato da Eros, mostrato nello stato EXPANDED di TagliereSection.jsx. `ingredients`,
+  // `price`, `image` e `allergens` invariati — `ingredients` resta la riga tecnica completa
+  // (include miele/marmellata di cipolle, che il copy non nomina).
   {
     id: 'item-043',
     name: 'Salumi Serissimi',
     category: 'tagliere',
-    description: 'Salumi seri — crudo, lardo, mortadella, speck — da dividere in due, se ci riuscite.',
+    description: 'Crudo, lardo, mortadella e speck. Serissimi solo nel nome: questo è il tagliere da mettere in mezzo e far sparire.',
     price: 8.0,
     points: null,
     tags: ['v2'],
@@ -441,7 +466,7 @@ export const kitchenMenuItems = [
     id: 'item-044',
     name: 'Formaggi Discutibili',
     category: 'tagliere',
-    description: 'Formaggi che fanno litigare — taleggio, pecorino, scamorza, raspadura, stracciatella, con miele e marmellata di cipolle — meglio spartirli in due.',
+    description: 'Taleggio, pecorino, scamorza e raspadura. Quattro caratteri diversi, nessuna intenzione di mettersi d’accordo.',
     price: 8.0,
     points: null,
     tags: ['v2'],
@@ -454,7 +479,7 @@ export const kitchenMenuItems = [
     id: 'item-045',
     name: 'Pace Fatta',
     category: 'tagliere',
-    description: 'Tagliere misto salumi e formaggi, per 2 persone.',
+    description: 'Salumi e formaggi nello stesso tagliere, pensato per due. Quando discutere non serve più: si ordina tutto.',
     price: 10.0,
     points: null,
     tags: ['v2'],
@@ -465,15 +490,34 @@ export const kitchenMenuItems = [
   },
   // BEVANDE — categoria esposta in MENU_CATEGORIES; voci senza prezzo restano non
   // ordinabili (PREZZO IN ARRIVO), nessun prezzo/marca inventati.
+  //
+  // MENU POLISH SPRINT (2026-09-16) — WIRING ASSET COMPLETATO.
+  // Il batch fotografico è arrivato: i 6 file reali sono in
+  // public/assets/kitchen/menu/bevande/ (512×512 .webp, spec nel README della cartella)
+  // e `image` punta ora al path definitivo di ciascuno. Il campo ponte `imagePending`,
+  // che teneva il path dichiarato finché i file non esistevano, è stato rimosso: non
+  // serve più e lasciarlo sarebbe dato morto. Nessun hotlink a marchi terzi, nessun
+  // placeholder generato — le foto sono scatti sui prodotti reali del locale.
+  //
+  // `format` = riga formato della card cliente (BevandeSection.jsx). Valorizzato SOLO dove
+  // il dato è confermato da una fonte nel repo: Acqua (`description` + README asset) e
+  // Pepsi 33cl (il formato è nel nome). Per Pepsi Zero / Seven Up / Schweppes il formato
+  // non è confermato da nessuna fonte: resta assente e la riga non viene renderizzata —
+  // stessa regola già applicata a Krombacher (`format: null`, nessun cl inventato).
+  // `displayName` è un override di sola UI menu: il nome reale (usato da carrello, ordine
+  // e staff) resta `name`. Serve solo a Pepsi 33cl, che altrimenti ripeterebbe "33cl"
+  // nel titolo e nella riga formato subito sotto.
   {
     id: 'item-046',
     name: 'Pepsi 33cl',
+    displayName: 'Pepsi',
     category: 'bevande',
     description: 'Bibita analcolica gassata.',
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: null,
+    image: '/assets/kitchen/menu/bevande/bevanda_pepsi.webp',
+    format: '33 cl',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
@@ -486,7 +530,7 @@ export const kitchenMenuItems = [
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: null,
+    image: '/assets/kitchen/menu/bevande/bevanda_pepsi_zero.webp',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
@@ -499,7 +543,7 @@ export const kitchenMenuItems = [
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: null,
+    image: '/assets/kitchen/menu/bevande/bevanda_seven_up.webp',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
@@ -512,7 +556,7 @@ export const kitchenMenuItems = [
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: null,
+    image: '/assets/kitchen/menu/bevande/bevanda_schweppes_lemon.webp',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
@@ -525,7 +569,7 @@ export const kitchenMenuItems = [
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: null,
+    image: '/assets/kitchen/menu/bevande/bevanda_schweppes_tonica.webp',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],

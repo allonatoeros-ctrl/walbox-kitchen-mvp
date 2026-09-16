@@ -10,6 +10,8 @@ import CicchettiSection from '../components/kitchen/CicchettiSection';
 import InsalatoneSection from '../components/kitchen/InsalatoneSection';
 import TartareSection from '../components/kitchen/TartareSection';
 import BirreSection from '../components/kitchen/BirreSection';
+import TagliereSection from '../components/kitchen/TagliereSection';
+import BevandeSection from '../components/kitchen/BevandeSection';
 import AllergenBadges from '../components/kitchen/AllergenBadges';
 import './CustomerKitchenMenu.css';
 
@@ -643,13 +645,19 @@ export default function CustomerKitchenMenu() {
       {activeCategory === 'birre' && visibleItems.length > 0 && (
         <BirreSection items={visibleItems} onAdd={addItem} />
       )}
+      {activeCategory === 'tagliere' && visibleItems.length > 0 && (
+        <TagliereSection items={visibleItems} onAdd={addItem} />
+      )}
+      {activeCategory === 'bevande' && visibleItems.length > 0 && (
+        <BevandeSection items={visibleItems} onAdd={addItem} />
+      )}
       {visibleItems.length === 0 && (
         <div className="kitch-menu-empty">NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA</div>
       )}
-      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && activeCategory !== 'birre' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
+      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && activeCategory !== 'birre' && activeCategory !== 'tagliere' && activeCategory !== 'bevande' && visibleItems.length > 0 && visibleItems.every((item) => item.available === false) && (
         <div className="kitch-menu-soldout-banner">AL MOMENTO È TUTTO ESAURITO</div>
       )}
-      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && activeCategory !== 'birre' && (
+      {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && activeCategory !== 'birre' && activeCategory !== 'tagliere' && activeCategory !== 'bevande' && (
       <div className="kitch-menu-list">
         {visibleItems.map((item) => (
           <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>
