@@ -13,6 +13,7 @@ import BirreSection from '../components/kitchen/BirreSection';
 import TagliereSection from '../components/kitchen/TagliereSection';
 import BevandeSection from '../components/kitchen/BevandeSection';
 import AllergenBadges from '../components/kitchen/AllergenBadges';
+import { buildIncludedBeersNote } from '../lib/kitchenServiceRules';
 import './CustomerKitchenMenu.css';
 
 // Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
@@ -393,11 +394,14 @@ export default function CustomerKitchenMenu() {
     if (orderItems.length === 0 || submitting || !fulfillmentType) return;
     setSubmitting(true);
     setOrderError(null);
+    // P0-2: la birra inclusa va PRIMA della nota del cliente — e' la prima cosa che la cucina
+    // deve leggere sulla comanda, non una riga persa in fondo a un testo libero.
+    const noteParts = [buildIncludedBeersNote(orderItems, menuItems), customerNote.trim()].filter(Boolean);
     const newOrder = {
       nickname: session.nickname,
       items: orderItems.map((o) => ({ itemId: o.baseId || o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
-      note: customerNote.trim() || null,
+      note: noteParts.length > 0 ? noteParts.join(' \u00B7 ') : null,
       status: 'pending_counter_payment',
       paymentStatus: 'pending_counter_payment',
       paidAt: null,
