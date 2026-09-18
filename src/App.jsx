@@ -6,6 +6,7 @@ import LiveTvScreenWalrusPoster from "./pages/LiveTvScreenWalrusPoster";
 import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
 import CustomerKitchenEntry from "./pages/CustomerKitchenEntry";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
+import CustomerOrderPayment from "./pages/CustomerOrderPayment";
 import KitchenStaffRedirect from "./pages/KitchenStaffRedirect";
 import KitchenPayments from "./pages/KitchenPayments";
 import KitchenSoloService from "./pages/KitchenSoloService";
@@ -179,6 +180,8 @@ export default function App() {
         return <CustomerKitchenEntry />;
       case "/kitchen":
         return <CustomerKitchenMenu />;
+      case "/kitchen/payment":
+        return <CustomerOrderPayment />;
       case "/kitchen/status":
         return <CustomerOrderStatus />;
       case "/kitchen/staff":

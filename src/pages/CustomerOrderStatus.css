@@ -61,6 +61,38 @@
 }
 .ost-topbar-bell { font-size: 20px; width: 36px; text-align: right; }
 
+/* ── Codes strip — codice ordine visibile fuori dal riquadro (follow-up UX 2026-09-18) ── */
+.ost-codes-strip {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 4px 20px 16px;
+}
+.ost-codes-chip {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  background: rgba(200,150,10,0.12);
+  border: 1px solid rgba(200,150,10,0.4);
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+.ost-codes-chip-code {
+  font-family: 'Anton', sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: #f8c534;
+}
+.ost-codes-chip-status {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(245,234,216,0.55);
+}
+
 /* ── Empty state ─────────────────────────────────── */
 .ost-empty-title {
   font-family: 'Anton', sans-serif;
@@ -548,51 +580,39 @@
   line-height: 1.4;
 }
 
-/* ── JukeboxBridgeCard ───────────────────────────── */
-.ost-jukebox-card {
+/* ── Order card compatto (follow-up UX 2026-09-18) ── */
+.ost-order-card {
+  background: #241407;
+  border: 1px solid rgba(245,234,216,0.1);
+  border-radius: 12px;
+  overflow: hidden;
   margin: 0 20px 16px;
-  background: linear-gradient(135deg, #1a0a3a, #2a0d0d);
-  border: 1px solid #f05a24;
-  border-radius: 8px;
-  padding: 20px 16px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 120px;
-  cursor: pointer;
-  transition: transform 0.15s ease;
+  padding-bottom: 0;
 }
-.ost-jukebox-card:active {
-  transform: scale(0.98);
+.ost-order-card .ost-status-banner,
+.ost-order-card .ost-inline-cta {
+  margin-left: 0;
+  margin-right: 0;
 }
-.ost-jukebox-text { flex: 1; }
-.ost-jukebox-headline {
-  font-family: 'Anton', sans-serif;
-  font-size: 20px;
-  letter-spacing: 0.4px;
-  color: #f5ead8;
-  line-height: 1.2;
-  margin-bottom: 8px;
-}
-.ost-jukebox-desc {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(245,234,216,0.6);
-}
-.ost-jukebox-btn {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: #f05a24;
+.ost-detail-toggle {
+  width: 100%;
+  padding: 12px 20px;
+  background: transparent;
   border: none;
-  font-size: 22px;
+  border-top: 1px solid rgba(245,234,216,0.08);
+  color: rgba(245,234,216,0.55);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 0 12px rgba(240,90,36,0.4);
+}
+.ost-detail-toggle:active {
+  background: rgba(245,234,216,0.05);
+}
+.ost-order-detail {
+  border-top: 1px solid rgba(245,234,216,0.08);
 }
 
 /* ── MyOrdersSwitcher ────────────────────────────── */

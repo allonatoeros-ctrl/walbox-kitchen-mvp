@@ -226,16 +226,25 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
   // handleSubmit ora attende addOrder() (sessione anonima + tentativo RPC) prima di redirigere:
-  // aspettare /kitchen/status è il segnale reale che l'ordine è stato scritto (fallback locale
-  // incluso), invece di leggere localStorage a tempo fisso subito dopo il click.
+  // aspettare /kitchen/payment è il segnale reale che l'ordine è stato scritto (fallback locale
+  // incluso), invece di leggere localStorage a tempo fisso subito dopo il click. Follow-up UX
+  // (2026-09-18): la destinazione post-ordine è ora la pagina pagamento dedicata, non più
+  // /kitchen/status direttamente — CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS.
+  await expect(page).toHaveURL(/\/kitchen\/payment/);
+  await expect(page.getByTestId('ost-payment-fork')).toBeVisible();
+  await page.getByTestId('ost-pay-counter').click();
+  await page.getByTestId('opay-go-status').click();
+
   await expect(page).toHaveURL(/\/kitchen\/status/);
-  // 'IN ATTESA DI PAGAMENTO' compare in hero + banner + bottom bar: si ancora al banner di stato,
+  // 'IN ATTESA DI PAGAMENTO' compare in banner + bottom bar: si ancora al banner di stato,
   // l'unico che rappresenta lo stato dell'ordine mostrato.
   await expect(page.locator('.ost-status-banner-label')).toHaveText('IN ATTESA DI PAGAMENTO');
   // P0 privacy (2026-09-16): /kitchen/status mostra l'ordine appena inviato da QUESTO device,
   // non l'ordine piu' recente del locale (i demo orders Gamba Lunga/IlCapo/... sono in
   // localStorage ma non sono di questo cliente).
   await expect(page.getByText('IlCapo')).toHaveCount(0);
+  // Nickname vive nel dettaglio espandibile del riquadro compatto (follow-up UX 2026-09-18).
+  await page.locator('.ost-detail-toggle').click();
   await expect(page.locator('.ost-info-value--orange')).toHaveText('Eros');
 
   // No-tables contract (2026-09-05): Kitchen non ha tavoli/asporto — invariato. Customer Checkout
@@ -272,7 +281,7 @@ test('3h. Invio ordine disabilitato finché "dove lo mangi" non è scelto', asyn
   await expect(submitBtn).toBeEnabled();
 });
 
-test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redirect a /kitchen/status, resta pending_counter_payment', async ({ page }) => {
+test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redirect a /kitchen/payment, resta pending_counter_payment', async ({ page }) => {
   const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'takeaway', orderCode: 'A03' });
 
   await page.goto('/kitchen?table=12&nickname=Eros');
@@ -282,9 +291,10 @@ test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redire
   await chooseFulfillment(page, 'takeaway');
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
-  // Il Sacco Pulito (2026-09-13): destinazione post-ordine unica, sempre /kitchen/status —
-  // nessuna schermata statica di conferma in-page, il pagamento (online o al banco) si sceglie lì.
-  await expect(page).toHaveURL(/\/kitchen\/status/);
+  // Follow-up UX (2026-09-18): destinazione post-ordine unica, sempre la pagina pagamento
+  // dedicata — nessuna schermata statica di conferma in-page, il pagamento (online o al banco)
+  // si sceglie lì.
+  await expect(page).toHaveURL(/\/kitchen\/payment/);
   await expect(page.locator('.kitch-confirm')).toHaveCount(0);
 
   expect(sent.body.p_fulfillment_type).toBe('takeaway');
@@ -302,7 +312,7 @@ test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redire
 });
 
 // F02 (Phantom Order) invariato: se la RPC di creazione ordine fallisce, il cliente non deve mai
-// essere redirezionato a /kitchen/status per un ordine che non esiste.
+// essere redirezionato alla pagina pagamento per un ordine che non esiste.
 test('3k. RPC di creazione ordine fallita: nessun ordine fantasma, carrello resta intatto per il retry', async ({ page }) => {
   await page.route('**/rest/v1/rpc/kitchen_customer_create_order', (route) =>
     route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'internal_error' }) })
@@ -315,6 +325,7 @@ test('3k. RPC di creazione ordine fallita: nessun ordine fantasma, carrello rest
   await chooseFulfillment(page, 'eat_here');
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
+  await expect(page).not.toHaveURL(/\/kitchen\/payment/);
   await expect(page).not.toHaveURL(/\/kitchen\/status/);
   await expect(page.getByTestId('order-submit-error')).toBeVisible();
   // Il carrello resta intatto per il retry: il pulsante di invio è di nuovo cliccabile.
@@ -489,27 +500,10 @@ for (const viewport of TOUCH_TARGET_VIEWPORTS) {
   });
 }
 
-test('4. Kitchen status → Jukebox bridge preserves table', async ({ page }) => {
-  // Seed a received order for T12 / Eros
-  const orders = makeSeedOrder();
-  await page.evaluate(
-    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
-    { key: LS_MY_ORDERS, data: orders },
-  );
-  // P0 privacy (2026-09-16): /kitchen/status mostra solo ordini creati da questo dispositivo.
-  // Il seed simula un ordine del locale, quindi va anche dichiarato come proprio — altrimenti la
-  // pagina risponde (correttamente) con l'empty state e il bridge jukebox non esiste.
-  await seedOwnedOrderIds(page, [orders[0].id]);
-
-  await page.goto('/kitchen/status');
-
-  // Jukebox bridge is visible when order is received or preparing
-  await page.getByRole('button', { name: /Vai al jukebox/i }).click();
-
-  await expect(page).toHaveURL(/\/request/);
-  await expect(page).toHaveURL(/table=12/);
-  await expect(page).not.toHaveURL(/\/entry/);
-});
+// Test 4 storico ("Kitchen status → Jukebox bridge preserves table") rimosso: la card
+// Jukebox su /kitchen/status è stata tolta per decisione approvata (follow-up UX 2026-09-18,
+// "Rimuovi dal customer order flow la card Jukebox... né nella vista status ordini attivi").
+// Il ponte Jukebox → Kitchen resta coperto dal test 6 (verso opposto: da /request a /kitchen/status).
 
 test('4b. Back button on /kitchen/status meets 44x44 tap target on mobile viewports', async ({ page }) => {
   const orders = makeSeedOrder();
@@ -888,7 +882,7 @@ test('18. Cliente inserisce un codice promo valido: il redeem parte con il codic
   await page.getByTestId('promo-code-input').fill('walrus-ab12c');
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
-  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page).toHaveURL(/\/kitchen\/payment/);
   expect(promoSent.body?.p_code).toBe('walrus-ab12c');
 });
 
@@ -917,7 +911,7 @@ test('19. Cliente inserisce un codice promo non valido: ordine confermato comunq
   await page.getByRole('button', { name: /Invia ordine/i }).click();
 
   // Un codice sbagliato non deve mai bloccare il cliente: l'ordine si conferma comunque.
-  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page).toHaveURL(/\/kitchen\/payment/);
   expect(promoSent.body?.p_code).toBe('WALRUS-USED1');
 });
 
@@ -1232,9 +1226,13 @@ test('26. P0 privacy: il dispositivo di un altro cliente non vede il mio ordine,
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'eat_here');
   await page.getByRole('button', { name: /Invia ordine/i }).click();
+  // Follow-up UX (2026-09-18): CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS.
+  await expect(page).toHaveURL(/\/kitchen\/payment/);
+  await page.getByTestId('ost-pay-counter').click();
+  await page.getByTestId('opay-go-status').click();
   await expect(page).toHaveURL(/\/kitchen\/status/);
   await expect(page.locator('.ost-status-banner-label')).toHaveText('IN ATTESA DI PAGAMENTO');
-  await expect(page.locator('.ost-info-value--muted')).toHaveText('A07');
+  await expect(page.locator('.ost-order-code-big')).toHaveText('A07');
 
   const ordersA = await readMyOrders(page);
   expect(ordersA.some((o) => o.id === 'order-cliente-a')).toBe(true);
@@ -1272,8 +1270,12 @@ test('27. P0 privacy: dopo il reload il cliente ritrova il PROPRIO ordine, non l
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'takeaway');
   await page.getByRole('button', { name: /Invia ordine/i }).click();
+  // Follow-up UX (2026-09-18): CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS.
+  await expect(page).toHaveURL(/\/kitchen\/payment/);
+  await page.getByTestId('ost-pay-counter').click();
+  await page.getByTestId('opay-go-status').click();
   await expect(page).toHaveURL(/\/kitchen\/status/);
-  await expect(page.locator('.ost-info-value--muted')).toHaveText('A08');
+  await expect(page.locator('.ost-order-code-big')).toHaveText('A08');
 
   // Nel frattempo il locale riceve un ordine piu' recente del mio: e' esattamente il caso che
   // prima "rubava" la pagina al cliente (ordine piu' recente del locale).
@@ -1281,12 +1283,12 @@ test('27. P0 privacy: dopo il reload il cliente ritrova il PROPRIO ordine, non l
   await seedMyOrders(page, [...orders, makeOtherCustomerOrder({ createdAt: new Date().toISOString() })]);
 
   await page.reload();
-  await expect(page.locator('.ost-info-value--muted')).toHaveText('A08');
+  await expect(page.locator('.ost-order-code-big')).toHaveText('A08');
   await expect(page.getByText('Pirata')).toHaveCount(0);
 
   // Anche senza querystring: l'ordine proprio si ritrova dal registro del dispositivo.
   await page.goto('/kitchen/status');
-  await expect(page.locator('.ost-info-value--muted')).toHaveText('A08');
+  await expect(page.locator('.ost-order-code-big')).toHaveText('A08');
   await expect(page.getByText('Pirata')).toHaveCount(0);
 });
 
@@ -1411,7 +1413,7 @@ test('31. AC4 fix: ordine cancelled con payment_status pending — resta visibil
   // Solo l'ordine attivo ha un blocco: il cancelled non compare mai, non c'è nessun "ordine
   // corrente" da cui passare.
   await expect(page.locator('.ost-order-block')).toHaveCount(1);
-  await expect(page.locator('.ost-info-value--muted')).toHaveText('M09');
+  await expect(page.locator('.ost-order-code-big')).toHaveText('M09');
   await expect(page.getByTestId('ost-payment-fork')).toHaveCount(0);
   await expect(page.getByText('C02')).toHaveCount(0);
 });
@@ -1568,4 +1570,137 @@ test('36. AC7: al ritorno da SumUp solo l\'ordine corrispondente a ?orderId= ese
   await page.waitForTimeout(200); // margine per un'eventuale seconda chiamata indesiderata
   expect(reconcileCalls.every((c) => c.order_id === 'order-target')).toBe(true);
   expect(reconcileCalls.some((c) => c.order_id === 'order-other')).toBe(false);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// CustomerOrderPayment — pagina pagamento dedicata (follow-up UX 2026-09-18)
+// CONFERMA ORDINE → PAGINA PAGAMENTO DEDICATA → STATUS ORDINI. Riusa useOrderPaymentFlow/
+// OrderPaymentActions (AC1/AC3), nessuna logica SumUp duplicata; il ritorno online resta
+// cablato lato server su /kitchen/status?sumup=return (AC3/AC7 invariati, vedi test 36).
+// ═══════════════════════════════════════════════════════════════════
+
+test('37. Submit ordine → atterra sulla pagina pagamento dedicata con codice e bivio, non su status', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'P01' });
+
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'eat_here');
+  await page.getByRole('button', { name: /Invia ordine/i }).click();
+
+  await expect(page).toHaveURL(/\/kitchen\/payment\?orderId=/);
+  await expect(page).not.toHaveURL(/\/kitchen\/status/);
+  await expect(page.getByTestId('opay-order-code-big')).toHaveText('P01');
+  await expect(page.getByTestId('ost-payment-fork')).toBeVisible();
+  await expect(page.getByText('COME VUOI PAGARE?')).toBeVisible();
+});
+
+test('38. Pagina pagamento non mostra jukebox, timeline di stato o lista ordini', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'order-pay-clean', orderCode: 'CL1', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment' }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-pay-clean']);
+
+  await page.goto('/kitchen/payment?orderId=order-pay-clean');
+
+  await expect(page.getByTestId('opay-order-code-big')).toHaveText('CL1');
+  await expect(page.getByTestId('ost-payment-fork')).toBeVisible();
+  // Nessun elemento del "dopo" (status ordini): niente jukebox, niente timeline di
+  // avanzamento, niente lista/stack di più ordini — solo codice + bivio pagamento.
+  await expect(page.getByText(/JUKEBOX/i)).toHaveCount(0);
+  await expect(page.locator('.ost-timeline')).toHaveCount(0);
+  await expect(page.locator('.ost-orders-stack')).toHaveCount(0);
+  await expect(page.locator('.ost-order-card')).toHaveCount(0);
+  await expect(page.locator('.ost-codes-strip')).toHaveCount(0);
+});
+
+test('39. CASSA: mostra codice + istruzione, poi accesso allo status', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'order-pay-cash', orderCode: 'CA1', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment' }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-pay-cash']);
+
+  await page.goto('/kitchen/payment?orderId=order-pay-cash');
+  await page.getByTestId('ost-pay-counter').click();
+
+  await expect(page.getByTestId('ost-payment-fork')).toHaveCount(0);
+  await expect(page.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toBeVisible();
+  await expect(page.getByText('CA1', { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId('opay-go-status')).toBeVisible();
+
+  await page.getByTestId('opay-go-status').click();
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page.locator('.ost-status-banner-label')).toHaveText('IN ATTESA DI PAGAMENTO');
+});
+
+test('40. ONLINE: SumUp → reconcile → atterra sullo status con esito confermato', async ({ page }) => {
+  await mockAnonymousSession(page);
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'order-pay-online', orderCode: 'ON1', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment' }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-pay-online']);
+
+  await page.route('**/rest/v1/rpc/kitchen_payment_attempt_start', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'attempt-online-1', status: 'created' }) })
+  );
+  const baseURL = test.info().project.use.baseURL;
+  await page.route('**/api/kitchen-sumup-create-checkout', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      // In produzione questo punta all'hosted checkout SumUp; qui simuliamo il redirect di
+      // ritorno che il backend (api/kitchen-sumup-create-checkout.js, non toccato da questo
+      // task) cabla già su /kitchen/status?...&sumup=return, per esercitare il vero round-trip
+      // senza dipendere da SumUp reale.
+      body: JSON.stringify({ hosted_checkout_url: `${baseURL}/kitchen/status?orderId=order-pay-online&sumup=return` }),
+    })
+  );
+  await page.route('**/api/kitchen-sumup-reconcile', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ outcome: 'confirmed' }) })
+  );
+
+  await page.goto('/kitchen/payment?orderId=order-pay-online');
+  await page.getByTestId('ost-pay-online').click();
+
+  await expect(page).toHaveURL(/\/kitchen\/status\?.*sumup=return/);
+  await expect(page.getByText(/Pagamento confermato/i)).toBeVisible();
+});
+
+test('41. /kitchen/status con più ordini resta compatto (codici in alto, dettaglio chiuso, CTA e fork indipendenti)', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'order-multi-pay', orderCode: 'MC1', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment', createdAt: minutesAgoIso(2) }),
+    makeOtherCustomerOrder({ id: 'order-multi-prep', orderCode: 'MC2', nickname: 'Eros', status: 'preparing', paymentStatus: 'paid', createdAt: minutesAgoIso(1) }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-multi-pay', 'order-multi-prep']);
+
+  await page.goto('/kitchen/status');
+
+  // Striscia codici in alto, sempre visibile, indipendente dai riquadri sotto.
+  await expect(page.getByTestId('ost-codes-strip')).toBeVisible();
+  await expect(page.locator('.ost-codes-chip')).toHaveCount(2);
+  await expect(page.getByTestId('ost-codes-strip').getByText('MC1')).toBeVisible();
+  await expect(page.getByTestId('ost-codes-strip').getByText('MC2')).toBeVisible();
+
+  // Dettaglio pesante chiuso di default su entrambi i riquadri: niente timeline/hero visibili.
+  await expect(page.locator('.ost-order-detail')).toHaveCount(0);
+  await expect(page.locator('.ost-timeline')).toHaveCount(0);
+
+  const blockPay  = page.getByTestId('ost-order-block-order-multi-pay');
+  const blockPrep = page.getByTestId('ost-order-block-order-multi-prep');
+  await expect(blockPay.getByTestId('ost-payment-fork')).toBeVisible();
+  await expect(blockPrep.getByTestId('ost-payment-fork')).toHaveCount(0);
+
+  // Il toggle dettaglio funziona indipendentemente per riquadro.
+  await blockPrep.locator('.ost-detail-toggle').click();
+  await expect(blockPrep.locator('.ost-timeline')).toBeVisible();
+  await expect(blockPay.locator('.ost-timeline')).toHaveCount(0);
 });

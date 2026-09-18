@@ -209,10 +209,11 @@ function customerPromoErrorText(err) {
 }
 
 // Stesso pattern SPA-navigate di CustomerOrderStatus.jsx (pushState + popstate sintetico, letto
-// dal router in App.jsx): unica destinazione post-ordine (Il Sacco Pulito, 2026-09-13) — il
-// pagamento (online o al banco) si sceglie sempre lì, mai qui.
-function navigateToOrderStatus(orderId) {
-  const path = `/kitchen/status?orderId=${orderId}`;
+// dal router in App.jsx). Follow-up UX (2026-09-18): la destinazione post-ordine è ora la pagina
+// pagamento dedicata (CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS), non più /kitchen/status
+// direttamente — il bivio cassa/online si sceglie lì, /kitchen/status resta il "dopo".
+function navigateToOrderPayment(orderId) {
+  const path = `/kitchen/payment?orderId=${orderId}`;
   window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
@@ -259,7 +260,7 @@ export default function CustomerKitchenMenu() {
   const [orderError, setOrderError] = useState(null);
   // Customer Checkout V1 (2026-09-13): unica scelta obbligatoria nel drawer, nessun default —
   // l'invio resta disabilitato finché il cliente non la sceglie esplicitamente. Il pagamento non
-  // si sceglie più qui: vive interamente su /kitchen/status (Il Sacco Pulito, 2026-09-13).
+  // si sceglie più qui: vive sulla pagina pagamento dedicata (/kitchen/payment, follow-up UX 2026-09-18).
   const [fulfillmentType, setFulfillmentType] = useState(restoredCart.fulfillmentType); // 'eat_here' | 'takeaway'
 
   // Banner "hai un ordine attivo" (cleanup cliente, 2026-09-18): deve riflettere lo STATO reale
@@ -438,7 +439,7 @@ export default function CustomerKitchenMenu() {
 
   const handleSubmit = async () => {
     // Invio bloccato finché il cliente non sceglie esplicitamente dove mangia — nessun default
-    // silenzioso. Il pagamento non è più un gate qui: si sceglie su /kitchen/status.
+    // silenzioso. Il pagamento non è più un gate qui: si sceglie su /kitchen/payment.
     if (orderItems.length === 0 || submitting || !fulfillmentType) return;
     setSubmitting(true);
     setOrderError(null);
@@ -484,10 +485,11 @@ export default function CustomerKitchenMenu() {
       await redeemPromo(createdOrder.id, code);
     }
 
-    // Destinazione post-ordine unica (Il Sacco Pulito, 2026-09-13): il pagamento — online o al
-    // banco — si sceglie sempre su /kitchen/status, mai in una schermata di conferma in-page.
+    // Destinazione post-ordine (follow-up UX 2026-09-18): CONFERMA ORDINE → PAGINA PAGAMENTO
+    // DEDICATA → STATUS. Il pagamento — online o al banco — si sceglie sulla pagina pagamento,
+    // mai in una schermata di conferma in-page.
     setSubmitting(false);
-    navigateToOrderStatus(createdOrder.id);
+    navigateToOrderPayment(createdOrder.id);
   };
 
   useEffect(() => {
@@ -506,8 +508,8 @@ export default function CustomerKitchenMenu() {
 
   // ── Main menu ─────────────────────────────────────────────────────────
   // La schermata di conferma in-page "ORDINE RICEVUTO" è stata rimossa (Il Sacco Pulito,
-  // 2026-09-13): dopo l'invio si va sempre su /kitchen/status (vedi handleSubmit), che copre
-  // già lo stesso contenuto (codice, timeline, pagamento) senza duplicarlo.
+  // 2026-09-13): dopo l'invio si va sulla pagina pagamento dedicata (vedi handleSubmit,
+  // follow-up UX 2026-09-18), che copre codice + bivio pagamento senza duplicarli in-page.
   return (
     <div className="kitch-page">
       <style>{`
@@ -876,7 +878,7 @@ export default function CustomerKitchenMenu() {
             )}
 
             {/* DOVE LO MANGI? — unica domanda del drawer (Il Sacco Pulito, 2026-09-13).
-                Il pagamento non si sceglie più qui: vive su /kitchen/status. */}
+                Il pagamento non si sceglie più qui: vive su /kitchen/payment. */}
             <div className="kitch-fulfillment-wrap" data-testid="checkout-fulfillment">
               <div className="kitch-fulfillment-label">DOVE LO MANGI?</div>
               <div className="kitch-fulfillment-grid">

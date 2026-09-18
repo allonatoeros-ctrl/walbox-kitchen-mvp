@@ -1,0 +1,117 @@
+/* CustomerOrderPayment.css — pagina pagamento dedicata (follow-up UX 2026-09-18) */
+
+.opay-page {
+  min-height: 100vh;
+  background: #1c1008;
+  color: #f5ead8;
+  font-family: 'Montserrat', sans-serif;
+}
+
+.opay-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 48px 20px 16px;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(28, 16, 8, 0.92);
+  backdrop-filter: blur(8px);
+}
+.opay-topbar-back {
+  font-size: 32px;
+  color: #f5ead8;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  line-height: 1;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.opay-topbar-title {
+  font-family: 'Anton', sans-serif;
+  font-size: 15px;
+  letter-spacing: 2px;
+  color: #f5ead8;
+}
+
+.opay-code-block {
+  text-align: center;
+  padding: 28px 20px 24px;
+}
+.opay-code-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: rgba(245,234,216,0.5);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.opay-code-big {
+  font-family: 'Anton', sans-serif;
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #f8c534;
+  line-height: 1;
+}
+
+.opay-go-status {
+  display: block;
+  width: calc(100% - 40px);
+  margin: 4px 20px 32px;
+  padding: 14px;
+  border-radius: 12px;
+  border: 2px solid rgba(245,234,216,0.25);
+  background: transparent;
+  color: rgba(245,234,216,0.8);
+  font-family: 'Anton', sans-serif;
+  font-size: 14px;
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+.opay-go-status:active {
+  background: rgba(245,234,216,0.06);
+}
+
+.opay-resolved {
+  margin: 0 20px;
+  text-align: center;
+  color: rgba(245,234,216,0.7);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.opay-empty {
+  padding: 60px 20px;
+  text-align: center;
+}
+.opay-empty-title {
+  font-family: 'Anton', sans-serif;
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: #f8c534;
+  margin-bottom: 12px;
+}
+.opay-empty-sub {
+  font-size: 14px;
+  color: rgba(245,234,216,0.4);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+.opay-empty-btn {
+  background: transparent;
+  border: 1px solid rgba(245,234,216,0.2);
+  border-radius: 20px;
+  color: rgba(245,234,216,0.6);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  cursor: pointer;
+}

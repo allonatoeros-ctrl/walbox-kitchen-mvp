@@ -92,7 +92,17 @@ export default function CustomerOrderStatus() {
           </button>
         </div>
       ) : (
-        <div className="ost-orders-stack">
+        <>
+          {/* Striscia codici — il codice ordine resta visibile anche fuori dal riquardo (follow-up UX 2026-09-18) */}
+          <div className="ost-codes-strip" data-testid="ost-codes-strip">
+            {activeOrders.map((o) => (
+              <div key={o.id} className="ost-codes-chip">
+                <span className="ost-codes-chip-code">{o.orderCode || '-'}</span>
+                <span className="ost-codes-chip-status">{kitchenOrderStatuses[o.status]?.label ?? o.status}</span>
+              </div>
+            ))}
+          </div>
+          <div className="ost-orders-stack">
           {activeOrders.map((o) => (
             <CustomerOrderPanel
               key={o.id}
@@ -100,7 +110,8 @@ export default function CustomerOrderStatus() {
               isReturnTarget={o.id === sumupReturnTargetId}
             />
           ))}
-        </div>
+          </div>
+        </>
       )}
 
       {/* DemoStateControls */}
