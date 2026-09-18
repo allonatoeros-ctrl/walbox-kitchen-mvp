@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { kitchenCategoryPromos, kitchenBeerPairing } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
-import { useKitchenOrders, rememberOwnedOrderId } from '../hooks/useKitchenOrders';
+import { useKitchenOrders, rememberOwnedOrderId, getOwnedOrderIds } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
@@ -217,10 +217,24 @@ function navigateToOrderStatus(orderId) {
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
+// Cleanup cliente (2026-09-18): stessa retro-compatibilità di CustomerOrderStatus.jsx —
+// una sessione aperta prima del registro `walbox_kitchen_my_order_ids` aveva solo la chiave
+// legacy a id singolo.
+function ownedOrderIdsWithLegacy() {
+  const ids = getOwnedOrderIds();
+  try {
+    const legacyId = localStorage.getItem('walbox_kitchen_last_order_id');
+    if (legacyId && !ids.includes(legacyId)) ids.push(legacyId);
+  } catch {
+    // best-effort: niente storage disponibile, resta solo il registro corrente
+  }
+  return ids;
+}
+
 export default function CustomerKitchenMenu() {
   const { session } = useCustomerSession();
   // scope cliente: vedi CustomerOrderStatus — persistenza locale limitata agli ordini propri.
-  const { addOrder, redeemPromo } = useKitchenOrders({ scope: 'customer' });
+  const { addOrder, redeemPromo, orders } = useKitchenOrders({ scope: 'customer' });
   const { menuItems } = useKitchenMenu();
 
   const CATEGORIES = MENU_CATEGORIES;
@@ -248,12 +262,19 @@ export default function CustomerKitchenMenu() {
   // si sceglie più qui: vive interamente su /kitchen/status (Il Sacco Pulito, 2026-09-13).
   const [fulfillmentType, setFulfillmentType] = useState(restoredCart.fulfillmentType); // 'eat_here' | 'takeaway'
 
+  // Banner "hai un ordine attivo" (cleanup cliente, 2026-09-18): deve riflettere lo STATO reale
+  // dell'ordine, non solo la presenza di una chiave locale — un cancelled/delivered non deve mai
+  // continuare ad alimentarlo. `orders` è già reattivo (poll 10s + realtime + storage event), quindi
+  // il banner sparisce non appena lo stato arriva, senza permanenza artificiale.
   useEffect(() => {
-    try {
-      const lastId = localStorage.getItem('walbox_kitchen_last_order_id');
-      if (lastId) setBannerOrderId(lastId);
-    } catch { }
-  }, []);
+    const owned = ownedOrderIdsWithLegacy();
+    if (!owned.length) { setBannerOrderId(null); return; }
+    const mine = orders.filter((o) => owned.includes(o.id));
+    const active = mine.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled');
+    if (!active.length) { setBannerOrderId(null); return; }
+    const mostRecent = active.reduce((best, o) => (new Date(o.createdAt) > new Date(best.createdAt) ? o : best));
+    setBannerOrderId(mostRecent.id);
+  }, [orders]);
 
   // Ripristino del SACCO: si aspetta il catalogo e si ricostruisce ogni riga dai dati CORRENTI,
   // cosi' un prezzo cambiato o un piatto esaurito non rientrano dal carrello vecchio. Il totale

@@ -1,80 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
 import { useKitchenOrders, getOwnedOrderIds, rememberOwnedOrderId } from '../hooks/useKitchenOrders';
-import { supabase } from '../lib/supabaseClient';
-import KitchenOrderCard from '../components/kitchen/KitchenOrderCard';
+import CustomerOrderPanel from '../components/kitchen/CustomerOrderPanel';
 import './CustomerOrderStatus.css';
-
-function getMostRecentOrder(orders) {
-  if (!orders || orders.length === 0) return null;
-  return orders.reduce((best, o) =>
-    new Date(o.createdAt) > new Date(best.createdAt) ? o : best
-  );
-}
-
-const TIMELINE_STEPS = ['pending_counter_payment', 'received', 'preparing', 'ready', 'delivered'];
-
-const STEP_LABELS = {
-  pending_counter_payment: 'IN ATTESA PAGAMENTO',
-  received:  'RICEVUTO',
-  preparing: 'IN PREPARAZIONE',
-  ready:     'PRONTO PER IL RITIRO',
-  delivered: 'CONSEGNATO',
-};
-
-function getStepState(step, currentStatus) {
-  const currentIndex = TIMELINE_STEPS.indexOf(currentStatus);
-  const stepIndex    = TIMELINE_STEPS.indexOf(step);
-  if (stepIndex < currentIndex)  return 'done';
-  if (stepIndex === currentIndex) return 'active';
-  return 'pending';
-}
-
-function formatTime(isoString) {
-  return new Date(isoString).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-}
-
-function elapsedMinutes(isoString) {
-  if (!isoString) return '';
-  const d = new Date(isoString);
-  if (isNaN(d.getTime())) return '';
-  const diff = Math.floor((Date.now() - d.getTime()) / 60000);
-  if (diff < 1) return 'ora';
-  return `${diff} min fa`;
-}
 
 function navigate(path) {
   window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
-}
-
-// Reused across retries for the same order so a re-click before checkout completes doesn't spawn
-// a fresh idempotency key every time (server-side RPC idempotency keys off this same value).
-function getSumupIdempotencyKey(orderId) {
-  const key = `walbox_sumup_idem_${orderId}`;
-  try {
-    const existing = sessionStorage.getItem(key);
-    if (existing) return existing;
-    const generated = crypto.randomUUID();
-    sessionStorage.setItem(key, generated);
-    return generated;
-  } catch {
-    return crypto.randomUUID();
-  }
-}
-
-const SUMUP_ERROR_MESSAGES = {
-  not_order_owner: 'Sessione ordine non riconosciuta su questo dispositivo. Paga alla cassa.',
-  order_already_paid: 'Questo ordine risulta già pagato.',
-  order_cancelled: 'Questo ordine è stato annullato.',
-  amount_mismatch: 'Importo non allineato all’ordine. Riprova o paga alla cassa.',
-  invalid_attempt_status: 'Pagamento già in corso. Attendi qualche secondo e riprova.',
-};
-
-function friendlySumupError(err) {
-  const raw = err?.message || err?.error || String(err ?? '');
-  const code = Object.keys(SUMUP_ERROR_MESSAGES).find((c) => raw.includes(c));
-  return code ? SUMUP_ERROR_MESSAGES[code] : 'Pagamento con SumUp non disponibile ora. Riprova o paga alla cassa.';
 }
 
 // P0 privacy (2026-09-16). `useKitchenOrders` legge TUTTI gli ordini del locale (stessa hook
@@ -95,204 +27,48 @@ function readOwnedOrderIds() {
 }
 
 // Un orderId in querystring non è una prova di proprietà (è condivisibile e ispezionabile):
-// vale solo se quell'ordine risulta già di questo dispositivo.
+// vale solo se quell'ordine risulta già di questo dispositivo. Usato solo per decidere quale
+// ordine è il target dell'eventuale reconciliation SumUp al ritorno (AC7 req 6) — non più per
+// scegliere quale ordine mostrare, dato che ora sono tutti visibili contemporaneamente.
 function resolveUrlOrderId(ownedIds) {
   const urlOrderId = new URLSearchParams(window.location.search).get('orderId');
   return urlOrderId && ownedIds.includes(urlOrderId) ? urlOrderId : null;
 }
+
+const sumupReturnRequested = new URLSearchParams(window.location.search).get('sumup') === 'return';
 
 export default function CustomerOrderStatus() {
   // scope cliente: lo storage locale di questa pagina contiene solo gli ordini creati da
   // questo dispositivo, mai la cache della lista ordini del locale lasciata da staff/cassa.
   const { orders } = useKitchenOrders({ scope: 'customer' });
   const [ownedIds, setOwnedIds] = useState(readOwnedOrderIds);
-  const [selectedId, setSelectedId] = useState(() => resolveUrlOrderId(readOwnedOrderIds()));
   const [devOpen, setDevOpen] = useState(false);
-  const [tick, setTick] = useState(0);
-  const [readyFlash, setReadyFlash] = useState(false);
-  const [sumup, setSumup] = useState(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    return { state: urlParams.get('sumup') === 'return' ? 'verifying' : 'idle', error: null };
-  });
-  const reconcileStartedRef = useRef(false);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTick((t) => t + 1);
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const handleNav = () => {
-      const ids = readOwnedOrderIds();
-      setOwnedIds(ids);
-      const urlOrderId = resolveUrlOrderId(ids);
-      if (urlOrderId) setSelectedId(urlOrderId);
-    };
+    const handleNav = () => setOwnedIds(readOwnedOrderIds());
     window.addEventListener('popstate', handleNav);
     return () => window.removeEventListener('popstate', handleNav);
   }, []);
 
-  // Unico insieme di ordini che questa pagina può leggere. Tutto ciò che sta sotto (ordine in
-  // primo piano, switcher, pagamento SumUp, bridge jukebox) parte da qui: nessun ramo risale mai
-  // a `orders`, che contiene anche gli ordini degli altri clienti del locale.
+  // Unico insieme di ordini che questa pagina può leggere. Ogni blocco ordine (AC7) parte solo da
+  // qui: nessun ramo risale mai a `orders`, che contiene anche gli ordini degli altri clienti del
+  // locale.
   const myOrders = orders.filter((o) => ownedIds.includes(o.id));
-  // Il fallback resta dentro myOrders: se l'ordine selezionato non è (ancora) caricato si mostra
-  // il proprio più recente, mai quello di un altro. Senza ordini propri → empty state.
-  const order = myOrders.find((o) => o.id === selectedId) ?? getMostRecentOrder(myOrders);
-  const isPendingPayment = order ? (order.status === 'pending_counter_payment' || order.paymentStatus === 'pending_counter_payment') : false;
-  const displayStatus = isPendingPayment ? 'pending_counter_payment' : (order ? order.status : 'received');
-  const statusInfo = order ? kitchenOrderStatuses[displayStatus] : null;
-  const isReady      = order?.status === 'ready';
-  const isPreparing  = order?.status === 'preparing';
-  const isReceived   = order?.status === 'received';
-  const isCancelled  = order?.status === 'cancelled';
-  const hasBottomBar = order && order.status !== 'delivered' && order.status !== 'cancelled';
 
-  const prevIsReadyRef = useRef(isReady);
+  // AC7: tutti gli ordini attivi, impilati verticalmente, nessun cap. `delivered`/`cancelled`
+  // restano fuori dalla vista attiva (AC4/AC5) — quando un ordine passa a uno di questi due stati
+  // sparisce da qui al render successivo, senza bisogno di un redirect esplicito: non esiste più
+  // un "ordine corrente" da cui allontanarsi.
+  const activeOrders = myOrders
+    .filter((o) => o.status !== 'cancelled' && o.status !== 'delivered')
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  const elapsed = order ? elapsedMinutes(order.createdAt) : '';
-  const elapsedText = elapsed ? ` · ${elapsed}` : '';
-
-  useEffect(() => {
-    const wasReady = prevIsReadyRef.current;
-    prevIsReadyRef.current = isReady;
-    if (isReady && !wasReady) {
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-      setReadyFlash(true);
-      const t = setTimeout(() => setReadyFlash(false), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [isReady]);
-
-  const handleSelectOrder = (oId) => {
-    setSelectedId(oId);
-    navigate(`/kitchen/status?orderId=${oId}`);
-  };
-
-  const handlePaySumup = async () => {
-    if (!order) return;
-    setSumup({ state: 'loading', error: null });
-    try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) throw error;
-        session = data.session;
-      }
-      if (!session) throw new Error('no_session');
-
-      const { data: attempt, error: attemptError } = await supabase.rpc('kitchen_payment_attempt_start', {
-        p_order_id: order.id,
-        p_channel: 'app',
-        p_provider: 'sumup',
-        p_method: 'sumup_online',
-        p_amount: order.total,
-        p_idempotency_key: getSumupIdempotencyKey(order.id),
-      });
-      if (attemptError) throw attemptError;
-
-      // Same-checkout retry window still open (LONG SESSION F): kitchen_payment_attempt_start
-      // returns the existing 'failed' attempt instead of opening a new one when SumUp could still
-      // turn it PAID (the customer retrying with a different card on the same hosted checkout).
-      // Never call create-checkout here — it would just 409 (invalid_attempt_status) — and never
-      // show a "pay again" CTA that could lead to a second, independent payment landing on top.
-      if (attempt.status === 'failed') {
-        setSumup({ state: 'pending', error: null });
-        return;
-      }
-
-      const res = await fetch('/api/kitchen-sumup-create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ order_id: order.id, payment_attempt_id: attempt.id }),
-      });
-      const body = await res.json();
-      if (!res.ok || !body.hosted_checkout_url) throw new Error(body.error || 'checkout_creation_failed');
-
-      setSumup({ state: 'redirecting', error: null });
-      window.location.href = body.hosted_checkout_url;
-    } catch (err) {
-      console.warn('[Walbox] SumUp checkout failed', err);
-      setSumup({ state: 'error', error: friendlySumupError(err) });
-    }
-  };
-
-  // Lost webhook recovery (FASE 3): the browser return from SumUp is never treated as proof of
-  // payment on its own — it only triggers a server-side reconciliation call that re-checks the
-  // authoritative SumUp status via api/kitchen-sumup-reconcile.js. Runs once per mount.
-  useEffect(() => {
-    if (sumup.state !== 'verifying' || !order || reconcileStartedRef.current) return;
-    reconcileStartedRef.current = true;
-
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setSumup({ state: 'unknown', error: null });
-          return;
-        }
-        const res = await fetch('/api/kitchen-sumup-reconcile', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ order_id: order.id }),
-        });
-        const body = await res.json();
-        if (!res.ok) {
-          setSumup({ state: 'unknown', error: null });
-          return;
-        }
-        if (body.outcome === 'confirmed' || body.outcome === 'already_paid') {
-          setSumup({ state: 'confirmed', error: null });
-        } else if (body.outcome === 'failed') {
-          setSumup({ state: 'error', error: 'Il pagamento non è andato a buon fine. Riprova o paga alla cassa.' });
-        } else if (body.outcome === 'pending') {
-          setSumup({ state: 'pending', error: null });
-        } else if (body.outcome === 'no_pending_attempt') {
-          setSumup({ state: 'idle', error: null });
-        } else {
-          setSumup({ state: 'unknown', error: null });
-        }
-      } catch (err) {
-        console.warn('[Walbox] SumUp reconciliation failed', err);
-        setSumup({ state: 'unknown', error: null });
-      }
-    })();
-  }, [sumup.state, order]);
-
-  if (!order) {
-    return (
-      <div className="ost-page">
-        <div className="ost-topbar">
-          <button className="ost-topbar-back" aria-label="Torna al menu" onClick={() => navigate('/kitchen')}>←</button>
-          <span className="ost-topbar-title">STATO ORDINE</span>
-          <span className="ost-topbar-bell">🔔</span>
-        </div>
-        <div style={{ padding: '60px 20px', textAlign: 'center' }} data-testid="order-status-empty">
-          <h2 className="ost-empty-title">Nessun ordine trovato</h2>
-          <p className="ost-empty-sub">
-            Non abbiamo trovato nessun ordine inviato da questo dispositivo. Gli ordini restano
-            visibili solo sul telefono da cui li hai inviati.
-          </p>
-          <button className="ost-topbar-back-btn" onClick={() => navigate('/kitchen')}>
-            ← Torna al menu
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  const sortedOrders = [...myOrders]
-    .filter((o) => o.id === order.id || (o.status !== 'delivered' && o.status !== 'cancelled'))
-    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-    .slice(0, 5);
+  // AC7 req 6: la reconciliation al ritorno da SumUp riguarda solo l'ordine il cui id combacia
+  // con `?orderId=` in querystring — mai un fallback sul più recente.
+  const sumupReturnTargetId = sumupReturnRequested ? resolveUrlOrderId(ownedIds) : null;
 
   return (
-    <div className={`ost-page${hasBottomBar ? ' ost-page--has-bottom-bar' : ''}`}>
+    <div className="ost-page">
 
       {/* TopBar */}
       <div className="ost-topbar">
@@ -301,361 +77,29 @@ export default function CustomerOrderStatus() {
         <span className="ost-topbar-bell">🔔</span>
       </div>
 
-      {/* WalrusChefHero */}
-      <div className={`ost-hero ${isPendingPayment ? 'ost-hero--pending-payment' : ''}`}>
-        <div className="ost-hero-glow" />
-        <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Chef" className="ost-hero-mascot" />
-        <div className="ost-hero-headline">
-          {(() => {
-            switch (displayStatus) {
-              case 'pending_counter_payment':
-                return (
-                  <>
-                    <div className="ost-hero-line1">IN ATTESA DI PAGAMENTO</div>
-                    <div className="ost-hero-line2" style={{ color: '#c8960a' }}>DA PAGARE AL BANCO</div>
-                  </>
-                );
-              case 'received':
-                return (
-                  <>
-                    <div className="ost-hero-line1">ORDINE RICEVUTO CON SUCCESSO</div>
-                    <div className="ost-hero-line2" style={{ color: '#f59e0b' }}>PRESTO IN PREPARAZIONE</div>
-                  </>
-                );
-              case 'preparing':
-                return (
-                  <>
-                    <div className="ost-hero-line1">IL TUO ORDINE È IN PREPARAZIONE</div>
-                    <div className="ost-hero-line2" style={{ color: '#3b82f6' }}>I NOSTRI CHEF SONO AL LAVORO</div>
-                  </>
-                );
-              case 'ready':
-                return (
-                  <>
-                    <div className="ost-hero-line1">IL TUO ORDINE È PRONTO!</div>
-                    <div className="ost-hero-line2" style={{ color: '#22c55e' }}>RITIRALO AL BANCO</div>
-                  </>
-                );
-              case 'delivered':
-                return (
-                  <>
-                    <div className="ost-hero-line1">ORDINE CONSEGNATO</div>
-                    <div className="ost-hero-line2" style={{ color: '#94a3b8' }}>GRAZIE E BUON APPETITO!</div>
-                  </>
-                );
-              case 'cancelled':
-                return (
-                  <>
-                    <div className="ost-hero-line1">ORDINE ANNULLATO</div>
-                    <div className="ost-hero-line2" style={{ color: '#ef4444' }}>RIVOLGITI AL PERSONALE</div>
-                  </>
-                );
-              default:
-                return (
-                  <>
-                    <div className="ost-hero-line1">ORDINE RICEVUTO CON SUCCESSO</div>
-                    <div className="ost-hero-line2" style={{ color: '#f59e0b' }}>PRESTO IN PREPARAZIONE</div>
-                  </>
-                );
-            }
-          })()}
-        </div>
-      </div>
-
-      {/* Code for payment at counter */}
-      {isPendingPayment && order.orderCode && (
-        <div style={{
-          margin: '0 20px 20px',
-          padding: '16px 24px',
-          background: 'rgba(200,150,10,0.12)',
-          border: '2px solid #c8960a',
-          borderRadius: '12px',
-          textAlign: 'center',
-        }}>
-          <div style={{
-            fontFamily: "'Montserrat', sans-serif",
-            fontSize: '11px',
-            fontWeight: 700,
-            letterSpacing: '1.5px',
-            color: 'rgba(245,234,216,0.55)',
-            textTransform: 'uppercase',
-            marginBottom: '4px'
-          }}>
-            MOSTRA QUESTO CODICE ALLA CASSA
-          </div>
-          <div style={{
-            fontFamily: "'Anton', sans-serif",
-            fontSize: '44px',
-            fontWeight: 900,
-            letterSpacing: '3px',
-            color: '#c8960a',
-            lineHeight: 1
-          }}>
-            {order.orderCode}
-          </div>
-        </div>
-      )}
-
-      {/* SumUp online payment CTA (sandbox) */}
-      {isPendingPayment && (
-        <div style={{ margin: '0 20px 20px', textAlign: 'center' }}>
-          {sumup.state === 'verifying' ? (
-            <div style={{
-              padding: '14px',
-              color: '#c8960a',
-              fontFamily: "'Montserrat', sans-serif",
-              fontSize: '13px',
-              fontWeight: 600,
-            }}>
-              Stiamo verificando il pagamento con SumUp… aggiorna tra qualche secondo.
-            </div>
-          ) : sumup.state === 'confirmed' ? (
-            <div style={{
-              padding: '14px',
-              color: '#22c55e',
-              fontFamily: "'Montserrat', sans-serif",
-              fontSize: '13px',
-              fontWeight: 600,
-            }}>
-              Pagamento confermato — stiamo aggiornando l'ordine…
-            </div>
-          ) : sumup.state === 'pending' ? (
-            // Pagamento ancora pendente lato SumUp: nessun retry possibile finché non è certamente
-            // FAILED/CANCELLED — mostrare una CTA qui creerebbe un secondo pagamento (contract V1).
-            <div style={{
-              padding: '14px',
-              color: '#c8960a',
-              fontFamily: "'Montserrat', sans-serif",
-              fontSize: '13px',
-              fontWeight: 600,
-            }}>
-              Pagamento ancora in corso presso SumUp. Non serve ripagare — aggiorna tra qualche secondo.
-            </div>
-          ) : sumup.state === 'unknown' ? (
-            // Verifica temporaneamente impossibile: stesso motivo di 'pending', nessuna CTA.
-            <div style={{
-              padding: '14px',
-              color: '#ef4444',
-              fontFamily: "'Montserrat', sans-serif",
-              fontSize: '13px',
-              fontWeight: 600,
-            }}>
-              Non riusciamo a verificare il pagamento in questo momento. Se hai già pagato non serve
-              ripagare: mostra questa schermata alla cassa se il problema persiste.
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={handlePaySumup}
-                disabled={sumup.state === 'loading' || sumup.state === 'redirecting'}
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: sumup.state === 'loading' || sumup.state === 'redirecting' ? '#6b5a1e' : '#c8960a',
-                  color: '#1a1206',
-                  fontFamily: "'Anton', sans-serif",
-                  fontSize: '16px',
-                  letterSpacing: '1px',
-                  cursor: sumup.state === 'loading' || sumup.state === 'redirecting' ? 'default' : 'pointer',
-                }}
-              >
-                {sumup.state === 'loading'
-                  ? 'AVVIO PAGAMENTO…'
-                  : sumup.state === 'redirecting'
-                    ? 'REINDIRIZZAMENTO A SUMUP…'
-                    : '💳 PAGA ONLINE'}
-              </button>
-              {sumup.state === 'error' && (
-                <div style={{
-                  marginTop: '8px',
-                  color: '#ef4444',
-                  fontSize: '12px',
-                  fontFamily: "'Montserrat', sans-serif",
-                }}>
-                  {sumup.error}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      )}
-
-      {/* OrderInfoGrid */}
-      <div className="ost-info-grid">
-        <div className="ost-info-grid-header">DATI ORDINE</div>
-        <div className="ost-info-grid-cells">
-          <div className="ost-info-cell">
-            <div className="ost-info-label">RITIRO</div>
-            <div className="ost-info-value ost-info-value--yellow">AL BANCO</div>
-          </div>
-          <div className="ost-info-cell">
-            <div className="ost-info-label">NICKNAME</div>
-            <div className="ost-info-value ost-info-value--orange">{order.nickname}</div>
-          </div>
-          <div className="ost-info-cell ost-info-cell--bottom">
-            <div className="ost-info-label">ORA ORDINE</div>
-            <div className="ost-info-value ost-info-value--time">🕐 {formatTime(order.createdAt)}</div>
-          </div>
-          <div className="ost-info-cell ost-info-cell--bottom">
-            <div className="ost-info-label">CODICE ORDINE</div>
-            <div className="ost-info-value ost-info-value--muted">{order.orderCode || '-'}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* CurrentStatusBanner */}
-      <div 
-        className={`ost-status-banner ost-status-banner--${displayStatus}`}
-        style={displayStatus === 'pending_counter_payment' ? {
-          background: '#c8960a',
-          boxShadow: '0 4px 16px rgba(200,150,10,0.33)'
-        } : undefined}
-      >
-        <div className="ost-status-banner-dot" />
-        <div className="ost-status-banner-content">
-          <div className="ost-status-banner-label">
-            {displayStatus === 'pending_counter_payment' ? 'IN ATTESA DI PAGAMENTO' : (STEP_LABELS[displayStatus] ?? statusInfo?.label ?? displayStatus.toUpperCase())}
-          </div>
-          <div className="ost-status-banner-sub">
-            {displayStatus === 'pending_counter_payment' && 'Mostra il codice in cassa per completare il pagamento e avviare la preparazione.'}
-            {displayStatus === 'received'  && `Abbiamo ricevuto il tuo ordine. La cucina lo prenderà in carico a breve.${elapsedText}`}
-            {displayStatus === 'preparing' && `Lo staff sta preparando il tuo ordine.${elapsedText}`}
-            {displayStatus === 'ready'     && 'Il tuo ordine è pronto! Presentati al banco con il codice per il ritiro.'}
-            {displayStatus === 'delivered' && 'Ordine consegnato. Buon appetito!'}
-            {displayStatus === 'cancelled' && 'L\'ordine è stato annullato. Rivolgiti al personale per assistenza.'}
-          </div>
-        </div>
-      </div>
-
-      {/* StatusTimeline */}
-      {!isCancelled && (
-        <div className={`ost-timeline ost-timeline--${displayStatus}`}>
-          <div className="ost-timeline-header">PROGRESSIONE</div>
-          {TIMELINE_STEPS.map((step, i) => {
-            const state = getStepState(step, displayStatus);
-            return (
-              <div key={step} className={`ost-timeline-item ost-timeline-item--${state}`}>
-                <div className="ost-timeline-left">
-                  <div className={`ost-timeline-dot ost-timeline-dot--${state}`}>
-                    {state === 'done'   && <span className="ost-dot-check">✓</span>}
-                    {state === 'active' && <span className="ost-dot-inner" />}
-                  </div>
-                  {i < TIMELINE_STEPS.length - 1 && (
-                    <div className={`ost-timeline-line ost-timeline-line--${state}`} />
-                  )}
-                </div>
-                <div className="ost-timeline-content">
-                  <div className="ost-timeline-label">{STEP_LABELS[step]}</div>
-                  {state === 'active' && (
-                    <div className="ost-timeline-sub">
-                      {step === 'pending_counter_payment' && 'Mostra il codice in cassa per completare il pagamento e avviare la preparazione.'}
-                      {step === 'received'  && `Abbiamo ricevuto il tuo ordine. La cucina lo prenderà in carico a breve.${elapsedText}`}
-                      {step === 'preparing' && `Lo staff sta preparando il tuo ordine.${elapsedText}`}
-                      {step === 'ready'     && 'Il tuo ordine è pronto! Presentati al banco con il codice per il ritiro.'}
-                      {step === 'delivered' && 'Ordine consegnato. Buon appetito!'}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* OrderedItemsPanel */}
-      <div className="ost-items-panel">
-        <div className="ost-items-panel-header">
-          <span>HAI ORDINATO</span>
-          <span>QTÀ / PREZZO</span>
-        </div>
-        {order.items.map((item, i) => (
-          <div key={i} className="ost-item-row">
-            <div className="ost-item-qty-badge">{item.quantity}</div>
-            <span className="ost-item-name">{item.name}</span>
-            <span className="ost-item-price">€{(item.price * item.quantity).toFixed(2)}</span>
-          </div>
-        ))}
-        <div className="ost-total-row">
-          <span className="ost-total-label">TOTALE</span>
-          <span className="ost-total-value">€{order.total.toFixed(2)}</span>
-        </div>
-      </div>
-
-      {/* KitchenNotesPanel */}
-      {order.note && (
-        <div className="ost-notes-panel">
-          <div className="ost-notes-header">
-            <span>📝</span>
-            <span className="ost-notes-label">NOTE PER LA CUCINA</span>
-          </div>
-          <div className="ost-notes-text">{order.note}</div>
-        </div>
-      )}
-
-      {/* JukeboxBridgeCard */}
-      {(isReceived || isPreparing) && (
-        <div 
-          className="ost-jukebox-card"
-          onClick={() => navigate(`/request?table=${(order.table || '').replace(/^T/i, '') || '7'}`)}
-        >
-          <div className="ost-jukebox-text">
-            <div className="ost-jukebox-headline">MENTRE ASPETTI<br />METTI UN PEZZO<br />AL JUKEBOX</div>
-            <div className="ost-jukebox-desc">Vota le canzoni, manda una dedica.</div>
-          </div>
-          <button
-            className="ost-jukebox-btn"
-            aria-label="Vai al jukebox"
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate(`/request?table=${(order.table || '').replace(/^T/i, '') || '7'}`);
-            }}
-          >
-            🎵
+      {activeOrders.length === 0 ? (
+        <div style={{ padding: '60px 20px', textAlign: 'center' }} data-testid="order-status-empty">
+          <h2 className="ost-empty-title">
+            {myOrders.length === 0 ? 'Nessun ordine trovato' : 'Nessun ordine attivo'}
+          </h2>
+          <p className="ost-empty-sub">
+            {myOrders.length === 0
+              ? 'Non abbiamo trovato nessun ordine inviato da questo dispositivo. Gli ordini restano visibili solo sul telefono da cui li hai inviati.'
+              : 'I tuoi ordini precedenti sono stati consegnati o annullati.'}
+          </p>
+          <button className="ost-topbar-back-btn" onClick={() => navigate('/kitchen')}>
+            ← Torna al menu
           </button>
         </div>
-      )}
-
-      {/* MyOrdersSwitcher */}
-      {sortedOrders.length > 1 && (
-        <div className="ost-switcher">
-          <div className="ost-switcher-label">I MIEI ORDINI</div>
-          <div className="ost-switcher-scroll">
-            {sortedOrders.map((o) => (
-              <KitchenOrderCard
-                key={o.id}
-                order={o}
-                isSelected={o.id === order.id}
-                onClick={() => handleSelectOrder(o.id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* ReadyAlertBottomBox */}
-      {hasBottomBar && (
-        <div className={`ost-bottom-bar${readyFlash ? ' ost-ready-flash' : ''}`} style={isReady ? { background: '#0a2a1a', borderTop: '2px solid #10b981' } : undefined}>
-          <span className="ost-bottom-bar-bell">{isReady ? '🟢' : (isPendingPayment ? '💳' : '🔔')}</span>
-          <div className="ost-bottom-bar-text">
-            {isReady ? (
-              <>
-                <div>IL TUO ORDINE È PRONTO</div>
-                <div className="ost-bottom-bar-accent">RITIRALO ORA AL BANCO</div>
-              </>
-            ) : isPendingPayment ? (
-              <>
-                <div>IN ATTESA DI PAGAMENTO</div>
-                <div className="ost-bottom-bar-accent">PAGA ALLA CASSA PER AVVIARE LA PREPARAZIONE</div>
-              </>
-            ) : (
-              <>
-                <div>MONITORAGGIO ATTIVO</div>
-                <div className="ost-bottom-bar-accent">TI NOTIFICHEREMO QUANDO SARÀ PRONTO</div>
-              </>
-            )}
-          </div>
+      ) : (
+        <div className="ost-orders-stack">
+          {activeOrders.map((o) => (
+            <CustomerOrderPanel
+              key={o.id}
+              order={o}
+              isReturnTarget={o.id === sumupReturnTargetId}
+            />
+          ))}
         </div>
       )}
 
@@ -673,14 +117,13 @@ export default function CustomerOrderStatus() {
               {orders.map((o) => (
                 <button
                   key={o.id}
-                  className={`ost-dev-btn${o.id === order.id ? ' ost-dev-btn--active' : ''}`}
+                  className={`ost-dev-btn${ownedIds.includes(o.id) ? ' ost-dev-btn--active' : ''}`}
                   onClick={() => {
                     // Solo DEV (rimosso dal bundle di produzione): simulare un ordine significa
                     // adottarlo esplicitamente come proprio, così il percorso di lettura resta
                     // sempre e solo `myOrders` — nessuna scorciatoia che bypassa il filtro.
                     rememberOwnedOrderId(o.id);
                     setOwnedIds(readOwnedOrderIds());
-                    setSelectedId(o.id);
                   }}
                 >
                   {o.nickname} · {kitchenOrderStatuses[o.status]?.label}

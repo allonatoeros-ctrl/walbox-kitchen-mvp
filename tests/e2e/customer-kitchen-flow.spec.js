@@ -1333,12 +1333,12 @@ test('29. Privacy client-side: la cache ordini di staff/cassa non contamina il c
   await expect(page.getByRole('button', { name: /Segui ordine/i })).toHaveCount(0);
 });
 
-test('28. P0 privacy: lo switcher "I MIEI ORDINI" elenca solo gli ordini di questo dispositivo', async ({ page }) => {
+test('28. P0 privacy: la lista ordini attivi impilata mostra solo gli ordini di questo dispositivo', async ({ page }) => {
   await mockVenueOrdersSelect(page);
   await page.goto('/');
   await seedMyOrders(page, [
     // Stesso nickname del cliente: col vecchio raggruppamento per nickname sarebbe finito
-    // nello switcher come se fosse suo.
+    // nella lista come se fosse suo.
     makeOtherCustomerOrder({ id: 'order-altrui-nick', orderCode: 'Z01', nickname: 'Eros', createdAt: minutesAgoIso(3) }),
     makeOtherCustomerOrder({ id: 'order-altrui-2', orderCode: 'Z02', createdAt: minutesAgoIso(1) }),
     makeOtherCustomerOrder({ id: 'order-mio-1', orderCode: 'M01', nickname: 'Eros', createdAt: minutesAgoIso(20), note: '' }),
@@ -1347,8 +1347,225 @@ test('28. P0 privacy: lo switcher "I MIEI ORDINI" elenca solo gli ordini di ques
   await seedOwnedOrderIds(page, ['order-mio-2', 'order-mio-1']);
 
   await page.goto('/kitchen/status');
-  await expect(page.locator('.ost-order-card')).toHaveCount(2);
-  await expect(page.locator('.ost-order-card-id')).toHaveText(['M02', 'M01']);
+  await expect(page.locator('.ost-order-block')).toHaveCount(2);
+  await expect(page.locator('.ost-order-code-big')).toHaveText(['M02', 'M01']);
   await expect(page.getByText('Pirata')).toHaveCount(0);
   await expect(page.getByText('Z01')).toHaveCount(0);
+  await expect(page.getByText('Z02')).toHaveCount(0);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// AC4 FIX (2026-09-18) — ordine cancelled con payment_status stale (scenari 30-31)
+// ═══════════════════════════════════════════════════════════════════
+// Regressione coperta (review ai-ops/reports, finding AC4 FAIL): kitchen_order_cancel aggiorna solo
+// status/cancel_reason/cancelled_at, MAI payment_status — un ordine annullato prima di essere pagato
+// resta con payment_status='pending_counter_payment' per costruzione. Prima del fix, isPendingPayment
+// leggeva quel campo in OR con status, quindi un ordine cancelled veniva comunque trattato come "in
+// attesa di pagamento": hero/status banner sbagliati e bivio PAGA IN CASSA/PAGA ONLINE ancora
+// cliccabile su un ordine già annullato. Il fix: uno stato chiuso non è mai isPendingPayment,
+// qualunque sia payment_status. Con AC7 (vista impilata, 2026-09-18) non esiste più un "ordine
+// corrente" da cui allontanarsi con un redirect: un ordine cancelled semplicemente non ha più un
+// blocco nella lista attiva al render successivo.
+
+test('30. AC4 fix: ordine cancelled con payment_status ancora pending_counter_payment — niente bivio, nessun ordine attivo', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({
+      id: 'order-cancelled-solo', orderCode: 'C01', nickname: 'Eros',
+      status: 'cancelled', paymentStatus: 'pending_counter_payment',
+      createdAt: minutesAgoIso(1),
+    }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-cancelled-solo']);
+
+  await page.goto('/kitchen/status?orderId=order-cancelled-solo');
+
+  // L'ordine cancelled non ha un blocco: nessun ordine attivo da mostrare.
+  await expect(page.getByTestId('order-status-empty')).toBeVisible();
+  await expect(page.locator('.ost-order-block')).toHaveCount(0);
+  await expect(page.getByTestId('ost-payment-fork')).toHaveCount(0);
+  await expect(page.getByText('C01')).toHaveCount(0);
+  await expect(page.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toHaveCount(0);
+});
+
+test('31. AC4 fix: ordine cancelled con payment_status pending — resta visibile solo l\'altro ordine proprio ancora attivo', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({
+      id: 'order-cancelled-multi', orderCode: 'C02', nickname: 'Eros',
+      status: 'cancelled', paymentStatus: 'pending_counter_payment',
+      createdAt: minutesAgoIso(5),
+    }),
+    makeOtherCustomerOrder({
+      id: 'order-attivo-altro', orderCode: 'M09', nickname: 'Eros',
+      status: 'preparing', paymentStatus: 'paid',
+      createdAt: minutesAgoIso(1),
+    }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-cancelled-multi', 'order-attivo-altro']);
+
+  await page.goto('/kitchen/status?orderId=order-cancelled-multi');
+
+  // Solo l'ordine attivo ha un blocco: il cancelled non compare mai, non c'è nessun "ordine
+  // corrente" da cui passare.
+  await expect(page.locator('.ost-order-block')).toHaveCount(1);
+  await expect(page.locator('.ost-info-value--muted')).toHaveText('M09');
+  await expect(page.getByTestId('ost-payment-fork')).toHaveCount(0);
+  await expect(page.getByText('C02')).toHaveCount(0);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// AC7 — multi-ordine stacked (2026-09-18, scenari 32-36)
+// ═══════════════════════════════════════════════════════════════════
+// Requisiti bloccati: tutti gli ordini attivi visibili contemporaneamente (nessun cap a 5), uno
+// sotto l'altro, ciascuno con codice grande, stato/CTA/pagamento indipendenti; cancelled/delivered
+// esclusi; niente switcher orizzontale come UX principale; reconciliation SumUp al ritorno solo per
+// l'ordine il cui id combacia con `?orderId=`.
+
+async function seedSupabaseSession(page) {
+  const userId = '33333333-3333-3333-3333-333333333333';
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const expiresIn = 3600;
+  const b64 = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+  const accessToken = [
+    b64({ alg: 'HS256', typ: 'JWT' }),
+    b64({
+      sub: userId, aud: 'authenticated', role: 'authenticated',
+      iat: nowSeconds, exp: nowSeconds + expiresIn, is_anonymous: true,
+    }),
+    'e2e-not-a-real-signature',
+  ].join('.');
+  const session = {
+    access_token: accessToken,
+    token_type: 'bearer',
+    expires_in: expiresIn,
+    expires_at: nowSeconds + expiresIn,
+    refresh_token: 'e2e-refresh-token',
+    user: {
+      id: userId, aud: 'authenticated', role: 'authenticated', email: '', phone: '',
+      is_anonymous: true, app_metadata: {}, user_metadata: {}, identities: [],
+      created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    },
+  };
+  // Stessa storage key che @supabase/supabase-js v2 usa per un client creato con
+  // VITE_SUPABASE_URL=https://pcrqfdzipotprqtuemso.supabase.co (.env.local): seedarla qui evita
+  // di dover davvero autenticare il browser per esercitare `supabase.auth.getSession()`.
+  await page.evaluate((s) => {
+    localStorage.setItem('sb-pcrqfdzipotprqtuemso-auth-token', JSON.stringify(s));
+  }, session);
+}
+
+async function mockReconcile(page, outcome = 'pending') {
+  const calls = [];
+  await page.route('**/api/kitchen-sumup-reconcile', async (route) => {
+    calls.push(route.request().postDataJSON());
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ outcome }) });
+  });
+  return calls;
+}
+
+test('32. AC7: tutti gli ordini attivi sono visibili contemporaneamente, impilati, senza cap a 5', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  const statuses = ['pending_counter_payment', 'received', 'preparing', 'ready', 'received', 'preparing'];
+  const ids = statuses.map((_, i) => `order-stack-${i}`);
+  await seedMyOrders(page, statuses.map((status, i) => makeOtherCustomerOrder({
+    id: ids[i], orderCode: `S0${i}`, nickname: 'Eros', status,
+    paymentStatus: status === 'pending_counter_payment' ? 'pending_counter_payment' : 'paid',
+    createdAt: minutesAgoIso(statuses.length - i),
+  })));
+  await seedOwnedOrderIds(page, ids);
+
+  await page.goto('/kitchen/status');
+
+  // Nessun cap: 6 ordini attivi, 6 blocchi, tutti con codice grande e dominante presente.
+  await expect(page.locator('.ost-order-block')).toHaveCount(6);
+  await expect(page.locator('.ost-order-code-big')).toHaveCount(6);
+  for (let i = 0; i < statuses.length; i++) {
+    await expect(page.getByText(`S0${i}`).first()).toBeVisible();
+  }
+  // Niente switcher orizzontale come UX principale.
+  await expect(page.locator('.ost-switcher')).toHaveCount(0);
+});
+
+test('33. AC7: due ordini attivi hanno stati indipendenti, ciascuno col proprio codice grande', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'order-ready', orderCode: 'R01', nickname: 'Eros', status: 'ready', paymentStatus: 'paid', createdAt: minutesAgoIso(5) }),
+    makeOtherCustomerOrder({ id: 'order-prep', orderCode: 'P01', nickname: 'Eros', status: 'preparing', paymentStatus: 'paid', createdAt: minutesAgoIso(2) }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-ready', 'order-prep']);
+
+  await page.goto('/kitchen/status');
+
+  await expect(page.locator('.ost-order-block')).toHaveCount(2);
+  await expect(page.locator('.ost-order-code-big')).toHaveText(['P01', 'R01']);
+  const blockPrep  = page.getByTestId('ost-order-block-order-prep');
+  const blockReady = page.getByTestId('ost-order-block-order-ready');
+  await expect(blockPrep.locator('.ost-status-banner-label')).toHaveText('IN PREPARAZIONE');
+  await expect(blockReady.locator('.ost-status-banner-label')).toHaveText('PRONTO PER IL RITIRO');
+});
+
+test('34. AC7: cancelled e delivered non compaiono mai nella lista attiva anche con altri ordini presenti', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'order-delivered', orderCode: 'D01', nickname: 'Eros', status: 'delivered', paymentStatus: 'paid', createdAt: minutesAgoIso(30) }),
+    makeOtherCustomerOrder({ id: 'order-cancelled', orderCode: 'X01', nickname: 'Eros', status: 'cancelled', paymentStatus: 'pending_counter_payment', createdAt: minutesAgoIso(20) }),
+    makeOtherCustomerOrder({ id: 'order-active', orderCode: 'A99', nickname: 'Eros', status: 'received', paymentStatus: 'paid', createdAt: minutesAgoIso(1) }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-delivered', 'order-cancelled', 'order-active']);
+
+  await page.goto('/kitchen/status');
+
+  await expect(page.locator('.ost-order-block')).toHaveCount(1);
+  await expect(page.locator('.ost-order-code-big')).toHaveText('A99');
+  await expect(page.getByText('D01')).toHaveCount(0);
+  await expect(page.getByText('X01')).toHaveCount(0);
+});
+
+test('35. AC7: due ordini in attesa di pagamento hanno bivio e CTA indipendenti, nessuna collisione di stato', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'order-pay-a', orderCode: 'PA1', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment', createdAt: minutesAgoIso(2) }),
+    makeOtherCustomerOrder({ id: 'order-pay-b', orderCode: 'PB1', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment', createdAt: minutesAgoIso(1) }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-pay-a', 'order-pay-b']);
+
+  await page.goto('/kitchen/status');
+
+  const blockA = page.getByTestId('ost-order-block-order-pay-a');
+  const blockB = page.getByTestId('ost-order-block-order-pay-b');
+  await expect(blockA.getByTestId('ost-payment-fork')).toBeVisible();
+  await expect(blockB.getByTestId('ost-payment-fork')).toBeVisible();
+
+  // Scegliere PAGA IN CASSA sull'ordine A non deve toccare lo stato dell'ordine B.
+  await blockA.getByTestId('ost-pay-counter').click();
+  await expect(blockA.getByTestId('ost-payment-fork')).toHaveCount(0);
+  await expect(blockA.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toBeVisible();
+  await expect(blockB.getByTestId('ost-payment-fork')).toBeVisible();
+  await expect(blockB.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toHaveCount(0);
+});
+
+test('36. AC7: al ritorno da SumUp solo l\'ordine corrispondente a ?orderId= esegue reconciliation', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedSupabaseSession(page);
+  const reconcileCalls = await mockReconcile(page, 'pending');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'order-target', orderCode: 'T01', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment', createdAt: minutesAgoIso(2) }),
+    makeOtherCustomerOrder({ id: 'order-other', orderCode: 'T02', nickname: 'Eros', status: 'preparing', paymentStatus: 'paid', createdAt: minutesAgoIso(1) }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-target', 'order-other']);
+
+  await page.goto('/kitchen/status?sumup=return&orderId=order-target');
+
+  await expect.poll(() => reconcileCalls.length).toBeGreaterThan(0);
+  await page.waitForTimeout(200); // margine per un'eventuale seconda chiamata indesiderata
+  expect(reconcileCalls.every((c) => c.order_id === 'order-target')).toBe(true);
+  expect(reconcileCalls.some((c) => c.order_id === 'order-other')).toBe(false);
 });
