@@ -86,7 +86,9 @@ function adoptAndClearVenueCacheForCustomer() {
   try { localStorage.removeItem(LS_VENUE_KEY); } catch { }
 }
 
-function loadOrders(scope) {
+// export solo per il test mirato staff-cache-empty-supabase; nessun nuovo consumer applicativo
+// oltre a useKitchenOrders (useState iniziale + refresh su storage/focus/visibility).
+export function loadOrders(scope) {
   if (scope === SCOPE_CUSTOMER) {
     adoptAndClearVenueCacheForCustomer();
     // Nessun fallback ai demo order lato cliente: i demo sono ordini di altre persone, e il
@@ -100,7 +102,13 @@ function loadOrders(scope) {
   }
   const saved = readOrdersFromKey(LS_VENUE_KEY);
   if (saved) return saved;
-  return demoKitchenOrders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i })) }));
+  // Niente fallback ai demo order in produzione: se la cache del locale e' vuota (device nuovo,
+  // cache ripulita, dopo un reset dati) lo stato reale e' "nessun ordine", non i 6 ordini finti
+  // di demoKitchenOrders — mostrarli su una superficie staff reale (TV/solo/cassa/prep board)
+  // significherebbe far vedere allo staff ordini di clienti mai esistiti. I mock restano
+  // disponibili solo nei percorsi preview/demo gia' espliciti (KitchenSoloServiceDemo,
+  // KitchenPrepBoardDemo, i rispettivi `*PreviewFixtures.js`), che non passano da questo hook.
+  return [];
 }
 
 function saveOrders(scope, orders) {
@@ -110,6 +118,9 @@ function saveOrders(scope, orders) {
   }
   writeOrdersToKey(LS_VENUE_KEY, orders);
 }
+// export solo per il test mirato staff-cache-empty-supabase; e' la stessa funzione usata da
+// `persist` dentro useKitchenOrders, nessun nuovo consumer applicativo.
+export { saveOrders };
 
 function appendLog(order, action) {
   const log = [...(order.actionLog ?? []), { action, at: new Date().toISOString() }];
@@ -165,6 +176,27 @@ export async function supabaseUpdateOrder(id, patch) {
     console.warn('[Walbox] Supabase update failed — localStorage updated only', err);
     return { ok: false, error: err };
   }
+}
+
+// export solo per il test mirato staff-cache-empty-supabase (funzione pura, nessun mock modulo
+// necessario); nessun nuovo consumer applicativo oltre a fetchSupabaseOrders dentro
+// useKitchenOrders.
+//
+// `data` e' sempre un array quando la select Supabase non ha errore (anche 0 righe = locale
+// davvero vuoto, es. dopo un DB cleanup pre go-live): il fetch e' la fonte di verita' e un
+// ordine sopravvive solo se il server lo restituisce ancora. L'unica eccezione e' un ordine con
+// un write pending/fallito non ancora confermato (pendingWrites) — quello resta protetto
+// localmente anche se questa risposta e' vuota o non lo contiene piu', cosi' un fetch che
+// incrocia una mutation staff in corso non la cancella sotto i piedi.
+export function mergeFetchedOrders(prev, data, pendingWrites) {
+  const prevById = new Map(prev.map((o) => [o.id, o]));
+  const fromServer = data.map((row) => {
+    const mapped = mapSupabaseOrder(row);
+    return pendingWrites.has(mapped.id) ? (prevById.get(mapped.id) ?? mapped) : mapped;
+  });
+  const serverIds = new Set(fromServer.map((o) => o.id));
+  const protectedPending = prev.filter((o) => pendingWrites.has(o.id) && !serverIds.has(o.id));
+  return [...fromServer, ...protectedPending];
 }
 
 // export solo per il test mirato Sprint 3B (mock.channel/.on/.subscribe); nessun nuovo
@@ -318,18 +350,16 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (!data?.length) return;
 
       setOrders((prev) => {
-        const prevById = new Map(prev.map((o) => [o.id, o]));
-        return data.map((row) => {
-          const mapped = mapSupabaseOrder(row);
-          // A write for this order is still pending or failed and unretried:
-          // keep the local view so the poll doesn't silently rewind it.
-          return pendingWritesRef.current.has(mapped.id)
-            ? (prevById.get(mapped.id) ?? mapped)
-            : mapped;
-        });
+        const next = mergeFetchedOrders(prev, data ?? [], pendingWritesRef.current);
+        // La cache staff (LS_VENUE_KEY) deve riflettere l'ultima risposta Supabase valida,
+        // incluso lo svuotamento (0 ordini reali dopo un DB cleanup): senza questo la cache
+        // resta stale finche' nessuna mutation locale la riscrive. Lo scope cliente non viene
+        // toccato qui — la sua persistenza resta quella gia' esistente (addOrder), per non
+        // introdurre effetti collaterali fuori scope su quel percorso.
+        if (scope !== SCOPE_CUSTOMER) saveOrders(scope, next);
+        return next;
       });
     } catch (err) {
       console.warn('[Walbox] Supabase read failed — using localStorage', err);
