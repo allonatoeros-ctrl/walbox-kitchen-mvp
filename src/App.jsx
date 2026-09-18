@@ -16,7 +16,6 @@ import KitchenStaffDashboardDemo from "./pages/KitchenStaffDashboardDemo";
 import KitchenTrainingDemo from "./pages/KitchenTrainingDemo";
 import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
-import KitchenPromo from "./pages/KitchenPromo";
 import KitchenPrepBoard from "./pages/KitchenPrepBoard";
 import KitchenPrepBoardDemo from "./pages/KitchenPrepBoardDemo";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
@@ -207,7 +206,10 @@ export default function App() {
       case "/kitchen/tv":
         return <KitchenTvScreen />;
       case "/kitchen/promo":
-        return <KitchenPromo />;
+        // Legacy destination embedded in the already printed promo QR.
+        // Reuse the established immediate redirect so this route never mounts
+        // the retired promo UI or its pass/tracking side effects.
+        return <CustomerKitchenEntry />;
       case "/kitchen/prep":
         return <KitchenPrepBoard />;
       case "/kitchen/prep-demo":
