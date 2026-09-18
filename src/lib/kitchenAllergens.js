@@ -96,3 +96,17 @@ export function resolveOrderAllergens(order) {
   });
   return { allergens: [...set], unknownItems, hasUnknown: unknownItems.length > 0 };
 }
+
+/**
+ * PREP_FOOD vs GRAB_SERVE per il Production Board (`/kitchen/prep`), vedi
+ * ai-ops/reports/prep-v1-grab-serve-classification-audit.md.
+ * Segnale: `tags.includes('drink')` su `kitchenMenuItems` — 1:1 con birre/bevande oggi.
+ * I FALLO PESANTE (`kitchenPesiMassimiCombos`) sono sempre PREP_FOOD: atomici, richiedono
+ * comunque cottura/assemblaggio (vedi COMBO_BEHAVIOR nell'audit). Id sconosciuto → PREP_FOOD
+ * (fallback prudenziale: mai far sparire silenziosamente un item potenzialmente da preparare).
+ */
+export function isGrabServeItem(itemId) {
+  const direct = menuItemById(itemId);
+  if (direct) return Boolean(direct.tags?.includes('drink'));
+  return false;
+}

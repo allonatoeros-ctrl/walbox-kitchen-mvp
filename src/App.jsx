@@ -17,6 +17,8 @@ import KitchenTrainingDemo from "./pages/KitchenTrainingDemo";
 import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
 import KitchenPromo from "./pages/KitchenPromo";
+import KitchenPrepBoard from "./pages/KitchenPrepBoard";
+import KitchenPrepBoardDemo from "./pages/KitchenPrepBoardDemo";
 import SpotifyTestPanel from "./pages/SpotifyTestPanel";
 import StaffLogin from "./pages/StaffLogin";
 import LiveTvScreenBranded from "./pages/LiveTvScreenBranded";
@@ -206,6 +208,10 @@ export default function App() {
         return <KitchenTvScreen />;
       case "/kitchen/promo":
         return <KitchenPromo />;
+      case "/kitchen/prep":
+        return <KitchenPrepBoard />;
+      case "/kitchen/prep-demo":
+        return <KitchenPrepBoardDemo />;
       case "/spotify-test":
         return <SpotifyTestPanel />;
 

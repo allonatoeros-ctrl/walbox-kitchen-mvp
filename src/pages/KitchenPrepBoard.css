@@ -1,0 +1,512 @@
+/* PASSIVE KDS V2 (2026-09-17). Sistema visivo dedicato, non riusa lo stile poster/grunge di
+   KitchenTvScreen.css: data board leggibile a distanza per la cucina, non un poster da cliente.
+   Layout a 3 fasce: TOP produzione ora (aggregato) / CENTER ticket ordini (max 6) / BOTTOM
+   carico in arrivo (aggregato). Zero interazione, zero scroll voluto sulla vista a riposo. */
+
+:root {
+  --kpb-bg: #12141a;
+  --kpb-bg-card: #1b1f28;
+  --kpb-bg-card-alt: #20242f;
+  --kpb-border: #2b303c;
+  --kpb-cream: #f4efe4;
+  --kpb-muted: #9aa3b5;
+  --kpb-amber: #f5b400;
+  --kpb-amber-dark: #cf9200;
+  --kpb-blue: #aebbd4;
+  --kpb-blue-dark: #7c8aa8;
+  --kpb-red: #d63b3b;
+  --kpb-red-bg: #2a1518;
+  --kpb-red-border: #4a1f22;
+  --font-board: 'Oswald', 'Arial Narrow', sans-serif;
+}
+
+.kpb-board {
+  width: 100%;
+  min-height: 100vh;
+  background: var(--kpb-bg);
+  color: var(--kpb-cream);
+  font-family: var(--font-board);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(14px, 1.4vh, 22px) clamp(16px, 1.6vw, 28px);
+  gap: clamp(8px, 1vh, 14px);
+  overflow: hidden;
+}
+
+.kpb-board * {
+  box-sizing: border-box;
+}
+
+.kpb-preview-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  text-align: center;
+  background: #f5b400;
+  color: #201700;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  font-size: 12px;
+  padding: 4px 0;
+}
+
+.kpb-audio-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 11, 15, 0.86);
+}
+
+.kpb-audio-gate-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(12px, 1.6vh, 20px);
+  padding: clamp(24px, 3vh, 40px) clamp(28px, 3vw, 48px);
+  background: var(--kpb-bg-card);
+  border: 1px solid var(--kpb-border);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.kpb-audio-gate-icon {
+  font-size: clamp(36px, 5vh, 56px);
+}
+
+.kpb-audio-gate-text {
+  margin: 0;
+  color: var(--kpb-cream);
+  font-size: clamp(14px, 1.6vh, 18px);
+  letter-spacing: 0.02em;
+}
+
+.kpb-audio-gate-btn {
+  border: none;
+  border-radius: 999px;
+  padding: clamp(12px, 1.6vh, 18px) clamp(28px, 3vw, 44px);
+  background: var(--kpb-amber);
+  color: #201700;
+  font-family: var(--font-board);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-size: clamp(14px, 1.8vh, 18px);
+  cursor: pointer;
+}
+
+.kpb-audio-gate-btn:active {
+  background: var(--kpb-amber-dark);
+}
+
+/* HEADER */
+.kpb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: clamp(6px, 0.8vh, 12px);
+  border-bottom: 1px solid var(--kpb-border);
+  flex: 0 0 auto;
+}
+
+.kpb-header-left {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.4vw, 22px);
+  min-width: 0;
+}
+
+.kpb-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.kpb-logo-mark {
+  font-size: clamp(18px, 1.8vw, 26px);
+}
+
+.kpb-logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+
+.kpb-logo-title {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  font-size: clamp(14px, 1.3vw, 18px);
+}
+
+.kpb-logo-subtitle {
+  font-size: clamp(8px, 0.65vw, 9px);
+  letter-spacing: 0.08em;
+  color: var(--kpb-muted);
+  font-weight: 600;
+}
+
+.kpb-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--kpb-border);
+}
+
+.kpb-title-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kpb-title {
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  font-size: clamp(18px, 1.9vw, 26px);
+  white-space: nowrap;
+}
+
+.kpb-subtitle {
+  font-size: clamp(9px, 0.85vw, 12px);
+  color: var(--kpb-muted);
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.kpb-header-right {
+  display: flex;
+  align-items: flex-start;
+}
+
+.kpb-clock-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.kpb-date {
+  font-size: clamp(9px, 0.8vw, 11px);
+  letter-spacing: 0.08em;
+  color: var(--kpb-muted);
+  font-weight: 600;
+}
+
+.kpb-time {
+  font-size: clamp(18px, 2vw, 26px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.kpb-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: clamp(9px, 0.8vw, 11px);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #43d17a;
+}
+
+.kpb-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #43d17a;
+  animation: kpb-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes kpb-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+/* MAIN — 3 fasce verticali: TOP / CENTER (flessibile) / BOTTOM */
+.kpb-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(8px, 1vh, 14px);
+}
+
+.kpb-band {
+  background: var(--kpb-bg-card);
+  border: 1px solid var(--kpb-border);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kpb-band-top {
+  flex: 0 0 auto;
+  max-height: 22vh;
+}
+
+.kpb-band-bottom {
+  flex: 0 0 auto;
+  max-height: 22vh;
+}
+
+.kpb-band-center {
+  flex: 1;
+  min-height: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+}
+
+.kpb-band-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: clamp(7px, 0.9vh, 11px) clamp(12px, 1.4vw, 18px);
+  border-bottom: 1px solid var(--kpb-border);
+  flex: 0 0 auto;
+}
+
+.kpb-band-icon {
+  font-size: clamp(14px, 1.3vw, 18px);
+}
+
+.kpb-band-title {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: clamp(13px, 1.2vw, 17px);
+  flex: 1;
+}
+
+.kpb-band-count {
+  font-weight: 800;
+  font-size: clamp(11px, 1vw, 14px);
+  letter-spacing: 0.04em;
+  color: var(--kpb-muted);
+  background: rgba(0, 0, 0, 0.28);
+  border-radius: 10px;
+  padding: 3px 10px;
+}
+
+.kpb-band-top .kpb-band-count { color: var(--kpb-amber); }
+.kpb-band-bottom .kpb-band-count { color: var(--kpb-blue); }
+
+/* Aggregate lists (TOP/BOTTOM) — righe compatte prodotto x quantita', mai un ticket per ordine. */
+.kpb-agg-list {
+  list-style: none;
+  margin: 0;
+  padding: clamp(6px, 0.8vh, 10px) clamp(12px, 1.4vw, 18px);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px clamp(14px, 1.6vw, 26px);
+}
+
+.kpb-agg-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: clamp(140px, 16vw, 220px);
+}
+
+.kpb-thumb {
+  width: clamp(26px, 2.4vw, 36px);
+  height: clamp(26px, 2.4vw, 36px);
+  border-radius: 7px;
+  object-fit: cover;
+  background: #0d0f14;
+  flex-shrink: 0;
+}
+
+.kpb-thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(13px, 1.2vw, 17px);
+}
+
+.kpb-agg-name {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  font-size: clamp(12px, 1.05vw, 15px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.kpb-agg-qty {
+  font-weight: 800;
+  font-size: clamp(14px, 1.3vw, 18px);
+  color: var(--kpb-amber);
+  white-space: nowrap;
+}
+
+.kpb-band-bottom .kpb-agg-qty { color: var(--kpb-blue); }
+
+.kpb-x {
+  font-size: 0.6em;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+/* CENTER — ticket grandi, max 6, griglia 3 colonne x 2 righe. Nessuna interazione, nessuno
+   scroll: e' un display passivo, mai un elenco che cresce oltre lo spazio disponibile. */
+.kpb-ticket-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(10px, 1.2vw, 18px);
+}
+
+.kpb-ticket {
+  background: var(--kpb-bg-card);
+  border: 2px solid var(--kpb-border);
+  border-radius: 16px;
+  padding: clamp(12px, 1.2vw, 20px);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kpb-ticket-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: clamp(6px, 0.8vh, 10px);
+  margin-bottom: clamp(6px, 0.8vh, 10px);
+  border-bottom: 2px solid var(--kpb-border);
+  flex: 0 0 auto;
+}
+
+.kpb-ticket-code {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: clamp(20px, 1.9vw, 30px);
+  color: var(--kpb-amber);
+}
+
+.kpb-ticket-flame {
+  font-size: clamp(16px, 1.5vw, 22px);
+}
+
+.kpb-ticket-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 0.6vh, 8px);
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.kpb-ticket-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.kpb-ticket-item-name {
+  font-weight: 700;
+  font-size: clamp(13px, 1.25vw, 18px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.kpb-ticket-item-qty {
+  font-weight: 800;
+  font-size: clamp(15px, 1.4vw, 20px);
+  white-space: nowrap;
+}
+
+.kpb-ticket-allergens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: clamp(6px, 0.8vh, 10px);
+  flex: 0 0 auto;
+}
+
+.kpb-ticket-badge {
+  background: var(--kpb-red-bg);
+  border: 1px solid var(--kpb-red-border);
+  color: #f4c9c9;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: clamp(10px, 0.9vw, 13px);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.kpb-ticket-badge-unverified {
+  background: rgba(214, 59, 59, 0.22);
+  color: #ffd9d9;
+}
+
+.kpb-ticket-note {
+  margin: clamp(6px, 0.8vh, 10px) 0 0;
+  font-size: clamp(11px, 1vw, 14px);
+  color: var(--kpb-muted);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  flex: 0 0 auto;
+}
+
+.kpb-overflow-note {
+  flex: 0 0 auto;
+  text-align: center;
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  font-size: clamp(13px, 1.2vw, 17px);
+  color: var(--kpb-muted);
+}
+
+.kpb-empty {
+  margin: 0;
+  padding: clamp(14px, 2vh, 24px);
+  color: var(--kpb-muted);
+  font-size: clamp(11px, 1vw, 14px);
+  text-align: center;
+}
+
+.kpb-empty-center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Densita' su viewport stretti (fallback, il board resta pensato per TV/desktop 16:9) */
+@media (max-width: 900px) {
+  .kpb-ticket-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+  }
+}
