@@ -4,23 +4,27 @@ import { test, expect } from '@playwright/test';
 
 const CART_KEY = 'walbox_kitchen_cart_v1';
 
+// FALLO PESANTE include sempre Krombacher Pils (2026-09-19), che e' `evening_only`: prima
+// delle 18:00 il combo non e' ordinabile per regola di servizio. Questi test riguardano la
+// persistenza del sacco, non quel gate, quindi l'orologio e' fissato a serata aperta.
+const EVENING = new Date('2026-09-14T19:00:00');
+const INCLUDED_BEER = 'Krombacher Pils';
+
 async function gotoMenu(page) {
+  await page.clock.setFixedTime(EVENING);
   await page.goto('/kitchen?nickname=Eros');
   await page.getByRole('button', { name: /ENTRA NEL MENU/i }).click();
 }
 
-/** Aggiunge un FALLO PESANTE scegliendo la birra: e' la riga carrello piu' fragile da ripristinare. */
+/** Aggiunge un FALLO PESANTE: e' la riga carrello piu' fragile da ripristinare (id composito
+ *  `combo::birra` + `includesBeerId`). La birra non si sceglie piu': e' fissa nel combo. */
 async function addFalloPesante(page) {
   await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
   await page.locator('.pm-card-closed').first().click();
   const card = page.locator('.pm-card--open').first();
-  const pill = card.locator('.pm-beer-pill').first();
-  const beerName = (await pill.locator('.pm-beer-pill-name').innerText()).trim();
-  await pill.click();
-  await card.locator('.pm-beer-detail-cta').click();
   await expect(card.locator('.pm-btn-heavy')).toBeEnabled();
   await card.locator('.pm-btn-heavy').click();
-  return beerName;
+  return INCLUDED_BEER;
 }
 
 async function openCart(page) {

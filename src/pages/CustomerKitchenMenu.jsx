@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { kitchenCategoryPromos, kitchenBeerPairing } from '../data/kitchenMockData';
+import { kitchenCategoryPromos, kitchenBeerPairing, FALLO_PESANTE_INCLUDED_BEER_ID, FALLO_PESANTE_INCLUDED_SIDE_ID } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders, rememberOwnedOrderId, getOwnedOrderIds } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
@@ -13,7 +13,7 @@ import BirreSection from '../components/kitchen/BirreSection';
 import TagliereSection from '../components/kitchen/TagliereSection';
 import BevandeSection from '../components/kitchen/BevandeSection';
 import AllergenBadges from '../components/kitchen/AllergenBadges';
-import { buildIncludedBeersNote } from '../lib/kitchenServiceRules';
+import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
 import './CustomerKitchenMenu.css';
@@ -91,6 +91,10 @@ CATEGORY_SVGS.tagliere = (
     <circle cx="26" cy="14" r="3.2" fill="currentColor" opacity="0.45" />
   </svg>
 );
+// Icona categoria CONTORNI (2026-09-19): riusa l'icona `patatine` già disegnata — stesso
+// mondo (fritto/contorno), nessun asset nuovo generato. `patatine` non è più una categoria
+// di navigazione (vedi MENU_CATEGORIES), quindi l'icona non è condivisa con nulla di attivo.
+CATEGORY_SVGS.contorni = CATEGORY_SVGS.patatine;
 CATEGORY_SVGS.bevande = (
   <svg width="24" height="34" viewBox="0 0 24 34" fill="none">
     <path d="M4,8 L20,8 L18,32 C17.8,33 17,33.5 12,33.5 C7,33.5 6.2,33 6,32 Z" fill="currentColor" />
@@ -110,6 +114,11 @@ const MENU_CATEGORIES = [
   { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.insalatone },
   { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.tartare },
   { key: 'tagliere', label: 'TAGLIERI', icon: CATEGORY_SVGS.tagliere },
+  // CONTORNI esposta come categoria cliente (2026-09-19, decisione Eros): oggi contiene la
+  // sola Patate al Forno (`item-058`, €5), che è anche il contorno incluso nel FALLO PESANTE.
+  // Nessuna sezione dedicata: cade sulla card generica in fondo a questo file, come le
+  // categorie senza componente proprio.
+  { key: 'contorni', label: 'CONTORNI', icon: CATEGORY_SVGS.contorni },
   { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
   { key: 'bevande', label: 'BEVANDE', icon: CATEGORY_SVGS.bevande },
 ];
@@ -120,10 +129,23 @@ const HOME_FEATURED = [
   { id: 'item-017', photoBg: '#f9f0e8' }, // 146:3
 ];
 
-// Panini/birre legacy pre-menu-attuale rimossi da kitchenMockData.js (cleanup 2026-09-15):
-// nessun id da nascondere oggi. Array tenuto vuoto (non rimosso) come meccanismo pronto per
-// futuri item da nascondere al cliente senza toccarli in kitchenMenuItems.
-const CUSTOMER_HIDDEN_ITEM_IDS = [];
+// Item presenti a catalogo ma nascosti al SOLO menu cliente. Non vengono rimossi da
+// `kitchenMenuItems`: restano ordinabili dalla cassa staff (`/kitchen/cassa`) e restano nel
+// catalogo server, quindi nessun ordine storico e nessuna riga `kitchen_menu_items` cambia.
+//
+// BIRRA UNICA — TEMPORANEO (2026-09-19, decisione Eros): a menu cliente resta la sola
+// Krombacher Pils (`item-057`). Le 6 bottiglie Keiler/Lupulus sono nascoste qui. Per
+// riportarle a menu basta svuotare questo array — insieme a `kitchenBeerPairing`
+// (kitchenMockData.js) e al sottotitolo della categoria BIRRE qui sotto, che sono le altre
+// due metà della stessa decisione.
+const CUSTOMER_HIDDEN_ITEM_IDS = [
+  'item-051', // Keiler Helles
+  'item-052', // Keiler Land-Pils
+  'item-053', // Keiler Kellerbier
+  'item-054', // Keiler Weisse
+  'item-055', // Keiler Dunkel Weisse
+  'item-056', // Lupulus
+];
 
 
 // AUTO-SELLING V1 (BEER SPRINT V1 §5/§7-D): ordine di priorità quando il sacco
@@ -136,6 +158,12 @@ const BEER_PAIRING_CATEGORY_PRIORITY = ['panini', 'bbq', 'cicchetti', 'tagliere'
 // un FALLO PESANTE via `includesBeerId`), se nessuna categoria food nel sacco ha
 // un pairing configurato, o se la birra consigliata non è ordinabile (prezzo non
 // confermato / esaurita) — mai un CTA morto, mai un doppione della birra già presa.
+//
+// 2026-09-19: due esclusioni in più, per la stessa ragione (mai un CTA che aggiunge al sacco
+// qualcosa che il cliente non può avere): una birra NASCOSTA al menu cliente
+// (`CUSTOMER_HIDDEN_ITEM_IDS`) non viene mai suggerita, e una birra `evening_only` non viene
+// suggerita fuori dal suo orario di servizio — la stessa regola che blocca la sua CTA in
+// BirreSection e il FALLO PESANTE in PesiMassimiSection.
 function findRecommendedBeer(orderItems, menuItems) {
   if (orderItems.some((o) => o.includesBeerId)) return null;
 
@@ -153,8 +181,11 @@ function findRecommendedBeer(orderItems, menuItems) {
     ];
   if (!beerId) return null;
 
+  if (CUSTOMER_HIDDEN_ITEM_IDS.includes(beerId)) return null;
+
   const beer = menuItems.find((i) => i.id === beerId);
   if (!beer || beer.price == null || beer.available === false) return null;
+  if (beer.availability === 'evening_only' && !isEveningServiceActive()) return null;
   return beer;
 }
 
@@ -173,6 +204,7 @@ function getCategoryTitle(cat) {
   if (cat === 'bbq') return <>PESI <span style={{ color: 'var(--k-orange)' }}>MASSIMI</span></>;
   if (cat === 'tagliere') return <>TAGLI<span style={{ color: 'var(--k-orange)' }}>ERI</span></>;
   if (cat === 'bevande') return <>BEVANDE</>;
+  if (cat === 'contorni') return <>CON<span style={{ color: 'var(--k-orange)' }}>TORNI</span></>;
   return cat.toUpperCase();
 }
 
@@ -183,7 +215,10 @@ function getCategorySubtitle(cat) {
   if (cat === 'insalatone') return 'CAESAR · SALMON · VEGGY';
   if (cat === 'tartare') return 'CRUDA E CONTENTA · DOLCE MA CRUDA';
   if (cat === 'tagliere') return 'SALUMI SERISSIMI · FORMAGGI DISCUTIBILI · PACE FATTA';
-  if (cat === 'birre') return 'KEILER HELLES · LAND-PILS · KELLERBIER · WEISSE · DUNKEL WEISSE · LUPULUS · KROMBACHER (SOLO SERA)';
+  // BIRRA UNICA — TEMPORANEO (2026-09-19): il sottotitolo elenca solo ciò che il cliente vede
+  // davvero. Va ripristinato insieme a `CUSTOMER_HIDDEN_ITEM_IDS` quando le bottiglie tornano.
+  if (cat === 'birre') return 'KROMBACHER PILS ALLA SPINA (SOLO SERA)';
+  if (cat === 'contorni') return 'PATATE AL FORNO';
   if (cat === 'bevande') return 'ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · SCHWEPPES LEMON · SCHWEPPES TONICA';
   return null;
 }
@@ -324,12 +359,12 @@ export default function CustomerKitchenMenu() {
 
   const pesiMassimiItems = customerItems.filter((i) => i.category === 'bbq');
 
-  // BEER SPRINT V1 Fase E (2026-09-14, decisione Eros): catalogo reale delle birre
-  // scelte incluse in FALLO PESANTE — le 6 bottiglie + Krombacher (evening_only,
-  // gate lato UI in PesiMassimiSection). Filtro per tag `birre-v1`, non per id.
-  const falloPesanteBeerOptions = menuItems.filter(
-    (i) => i.category === 'birre' && i.tags?.includes('birre-v1'),
-  );
+  // FALLO PESANTE (2026-09-19, decisione Eros): niente più scelta birra. I due inclusi fissi
+  // del combo si leggono dal catalogo REALE — così availability ed ESAURITO arrivano dalla
+  // stessa fonte del resto del menu (`useKitchenMenu`, override staff + Supabase) e non da
+  // una copia. Se uno dei due manca o è esaurito, PesiMassimiSection disabilita il combo.
+  const falloPesanteBeer = menuItems.find((i) => i.id === FALLO_PESANTE_INCLUDED_BEER_ID) ?? null;
+  const falloPesanteSide = menuItems.find((i) => i.id === FALLO_PESANTE_INCLUDED_SIDE_ID) ?? null;
   const featuredItems = HOME_FEATURED
     .map(({ id, photoBg }) => {
       const item = customerItems.find((i) => i.id === id);
@@ -750,7 +785,12 @@ export default function CustomerKitchenMenu() {
 
       {/* Menu items */}
       {activeCategory === 'bbq' && visibleItems.length > 0 && (
-        <PesiMassimiSection items={visibleItems} onAdd={addItem} beerOptions={falloPesanteBeerOptions} />
+        <PesiMassimiSection
+          items={visibleItems}
+          onAdd={addItem}
+          includedBeer={falloPesanteBeer}
+          includedSide={falloPesanteSide}
+        />
       )}
       {activeCategory === 'panini' && visibleItems.length > 0 && (
         <PaniniSection items={visibleItems} onAdd={addItem} />

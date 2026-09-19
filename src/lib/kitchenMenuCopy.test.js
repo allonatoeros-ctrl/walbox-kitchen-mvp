@@ -30,14 +30,11 @@ function allSourceFiles(dir = SRC, acc = []) {
 }
 
 // ── 2. IMMAGINI BIRRA ────────────────────────────────────────────────────────
+// NOTA (2026-09-19): i frame birra dentro il combo (`.pm-beer-*`) non esistono piu' come UI —
+// FALLO PESANTE ha composizione fissa e non mostra piu' foto birra. Le regole CSS sono rimaste
+// nel file ma non sono piu' renderizzate, quindi non ha senso vincolarle qui: l'unico posto
+// dove una foto di birra arriva ancora al cliente e' BirreSection.
 test('ogni frame immagine birra usa contain: con cover di una bottiglia 1:2 se ne vedeva meta', () => {
-  const pm = read('components/kitchen/PesiMassimiSection.css');
-  for (const sel of ['.pm-beer-pill-photo', '.pm-beer-chosen-photo', '.pm-beer-detail-photo']) {
-    const body = ruleBody(pm, sel);
-    assert.match(body, /object-fit:\s*contain/, `${sel} deve essere contain`);
-    assert.doesNotMatch(body, /object-fit:\s*cover/, `${sel} non deve croppare`);
-    assert.match(body, /object-position:\s*center/, `${sel} deve essere centrato`);
-  }
   const br = read('components/kitchen/BirreSection.css');
   for (const sel of ['.br-card-photo', '.br-card-body-photo']) {
     const body = ruleBody(br, sel);
@@ -47,9 +44,6 @@ test('ogni frame immagine birra usa contain: con cover di una bottiglia 1:2 se n
 });
 
 test('i frame birra sono piu piccoli di prima (card compatte su telefono)', () => {
-  const pm = read('components/kitchen/PesiMassimiSection.css');
-  assert.match(ruleBody(pm, '.pm-beer-pill-photo'), /width:\s*22px/);   // era 24
-  assert.match(ruleBody(pm, '.pm-beer-chosen-photo'), /width:\s*24px/); // era 26
   const br = read('components/kitchen/BirreSection.css');
   assert.match(ruleBody(br, '.br-card-photo-wrap'), /width:\s*72px/);       // era 96
   assert.match(ruleBody(br, '.br-card-photo'), /max-height:\s*132px/);      // era 192 pieni
@@ -62,16 +56,31 @@ test('tutte e 7 le birre hanno un asset: nessuna cade sul placeholder', () => {
   for (const b of beers) assert.match(b.image ?? '', /^\/assets\/kitchen\/beers\/.+\.png$/, `${b.id} senza asset`);
 });
 
-// ── 3. PREZZO DI LISTINO ─────────────────────────────────────────────────────
-test('il dettaglio birra nel combo non mostra piu il prezzo di listino', () => {
+// ── 3. COMBO FALLO PESANTE: nessun prezzo birra, nessuna scelta birra ────────
+test('il combo non mostra alcun prezzo della birra inclusa', () => {
   const jsx = read('components/kitchen/PesiMassimiSection.jsx');
   assert.doesNotMatch(jsx, /a listino/);
   assert.doesNotMatch(jsx, /pm-beer-detail-listino/);
-  // resta formato + INCLUSA NEL COMBO
-  assert.match(jsx, /previewBeer\.format \? `\$\{previewBeer\.format\.toUpperCase\(\)\} · ` : ''/);
-  assert.match(jsx, /INCLUSA NEL COMBO/);
-  // niente CSS orfano
   assert.doesNotMatch(read('components/kitchen/PesiMassimiSection.css'), /pm-beer-detail-listino/);
+});
+
+// FALLO PESANTE a composizione fissa (2026-09-19, decisione Eros): panino + Patate al Forno +
+// Krombacher Pils. La scelta della birra non esiste piu' e non deve rientrare di soppiatto.
+test('il combo non ha nessuna UI di scelta birra', () => {
+  const jsx = read('components/kitchen/PesiMassimiSection.jsx');
+  for (const gone of ['pm-beer-pill', 'pm-beer-detail', 'pm-beer-chosen', 'SCEGLI QUESTA BIRRA', 'beerOptions']) {
+    assert.ok(!jsx.includes(gone), `il selettore birra e' tornato nel combo: ${gone}`);
+  }
+  // Gli inclusi arrivano da fuori, senza id hardcoded nel componente.
+  assert.match(jsx, /includedBeer/);
+  assert.match(jsx, /includedSide/);
+  assert.doesNotMatch(jsx, /item-05\d/);
+});
+
+test('il sottotitolo del combo dice esattamente cosa c\'e dentro', () => {
+  for (const c of Object.values(kitchenPesiMassimiCombos)) {
+    assert.equal(c.subtitle, 'Patate al forno + Krombacher Pils', `${c.id} ha il sottotitolo sbagliato`);
+  }
 });
 
 test('il prezzo della birra resta nel catalogo e nella sezione BIRRE (rimosso solo dentro il combo)', () => {

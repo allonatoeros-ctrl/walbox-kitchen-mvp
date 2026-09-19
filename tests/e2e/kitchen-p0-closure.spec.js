@@ -176,7 +176,11 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     }
   });
 
-  test('UI reale: FALLO PESANTE resta bloccato finche non si conferma la birra, poi la porta in carrello', async ({ page }) => {
+  test('UI reale: FALLO PESANTE porta sempre Krombacher in carrello, e resta bloccato fuori orario', async ({ page }) => {
+    // Composizione fissa (2026-09-19): niente piu' selettore birra. La riga carrello deve
+    // comunque nascere con `includesBeerId` valorizzato — e' cio' che garantisce che P0-2
+    // (la birra arriva alla comanda via customer_note) abbia sempre un dato da cui partire.
+    await page.clock.setFixedTime(new Date('2026-09-14T19:00:00'));
     await page.goto('/kitchen?nickname=Eros');
     // HOME -> CATEGORIE -> PESI MASSIMI (stessa navigazione di openCategoryList in
     // customer-kitchen-flow.spec.js: la lista si apre solo dalla tile della categoria).
@@ -189,28 +193,32 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     const heavy = card.locator('.pm-btn-heavy');
     await expect(heavy).toBeVisible();
 
-    // Gate reale: senza birra confermata il combo non e' ordinabile. E' cio' che garantisce che
-    // `includesBeerId` esista sempre sulla riga carrello, quindi che P0-2 abbia sempre un dato.
-    await expect(heavy).toBeDisabled();
+    // Nessun selettore birra residuo: la scelta non esiste piu'.
+    await expect(card.locator('.pm-beer-pill')).toHaveCount(0);
+    await expect(card.locator('.pm-beer-detail')).toHaveCount(0);
 
-    // Sceglie la prima birra della lista e la conferma.
-    const pill = card.locator('.pm-beer-pill').first();
-    await pill.scrollIntoViewIfNeeded();
-    const beerName = (await pill.locator('.pm-beer-pill-name').innerText()).trim();
-    await pill.click();
-    const confirm = card.locator('.pm-beer-detail-cta');
-    await expect(confirm).toContainText('SCEGLI QUESTA BIRRA');
-    await confirm.click();
-
-    await expect(card.locator('.pm-beer-chosen-name')).toContainText(beerName.toUpperCase());
+    // La sera il combo e' ordinabile direttamente, senza passaggi intermedi.
     await expect(heavy).toBeEnabled();
-
+    await expect(heavy).toHaveText('FALLO PESANTE');
     await heavy.scrollIntoViewIfNeeded();
     await heavy.click();
 
-    // La riga carrello porta la birra scelta: e' l'input di buildIncludedBeersNote.
+    // La riga carrello porta la birra inclusa: e' l'input di buildIncludedBeersNote.
     await page.locator('.kitch-bottom-card, .kitch-cart-bar').first().click();
     await expect(page.locator('.kitch-drawer')).toBeVisible();
-    await expect(page.locator('.kitch-drawer')).toContainText(beerName.toUpperCase().slice(0, 6));
+    await expect(page.locator('.kitch-drawer')).toContainText('KROMBA');
+  });
+
+  test('UI reale: prima delle 18:00 FALLO PESANTE e bloccato, perche la birra inclusa e evening_only', async ({ page }) => {
+    await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
+    await page.goto('/kitchen?nickname=Eros');
+    await page.getByRole('button', { name: /ENTRA NEL MENU/i }).click();
+    await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
+    await page.locator('.pm-card-closed').first().click();
+
+    const heavy = page.locator('.pm-card--open').first().locator('.pm-btn-heavy');
+    await expect(heavy).toBeDisabled();
+    // La CTA dice il perche': mai un bottone spento e muto.
+    await expect(heavy).toHaveText('SOLO LA SERA');
   });
 });

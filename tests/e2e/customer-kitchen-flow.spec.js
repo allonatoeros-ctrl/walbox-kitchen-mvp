@@ -923,11 +923,17 @@ test('19. Cliente inserisce un codice promo non valido: ordine confermato comunq
   expect(promoSent.body?.p_code).toBe('WALRUS-USED1');
 });
 
-test('20. Krombacher (evening_only, BEER SPRINT V1 Fase E): CTA "SOLO LA SERA" prima delle 18:00, "LO VOGLIO" ordinabile dopo', async ({ page }) => {
-  // Prima delle 18:00 locali: prezzo confermato (€6) ma servizio serale non attivo.
+test('20. Krombacher (evening_only): CTA "SOLO LA SERA" prima delle 18:00, "LO VOGLIO" a €5,00 dopo', async ({ page }) => {
+  // Prima delle 18:00 locali: prezzo confermato (€5, 2026-09-19) ma servizio serale non attivo.
   await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'BIRRE');
+
+  // BIRRA UNICA (2026-09-19): le 6 bottiglie Keiler/Lupulus sono nascoste al menu cliente,
+  // resta la sola Krombacher. Se tornano a menu, questo assert va aggiornato insieme a
+  // CUSTOMER_HIDDEN_ITEM_IDS.
+  await expect(page.locator('.br-card')).toHaveCount(1);
+  await expect(page.getByText('KEILER')).toHaveCount(0);
 
   const krombacherCard = page.locator('.br-card', { hasText: 'KROMBACHER PILS' });
   await expect(krombacherCard.getByText('SOLO LA SERA').first()).toBeVisible();
@@ -955,15 +961,15 @@ test('20. Krombacher (evening_only, BEER SPRINT V1 Fase E): CTA "SOLO LA SERA" p
   const eveningCta = krombacherCardEvening.locator('.br-btn-want');
   await expect(eveningCta).toHaveText('LO VOGLIO');
   await expect(eveningCta).toBeEnabled();
-  await expect(krombacherCardEvening.getByText('€6').first()).toBeVisible();
+  await expect(krombacherCardEvening.getByText('€5').first()).toBeVisible();
 
   await eveningCta.click();
   await expect(page.getByText('1 ROBA NEL SACCO')).toBeVisible();
-  await expect(page.getByText('€6,00')).toBeVisible();
+  await expect(page.getByText('€5,00')).toBeVisible();
 });
 
-test('21. FALLO PESANTE (BEER SPRINT V1 Fase E): birra inclusa obbligatoria, prezzo combo invariato, Krombacher segue evening_only', async ({ page }) => {
-  // Prima delle 18:00: le 6 bottiglie sono scegliibili, Krombacher è bloccata.
+test('21. FALLO PESANTE (composizione fissa 2026-09-19): niente scelta birra, copy corretta, gate serale, prezzo combo invariato', async ({ page }) => {
+  // Prima delle 18:00: il combo include Krombacher, che e' `evening_only` → non ordinabile.
   await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'PESI MASSIMI');
@@ -971,66 +977,57 @@ test('21. FALLO PESANTE (BEER SPRINT V1 Fase E): birra inclusa obbligatoria, pre
 
   const openCard = page.locator('.pm-card--open');
   const heavyCta = openCard.locator('.pm-btn-heavy');
-  // Nessuna birra scelta: FALLO PESANTE resta disabilitato, nessun add silenzioso.
-  await expect(heavyCta).toBeDisabled();
-  await expect(heavyCta).toHaveText('FALLO PESANTE');
-  // Prezzo del combo mostrato invariato prima ancora di scegliere la birra.
-  await expect(openCard.locator('.pm-upsell-price')).toHaveText('€19');
 
-  const krombacherPill = openCard.locator('.pm-beer-pill', { hasText: 'Krombacher Pils' });
-  await expect(krombacherPill).toBeDisabled();
-  await expect(krombacherPill).toContainText('SOLO LA SERA');
+  // Copy approvata: titolo + cosa c'e' dentro. Nessun "PANINO + BIRRA" generico.
+  await expect(openCard.locator('.pm-upsell-title')).toHaveText('FALLO PESANTE');
+  await expect(openCard.locator('.pm-upsell-sub')).toHaveText('Patate al forno + Krombacher Pils');
 
-  // BEER DISCOVERY (FINAL UX POLISH): il tap sulla birra apre il dettaglio, non seleziona.
-  await openCard.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
-  const beerDetail = openCard.locator('.pm-beer-detail');
-  await expect(beerDetail.locator('.pm-beer-detail-name')).toHaveText('KEILER HELLES');
-  await expect(beerDetail.locator('.pm-beer-detail-story')).toContainText('Morbida');
-  await expect(beerDetail.locator('.pm-beer-detail-meta')).toContainText('50 CL');
-  await expect(beerDetail.locator('.pm-beer-detail-meta')).toContainText('INCLUSA NEL COMBO');
-  // Finché non si conferma, FALLO PESANTE resta disabilitato.
-  await expect(heavyCta).toBeDisabled();
-
-  await beerDetail.getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
-  // Selezione finale esplicita, dettaglio richiuso.
-  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('KEILER HELLES');
+  // Nessuna selezione birra residua: niente pill, niente dettaglio, niente "SCEGLI QUESTA BIRRA".
+  await expect(openCard.locator('.pm-beer-pill')).toHaveCount(0);
   await expect(openCard.locator('.pm-beer-detail')).toHaveCount(0);
-  await expect(heavyCta).toBeEnabled();
-  // Scegliere la birra non cambia il prezzo del combo.
+  await expect(openCard.locator('.pm-beer-chosen')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'SCEGLI QUESTA BIRRA' })).toHaveCount(0);
+
+  // Gate serale ereditato dalla birra inclusa, con il motivo scritto sulla CTA.
+  await expect(heavyCta).toBeDisabled();
+  await expect(heavyCta).toHaveText('SOLO LA SERA');
+  // Prezzo del combo invariato rispetto a prima del cambio.
   await expect(openCard.locator('.pm-upsell-price')).toHaveText('€19');
 
-  await heavyCta.click();
-  await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
-  await expect(page.locator('.kitch-drawer-row-name', { hasText: 'PULLED PORK — FALLO PESANTE · KEILER HELLES' })).toBeVisible();
-  await expect(page.locator('.kitch-drawer-row-price', { hasText: '€19,00' })).toBeVisible();
-  await page.getByRole('button', { name: '×' }).click();
-
-  // Dopo le 18:00: Krombacher diventa selezionabile come le altre, stesso prezzo combo.
+  // Dopo le 18:00: ordinabile in un solo tap, stesso prezzo.
   await page.clock.setFixedTime(new Date('2026-09-14T19:00:00'));
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'PESI MASSIMI');
   await page.locator('.pm-card-closed').first().click();
 
   const eveningCard = page.locator('.pm-card--open');
-  const eveningKrombacherPill = eveningCard.locator('.pm-beer-pill', { hasText: 'Krombacher Pils' });
-  await expect(eveningKrombacherPill).toBeEnabled();
-  await eveningKrombacherPill.click();
-  await eveningCard.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
-  await expect(eveningCard.locator('.pm-beer-chosen-name')).toHaveText('KROMBACHER PILS');
   const eveningHeavyCta = eveningCard.locator('.pm-btn-heavy');
   await expect(eveningHeavyCta).toBeEnabled();
+  await expect(eveningHeavyCta).toHaveText('FALLO PESANTE');
   await expect(eveningCard.locator('.pm-upsell-price')).toHaveText('€19');
 
   await eveningHeavyCta.click();
   await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
-  // Il prezzo va letto sulla RIGA di Krombacher, non con un match globale su "€19,00": da quando
-  // IL SACCO sopravvive al reload (fix carrello 2026-09-16) il secondo `page.goto` non svuota piu'
-  // il carrello, quindi nel drawer convivono la riga Keiler Helles e quella Krombacher, entrambe
-  // a €19,00. L'assert per riga e' piu' stretto del precedente, non piu' lasco: verifica che sia
-  // QUELLA riga a costare quanto il combo.
+  // La riga carrello porta la birra inclusa: e' cio' che finisce sulla comanda (P0-2).
   const krombacherRow = page.locator('.kitch-drawer-row', { hasText: 'PULLED PORK — FALLO PESANTE · KROMBACHER PILS' });
   await expect(krombacherRow.locator('.kitch-drawer-row-name')).toHaveText('PULLED PORK — FALLO PESANTE · KROMBACHER PILS');
   await expect(krombacherRow.locator('.kitch-drawer-row-price')).toHaveText('€19,00');
+});
+
+test('21b. CONTORNI (2026-09-19): Patate al Forno ordinabile come item singolo a €5,00', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openCategoryList(page, 'CONTORNI');
+
+  const patate = page.locator('.kitch-card', { hasText: 'PATATE AL FORNO' });
+  await expect(patate).toHaveCount(1);
+  await expect(patate.locator('.kitch-card-price')).toHaveText('€5,00');
+
+  const cta = patate.getByRole('button', { name: 'LO VOGLIO' });
+  await expect(cta).toBeEnabled();
+  await cta.click();
+
+  await expect(page.getByText('1 ROBA NEL SACCO')).toBeVisible();
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('€5,00');
 });
 
 // Nota di copertura: l'autorizzazione "cliente redime solo il proprio ordine, non quello di un
