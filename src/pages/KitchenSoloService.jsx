@@ -60,8 +60,23 @@ function customerLabel(order) {
 }
 
 function itemsLine(order) {
-  return order.items.map((i) => `${i.quantity} × ${i.name.toUpperCase()}`).join(' · ');
+  return order.items
+    .map((i) => {
+      const tag = STAFF_DISAMBIGUATION_LABEL[i.itemId];
+      return `${i.quantity} × ${i.name.toUpperCase()}${tag ? ` [${tag}]` : ''}`;
+    })
+    .join(' · ');
 }
+
+// Label operativa SOLO staff per prodotti dal nome commerciale simile ma diversi per
+// categoria/preparazione (segnalato da Eros: errori di confusione in coda). Match su
+// itemId reale (kitchenMockData.js), non sul nome — mai mostrata al cliente.
+const STAFF_DISAMBIGUATION_LABEL = {
+  'item-017': 'PANINO',           // Mortazza Classe Alta
+  'item-034': 'CICCHETTO',        // Mortazza
+  'item-014': 'PROSCIUTTO CRUDO', // Crudo Ma Educato
+  'item-012': 'CARNE CRUDA',      // Crudo Vero
+};
 
 // P0-3: la derivazione vive in ../lib/kitchenAllergens (unica fonte, condivisa con AlertView).
 // Qui si usa solo il risultato, inclusa la distinzione fra "nessun allergene dichiarato" e
@@ -628,7 +643,12 @@ export function KitchenSoloServiceView({
                         onClick={() => toggleCheck(idx)}
                       >
                         <span className="kss-prep-check">{done ? '✓' : ''}</span>
-                        <span className="kss-prep-name">{item.name}</span>
+                        <span className="kss-prep-name">
+                          {item.name}
+                          {STAFF_DISAMBIGUATION_LABEL[item.itemId] && (
+                            <span className="kss-prep-tag">{STAFF_DISAMBIGUATION_LABEL[item.itemId]}</span>
+                          )}
+                        </span>
                         <span className="kss-prep-qty">{item.quantity}x</span>
                       </button>
                     );
