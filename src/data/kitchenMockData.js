@@ -601,8 +601,9 @@ export const kitchenMenuItems = [
     allergens: [],
   },
   // CONTORNI — MENU CLEANUP + PRICE SPRINT (2026-09-15, prezzo confermato da Eros).
-  // Asset fotografico ancora pending: `image: null`, stesso fallback visivo già in
-  // uso per Acqua/Pepsi/ecc.
+  // Asset fotografico consegnato e cablato (2026-09-19): `contorno_patate_al_forno.webp`
+  // in `public/assets/kitchen/menu/contorni/`, stessa convenzione delle altre categorie
+  // (1254×1254 .webp). Il fallback SVG di categoria resta come ramo `item.image` falsy.
   //
   // FALLO PESANTE V2 (2026-09-19, decisione Eros): la categoria `contorni` è ora esposta
   // in `MENU_CATEGORIES` (CustomerKitchenMenu.jsx) — Patate al Forno è ordinabile come
@@ -617,7 +618,7 @@ export const kitchenMenuItems = [
     price: 5.0,
     points: null,
     tags: ['veg', 'v2'],
-    image: null,
+    image: '/assets/kitchen/menu/contorni/contorno_patate_al_forno.webp',
     available: true,
     ingredients: 'Patate al forno.',
     allergens: [],
