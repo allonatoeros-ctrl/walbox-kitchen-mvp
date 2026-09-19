@@ -3,6 +3,7 @@ import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { resolveOrderAllergens } from '../lib/kitchenAllergens';
+import { STAFF_DISAMBIGUATION_LABEL } from '../lib/kitchenStaffLabels';
 import { getStaffSession, onAuthStateChange, isKitchenStaff, signOut } from '../lib/supabaseAuth';
 import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPreviewFixtures';
 import { useKitchenAudio } from '../hooks/useKitchenAudio';
@@ -67,16 +68,6 @@ function itemsLine(order) {
     })
     .join(' · ');
 }
-
-// Label operativa SOLO staff per prodotti dal nome commerciale simile ma diversi per
-// categoria/preparazione (segnalato da Eros: errori di confusione in coda). Match su
-// itemId reale (kitchenMockData.js), non sul nome — mai mostrata al cliente.
-const STAFF_DISAMBIGUATION_LABEL = {
-  'item-017': 'PANINO',           // Mortazza Classe Alta
-  'item-034': 'CICCHETTO',        // Mortazza
-  'item-014': 'PROSCIUTTO CRUDO', // Crudo Ma Educato
-  'item-012': 'CARNE CRUDA',      // Crudo Vero
-};
 
 // P0-3: la derivazione vive in ../lib/kitchenAllergens (unica fonte, condivisa con AlertView).
 // Qui si usa solo il risultato, inclusa la distinzione fra "nessun allergene dichiarato" e

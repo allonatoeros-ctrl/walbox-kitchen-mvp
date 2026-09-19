@@ -435,6 +435,20 @@
   min-width: 0;
 }
 
+/* Tag disambiguazione staff (prodotti dal nome simile ma preparazione diversa). Molto
+   visibile: sfondo giallo pieno, sempre leggibile da lontano su TV cucina. */
+.kpb-staff-tag {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 0.05em 0.4em;
+  background: #ffd400;
+  color: #000;
+  font-weight: 800;
+  font-size: 0.85em;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+}
+
 .kpb-ticket-item-qty {
   font-weight: 800;
   font-size: clamp(15px, 1.4vw, 20px);

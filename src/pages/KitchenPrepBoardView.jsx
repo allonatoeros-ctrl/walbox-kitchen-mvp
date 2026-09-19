@@ -18,6 +18,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { aggregatePrepBoard, buildPreparingTickets } from '../lib/kitchenPrepAggregation';
 import { kitchenMenuItems } from '../data/kitchenMockData';
 import { ALLERGEN_LABEL } from '../components/kitchen/AllergenBadges';
+import { STAFF_DISAMBIGUATION_LABEL } from '../lib/kitchenStaffLabels';
 import './KitchenPrepBoard.css';
 
 const imageByItemId = new Map(kitchenMenuItems.map((i) => [i.id, i.image]));
@@ -56,10 +57,14 @@ function ProductThumb({ itemId }) {
 }
 
 function AggregateRow({ row }) {
+  const staffTag = STAFF_DISAMBIGUATION_LABEL[row.itemId];
   return (
     <li className="kpb-agg-row">
       <ProductThumb itemId={row.itemId} />
-      <span className="kpb-agg-name">{row.name}</span>
+      <span className="kpb-agg-name">
+        {row.name}
+        {staffTag && <span className="kpb-staff-tag">[{staffTag}]</span>}
+      </span>
       <span className="kpb-agg-qty">
         <span className="kpb-x">x</span> {row.quantity}
       </span>
@@ -89,14 +94,20 @@ function PrepTicket({ ticket }) {
         <span className="kpb-ticket-flame" aria-hidden="true">🔥</span>
       </header>
       <ul className="kpb-ticket-items">
-        {ticket.items.map((line) => (
-          <li key={line.itemId} className="kpb-ticket-item">
-            <span className="kpb-ticket-item-name">{line.name}</span>
-            <span className="kpb-ticket-item-qty">
-              <span className="kpb-x">x</span> {line.quantity}
-            </span>
-          </li>
-        ))}
+        {ticket.items.map((line) => {
+          const staffTag = STAFF_DISAMBIGUATION_LABEL[line.itemId];
+          return (
+            <li key={line.itemId} className="kpb-ticket-item">
+              <span className="kpb-ticket-item-name">
+                {line.name}
+                {staffTag && <span className="kpb-staff-tag">[{staffTag}]</span>}
+              </span>
+              <span className="kpb-ticket-item-qty">
+                <span className="kpb-x">x</span> {line.quantity}
+              </span>
+            </li>
+          );
+        })}
       </ul>
       <TicketAllergens allergens={ticket.allergens} unverified={ticket.allergensUnverified} />
       {ticket.note && <p className="kpb-ticket-note">📝 {ticket.note}</p>}
