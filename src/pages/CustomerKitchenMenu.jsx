@@ -232,8 +232,24 @@ function ownedOrderIdsWithLegacy() {
   return ids;
 }
 
+// Step nome cliente (2026-09-19): il codice ordine non viene mai generato prima che il cliente
+// abbia detto come si chiama. Riusa il campo `nickname` gia' esistente (sessione localStorage +
+// colonna gia' presente lato ordine): nessuna tabella, nessuna migration.
+const GUEST_NICKNAME = 'Ospite Walrus';
+const CUSTOMER_NAME_MAX = 24;
+const CUSTOMER_NAME_MIN = 2;
+
+export function normalizeCustomerName(value) {
+  return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, CUSTOMER_NAME_MAX);
+}
+
+export function isValidCustomerName(value) {
+  const name = normalizeCustomerName(value);
+  return name.length >= CUSTOMER_NAME_MIN && name !== GUEST_NICKNAME;
+}
+
 export default function CustomerKitchenMenu() {
-  const { session } = useCustomerSession();
+  const { session, saveSession } = useCustomerSession();
   // scope cliente: vedi CustomerOrderStatus — persistenza locale limitata agli ordini propri.
   const { addOrder, redeemPromo, orders } = useKitchenOrders({ scope: 'customer' });
   const { menuItems } = useKitchenMenu();
@@ -255,6 +271,12 @@ export default function CustomerKitchenMenu() {
   const [notesOpen, setNotesOpen] = useState(Boolean(restoredCart.note));
   const [promoOpen, setPromoOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // Step nome: si apre al tap su CONFERMA ORDINE, prima di qualsiasi chiamata ad addOrder().
+  const [nameStepOpen, setNameStepOpen] = useState(false);
+  const [customerName, setCustomerName] = useState(
+    () => (isValidCustomerName(session.nickname) ? normalizeCustomerName(session.nickname) : '')
+  );
+  const [nameError, setNameError] = useState(null);
   const [bannerOrderId, setBannerOrderId] = useState(null);
   const [promoCode, setPromoCode] = useState('');
   const [orderError, setOrderError] = useState(null);
@@ -437,17 +459,44 @@ export default function CustomerKitchenMenu() {
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
   const recommendedBeer = findRecommendedBeer(orderItems, menuItems);
 
-  const handleSubmit = async () => {
+  // CONFERMA ORDINE non invia piu' direttamente: apre lo step nome. Il codice ordine nasce
+  // solo dopo il submit dello step (vedi confirmCustomerName).
+  const openNameStep = () => {
+    if (orderItems.length === 0 || submitting || !fulfillmentType) return;
+    setNameError(null);
+    setNameStepOpen(true);
+  };
+
+  const confirmCustomerName = () => {
+    const name = normalizeCustomerName(customerName);
+    if (!isValidCustomerName(name)) {
+      setNameError('Scrivi il tuo nome (almeno 2 caratteri)');
+      return;
+    }
+    setCustomerName(name);
+    saveSession(session.table, name);
+    setNameError(null);
+    setNameStepOpen(false);
+    handleSubmit(name);
+  };
+
+  const handleSubmit = async (confirmedName) => {
     // Invio bloccato finché il cliente non sceglie esplicitamente dove mangia — nessun default
     // silenzioso. Il pagamento non è più un gate qui: si sceglie su /kitchen/payment.
     if (orderItems.length === 0 || submitting || !fulfillmentType) return;
+    // Il nome è obbligatorio: senza, si torna allo step nome e nessun ordine viene creato.
+    const nickname = normalizeCustomerName(confirmedName ?? customerName);
+    if (!isValidCustomerName(nickname)) {
+      setNameStepOpen(true);
+      return;
+    }
     setSubmitting(true);
     setOrderError(null);
     // P0-2: la birra inclusa va PRIMA della nota del cliente — e' la prima cosa che la cucina
     // deve leggere sulla comanda, non una riga persa in fondo a un testo libero.
     const noteParts = [buildIncludedBeersNote(orderItems, menuItems), customerNote.trim()].filter(Boolean);
     const newOrder = {
-      nickname: session.nickname,
+      nickname,
       items: orderItems.map((o) => ({ itemId: o.baseId || o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
       note: noteParts.length > 0 ? noteParts.join(' \u00B7 ') : null,
@@ -494,7 +543,8 @@ export default function CustomerKitchenMenu() {
 
   useEffect(() => {
     if (cartOpen && orderItems.length === 0) setCartOpen(false);
-  }, [orderItems.length, cartOpen]);
+    if (!cartOpen && nameStepOpen) setNameStepOpen(false);
+  }, [orderItems.length, cartOpen, nameStepOpen]);
 
   // Sacco svuotato (cestino, o ultima riga rimossa): cadono anche nota e scelta di ritiro.
   // Sono contestuali a QUEL sacco — una nota "senza cipolla" sopravvissuta a un carrello
@@ -971,19 +1021,58 @@ export default function CustomerKitchenMenu() {
                 <div className="kitch-drawer-total-label">TOTALE</div>
                 <div className="kitch-drawer-total-value">€{total.toFixed(2).replace('.', ',')}</div>
               </div>
-              <button
-                className="kitch-btn-submit"
-                onClick={handleSubmit}
-                aria-label="Invia ordine"
-                disabled={submitting || !fulfillmentType}
-                data-testid="submit-order-btn"
-                style={(submitting || !fulfillmentType) ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
-              >
-                {submitting ? 'INVIO IN CORSO…' : 'CONFERMA ORDINE'}
-              </button>
-              <div className="kitch-secure-hint">
-                {fulfillmentType ? 'Paghi dopo: al banco o dal telefono.' : 'Prima dicci: qui o via?'}
-              </div>
+              {nameStepOpen ? (
+                /* Step nome: ultimo passo prima della creazione dell'ordine (e quindi del codice). */
+                <div data-testid="customer-name-step">
+                  <label className="kitch-fulfillment-label" htmlFor="customer-name-input">
+                    COME TI CHIAMI?
+                  </label>
+                  <input
+                    id="customer-name-input"
+                    type="text"
+                    className="kitch-extra-field"
+                    value={customerName}
+                    onChange={(e) => { setCustomerName(e.target.value); if (nameError) setNameError(null); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter') confirmCustomerName(); }}
+                    placeholder="Il tuo nome"
+                    maxLength={CUSTOMER_NAME_MAX}
+                    autoComplete="given-name"
+                    autoFocus
+                    disabled={submitting}
+                    data-testid="customer-name-input"
+                  />
+                  {nameError && (
+                    <div className="kitch-secure-hint" data-testid="customer-name-error">{nameError}</div>
+                  )}
+                  <button
+                    className="kitch-btn-submit"
+                    onClick={confirmCustomerName}
+                    aria-label="Continua"
+                    disabled={submitting || !isValidCustomerName(customerName)}
+                    data-testid="customer-name-continue"
+                    style={(submitting || !isValidCustomerName(customerName)) ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                  >
+                    {submitting ? 'INVIO IN CORSO…' : 'CONTINUA'}
+                  </button>
+                  <div className="kitch-secure-hint">Serve alla cucina per chiamarti: A42 · {normalizeCustomerName(customerName) || 'il tuo nome'}</div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    className="kitch-btn-submit"
+                    onClick={openNameStep}
+                    aria-label="Invia ordine"
+                    disabled={submitting || !fulfillmentType}
+                    data-testid="submit-order-btn"
+                    style={(submitting || !fulfillmentType) ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                  >
+                    {submitting ? 'INVIO IN CORSO…' : 'CONFERMA ORDINE'}
+                  </button>
+                  <div className="kitch-secure-hint">
+                    {fulfillmentType ? 'Paghi dopo: al banco o dal telefono.' : 'Prima dicci: qui o via?'}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

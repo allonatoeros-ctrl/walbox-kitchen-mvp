@@ -51,6 +51,14 @@ function formatClock(iso) {
   return new Date(iso).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
+// Nome cliente accanto al codice ordine ("A42 \u00B7 Marco", 2026-09-19). Il placeholder legacy
+// "Ospite Walrus" degli ordini vecchi non aggiunge informazione: non viene mostrato.
+function customerLabel(order) {
+  const name = String(order?.nickname ?? '').trim();
+  if (!name || name === 'Ospite Walrus') return '';
+  return name;
+}
+
 function itemsLine(order) {
   return order.items.map((i) => `${i.quantity} × ${i.name.toUpperCase()}`).join(' · ');
 }
@@ -421,6 +429,12 @@ export function KitchenSoloServiceView({
               <span className="kss-qcard-main">
                 <span className="kss-qcard-line1">
                   {o.orderCode}
+                  {customerLabel(o) && (
+                    <>
+                      <span className="kss-qcard-dot">·</span>
+                      <span data-testid={`customer-name-${o.orderCode}`}>{customerLabel(o)}</span>
+                    </>
+                  )}
                   <span className="kss-qcard-dot">·</span>
                   <span className="kss-qcard-min">{mins} min</span>
                 </span>
@@ -566,6 +580,12 @@ export function KitchenSoloServiceView({
                   )}
                   <div className="kss-focus-code">
                     <span data-testid="focus-code">{focusOrder.orderCode}</span>
+                    {customerLabel(focusOrder) && (
+                      <>
+                        <span className="kss-focus-sep kss-focus-sep--min">·</span>
+                        <span data-testid="focus-customer-name">{customerLabel(focusOrder)}</span>
+                      </>
+                    )}
                     <span className="kss-focus-sep kss-focus-sep--min">·</span>
                     <span className="kss-focus-min">{minutesSince(focusOrder.createdAt)} MIN</span>
                   </div>

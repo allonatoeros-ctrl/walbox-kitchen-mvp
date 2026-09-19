@@ -82,6 +82,14 @@ async function chooseFulfillment(page, fulfillment) {
   await page.getByTestId(`fulfillment-${fulfillment}`).click();
 }
 
+// Step nome cliente (2026-09-19): "Invia ordine" non crea piu' l'ordine — apre lo step
+// "COME TI CHIAMI?". Il codice ordine nasce solo dopo CONTINUA.
+async function submitOrder(page, name = 'Marco') {
+  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await page.getByTestId('customer-name-input').fill(name);
+  await page.getByTestId('customer-name-continue').click();
+}
+
 // kitchen_customer_create_order a 5 argomenti (20260913130000_kitchen_checkout_fulfillment_v1.sql)
 // è "LOCAL BUILD ONLY — NOT APPLIED TO REMOTE" per decisione esplicita di questo task (NON: apply
 // remoto). Questo ambiente E2E punta al progetto Supabase reale via .env.local, dove PostgREST non
@@ -223,7 +231,7 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   await chooseFulfillment(page, 'eat_here');
 
   // Submit the order
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await submitOrder(page);
 
   // handleSubmit ora attende addOrder() (sessione anonima + tentativo RPC) prima di redirigere:
   // aspettare /kitchen/payment è il segnale reale che l'ordine è stato scritto (fallback locale
@@ -289,7 +297,7 @@ test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redire
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'takeaway');
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await submitOrder(page);
 
   // Follow-up UX (2026-09-18): destinazione post-ordine unica, sempre la pagina pagamento
   // dedicata — nessuna schermata statica di conferma in-page, il pagamento (online o al banco)
@@ -323,7 +331,7 @@ test('3k. RPC di creazione ordine fallita: nessun ordine fantasma, carrello rest
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'eat_here');
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await submitOrder(page);
 
   await expect(page).not.toHaveURL(/\/kitchen\/payment/);
   await expect(page).not.toHaveURL(/\/kitchen\/status/);
@@ -880,7 +888,7 @@ test('18. Cliente inserisce un codice promo valido: il redeem parte con il codic
 
   await page.getByRole('button', { name: /HO UN CODICE/i }).click();
   await page.getByTestId('promo-code-input').fill('walrus-ab12c');
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await submitOrder(page);
 
   await expect(page).toHaveURL(/\/kitchen\/payment/);
   expect(promoSent.body?.p_code).toBe('walrus-ab12c');
@@ -908,7 +916,7 @@ test('19. Cliente inserisce un codice promo non valido: ordine confermato comunq
 
   await page.getByRole('button', { name: /HO UN CODICE/i }).click();
   await page.getByTestId('promo-code-input').fill('WALRUS-USED1');
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await submitOrder(page);
 
   // Un codice sbagliato non deve mai bloccare il cliente: l'ordine si conferma comunque.
   await expect(page).toHaveURL(/\/kitchen\/payment/);
@@ -1225,7 +1233,7 @@ test('26. P0 privacy: il dispositivo di un altro cliente non vede il mio ordine,
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'eat_here');
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await submitOrder(page);
   // Follow-up UX (2026-09-18): CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS.
   await expect(page).toHaveURL(/\/kitchen\/payment/);
   await page.getByTestId('ost-pay-counter').click();
@@ -1269,7 +1277,7 @@ test('27. P0 privacy: dopo il reload il cliente ritrova il PROPRIO ordine, non l
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'takeaway');
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await submitOrder(page);
   // Follow-up UX (2026-09-18): CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS.
   await expect(page).toHaveURL(/\/kitchen\/payment/);
   await page.getByTestId('ost-pay-counter').click();
@@ -1587,7 +1595,7 @@ test('37. Submit ordine → atterra sulla pagina pagamento dedicata con codice e
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'eat_here');
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  await submitOrder(page);
 
   await expect(page).toHaveURL(/\/kitchen\/payment\?orderId=/);
   await expect(page).not.toHaveURL(/\/kitchen\/status/);
