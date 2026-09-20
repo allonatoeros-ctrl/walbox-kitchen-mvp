@@ -1,8 +1,4 @@
 import { useState, useEffect } from "react";
-import CustomerEntry from "./pages/CustomerEntry";
-import CustomerRequest from "./pages/CustomerRequest";
-import StaffDashboard from "./pages/StaffDashboard";
-import LiveTvScreenWalrusPoster from "./pages/LiveTvScreenWalrusPoster";
 import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
 import CustomerKitchenEntry from "./pages/CustomerKitchenEntry";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
@@ -18,133 +14,10 @@ import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
 import KitchenPrepBoard from "./pages/KitchenPrepBoard";
 import KitchenPrepBoardDemo from "./pages/KitchenPrepBoardDemo";
-import SpotifyTestPanel from "./pages/SpotifyTestPanel";
-import StaffLogin from "./pages/StaffLogin";
-import LiveTvScreenBranded from "./pages/LiveTvScreenBranded";
-import PartyFerieRequest from "./pages/PartyFerieRequest";
-import FantaVarRoom from "./fanta/pages/FantaVarRoom";
-import FantaMatchday from "./fanta/pages/FantaMatchday";
-import FantaClassifica from "./fanta/pages/FantaClassifica";
-import FantaEntryTesseramento from "./fanta/pages/FantaEntryTesseramento";
-import FantaTeamBuilder from "./fanta/pages/FantaTeamBuilder";
-import FantaHome from "./fanta/pages/FantaHome";
-import FantaAuth from "./fanta/pages/FantaAuth";
-import FantaGuestPrompt from "./fanta/pages/FantaGuestPrompt";
-import { getStaffSession, onAuthStateChange } from "./lib/supabaseAuth";
-import { getFantaSession, onFantaAuthStateChange } from "./lib/fantaAuth";
-import { initializeStorage } from "./data/mockData";
-
-// Custom Link helper component for internal navigation without full-page reloads
-function NavLink({ to, activePath, children }) {
-  const isActive = activePath === to || 
-    (to === "/" && activePath === "/entry") || 
-    (to === "/entry" && activePath === "/");
-
-  const handleClick = (e) => {
-    e.preventDefault();
-    window.history.pushState({}, "", to);
-    // Trigger popstate event to let App component know the URL changed
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  };
-
-  return (
-    <a href={to} onClick={handleClick} className={isActive ? "active" : ""}>
-      {children}
-    </a>
-  );
-}
-
-// P0-2-R3 (F2): gate /staff — solo sessione non-anonima (staff reale). Il verdetto
-// AUTORITATIVO di "staff" resta sulla policy DB is_staff_for_venue (F0/F4); qui blocchiamo
-// solo l'accesso anonimo dal frontend. NOTA: getStaffSession() consente qualsiasi account
-// non-anonimo (F-SEC-1); la sicurezza completa richiede F0/F4/F5 (tabella staff + policy IS_STAFF).
-function StaffRouteGuard() {
-  const [session, setSession] = useState(null);
-  const [checked, setChecked] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    getStaffSession().then((s) => {
-      if (cancelled) return;
-      setSession(s);
-      setChecked(true);
-    });
-    const { data: { subscription } } = onAuthStateChange((s) => {
-      setSession(s);
-      setChecked(true);
-    });
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  if (!checked) return null;
-  return session ? <StaffDashboard /> : <StaffLogin />;
-}
-
-// F-AUTH1: gate per le route Fanta che richiedono login (entry/team/home).
-// Anonimi (incluse le sessioni signInAnonymously di Jukebox) vengono
-// rimandati a /fanta/auth; /fanta/var e /fanta/matchday restano pubblici.
-// In modalità guest (localStorage fanta_walrus_guest_mode=true) il gate
-// viene bypassato per permettere l'uso senza autenticazione.
-function isFantaGuestMode() {
-  return (
-    typeof localStorage !== 'undefined' &&
-    localStorage.getItem('fanta_walrus_guest_mode') === 'true'
-  );
-}
-
-function FantaRouteGuard({ Component }) {
-  const [session, setSession] = useState(null);
-  const [checked, setChecked] = useState(isFantaGuestMode);
-
-  useEffect(() => {
-    if (isFantaGuestMode()) return;
-
-    let cancelled = false;
-    getFantaSession().then((s) => {
-      if (cancelled) return;
-      setSession(s);
-      setChecked(true);
-    });
-    const { data: { subscription } } = onFantaAuthStateChange((s) => {
-      setSession(s);
-      setChecked(true);
-    });
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (checked && !session) {
-      const isGuest =
-        typeof localStorage !== 'undefined' &&
-        localStorage.getItem('fanta_walrus_guest_mode') === 'true';
-      if (!isGuest) {
-        window.history.pushState({}, "", "/fanta/auth");
-        window.dispatchEvent(new PopStateEvent("popstate"));
-      }
-    }
-  }, [checked, session]);
-
-  if (!checked) return null;
-  const isGuest =
-    typeof localStorage !== 'undefined' &&
-    localStorage.getItem('fanta_walrus_guest_mode') === 'true';
-  if (!session && !isGuest) return null;
-  return <Component />;
-}
-
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
   useEffect(() => {
-    // Initial storage structure initialization
-    initializeStorage();
-
     const handleLocationChange = () => {
       setCurrentPath(window.location.pathname);
     };
@@ -155,26 +28,10 @@ export default function App() {
     };
   }, []);
 
-  // Simple client-side routing logic
   const renderRoute = () => {
     switch (currentPath) {
-      // === JUKEBOX MODULE ROUTES ===
       case "/":
-      case "/entry":
-        return <CustomerEntry />;
-      case "/request":
-        return <CustomerRequest />;
-      case "/staff":
-        return <StaffRouteGuard />;
-
-      // === TV / POSTER ROUTES ===
-      case "/tv":
-      case "/tv-poster":
-        return <LiveTvScreenWalrusPoster />;
-      case "/live-tv":
-        return <LiveTvScreenBranded />;
-      case "/party-ferie":
-        return <PartyFerieRequest />;
+        return <CustomerKitchenEntry />;
 
       // === KITCHEN MODULE ROUTES ===
       case "/kitchen/entry":
@@ -191,8 +48,6 @@ export default function App() {
         return <KitchenPayments />;
       case "/kitchen/solo":
         return <KitchenSoloService />;
-      // Ordine assistito al banco (cliente senza app): stesso catalogo, stessa RPC di
-      // creazione ordine e stesso Payment Hub del flusso cliente, guard staff proprio.
       case "/kitchen/cassa":
         return <CounterAssistedOrder />;
       case "/kitchen/solo-demo":
@@ -206,72 +61,15 @@ export default function App() {
       case "/kitchen/tv":
         return <KitchenTvScreen />;
       case "/kitchen/promo":
-        // Legacy destination embedded in the already printed promo QR.
-        // Reuse the established immediate redirect so this route never mounts
-        // the retired promo UI or its pass/tracking side effects.
         return <CustomerKitchenEntry />;
       case "/kitchen/prep":
         return <KitchenPrepBoard />;
       case "/kitchen/prep-demo":
         return <KitchenPrepBoardDemo />;
-      case "/spotify-test":
-        return <SpotifyTestPanel />;
-
-      // === FANTAWALRUS MODULE ROUTES ===
-      case "/fanta/auth":
-        return <FantaAuth />;
-      case "/fanta/guest":
-        return <FantaGuestPrompt />;
-      case "/fanta/var":
-        return <FantaVarRoom />;
-      case "/fanta/matchday":
-        return <FantaMatchday />;
-      case "/fanta/classifica":
-        return <FantaClassifica />;
-      case "/fanta/entry":
-        return <FantaRouteGuard Component={FantaEntryTesseramento} />;
-      case "/fanta/team":
-        return <FantaRouteGuard Component={FantaTeamBuilder} />;
-      case "/fanta/home":
-        return <FantaRouteGuard Component={FantaHome} />;
       default:
-        // Redirect/fall-through default
-        return <CustomerEntry />;
+        return <CustomerKitchenEntry />;
     }
   };
 
-  return (
-    <>
-      {/* P1.4 — Dev Quick Link Bar: visibile SOLO in sviluppo (Vite lo rimuove in prod) */}
-      {import.meta.env.DEV && currentPath === "/staff" && (
-        <nav className="dev-navigation">
-          <strong style={{ color: "white", marginRight: "10px" }}>⚡ DEV ROUTING:</strong>
-          <NavLink to="/entry" activePath={currentPath}>Entry (Cliente)</NavLink>
-          <NavLink to="/request?table=4" activePath={currentPath}>Request (Tavolo 4)</NavLink>
-          <NavLink to="/staff" activePath={currentPath}>Staff Dashboard</NavLink>
-          <NavLink to="/tv-poster" activePath={currentPath}>Poster TV</NavLink>
-          
-          <button 
-            onClick={() => {
-              if (window.confirm("Resettare tutti i dati alle impostazioni di fabbrica (demo)?")) {
-                localStorage.clear();
-                window.location.reload();
-              }
-            }}
-            style={{ 
-              marginLeft: "auto", 
-              background: "rgba(255, 0, 127, 0.1)", 
-              borderColor: "rgba(255, 0, 127, 0.3)", 
-              color: "var(--accent-primary)" 
-            }}
-          >
-            Reset Demo 🔄
-          </button>
-        </nav>
-      )}
-
-      {/* Render selected component */}
-      {renderRoute()}
-    </>
-  );
+  return <>{renderRoute()}</>;
 }
