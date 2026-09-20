@@ -5,7 +5,10 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.clear());
 });
 
-test('smoke: entry page loads', async ({ page }) => {
-  await page.goto('/entry');
-  await expect(page.getByText('THE WALBOX')).toBeVisible();
+// Cleanup Kitchen-only (2026-09-21): /entry (branding Jukebox "THE WALBOX") non esiste piu'
+// (rimosso in 5400b5e). L'entry point nativo cliente e' "/", che reindirizza a /kitchen.
+test('smoke: root entry point loads the Kitchen home', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/kitchen$/);
+  await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible({ timeout: 10000 });
 });

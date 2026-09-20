@@ -178,20 +178,22 @@ test.beforeEach(async ({ page }) => {
   await page.evaluate(() => localStorage.clear());
 });
 
-test('1. Entry → Request preserves table and nickname', async ({ page }) => {
-  await page.goto('/entry');
-  await page.getByPlaceholder('Es. 12').fill('12');
-  await page.getByPlaceholder('Es. Marco').fill('Eros');
-  await page.getByRole('button', { name: /ENTRA NEL WALBOX/i }).click();
-  await expect(page).toHaveURL(/\/request/);
-  await expect(page).toHaveURL(/table=12/);
-  await expect(page).toHaveURL(/nickname=Eros/);
+// Cleanup Kitchen-only (2026-09-21): il ponte Jukebox /entry → /request → CTA "Cibo" non esiste
+// piu' (rimosso in 5400b5e, vedi ai-ops/reports/kitchen-clean-baseline-v2-phase-a-cleanup-regression-audit.md).
+// La radice "/" e' ora il solo entry point nativo cliente (CustomerKitchenEntry, redirect reale a
+// /kitchen) e non richiede nessuna identita' pregressa: nickname/table non vengono piu' preservati
+// tra pagine, sono catturati inline dallo step nome nativo al momento dell'ordine (vedi test 3).
+test('1. Root entry point (/) redirects to /kitchen and renders the Kitchen home', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/kitchen$/);
+  await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible({ timeout: 10000 });
 });
 
-test('2. Request → Kitchen CTA navigates to /kitchen', async ({ page }) => {
-  await page.goto('/request?table=12&nickname=Eros');
-  await page.getByRole('button', { name: /Cibo/i }).click();
-  await expect(page).toHaveURL(/\/kitchen/);
+test('2. /kitchen is reachable directly as the native entry point, no Jukebox bridge needed', async ({ page }) => {
+  await page.goto('/kitchen');
+  await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible();
+  await openFullMenu(page);
+  await expect(page.getByRole('button', { name: /PESI MASSIMI/i })).toBeVisible();
 });
 
 // SOLO SERVICE CONSOLIDATION GAP FIX (2026-09-07): /kitchen/entry (CustomerKitchenEntry.jsx) è un
@@ -208,15 +210,8 @@ test('2b. /kitchen/entry redirects to /kitchen and renders the real Kitchen home
   await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible({ timeout: 10000 });
 });
 
-test('3. Full Kitchen order uses customer identity from entry', async ({ page }) => {
-  await page.goto('/entry');
-  await page.getByPlaceholder('Es. 12').fill('12');
-  await page.getByPlaceholder('Es. Marco').fill('Eros');
-  await page.getByRole('button', { name: /ENTRA NEL WALBOX/i }).click();
-  await expect(page).toHaveURL(/\/request/);
-
-  await page.getByRole('button', { name: /Cibo/i }).click();
-  await expect(page).toHaveURL(/\/kitchen/);
+test('3. Full Kitchen order uses customer identity from the native name step', async ({ page }) => {
+  await page.goto('/kitchen');
 
   const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'A02' });
 
@@ -230,8 +225,8 @@ test('3. Full Kitchen order uses customer identity from entry', async ({ page })
   // Il Sacco Pulito (2026-09-13): fulfillment obbligatorio prima dell'invio, il pagamento no.
   await chooseFulfillment(page, 'eat_here');
 
-  // Submit the order
-  await submitOrder(page);
+  // Submit the order — nickname fornito qui, allo step nome nativo (non più precompilato via /entry).
+  await submitOrder(page, 'Eros');
 
   // handleSubmit ora attende addOrder() (sessione anonima + tentativo RPC) prima di redirigere:
   // aspettare /kitchen/payment è il segnale reale che l'ordine è stato scritto (fallback locale
@@ -511,7 +506,8 @@ for (const viewport of TOUCH_TARGET_VIEWPORTS) {
 // Test 4 storico ("Kitchen status → Jukebox bridge preserves table") rimosso: la card
 // Jukebox su /kitchen/status è stata tolta per decisione approvata (follow-up UX 2026-09-18,
 // "Rimuovi dal customer order flow la card Jukebox... né nella vista status ordini attivi").
-// Il ponte Jukebox → Kitchen resta coperto dal test 6 (verso opposto: da /request a /kitchen/status).
+// Il ponte Jukebox non esiste più (cleanup 2026-09-21): il banner nativo "ordine attivo" di
+// /kitchen → /kitchen/status resta coperto dal test 6.
 
 test('4b. Back button on /kitchen/status meets 44x44 tap target on mobile viewports', async ({ page }) => {
   const orders = makeSeedOrder();
@@ -557,18 +553,21 @@ test('5. Staff dashboard shows Eros', async ({ page }) => {
   test.skip(true, 'Solo Service non mostra il nickname nella coda/focus live — gap noto, serve decisione di prodotto');
 });
 
-test('6. Jukebox shows Segui ordine CTA when active kitchen order exists', async ({ page }) => {
+// Cleanup Kitchen-only (2026-09-21): la CTA "Segui ordine" viveva nell'hub Jukebox
+// (CustomerRequest.jsx, rimosso in 5400b5e). L'equivalente nativo e piu' recente e' gia' dentro
+// CustomerKitchenMenu.jsx (righe ~607-625, banner sticky "HAI UN ORDINE ATTIVO"), introdotto nel
+// cleanup cliente del 2026-09-18 — stessa fonte dati (LS_MY_ORDERS + registro di proprieta'),
+// stesso comportamento, scope cliente corretto.
+test('6. Kitchen home shows the active order banner when an active kitchen order exists', async ({ page }) => {
   const orders = makeSeedOrder();
-  await page.evaluate(
-    ({ key, data }) => localStorage.setItem(key, JSON.stringify(data)),
-    { key: LS_MY_ORDERS, data: orders },
-  );
+  await seedMyOrders(page, orders);
+  await seedOwnedOrderIds(page, [orders[0].id]);
 
-  await page.goto('/request?table=12&nickname=Eros');
+  await page.goto('/kitchen');
 
-  await expect(page.getByRole('button', { name: /Segui ordine/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /HAI UN ORDINE ATTIVO/i })).toBeVisible();
 
-  await page.getByRole('button', { name: /Segui ordine/i }).click();
+  await page.getByRole('button', { name: /HAI UN ORDINE ATTIVO/i }).click();
   await expect(page).toHaveURL(/\/kitchen\/status/);
 });
 
@@ -874,12 +873,7 @@ test('18. Cliente inserisce un codice promo valido: il redeem parte con il codic
     });
   });
 
-  await page.goto('/entry');
-  await page.getByPlaceholder('Es. 12').fill('12');
-  await page.getByPlaceholder('Es. Marco').fill('Eros');
-  await page.getByRole('button', { name: /ENTRA NEL WALBOX/i }).click();
-  await page.getByRole('button', { name: /Cibo/i }).click();
-  await expect(page).toHaveURL(/\/kitchen/);
+  await page.goto('/kitchen');
 
   await openFullMenu(page);
   await addFirstOrderableItem(page);
@@ -902,12 +896,7 @@ test('19. Cliente inserisce un codice promo non valido: ordine confermato comunq
     await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) });
   });
 
-  await page.goto('/entry');
-  await page.getByPlaceholder('Es. 12').fill('12');
-  await page.getByPlaceholder('Es. Marco').fill('Eros');
-  await page.getByRole('button', { name: /ENTRA NEL WALBOX/i }).click();
-  await page.getByRole('button', { name: /Cibo/i }).click();
-  await expect(page).toHaveURL(/\/kitchen/);
+  await page.goto('/kitchen');
 
   await openFullMenu(page);
   await addFirstOrderableItem(page);
@@ -1334,10 +1323,10 @@ test('29. Privacy client-side: la cache ordini di staff/cassa non contamina il c
   expect(after.venue).toBeNull();
   expect(after.mine).toEqual([]);
 
-  // 3) anche il ponte jukebox legge solo lo storage cliente: nessuna CTA "Segui ordine"
-  //    generata da un ordine altrui rimasto in cache.
-  await page.goto('/request?table=12&nickname=Alice');
-  await expect(page.getByRole('button', { name: /Segui ordine/i })).toHaveCount(0);
+  // 3) anche il banner nativo "ordine attivo" legge solo lo storage cliente: nessuna CTA generata
+  //    da un ordine altrui rimasto in cache (ex ponte Jukebox, rimosso — vedi test 6).
+  await page.goto('/kitchen');
+  await expect(page.getByRole('button', { name: /HAI UN ORDINE ATTIVO/i })).toHaveCount(0);
 });
 
 test('28. P0 privacy: la lista ordini attivi impilata mostra solo gli ordini di questo dispositivo', async ({ page }) => {
