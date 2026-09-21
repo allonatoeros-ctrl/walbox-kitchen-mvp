@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { formatServiceNightLabel } from '../lib/kitchenServiceRules';
 import { supabase } from '../lib/supabaseClient';
+import CassaControlSection from '../components/kitchen/CassaControlSection';
 import './PaymentsViewDemo.css';
 
 const METHOD_LABELS = {
@@ -200,7 +201,7 @@ export default function PaymentsView({
   visibleAnomalyIds,
   allowReconcileFailed = true,
 } = {}) {
-  const { loading, error, refresh, todaySummary, anomalies, recentPayments, serviceNight } = usePaymentsData();
+  const { loading, error, refresh, todaySummary, paymentsByMethod, anomalies, recentPayments, serviceNight } = usePaymentsData();
   // Stessa finestra dello Storico (06:00 -> 06:00): il titolo deve dire QUALE serata, altrimenti
   // dopo mezzanotte "oggi" e' ambiguo proprio quando serve di piu'. Gli harness demo non passano
   // serviceNight: in quel caso resta il titolo neutro.
@@ -299,32 +300,13 @@ export default function PaymentsView({
         )}
       </div>
 
-      {/* CASSA OGGI */}
-      <div>
-        <div className="kpd-section-title">{nightLabel ? `Cassa serata ${nightLabel}` : 'Cassa oggi'}</div>
-        <div className="kpd-cash-grid">
-          <div className="kpd-cash-tile">
-            <span className="kpd-cash-label">Incassato</span>
-            <span className="kpd-cash-value" style={{ color: '#4ade80' }}>{formatEuro(todaySummary.incasso)}</span>
-          </div>
-          <div className="kpd-cash-tile">
-            <span className="kpd-cash-label">Rimborsato</span>
-            <span className="kpd-cash-value" style={{ color: '#f87171' }}>{formatEuro(todaySummary.rimborsato)}</span>
-          </div>
-          <div className="kpd-cash-tile">
-            <span className="kpd-cash-label">Netto</span>
-            <span className="kpd-cash-value" style={{ color: '#facc15' }}>{formatEuro(todaySummary.netto)}</span>
-          </div>
-          <div className="kpd-cash-tile">
-            <span className="kpd-cash-label">In sospeso</span>
-            <span className="kpd-cash-value" style={{ color: todaySummary.inSospeso > 0 ? '#f59e0b' : 'rgba(245,240,232,0.4)' }}>{formatEuro(todaySummary.inSospeso)}</span>
-          </div>
-          <div className="kpd-cash-tile">
-            <span className="kpd-cash-label">Tentativi falliti</span>
-            <span className="kpd-cash-value" style={{ color: todaySummary.falliti > 0 ? '#f87171' : 'rgba(245,240,232,0.4)' }}>{todaySummary.falliti}</span>
-          </div>
-        </div>
-      </div>
+      {/* CONTROLLO SERATA / CASSA — Kitchen Analytics V1 Fase 2, sostituisce "Cassa serata" */}
+      <CassaControlSection
+        nightLabel={nightLabel}
+        todaySummary={todaySummary}
+        paymentsByMethod={paymentsByMethod}
+        anomalyCount={visibleAnomalies.length}
+      />
 
       {/* PAGAMENTI RECENTI */}
       <div>

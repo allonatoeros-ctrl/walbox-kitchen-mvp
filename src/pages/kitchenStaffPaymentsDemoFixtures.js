@@ -1,3 +1,5 @@
+import { summarizeServiceNightPayments, summarizePaymentsByMethod } from '../lib/kitchenServiceRules';
+
 /**
  * Fixture dati per /kitchen/staff-payments-demo.
  * Stessa shape di useKitchenPayments (hooks/useKitchenPayments.js) ma 100% locale/deterministico:
@@ -5,14 +7,6 @@
  * order_code/table sono etichette leggibili per lo staff (payment id tecnico resta solo come key interna).
  */
 export function usePreviewKitchenPayments() {
-  const todaySummary = {
-    incasso: 187.5,
-    rimborsato: 12.0,
-    netto: 175.5,
-    inSospeso: 8.5,
-    falliti: 1,
-  };
-
   const anomalies = [
     {
       order_id: 'ord-7734-demo',
@@ -148,11 +142,19 @@ export function usePreviewKitchenPayments() {
     },
   ];
 
+  // Fase 2 (Kitchen Analytics V1 — CONTROLLO SERATA/CASSA): todaySummary e paymentsByMethod
+  // derivati dalle STESSE righe (recentPayments), con le stesse funzioni pure usate dal hook
+  // reale (kitchenServiceRules.js) — garantisce per costruzione la coerenza incrociata AC3
+  // anche in questo harness demo, invece di due costanti scritte a mano che potrebbero divergere.
+  const todaySummary = summarizeServiceNightPayments(recentPayments);
+  const paymentsByMethod = summarizePaymentsByMethod(recentPayments);
+
   return {
     loading: false,
     error: null,
     refresh: () => {},
     todaySummary,
+    paymentsByMethod,
     anomalies,
     recentPayments,
   };
