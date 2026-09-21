@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
 import CustomerKitchenEntry from "./pages/CustomerKitchenEntry";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
@@ -14,6 +14,14 @@ import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
 import KitchenPrepBoard from "./pages/KitchenPrepBoard";
 import KitchenPrepBoardDemo from "./pages/KitchenPrepBoardDemo";
+
+// Kitchen V2 Fase 2 / B3 — TEMPORARY DEV HARNESS: caricata solo in DEV, mai in build
+// production (vedi ai-ops/reports/kitchen-v2-fase2-b3-dev-harness-result.md,
+// TEMP_FILES_TO_REMOVE — va rimossa insieme al resto dell'harness prima del cutover).
+const KitchenNightPreview = import.meta.env.DEV
+  ? lazy(() => import("./pages/KitchenNightPreview"))
+  : null;
+
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
 
@@ -66,6 +74,14 @@ export default function App() {
         return <KitchenPrepBoard />;
       case "/kitchen/prep-demo":
         return <KitchenPrepBoardDemo />;
+      case "/kitchen/night-preview":
+        return KitchenNightPreview ? (
+          <Suspense fallback={null}>
+            <KitchenNightPreview />
+          </Suspense>
+        ) : (
+          <CustomerKitchenEntry />
+        );
       default:
         return <CustomerKitchenEntry />;
     }

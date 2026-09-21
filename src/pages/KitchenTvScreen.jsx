@@ -135,21 +135,6 @@ const KitchenTvScreen = () => {
             <span className="price-new">15,90€</span>
           </div>
         </div>
-
-        <div className="jukebox-bridge">
-          <div className="jukebox-header">
-            <span className="juke-pre">MENTRE ASPETTI,</span>
-            <span className="juke-action">METTI UN PEZZO</span>
-          </div>
-          <div className="jukebox-playing">
-            <div className="play-circle-icon">▶</div>
-            <div className="song-info">
-              <span className="now-playing-label">NOW PLAYING ON JUKEBOX</span>
-              <span className="song-title">FUOCO AL BANCONE</span>
-              <span className="song-artist">STATICA MARINA</span>
-            </div>
-          </div>
-        </div>
       </div>
 
       <footer className="tv-footer">

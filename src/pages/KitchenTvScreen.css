@@ -615,6 +615,7 @@
 /* Promo Board Ad */
 .promo-block {
   flex: 2.2;
+  max-width: 62vw;
   background-color: #12100f;
   /* Left dark overlay + warm orange glow on the right */
   background-image:
@@ -725,81 +726,6 @@
   color: var(--tv-orange);
   vertical-align: middle;
   margin-right: 5px;
-}
-
-/* Jukebox Flyer Card */
-.jukebox-bridge {
-  flex: 1;
-  background-color: #ebdcb9;
-  background-image: radial-gradient(circle at center, rgba(255, 255, 255, 0.1), transparent);
-  border: 1px solid #c7b692;
-  border-radius: 4px;
-  padding: 1.5vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 4px 6px 15px rgba(0, 0, 0, 0.6);
-  color: var(--tv-text-dark);
-  transform: rotate(1deg);
-}
-
-.jukebox-header {
-  display: flex;
-  flex-direction: column;
-  border-bottom: 2px dashed rgba(0, 0, 0, 0.15);
-  padding-bottom: 0.5vh;
-}
-
-.juke-pre {
-  font-size: 1.4vh;
-  color: #666;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-.juke-action {
-  font-family: var(--font-display);
-  font-size: 2.8vh;
-  color: var(--tv-text-dark);
-  letter-spacing: 1px;
-}
-
-.jukebox-playing {
-  display: flex;
-  align-items: center;
-  gap: 1vw;
-  background-color: rgba(0, 0, 0, 0.05);
-  padding: 1vh;
-  border-radius: 4px;
-  border-left: 4px solid var(--tv-red);
-}
-
-.play-circle-icon {
-  font-size: 2.5vh;
-  color: var(--tv-red);
-}
-
-.song-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.now-playing-label {
-  font-size: 1vh;
-  color: #888;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.song-title {
-  font-weight: 700;
-  font-size: 1.8vh;
-  color: var(--tv-text-dark);
-}
-
-.song-artist {
-  font-size: 1.3vh;
-  color: #666;
 }
 
 /* FOOTER MARQUEE */

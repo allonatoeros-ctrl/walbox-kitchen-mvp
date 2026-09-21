@@ -38,6 +38,8 @@ export default function KitchenLogin() {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <input
+            id="kitchen-login-email"
+            name="email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -47,6 +49,8 @@ export default function KitchenLogin() {
             style={inputStyle}
           />
           <input
+            id="kitchen-login-password"
+            name="password"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}

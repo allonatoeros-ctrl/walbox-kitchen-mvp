@@ -371,6 +371,8 @@ function CounterAssistedOrderView() {
             <label className="kca-note">
               <span className="kca-field-label">NOTA (facoltativa)</span>
               <input
+                id="cassa-note"
+                name="staffNote"
                 type="text"
                 value={staffNote}
                 data-testid="cassa-note"
