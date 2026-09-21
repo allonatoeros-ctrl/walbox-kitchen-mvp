@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { serviceNightWindowFor, isInServiceNight, formatServiceNightLabel } from '../lib/kitchenServiceRules';
 import AnalyticsKpiStrip from '../components/kitchen/AnalyticsKpiStrip';
+import AttentionSection from '../components/kitchen/AttentionSection';
 import './PaymentsViewDemo.css';
 
 const HISTORY_PAGE_SIZE = 15;
@@ -21,7 +22,7 @@ function formatEuro(n) {
  * non viene mai sommato come "incassato". Senza `paymentsSummary` (Preview/Demo, nessuna
  * sessione staff) gli importi di cassa non vengono inventati: restano '—'.
  */
-export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null }) {
+export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [] }) {
   const [historySearch, setHistorySearch] = useState('');
 
   const summary = useMemo(() => {
@@ -106,6 +107,13 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
               falliti={paymentsSummary?.falliti ?? 0}
             />
           </div>
+
+          <AttentionSection
+            pendingAmount={paymentsSummary?.inSospeso ?? 0}
+            failedCount={paymentsSummary?.falliti ?? 0}
+            cancelledCount={reportOggi.annullati}
+            anomalyCount={anomalies.length}
+          />
 
           <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', marginBottom: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>

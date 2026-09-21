@@ -132,7 +132,7 @@ export default function KitchenNightPreview() {
         </div>
 
         <div style={sectionTitleStyle}>Storico / Report Serata (componente reale, dataset mock)</div>
-        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={serviceNight} />
+        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={serviceNight} anomalies={anomalies} />
       </div>
     </div>
   );

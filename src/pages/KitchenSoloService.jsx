@@ -884,7 +884,7 @@ export function KitchenSoloServiceView({
             </div>
             <div className="kss-overlay-body">
               {overlay === 'menu'    && <MenuView menuItems={menuItems} toggleAvailability={toggleAvailability} />}
-              {overlay === 'storico' && <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} />}
+              {overlay === 'storico' && <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} />}
               {overlay === 'alert'   && <AlertView orders={orders} />}
             </div>
           </div>
