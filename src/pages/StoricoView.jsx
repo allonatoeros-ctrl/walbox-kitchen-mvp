@@ -1,5 +1,7 @@
 import { useState, useMemo } from 'react';
 import { serviceNightWindowFor, isInServiceNight, formatServiceNightLabel } from '../lib/kitchenServiceRules';
+import AnalyticsKpiStrip from '../components/kitchen/AnalyticsKpiStrip';
+import './PaymentsViewDemo.css';
 
 const HISTORY_PAGE_SIZE = 15;
 
@@ -67,6 +69,17 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
       }
     : { incasso: '—', rimborsato: '—', netto: '—', ticket: '—' };
 
+  // KPI strip (Kitchen Analytics V1 Fase 3) — ticket medio qui e' netto / pagamenti succeeded
+  // (paymentsSummary.incassiRiusciti), diverso dal divisore "ordini consegnati" usato sopra da
+  // `cassa.ticket` (blocco Report serata esistente, invariato). Le due tile mostrano quindi
+  // volutamente numeri diversi finche' il blocco Report serata non viene consolidato in una fase
+  // successiva (fuori scope Fase 3).
+  const kpiTicketMedioDisplay = paymentsSummary
+    ? formatEuro(
+        paymentsSummary.incassiRiusciti > 0 ? paymentsSummary.netto / paymentsSummary.incassiRiusciti : 0
+      )
+    : '—';
+
   const historyOrders = useMemo(() => {
     const completed = orders
       .filter((o) => o.status === 'delivered' || o.status === 'cancelled')
@@ -82,6 +95,18 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
     <div className="ksd-sections">
       <div className="ksd-history" style={{ borderTop: 'none' }}>
         <div className="ksd-history-body">
+          <div style={{ marginBottom: '1rem' }}>
+            <AnalyticsKpiStrip
+              incassoDisplay={cassa.incasso}
+              nettoDisplay={cassa.netto}
+              ticketMedioDisplay={kpiTicketMedioDisplay}
+              ordiniConsegnati={reportOggi.count}
+              annullati={reportOggi.annullati}
+              inSospeso={paymentsSummary?.inSospeso ?? 0}
+              falliti={paymentsSummary?.falliti ?? 0}
+            />
+          </div>
+
           <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', marginBottom: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Consegnati</span>

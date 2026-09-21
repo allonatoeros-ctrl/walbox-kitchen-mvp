@@ -28,10 +28,13 @@ export function buildNightPaymentsView() {
   let rimborsato = 0;
   let inSospeso = 0;
   let falliti = 0;
+  let incassiRiusciti = 0;
   serataWalrusPayments.forEach((payment) => {
     const amount = Number(payment.amount) || 0;
-    if (payment.direction === 'charge' && payment.status === 'succeeded') incasso += amount;
-    else if (payment.direction === 'refund' && payment.status === 'succeeded') rimborsato += amount;
+    if (payment.direction === 'charge' && payment.status === 'succeeded') {
+      incasso += amount;
+      incassiRiusciti += 1;
+    } else if (payment.direction === 'refund' && payment.status === 'succeeded') rimborsato += amount;
     else if (payment.status === 'initiated' || payment.status === 'pending') inSospeso += amount;
     else if (payment.status === 'failed') falliti += 1;
   });
@@ -42,6 +45,7 @@ export function buildNightPaymentsView() {
     netto: round2(incasso - rimborsato),
     inSospeso: round2(inSospeso),
     falliti,
+    incassiRiusciti,
   };
 
   // I pagamenti SumUp "stuck" del dataset B1 (gruppo pending_sumup_stuck) sono l'unico scenario
