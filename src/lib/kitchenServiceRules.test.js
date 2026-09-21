@@ -120,6 +120,7 @@ import {
   formatServiceNightLabel,
   summarizeServiceNightPayments,
   summarizePaymentsByMethod,
+  bucketOrdersByServiceNight,
 } from './kitchenServiceRules.js';
 
 // Orario da muro di Roma -> istante. A settembre l'Italia e' in CEST (+02:00).
@@ -285,6 +286,77 @@ test('AC3: la somma per metodo coincide esattamente con summarizeServiceNightPay
 test('summarizePaymentsByMethod: nessuna riga = tutto a zero, mai NaN', () => {
   for (const input of [[], null, undefined]) {
     assert.deepEqual(summarizePaymentsByMethod(input), { byMethod: {}, sumup: { succeeded: 0, pending: 0, failed: 0 } });
+  }
+});
+
+// --- Kitchen Analytics V1 Fase 5: vendite per fascia oraria ---
+
+function order(id, createdAtIso, { status = 'delivered', total = 10 } = {}) {
+  return { id, createdAt: createdAtIso, status, total };
+}
+
+test('bucketOrdersByServiceNight: 12 bucket da 2h, etichette da 06-08 a 04-06', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const buckets = bucketOrdersByServiceNight([], night, 2);
+  assert.equal(buckets.length, 12);
+  assert.equal(buckets[0].label, '06-08');
+  assert.equal(buckets[6].label, '18-20');
+  assert.equal(buckets[8].label, '22-00');
+  assert.equal(buckets[9].label, '00-02');
+  assert.equal(buckets[11].label, '04-06');
+  buckets.forEach((b) => { assert.equal(b.count, 0); assert.equal(b.value, 0); });
+});
+
+test('bucketOrdersByServiceNight: conta solo i delivered dentro la serata, somma order.total nel bucket', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    order('o1', cest('2026-09-18T19:00:00').toISOString(), { total: 12 }),   // 18-20
+    order('o2', cest('2026-09-18T19:30:00').toISOString(), { total: 8 }),    // 18-20
+    order('o3', cest('2026-09-18T21:15:00').toISOString(), { total: 20 }),   // 20-22
+    order('o4', cest('2026-09-18T19:00:00').toISOString(), { status: 'cancelled', total: 99 }), // escluso: non delivered
+    order('o5', cest('2026-09-17T19:00:00').toISOString(), { total: 99 }),   // escluso: serata diversa
+  ];
+  const buckets = bucketOrdersByServiceNight(orders, night, 2);
+  const b1820 = buckets.find((b) => b.label === '18-20');
+  const b2022 = buckets.find((b) => b.label === '20-22');
+  assert.deepEqual({ count: b1820.count, value: b1820.value }, { count: 2, value: 20 });
+  assert.deepEqual({ count: b2022.count, value: b2022.value }, { count: 1, value: 20 });
+  const totalCount = buckets.reduce((sum, b) => sum + b.count, 0);
+  const totalValue = buckets.reduce((sum, b) => sum + b.value, 0);
+  assert.equal(totalCount, 3); // AC6: nessun ordine perso ne' duplicato
+  assert.equal(totalValue, 40);
+});
+
+test('bucketOrdersByServiceNight: ordine a cavallo di mezzanotte finisce nel bucket giusto (22-00 vs 00-02)', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    order('o1', cest('2026-09-18T23:30:00').toISOString()),
+    order('o2', cest('2026-09-19T00:30:00').toISOString()),
+  ];
+  const buckets = bucketOrdersByServiceNight(orders, night, 2);
+  assert.equal(buckets.find((b) => b.label === '22-00').count, 1);
+  assert.equal(buckets.find((b) => b.label === '00-02').count, 1);
+});
+
+test('bucketOrdersByServiceNight: estremo di bucket incluso a sinistra, escluso a destra (come isInServiceNight)', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const bucketStart = cest('2026-09-18T20:00:00'); // inizio esatto del bucket 20-22
+  const justBefore = new Date(bucketStart.getTime() - 1);
+  const orders = [
+    order('a', bucketStart.toISOString()),
+    order('b', justBefore.toISOString()),
+  ];
+  const buckets = bucketOrdersByServiceNight(orders, night, 2);
+  assert.equal(buckets.find((b) => b.label === '20-22').count, 1);
+  assert.equal(buckets.find((b) => b.label === '18-20').count, 1);
+});
+
+test('bucketOrdersByServiceNight: nessun ordine = tutti i bucket a zero, mai NaN', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  for (const input of [[], null, undefined]) {
+    const buckets = bucketOrdersByServiceNight(input, night, 2);
+    assert.equal(buckets.length, 12);
+    buckets.forEach((b) => { assert.equal(b.count, 0); assert.equal(b.value, 0); });
   }
 });
 

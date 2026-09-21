@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { serviceNightWindowFor, isInServiceNight, formatServiceNightLabel } from '../lib/kitchenServiceRules';
+import { serviceNightWindowFor, isInServiceNight, formatServiceNightLabel, bucketOrdersByServiceNight } from '../lib/kitchenServiceRules';
 import AnalyticsKpiStrip from '../components/kitchen/AnalyticsKpiStrip';
 import AttentionSection from '../components/kitchen/AttentionSection';
+import HourlySalesChart from '../components/kitchen/HourlySalesChart';
 import './PaymentsViewDemo.css';
 
 const HISTORY_PAGE_SIZE = 15;
@@ -61,6 +62,10 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
     return { count, annullati: todayCancelled.length, topItem, byPayment };
   }, [orders, night]);
 
+  // Kitchen Analytics V1 Fase 5 — VENDITE PER FASCIA ORARIA. Bucket 2h sulla stessa finestra
+  // serata di `reportOggi`/Cassa, sui soli ordini delivered (stesso filtro di reportOggi).
+  const hourlyBuckets = useMemo(() => bucketOrdersByServiceNight(orders, night, 2), [orders, night]);
+
   const cassa = paymentsSummary
     ? {
         incasso: formatEuro(paymentsSummary.incasso),
@@ -114,6 +119,11 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
             cancelledCount={reportOggi.annullati}
             anomalyCount={anomalies.length}
           />
+
+          <div style={{ marginBottom: '1rem' }}>
+            <div className="kpd-section-title">Vendite per fascia oraria</div>
+            <HourlySalesChart buckets={hourlyBuckets} />
+          </div>
 
           <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', marginBottom: '1rem', flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>

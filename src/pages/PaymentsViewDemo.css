@@ -165,6 +165,37 @@
   padding: 20px 16px;
 }
 
+/* ── VENDITE PER FASCIA ORARIA — bar chart orizzontale (Kitchen Analytics V1 Fase 5) ── */
+.kpd-hourly-chart { display: flex; flex-direction: column; gap: 6px; }
+.kpd-hourly-row { display: flex; align-items: center; gap: 8px; }
+.kpd-hourly-label {
+  width: 44px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: rgba(245, 240, 232, 0.5);
+}
+.kpd-hourly-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.kpd-hourly-bar {
+  height: 100%;
+  background: var(--k-yellow, #facc15);
+  border-radius: 4px;
+}
+.kpd-hourly-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  min-width: 58px;
+  flex-shrink: 0;
+}
+.kpd-hourly-count { font-size: 13px; font-weight: 900; color: #f5f0e8; line-height: 1.2; }
+.kpd-hourly-value { font-size: 10.5px; color: rgba(245, 240, 232, 0.4); line-height: 1.2; }
+
 /* ── Tablet: più respiro, testo più leggibile a distanza ── */
 @media (min-width: 768px) {
   .kpd-page { padding: 24px; gap: 26px; max-width: 1100px; margin: 0 auto; }
@@ -176,6 +207,11 @@
   .kpd-payment-row { padding: 14px 18px; gap: 18px; }
   .kpd-payment-order { font-size: 15px; }
   .kpd-payment-method { font-size: 13.5px; }
+  .kpd-hourly-label { width: 56px; font-size: 12px; }
+  .kpd-hourly-track { height: 16px; }
+  .kpd-hourly-meta { min-width: 72px; }
+  .kpd-hourly-count { font-size: 14px; }
+  .kpd-hourly-value { font-size: 11px; }
 }
 
 /* ── Mobile: colonne che si impilano ─────────────── */

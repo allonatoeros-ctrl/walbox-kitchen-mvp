@@ -248,3 +248,43 @@ export function summarizePaymentsByMethod(rows) {
 
   return { byMethod, sumup };
 }
+
+/**
+ * Kitchen Analytics V1 — Fase 5 (VENDITE PER FASCIA ORARIA).
+ * Bucket da `bucketHours` ore sulla finestra di serata [night.start, night.end), su
+ * `order.createdAt` degli ordini `delivered` (stesso filtro di `reportOggi` in StoricoView).
+ * `value` e' la somma di `order.total` nel bucket: e' il "valore ordini" (valore della comanda),
+ * MAI l'incasso — stessa distinzione di `summarizeServiceNightPayments` sopra, order.total non
+ * entra mai come incasso. Un incasso per bucket richiederebbe una join contro kitchen_payments per
+ * singolo pagamento con la sua data, dato non disponibile oggi senza una nuova query (fuori scope
+ * Fase 5: "nessuna nuova query se non esplicitamente necessaria").
+ * Nessun ordine perso: gli ordini fuori dai bucket attesi (notti >24h per cambio ora legale) sono
+ * assorbiti nell'ultimo bucket, mai scartati.
+ */
+export function bucketOrdersByServiceNight(orders, night, bucketHours = 2) {
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const bucketMs = bucketHours * 3600000;
+  const bucketCount = Math.ceil(24 / bucketHours);
+
+  const buckets = [];
+  for (let i = 0; i < bucketCount; i++) {
+    const startMs = night.start + i * bucketMs;
+    const startHour = romeParts(new Date(startMs)).hour;
+    const endHour = (startHour + bucketHours) % 24;
+    buckets.push({ label: `${pad2(startHour)}-${pad2(endHour)}`, count: 0, value: 0 });
+  }
+
+  (orders ?? []).forEach((o) => {
+    if (o.status !== 'delivered') return;
+    if (!isInServiceNight(o.createdAt, night)) return;
+    const t = new Date(o.createdAt).getTime();
+    let idx = Math.floor((t - night.start) / bucketMs);
+    if (idx < 0) idx = 0;
+    if (idx >= buckets.length) idx = buckets.length - 1;
+    buckets[idx].count += 1;
+    buckets[idx].value += Number(o.total) || 0;
+  });
+
+  buckets.forEach((b) => { b.value = round2(b.value); });
+  return buckets;
+}
