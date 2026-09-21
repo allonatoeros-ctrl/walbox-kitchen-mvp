@@ -15,6 +15,11 @@ import { serviceNightWindow } from '../lib/kitchenServiceRules';
 import StoricoView from './StoricoView';
 import './KitchenStaffDashboard.css';
 
+function navigate(path) {
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
+}
+
 const STATUS_LABELS = {
   pending_counter_payment: 'IN ATTESA PAGAMENTO',
   received: 'RICEVUTO',
@@ -132,7 +137,10 @@ export default function KitchenNightPreview() {
         </div>
 
         <div style={sectionTitleStyle}>Storico / Report Serata (componente reale, dataset mock)</div>
-        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={serviceNight} anomalies={anomalies} paymentsByMethod={paymentsByMethod} />
+        {/* DEV harness: /kitchen/payments richiede sessione staff reale (pagina nera senza env
+            Supabase). "Apri Cassa" qui punta al demo harness Cassa gia' esistente
+            (/kitchen/staff-payments-demo, zero Supabase/auth), non alla route di produzione. */}
+        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={serviceNight} anomalies={anomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => navigate('/kitchen/staff-payments-demo')} />
       </div>
     </div>
   );

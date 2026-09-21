@@ -192,6 +192,7 @@ function KitchenSoloServiceLive() {
       toggleAvailability={toggleAvailability}
       paymentAnomalies={paymentAnomalies}
       paymentsSummary={paymentsSummary}
+      paymentsByMethod={paymentsByMethod}
       serviceNight={serviceNight}
       onLogout={handleLogout}
     />
@@ -221,7 +222,7 @@ function KitchenSoloServicePreview() {
 export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
-  paymentsSummary = null, serviceNight = null,
+  paymentsSummary = null, paymentsByMethod = null, serviceNight = null,
   paymentsPath = '/kitchen/payments',
   // Default per Preview/Demo/Training (nessuna sessione reale da chiudere): solo navigazione.
   onLogout = () => navigate('/kitchen/login'),
@@ -884,7 +885,7 @@ export function KitchenSoloServiceView({
             </div>
             <div className="kss-overlay-body">
               {overlay === 'menu'    && <MenuView menuItems={menuItems} toggleAvailability={toggleAvailability} />}
-              {overlay === 'storico' && <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} />}
+              {overlay === 'storico' && <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => navigate(paymentsPath)} />}
               {overlay === 'alert'   && <AlertView orders={orders} />}
             </div>
           </div>

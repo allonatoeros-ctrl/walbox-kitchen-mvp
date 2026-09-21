@@ -278,9 +278,11 @@ export default function PaymentsView({
         </div>
       )}
 
-      {/* ATTENZIONE */}
+      {/* DA CONTROLLARE — Kitchen Analytics V1 Fase 9B: rinominato da "⚠ Attenzione" per non
+          confondersi con AttentionSection di StoricoView (contenuto diverso: qui solo anomalie
+          pagamento, sempre visibile; li' pending/falliti/annullati/anomalie, solo se >0). */}
       <div>
-        <div className="kpd-section-title kpd-attention-title">⚠ Attenzione</div>
+        <div className="kpd-section-title kpd-attention-title">DA CONTROLLARE</div>
         {visibleAnomalies.length === 0 ? (
           <div className="kpd-attention-empty">Nessuna anomalia 🟢</div>
         ) : (

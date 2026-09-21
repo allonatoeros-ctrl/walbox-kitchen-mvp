@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { serviceNightWindowFor, isInServiceNight, formatServiceNightLabel, bucketOrdersByWalrusServiceHours, computeTopProductsAndCategories } from '../lib/kitchenServiceRules';
+import { serviceNightWindowFor, isInServiceNight, bucketOrdersByWalrusServiceHours, computeTopProductsAndCategories } from '../lib/kitchenServiceRules';
 import { kitchenMenuItems } from '../data/kitchenMockData';
 import AnalyticsKpiStrip from '../components/kitchen/AnalyticsKpiStrip';
 import AttentionSection from '../components/kitchen/AttentionSection';
@@ -27,16 +27,8 @@ function formatEuro(n) {
  * non viene mai sommato come "incassato". Senza `paymentsSummary` (Preview/Demo, nessuna
  * sessione staff) gli importi di cassa non vengono inventati: restano '—'.
  */
-export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [], paymentsByMethod = null }) {
+export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [], paymentsByMethod = null, onOpenCassa = null }) {
   const [historySearch, setHistorySearch] = useState('');
-
-  const summary = useMemo(() => {
-    const delivered = orders.filter((o) => o.status === 'delivered');
-    const count = delivered.length;
-    const total = delivered.reduce((sum, o) => sum + (o.total ?? 0), 0);
-    const avg = count > 0 ? total / count : 0;
-    return { count, total, avg };
-  }, [orders]);
 
   // Serata: finestra 06:00 -> 06:00 Europe/Rome su kitchen_orders.created_at — la STESSA che
   // filtra la Cassa/Payment Hub (useKitchenPayments). Mai service_day: scatta a mezzanotte.
@@ -49,21 +41,7 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
     const todayDelivered = orders.filter((o) => o.status === 'delivered' && isTonight(o));
     const todayCancelled = orders.filter((o) => o.status === 'cancelled' && isTonight(o));
 
-    const count = todayDelivered.length;
-
-    const itemCounts = {};
-    todayDelivered.forEach((o) => {
-      o.items?.forEach((i) => { itemCounts[i.name] = (itemCounts[i.name] ?? 0) + i.quantity; });
-    });
-    const topItem = Object.entries(itemCounts).sort((a, b) => b[1] - a[1])[0] ?? null;
-
-    const byPayment = { counter: 0, card: 0 };
-    todayDelivered.forEach((o) => {
-      if (o.paymentMethod === 'counter' || o.paymentMethod === 'cash') byPayment.counter++;
-      else if (o.paymentMethod === 'card') byPayment.card++;
-    });
-
-    return { count, annullati: todayCancelled.length, topItem, byPayment };
+    return { count: todayDelivered.length, annullati: todayCancelled.length };
   }, [orders, night]);
 
   // Kitchen Analytics V1 Fase 5 — VENDITE PER FASCIA ORARIA. Bucket 2h sulla stessa finestra
@@ -88,17 +66,12 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
   const cassa = paymentsSummary
     ? {
         incasso: formatEuro(paymentsSummary.incasso),
-        rimborsato: formatEuro(paymentsSummary.rimborsato),
         netto: formatEuro(paymentsSummary.netto),
-        ticket: reportOggi.count > 0 ? formatEuro(paymentsSummary.netto / reportOggi.count) : formatEuro(0),
       }
-    : { incasso: '—', rimborsato: '—', netto: '—', ticket: '—' };
+    : { incasso: '—', netto: '—' };
 
-  // KPI strip (Kitchen Analytics V1 Fase 3) — ticket medio qui e' netto / pagamenti succeeded
-  // (paymentsSummary.incassiRiusciti), diverso dal divisore "ordini consegnati" usato sopra da
-  // `cassa.ticket` (blocco Report serata esistente, invariato). Le due tile mostrano quindi
-  // volutamente numeri diversi finche' il blocco Report serata non viene consolidato in una fase
-  // successiva (fuori scope Fase 3).
+  // KPI strip (Kitchen Analytics V1 Fase 3) — ticket medio = netto / pagamenti succeeded
+  // (paymentsSummary.incassiRiusciti).
   const kpiTicketMedioDisplay = paymentsSummary
     ? formatEuro(
         paymentsSummary.incassiRiusciti > 0 ? paymentsSummary.netto / paymentsSummary.incassiRiusciti : 0
@@ -126,9 +99,6 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
               nettoDisplay={cassa.netto}
               ticketMedioDisplay={kpiTicketMedioDisplay}
               ordiniConsegnati={reportOggi.count}
-              annullati={reportOggi.annullati}
-              inSospeso={paymentsSummary?.inSospeso ?? 0}
-              falliti={paymentsSummary?.falliti ?? 0}
             />
           </div>
 
@@ -138,6 +108,14 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
             cancelledCount={reportOggi.annullati}
             anomalyCount={anomalies.length}
           />
+
+          {onOpenCassa && (
+            <div className="kpd-cassa-ref-row">
+              <button type="button" className="kpd-cassa-ref-btn" data-testid="storico-open-cassa" onClick={onOpenCassa}>
+                Apri Cassa →
+              </button>
+            </div>
+          )}
 
           <div style={{ marginBottom: '1rem' }}>
             <div className="kpd-section-title">Vendite per fascia oraria</div>
@@ -162,76 +140,6 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
           <div style={{ marginBottom: '1rem' }}>
             <div className="kpd-section-title">Mix pagamento</div>
             <PaymentMixChart paymentsByMethod={paymentsByMethod} />
-          </div>
-
-          <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', marginBottom: '1rem', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Consegnati</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4ade80' }}>{summary.count}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valore ordini consegnati</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>{formatEuro(summary.total)}</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valore medio ordine</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>{formatEuro(summary.avg)}</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-              <span style={{ fontSize: '0.68rem', color: '#6b7280', maxWidth: '20rem', lineHeight: 1.3 }}>
-                Valore delle comande, non l&apos;incasso. L&apos;incasso reale è qui sotto e in CASSA.
-              </span>
-            </div>
-          </div>
-
-          {/* Report serata — stessa finestra e stessi importi della Cassa */}
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ fontSize: '0.65rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
-              Serata {formatServiceNightLabel(night.night)} · dalle 06:00 alle 06:00
-            </div>
-            <div style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.75rem 1rem', flexWrap: 'wrap', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ordini</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4ade80' }}>{reportOggi.count}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Incassato</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4ade80' }}>{cassa.incasso}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rimborsato</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f87171' }}>{cassa.rimborsato}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Netto</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>{cassa.netto}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket medio</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>{cassa.ticket}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Annullati</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: reportOggi.annullati > 0 ? '#f87171' : '#6b7280' }}>{reportOggi.annullati}</span>
-              </div>
-              {reportOggi.topItem && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Top prodotto</span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#e2e8f0' }}>{reportOggi.topItem[0]} <span style={{ color: '#6b7280', fontWeight: 400 }}>×{reportOggi.topItem[1]}</span></span>
-                </div>
-              )}
-              {(reportOggi.byPayment.counter > 0 || reportOggi.byPayment.card > 0) && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Cassa / Carta</span>
-                  <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#e2e8f0' }}>{reportOggi.byPayment.counter} / {reportOggi.byPayment.card}</span>
-                </div>
-              )}
-            </div>
-            {!paymentsSummary && (
-              <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: '0.4rem' }}>
-                Importi di cassa non disponibili qui — aprili in CASSA.
-              </div>
-            )}
           </div>
 
           <div className="ksd-history-search-wrap">
