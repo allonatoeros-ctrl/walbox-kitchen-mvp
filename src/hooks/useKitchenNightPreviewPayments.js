@@ -12,6 +12,7 @@
 // buildNightPaymentsView() e' pura (nessun useState/useEffect: il dataset B1 e' statico e
 // deterministico) cosi' resta testabile senza renderizzare l'hook React.
 import { serataWalrusOrders, serataWalrusPayments } from '../data/kitchenNightMockData.js';
+import { summarizePaymentsByMethod } from '../lib/kitchenServiceRules';
 
 const RECENT_LIMIT = 30;
 
@@ -65,7 +66,12 @@ export function buildNightPaymentsView() {
     .slice(0, RECENT_LIMIT)
     .map((payment) => ({ ...payment, order_code: orderCodeById.get(payment.order_id) ?? payment.order_code ?? null }));
 
-  return { todaySummary, anomalies, recentPayments };
+  // Fase 7 (MIX PAGAMENTI): stessa aggregazione pura del hook reale, sulle stesse righe
+  // serataWalrusPayments (forma compatibile: method/direction/status/amount) — nessun nuovo
+  // dataset mock.
+  const paymentsByMethod = summarizePaymentsByMethod(serataWalrusPayments);
+
+  return { todaySummary, anomalies, recentPayments, paymentsByMethod };
 }
 
 /** Adapter DEV — contratto compatibile con useKitchenPayments(), solo in-memory/deterministico. */
@@ -73,6 +79,6 @@ export function usePreviewKitchenNightPayments() {
   const loading = false;
   const error = null;
   const refresh = () => {};
-  const { todaySummary, anomalies, recentPayments } = buildNightPaymentsView();
-  return { loading, error, refresh, todaySummary, anomalies, recentPayments };
+  const { todaySummary, anomalies, recentPayments, paymentsByMethod } = buildNightPaymentsView();
+  return { loading, error, refresh, todaySummary, anomalies, recentPayments, paymentsByMethod };
 }

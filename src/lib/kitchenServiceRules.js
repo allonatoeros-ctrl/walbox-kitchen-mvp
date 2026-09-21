@@ -217,6 +217,8 @@ const SUMUP_METHODS = new Set(['sumup_online', 'sumup_pos']);
  * tabella "CONTROLLO SERATA/CASSA" e il chart Mix pagamento leggono da qui.
  * `sumup` conta i tentativi (non gli importi) sui soli metodi sumup_online/sumup_pos: initiated
  * e pending sono entrambi "in corso", coerente col trattamento di inSospeso sopra.
+ * `count` (Fase 7, MIX PAGAMENTI) e' il numero di pagamenti charge succeeded per metodo — stesso
+ * filtro che alimenta `incasso`, nessun nuovo giro sulle righe.
  */
 export function summarizePaymentsByMethod(rows) {
   const round2 = (n) => Math.round(n * 100) / 100;
@@ -226,9 +228,10 @@ export function summarizePaymentsByMethod(rows) {
   (rows ?? []).forEach((r) => {
     const method = r.method ?? 'unknown';
     const amount = Number(r.amount) || 0;
-    if (!byMethod[method]) byMethod[method] = { incasso: 0, rimborsato: 0, netto: 0 };
+    if (!byMethod[method]) byMethod[method] = { incasso: 0, rimborsato: 0, netto: 0, count: 0 };
     if (r.direction === 'charge' && r.status === 'succeeded') {
       byMethod[method].incasso += amount;
+      byMethod[method].count += 1;
     } else if (r.direction === 'refund' && r.status === 'succeeded') {
       byMethod[method].rimborsato += amount;
     }
@@ -287,4 +290,88 @@ export function bucketOrdersByServiceNight(orders, night, bucketHours = 2) {
 
   buckets.forEach((b) => { b.value = round2(b.value); });
   return buckets;
+}
+
+/**
+ * Kitchen Analytics V1 — Fase 5 follow-up v2 (VENDITE PER FASCIA ORARIA, solo visualizzazione).
+ * Il Walrus opera solo a PRANZO (12-15, granularità 1h — volume basso, il dettaglio ora-per-ora è
+ * più leggibile di un bucket da 2h) e SERA/NOTTE (18-02, granularità 2h, invariata dalla Fase 5).
+ * Tutte le altre fasce sono chiusura e vengono escluse dal grafico per design, non azzerate: un
+ * ordine `delivered` fuori da queste fasce non sparisce dagli altri totali (KPI/Top
+ * prodotti-categorie/AC6 restano su `bucketOrdersByServiceNight`/`isInServiceNight` invariate),
+ * semplicemente non compare in QUESTO grafico. Offset in ore rispetto a `night.start` (06:00),
+ * non ore-di-parete, per rappresentare senza ambiguità le fasce a cavallo di mezzanotte (00-02).
+ */
+export const WALRUS_SERVICE_HOUR_RANGES = [
+  { label: '12-13', offsetStart: 6, offsetEnd: 7 },
+  { label: '13-14', offsetStart: 7, offsetEnd: 8 },
+  { label: '14-15', offsetStart: 8, offsetEnd: 9 },
+  { label: '18-20', offsetStart: 12, offsetEnd: 14 },
+  { label: '20-22', offsetStart: 14, offsetEnd: 16 },
+  { label: '22-00', offsetStart: 16, offsetEnd: 18 },
+  { label: '00-02', offsetStart: 18, offsetEnd: 20 },
+];
+
+export function bucketOrdersByWalrusServiceHours(orders, night) {
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const buckets = WALRUS_SERVICE_HOUR_RANGES.map((r) => ({ label: r.label, count: 0, value: 0 }));
+
+  (orders ?? []).forEach((o) => {
+    if (o.status !== 'delivered') return;
+    if (!isInServiceNight(o.createdAt, night)) return;
+    const offsetHours = (new Date(o.createdAt).getTime() - night.start) / 3600000;
+    const idx = WALRUS_SERVICE_HOUR_RANGES.findIndex(
+      (r) => offsetHours >= r.offsetStart && offsetHours < r.offsetEnd
+    );
+    if (idx === -1) return; // fuori dalle fasce operative Walrus, escluso da questo grafico per design
+    buckets[idx].count += 1;
+    buckets[idx].value += Number(o.total) || 0;
+  });
+
+  buckets.forEach((b) => { b.value = round2(b.value); });
+  return buckets;
+}
+
+/**
+ * Kitchen Analytics V1 — Fase 6 (TOP PRODOTTI + TOP CATEGORIE).
+ * Aggrega `order.items[].name/quantity` sui soli ordini `delivered` della finestra serata
+ * corrente (stesso filtro di `bucketOrdersByServiceNight`/`reportOggi`), nessuna nuova query.
+ * Prodotto -> categoria: join client-side contro `menuItems` (catalogo Kitchen esistente,
+ * `kitchenMenuItems`) per `itemId` quando presente sull'item d'ordine, altrimenti per `name`
+ * esatto. Un item non mappabile al catalogo finisce nel bucket esplicito `NON_MAPPED_CATEGORY`
+ * — mai una categoria inventata, la quantita' resta comunque contata nel totale.
+ */
+export const NON_MAPPED_CATEGORY = 'non mappato';
+
+export function computeTopProductsAndCategories(orders, night, menuItems = [], topN = 5) {
+  const byId = new Map(menuItems.map((m) => [m.id, m]));
+  const byName = new Map(menuItems.map((m) => [m.name, m]));
+
+  const productCounts = {};
+  const categoryCounts = {};
+
+  (orders ?? []).forEach((o) => {
+    if (o.status !== 'delivered') return;
+    if (!isInServiceNight(o.createdAt, night)) return;
+    (o.items ?? []).forEach((i) => {
+      const qty = Number(i.quantity) || 0;
+      if (qty <= 0 || !i.name) return;
+      productCounts[i.name] = (productCounts[i.name] ?? 0) + qty;
+
+      const menuItem = (i.itemId && byId.get(i.itemId)) || byName.get(i.name);
+      const category = menuItem?.category || NON_MAPPED_CATEGORY;
+      categoryCounts[category] = (categoryCounts[category] ?? 0) + qty;
+    });
+  });
+
+  const topProducts = Object.entries(productCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, topN)
+    .map(([name, quantity]) => ({ name, quantity }));
+
+  const topCategories = Object.entries(categoryCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, quantity]) => ({ category, quantity }));
+
+  return { topProducts, topCategories };
 }

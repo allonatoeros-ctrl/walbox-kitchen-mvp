@@ -1,8 +1,12 @@
 import { useState, useMemo } from 'react';
-import { serviceNightWindowFor, isInServiceNight, formatServiceNightLabel, bucketOrdersByServiceNight } from '../lib/kitchenServiceRules';
+import { serviceNightWindowFor, isInServiceNight, formatServiceNightLabel, bucketOrdersByWalrusServiceHours, computeTopProductsAndCategories } from '../lib/kitchenServiceRules';
+import { kitchenMenuItems } from '../data/kitchenMockData';
 import AnalyticsKpiStrip from '../components/kitchen/AnalyticsKpiStrip';
 import AttentionSection from '../components/kitchen/AttentionSection';
 import HourlySalesChart from '../components/kitchen/HourlySalesChart';
+import TopProductsList from '../components/kitchen/TopProductsList';
+import TopCategoriesChart from '../components/kitchen/TopCategoriesChart';
+import PaymentMixChart from '../components/kitchen/PaymentMixChart';
 import './PaymentsViewDemo.css';
 
 const HISTORY_PAGE_SIZE = 15;
@@ -23,7 +27,7 @@ function formatEuro(n) {
  * non viene mai sommato come "incassato". Senza `paymentsSummary` (Preview/Demo, nessuna
  * sessione staff) gli importi di cassa non vengono inventati: restano '—'.
  */
-export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [] }) {
+export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [], paymentsByMethod = null }) {
   const [historySearch, setHistorySearch] = useState('');
 
   const summary = useMemo(() => {
@@ -64,7 +68,22 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
 
   // Kitchen Analytics V1 Fase 5 — VENDITE PER FASCIA ORARIA. Bucket 2h sulla stessa finestra
   // serata di `reportOggi`/Cassa, sui soli ordini delivered (stesso filtro di reportOggi).
-  const hourlyBuckets = useMemo(() => bucketOrdersByServiceNight(orders, night, 2), [orders, night]);
+  // Fase 5 follow-up v2: il grafico mostra solo le fasce operative Walrus — pranzo 12-15 (1h) e
+  // sera/notte 18-02 (2h), tutte le fasce di chiusura escluse. La serata canonica 06:00->06:00 e
+  // il totale aggregato per gli altri consumer (KPI/Top prodotti-categorie/AC6) restano su
+  // `bucketOrdersByServiceNight`/`isInServiceNight`, invariati.
+  const hourlyBuckets = useMemo(
+    () => bucketOrdersByWalrusServiceHours(orders, night),
+    [orders, night]
+  );
+
+  // Kitchen Analytics V1 Fase 6 — TOP PRODOTTI + TOP CATEGORIE. Stessa finestra serata/filtro
+  // delivered di hourlyBuckets/reportOggi, mappatura prodotto->categoria contro il catalogo
+  // Kitchen esistente (kitchenMenuItems), nessuna nuova query.
+  const { topProducts, topCategories } = useMemo(
+    () => computeTopProductsAndCategories(orders, night, kitchenMenuItems, 5),
+    [orders, night]
+  );
 
   const cassa = paymentsSummary
     ? {
@@ -123,6 +142,26 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
           <div style={{ marginBottom: '1rem' }}>
             <div className="kpd-section-title">Vendite per fascia oraria</div>
             <HourlySalesChart buckets={hourlyBuckets} />
+          </div>
+
+          <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
+            <div style={{ flex: '1 1 260px', minWidth: '240px' }}>
+              <div className="kpd-section-title">Top prodotti</div>
+              <TopProductsList products={topProducts} />
+            </div>
+            <div style={{ flex: '1 1 260px', minWidth: '240px' }}>
+              <div className="kpd-section-title">Top categorie</div>
+              <TopCategoriesChart categories={topCategories} />
+            </div>
+          </div>
+
+          {/* Kitchen Analytics V1 Fase 7 — MIX PAGAMENTI. Visual complement alla tabella
+              CONTROLLO SERATA/CASSA (PaymentsView/CassaControlSection): stessa aggregazione
+              paymentsByMethod (Fase 1), stessa fonte dati, zero divergenza (AC8). Senza
+              paymentsByMethod (Preview/Demo senza sessione staff) la sezione non inventa dati. */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div className="kpd-section-title">Mix pagamento</div>
+            <PaymentMixChart paymentsByMethod={paymentsByMethod} />
           </div>
 
           <div style={{ display: 'flex', gap: '1.5rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', marginBottom: '1rem', flexWrap: 'wrap' }}>

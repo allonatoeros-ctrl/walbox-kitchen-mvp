@@ -130,7 +130,7 @@ function KitchenSoloServiceLive() {
   // Micro-fase 2 (Storico/Cassa allineati): la stessa summary kitchen_payments che alimenta
   // la Cassa/Payment Hub viene passata allo Storico, con la giornata operativa (service_day)
   // gia' risolta — cosi' le due schermate non possono divergere. Sempre read-only.
-  const { anomalies: paymentAnomalies, todaySummary: paymentsSummary, serviceNight } = useKitchenPayments();
+  const { anomalies: paymentAnomalies, todaySummary: paymentsSummary, serviceNight, paymentsByMethod } = useKitchenPayments();
 
   const [authChecked, setAuthChecked] = useState(
     () => import.meta.env.VITE_E2E_BYPASS_STAFF_AUTH === 'true'
@@ -884,7 +884,7 @@ export function KitchenSoloServiceView({
             </div>
             <div className="kss-overlay-body">
               {overlay === 'menu'    && <MenuView menuItems={menuItems} toggleAvailability={toggleAvailability} />}
-              {overlay === 'storico' && <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} />}
+              {overlay === 'storico' && <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} />}
               {overlay === 'alert'   && <AlertView orders={orders} />}
             </div>
           </div>

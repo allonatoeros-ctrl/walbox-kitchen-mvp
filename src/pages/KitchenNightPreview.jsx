@@ -84,7 +84,7 @@ function SummaryTile({ label, value }) {
  */
 export default function KitchenNightPreview() {
   const { orders, resetToDemo } = usePreviewKitchenNightOrders();
-  const { todaySummary, anomalies } = usePreviewKitchenNightPayments();
+  const { todaySummary, anomalies, paymentsByMethod } = usePreviewKitchenNightPayments();
 
   // Il dataset B1 e' fisso sulla notte del 2026-09-20 (SERATA_WALRUS_NIGHT_START_ISO): senza
   // passare questo serviceNight a StoricoView, il componente ricade sulla serata "adesso" reale
@@ -132,7 +132,7 @@ export default function KitchenNightPreview() {
         </div>
 
         <div style={sectionTitleStyle}>Storico / Report Serata (componente reale, dataset mock)</div>
-        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={serviceNight} anomalies={anomalies} />
+        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={serviceNight} anomalies={anomalies} paymentsByMethod={paymentsByMethod} />
       </div>
     </div>
   );

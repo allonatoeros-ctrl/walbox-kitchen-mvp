@@ -196,6 +196,102 @@
 .kpd-hourly-count { font-size: 13px; font-weight: 900; color: #f5f0e8; line-height: 1.2; }
 .kpd-hourly-value { font-size: 10.5px; color: rgba(245, 240, 232, 0.4); line-height: 1.2; }
 
+/* ── TOP PRODOTTI — lista ranked (Kitchen Analytics V1 Fase 6) ── */
+.kpd-top-list { display: flex; flex-direction: column; gap: 6px; }
+.kpd-top-row { display: flex; align-items: center; gap: 8px; }
+.kpd-top-rank {
+  width: 16px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 900;
+  color: rgba(245, 240, 232, 0.4);
+  text-align: right;
+}
+.kpd-top-name {
+  width: 40%;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: rgba(245, 240, 232, 0.75);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kpd-top-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.kpd-top-bar { height: 100%; background: var(--k-yellow, #facc15); border-radius: 4px; }
+.kpd-top-qty {
+  min-width: 34px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 900;
+  color: #f5f0e8;
+}
+
+/* ── TOP CATEGORIE — bar chart orizzontale (Kitchen Analytics V1 Fase 6) ── */
+.kpd-category-chart { display: flex; flex-direction: column; gap: 6px; }
+.kpd-category-row { display: flex; align-items: center; gap: 8px; }
+.kpd-category-label {
+  width: 84px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: rgba(245, 240, 232, 0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+.kpd-category-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.kpd-category-bar { height: 100%; background: var(--k-yellow, #facc15); border-radius: 4px; }
+.kpd-category-qty {
+  min-width: 34px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 900;
+  color: #f5f0e8;
+}
+
+/* ── MIX PAGAMENTI — bar chart orizzontale (Kitchen Analytics V1 Fase 7) ── */
+.kpd-paymentmix-chart { display: flex; flex-direction: column; gap: 6px; }
+.kpd-paymentmix-row { display: flex; align-items: center; gap: 8px; }
+.kpd-paymentmix-label {
+  width: 104px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: rgba(245, 240, 232, 0.5);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kpd-paymentmix-track {
+  flex: 1;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.kpd-paymentmix-bar { height: 100%; background: var(--k-yellow, #facc15); border-radius: 4px; }
+.kpd-paymentmix-meta {
+  min-width: 118px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 900;
+  color: #f5f0e8;
+}
+
 /* ── Tablet: più respiro, testo più leggibile a distanza ── */
 @media (min-width: 768px) {
   .kpd-page { padding: 24px; gap: 26px; max-width: 1100px; margin: 0 auto; }
@@ -212,6 +308,15 @@
   .kpd-hourly-meta { min-width: 72px; }
   .kpd-hourly-count { font-size: 14px; }
   .kpd-hourly-value { font-size: 11px; }
+  .kpd-top-name { font-size: 13px; }
+  .kpd-top-track { height: 16px; }
+  .kpd-top-qty { font-size: 14px; min-width: 40px; }
+  .kpd-category-label { width: 104px; font-size: 12px; }
+  .kpd-category-track { height: 16px; }
+  .kpd-category-qty { font-size: 14px; min-width: 40px; }
+  .kpd-paymentmix-label { width: 128px; font-size: 12px; }
+  .kpd-paymentmix-track { height: 16px; }
+  .kpd-paymentmix-meta { font-size: 13px; min-width: 130px; }
 }
 
 /* ── Mobile: colonne che si impilano ─────────────── */

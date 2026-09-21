@@ -121,6 +121,10 @@ import {
   summarizeServiceNightPayments,
   summarizePaymentsByMethod,
   bucketOrdersByServiceNight,
+  bucketOrdersByWalrusServiceHours,
+  WALRUS_SERVICE_HOUR_RANGES,
+  computeTopProductsAndCategories,
+  NON_MAPPED_CATEGORY,
 } from './kitchenServiceRules.js';
 
 // Orario da muro di Roma -> istante. A settembre l'Italia e' in CEST (+02:00).
@@ -246,10 +250,21 @@ test('summarizePaymentsByMethod: incasso/rimborsato/netto per metodo, solo succe
     { method: 'sumup_pos', direction: 'charge', status: 'failed', amount: 99 },
   ];
   const { byMethod } = summarizePaymentsByMethod(rows);
-  assert.deepEqual(byMethod.cash, { incasso: 15.5, rimborsato: 0, netto: 15.5 });
-  assert.deepEqual(byMethod.sumup_online, { incasso: 20, rimborsato: 4, netto: 16 });
+  assert.deepEqual(byMethod.cash, { incasso: 15.5, rimborsato: 0, netto: 15.5, count: 2 });
+  assert.deepEqual(byMethod.sumup_online, { incasso: 20, rimborsato: 4, netto: 16, count: 1 });
   // Un tentativo fallito non produce incasso ma la riga per il metodo esiste comunque (per il badge SumUp).
-  assert.deepEqual(byMethod.sumup_pos, { incasso: 0, rimborsato: 0, netto: 0 });
+  assert.deepEqual(byMethod.sumup_pos, { incasso: 0, rimborsato: 0, netto: 0, count: 0 });
+});
+
+test('summarizePaymentsByMethod: count e il numero di pagamenti charge succeeded per metodo (Fase 7)', () => {
+  const rows = [
+    { method: 'cash', direction: 'charge', status: 'succeeded', amount: 10 },
+    { method: 'cash', direction: 'charge', status: 'succeeded', amount: 12 },
+    { method: 'cash', direction: 'charge', status: 'failed', amount: 8 },
+    { method: 'cash', direction: 'refund', status: 'succeeded', amount: 3 },
+  ];
+  const { byMethod } = summarizePaymentsByMethod(rows);
+  assert.equal(byMethod.cash.count, 2);
 });
 
 test('summarizePaymentsByMethod: badge SumUp conta i tentativi, solo su sumup_online/sumup_pos', () => {
@@ -360,6 +375,66 @@ test('bucketOrdersByServiceNight: nessun ordine = tutti i bucket a zero, mai NaN
   }
 });
 
+test('bucketOrdersByWalrusServiceHours: 7 fasce, solo pranzo (1h) e sera/notte (2h), tutte a zero senza ordini', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const buckets = bucketOrdersByWalrusServiceHours([], night);
+  assert.deepEqual(buckets.map((b) => b.label), ['12-13', '13-14', '14-15', '18-20', '20-22', '22-00', '00-02']);
+  assert.deepEqual(WALRUS_SERVICE_HOUR_RANGES.map((r) => r.label), buckets.map((b) => b.label));
+  buckets.forEach((b) => { assert.equal(b.count, 0); assert.equal(b.value, 0); });
+});
+
+test('bucketOrdersByWalrusServiceHours: conta pranzo e sera nella fascia giusta, somma order.total', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    order('o1', cest('2026-09-18T12:30:00').toISOString(), { total: 9 }),  // 12-13
+    order('o2', cest('2026-09-18T13:45:00').toISOString(), { total: 11 }), // 13-14
+    order('o3', cest('2026-09-18T19:00:00').toISOString(), { total: 12 }), // 18-20
+    order('o4', cest('2026-09-19T01:00:00').toISOString(), { total: 7 }),  // 00-02
+  ];
+  const buckets = bucketOrdersByWalrusServiceHours(orders, night);
+  const byLabel = Object.fromEntries(buckets.map((b) => [b.label, b]));
+  assert.deepEqual({ count: byLabel['12-13'].count, value: byLabel['12-13'].value }, { count: 1, value: 9 });
+  assert.deepEqual({ count: byLabel['13-14'].count, value: byLabel['13-14'].value }, { count: 1, value: 11 });
+  assert.deepEqual({ count: byLabel['18-20'].count, value: byLabel['18-20'].value }, { count: 1, value: 12 });
+  assert.deepEqual({ count: byLabel['00-02'].count, value: byLabel['00-02'].value }, { count: 1, value: 7 });
+  assert.equal(byLabel['14-15'].count, 0);
+});
+
+test('bucketOrdersByWalrusServiceHours: ordini fuori dalle fasce operative (chiusura) sono esclusi dal grafico, non azzerano gli altri totali', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    order('o1', cest('2026-09-18T07:00:00').toISOString(), { total: 99 }), // 06-08, chiusura mattina
+    order('o2', cest('2026-09-18T10:00:00').toISOString(), { total: 99 }), // 10-12, chiusura tarda mattina
+    order('o3', cest('2026-09-18T16:00:00').toISOString(), { total: 99 }), // 16-18, chiusura pomeriggio
+    order('o4', cest('2026-09-19T03:00:00').toISOString(), { total: 99 }), // 02-04, chiusura notte fonda
+    order('o5', cest('2026-09-18T18:30:00').toISOString(), { total: 15 }), // 18-20, unico visibile
+  ];
+  const buckets = bucketOrdersByWalrusServiceHours(orders, night);
+  const totalCount = buckets.reduce((sum, b) => sum + b.count, 0);
+  const totalValue = buckets.reduce((sum, b) => sum + b.value, 0);
+  assert.equal(totalCount, 1);
+  assert.equal(totalValue, 15);
+  // AC6 (totale giornata) resta intatto altrove: bucketOrdersByServiceNight non e' toccata.
+  const fullNightTotal = bucketOrdersByServiceNight(orders, night, 2).reduce((sum, b) => sum + b.count, 0);
+  assert.equal(fullNightTotal, 5);
+});
+
+test('bucketOrdersByWalrusServiceHours: solo delivered nella serata corrente, mai NaN senza ordini', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    order('o1', cest('2026-09-18T12:30:00').toISOString(), { status: 'cancelled', total: 9 }), // escluso: non delivered
+    order('o2', cest('2026-09-17T12:30:00').toISOString(), { total: 9 }), // escluso: serata diversa
+  ];
+  const buckets = bucketOrdersByWalrusServiceHours(orders, night);
+  buckets.forEach((b) => { assert.equal(b.count, 0); assert.equal(b.value, 0); });
+  for (const input of [null, undefined, []]) {
+    bucketOrdersByWalrusServiceHours(input, night).forEach((b) => {
+      assert.equal(b.count, 0);
+      assert.equal(b.value, 0);
+    });
+  }
+});
+
 // --- Verifica end-to-end su dati reali esportati (se presenti) ---
 //
 // Replica esattamente la pipeline di produzione: pagamento -> ordine -> finestra della serata,
@@ -429,5 +504,117 @@ test('serviceNightWindowFor ricostruisce la stessa finestra a partire dalla sera
     const w = serviceNightWindowFor(bad);
     assert.equal(typeof w.start, 'number');
     assert.ok(w.end > w.start);
+  }
+});
+
+// ============================================================================
+// TOP PRODOTTI + TOP CATEGORIE (Kitchen Analytics V1 Fase 6)
+// ============================================================================
+function orderWithItems(id, createdAtIso, items, { status = 'delivered' } = {}) {
+  return { id, createdAt: createdAtIso, status, items };
+}
+
+const menu = [
+  { id: 'm1', name: 'Crudo Vero', category: 'panini' },
+  { id: 'm2', name: 'Box Pulled Pork', category: 'bbq' },
+  { id: 'm3', name: 'Keiler Helles', category: 'birre' },
+];
+
+test('computeTopProductsAndCategories: somma le quantita per nome prodotto, solo delivered nella serata', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'm1', name: 'Crudo Vero', quantity: 2 },
+      { itemId: 'm2', name: 'Box Pulled Pork', quantity: 1 },
+    ]),
+    orderWithItems('o2', cest('2026-09-18T19:30:00').toISOString(), [
+      { itemId: 'm1', name: 'Crudo Vero', quantity: 1 },
+    ]),
+    orderWithItems('o3', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'm1', name: 'Crudo Vero', quantity: 5 },
+    ], { status: 'cancelled' }), // escluso: non delivered
+    orderWithItems('o4', cest('2026-09-17T19:00:00').toISOString(), [
+      { itemId: 'm1', name: 'Crudo Vero', quantity: 5 },
+    ]), // escluso: serata diversa
+  ];
+  const { topProducts } = computeTopProductsAndCategories(orders, night, menu, 5);
+  assert.deepEqual(topProducts, [
+    { name: 'Crudo Vero', quantity: 3 },
+    { name: 'Box Pulled Pork', quantity: 1 },
+  ]);
+});
+
+test('computeTopProductsAndCategories: rispetta topN e ordina per quantita decrescente', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'm1', name: 'Crudo Vero', quantity: 1 },
+      { itemId: 'm2', name: 'Box Pulled Pork', quantity: 3 },
+      { itemId: 'm3', name: 'Keiler Helles', quantity: 2 },
+    ]),
+  ];
+  const { topProducts } = computeTopProductsAndCategories(orders, night, menu, 2);
+  assert.equal(topProducts.length, 2);
+  assert.deepEqual(topProducts, [
+    { name: 'Box Pulled Pork', quantity: 3 },
+    { name: 'Keiler Helles', quantity: 2 },
+  ]);
+});
+
+test('computeTopProductsAndCategories: mappa prodotto->categoria per itemId, aggrega per categoria', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'm1', name: 'Crudo Vero', quantity: 2 },
+      { itemId: 'm2', name: 'Box Pulled Pork', quantity: 1 },
+    ]),
+    orderWithItems('o2', cest('2026-09-18T19:30:00').toISOString(), [
+      { itemId: 'm3', name: 'Keiler Helles', quantity: 4 },
+    ]),
+  ];
+  const { topCategories } = computeTopProductsAndCategories(orders, night, menu, 5);
+  assert.deepEqual(topCategories, [
+    { category: 'birre', quantity: 4 },
+    { category: 'panini', quantity: 2 },
+    { category: 'bbq', quantity: 1 },
+  ]);
+});
+
+test('computeTopProductsAndCategories: item non mappabile al catalogo va nel bucket esplicito NON_MAPPED_CATEGORY, mai categoria inventata', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'item-999-ghost', name: 'Piatto Sparito Dal Menu', quantity: 3 },
+      { itemId: 'm1', name: 'Crudo Vero', quantity: 1 },
+    ]),
+  ];
+  const { topProducts, topCategories } = computeTopProductsAndCategories(orders, night, menu, 5);
+  assert.deepEqual(topProducts, [
+    { name: 'Piatto Sparito Dal Menu', quantity: 3 },
+    { name: 'Crudo Vero', quantity: 1 },
+  ]);
+  assert.deepEqual(topCategories, [
+    { category: NON_MAPPED_CATEGORY, quantity: 3 },
+    { category: 'panini', quantity: 1 },
+  ]);
+});
+
+test('computeTopProductsAndCategories: fallback su match per nome quando itemId assente', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { name: 'Keiler Helles', quantity: 2 }, // nessun itemId
+    ]),
+  ];
+  const { topCategories } = computeTopProductsAndCategories(orders, night, menu, 5);
+  assert.deepEqual(topCategories, [{ category: 'birre', quantity: 2 }]);
+});
+
+test('computeTopProductsAndCategories: nessun ordine = liste vuote, mai NaN', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  for (const input of [[], null, undefined]) {
+    const { topProducts, topCategories } = computeTopProductsAndCategories(input, night, menu, 5);
+    assert.deepEqual(topProducts, []);
+    assert.deepEqual(topCategories, []);
   }
 });
