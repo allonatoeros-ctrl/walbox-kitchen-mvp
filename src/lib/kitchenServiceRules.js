@@ -206,3 +206,45 @@ export function summarizeServiceNightPayments(rows) {
     incassiRiusciti,
   };
 }
+
+const SUMUP_METHODS = new Set(['sumup_online', 'sumup_pos']);
+
+/**
+ * Cassa della serata per metodo di pagamento (kitchen_payments.method). Stesse righe e stessa
+ * finestra di summarizeServiceNightPayments: la somma di incasso/rimborsato/netto su tutti i
+ * metodi deve combaciare esattamente con quella funzione per le stesse righe (vincolo di
+ * coerenza incrociata, Kitchen Analytics V1 AC3). Un solo posto di verita, due letture: la
+ * tabella "CONTROLLO SERATA/CASSA" e il chart Mix pagamento leggono da qui.
+ * `sumup` conta i tentativi (non gli importi) sui soli metodi sumup_online/sumup_pos: initiated
+ * e pending sono entrambi "in corso", coerente col trattamento di inSospeso sopra.
+ */
+export function summarizePaymentsByMethod(rows) {
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const byMethod = {};
+  const sumup = { succeeded: 0, pending: 0, failed: 0 };
+
+  (rows ?? []).forEach((r) => {
+    const method = r.method ?? 'unknown';
+    const amount = Number(r.amount) || 0;
+    if (!byMethod[method]) byMethod[method] = { incasso: 0, rimborsato: 0, netto: 0 };
+    if (r.direction === 'charge' && r.status === 'succeeded') {
+      byMethod[method].incasso += amount;
+    } else if (r.direction === 'refund' && r.status === 'succeeded') {
+      byMethod[method].rimborsato += amount;
+    }
+    if (SUMUP_METHODS.has(method)) {
+      if (r.status === 'succeeded') sumup.succeeded += 1;
+      else if (r.status === 'initiated' || r.status === 'pending') sumup.pending += 1;
+      else if (r.status === 'failed') sumup.failed += 1;
+    }
+  });
+
+  Object.keys(byMethod).forEach((method) => {
+    const m = byMethod[method];
+    m.incasso = round2(m.incasso);
+    m.rimborsato = round2(m.rimborsato);
+    m.netto = round2(m.incasso - m.rimborsato);
+  });
+
+  return { byMethod, sumup };
+}

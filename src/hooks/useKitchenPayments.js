@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { serviceNightWindow, summarizeServiceNightPayments } from '../lib/kitchenServiceRules';
+import { serviceNightWindow, summarizeServiceNightPayments, summarizePaymentsByMethod } from '../lib/kitchenServiceRules';
 
 const VENUE_ID = 'walrus-main';
 const RECENT_LIMIT = 30;
@@ -20,6 +20,7 @@ const POLL_MS = 15000;
 // righe sono gia' leggibili dallo staff con la policy esistente `staff_select_venue_payments`.
 
 const EMPTY_SUMMARY = { incasso: 0, rimborsato: 0, netto: 0, inSospeso: 0, falliti: 0, incassiRiusciti: 0 };
+const EMPTY_BY_METHOD = { byMethod: {}, sumup: { succeeded: 0, pending: 0, failed: 0 } };
 
 /**
  * Kitchen Payment Hub V1 — staff read-only data layer.
@@ -32,6 +33,7 @@ export function useKitchenPayments() {
   const [error, setError] = useState(null);
   const [serviceNight, setServiceNight] = useState(() => serviceNightWindow().night);
   const [todaySummary, setTodaySummary] = useState(EMPTY_SUMMARY);
+  const [paymentsByMethod, setPaymentsByMethod] = useState(EMPTY_BY_METHOD);
   const [anomalies, setAnomalies] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
 
@@ -51,7 +53,7 @@ export function useKitchenPayments() {
         // serata. Nessun filtro sul created_at del pagamento e nessun filtro su service_day.
         supabase
           .from('kitchen_payments')
-          .select('id, direction, status, amount, kitchen_orders!inner(created_at)')
+          .select('id, direction, status, method, amount, kitchen_orders!inner(created_at)')
           .eq('venue_id', VENUE_ID)
           .gte('kitchen_orders.created_at', night.startIso)
           .lt('kitchen_orders.created_at', night.endIso),
@@ -87,6 +89,7 @@ export function useKitchenPayments() {
 
       setServiceNight(night.night);
       setTodaySummary(summarizeServiceNightPayments(summaryRes.data));
+      setPaymentsByMethod(summarizePaymentsByMethod(summaryRes.data));
       setAnomalies(drift.map((a) => ({ ...a, order_code: orderCodeById[a.order_id] ?? null })));
       setRecentPayments(recent.map((p) => ({ ...p, order_code: orderCodeById[p.order_id] ?? null })));
       setError(null);
@@ -109,5 +112,5 @@ export function useKitchenPayments() {
     return () => clearInterval(intervalId);
   }, []);
 
-  return { loading, error, refresh, serviceNight, todaySummary, anomalies, recentPayments };
+  return { loading, error, refresh, serviceNight, todaySummary, paymentsByMethod, anomalies, recentPayments };
 }

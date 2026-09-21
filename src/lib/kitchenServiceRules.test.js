@@ -119,6 +119,7 @@ import {
   isInServiceNight,
   formatServiceNightLabel,
   summarizeServiceNightPayments,
+  summarizePaymentsByMethod,
 } from './kitchenServiceRules.js';
 
 // Orario da muro di Roma -> istante. A settembre l'Italia e' in CEST (+02:00).
@@ -230,6 +231,60 @@ test('nessuna riga = tutto a zero, mai NaN', () => {
   for (const input of [[], null, undefined]) {
     const s = summarizeServiceNightPayments(input);
     assert.deepEqual(s, { incasso: 0, rimborsato: 0, netto: 0, inSospeso: 0, falliti: 0, incassiRiusciti: 0 });
+  }
+});
+
+// --- Kitchen Analytics V1 Fase 1: breakdown cassa per metodo ---
+
+test('summarizePaymentsByMethod: incasso/rimborsato/netto per metodo, solo succeeded', () => {
+  const rows = [
+    { method: 'cash', direction: 'charge', status: 'succeeded', amount: 10 },
+    { method: 'cash', direction: 'charge', status: 'succeeded', amount: '5.50' },
+    { method: 'sumup_online', direction: 'charge', status: 'succeeded', amount: 20 },
+    { method: 'sumup_online', direction: 'refund', status: 'succeeded', amount: 4 },
+    { method: 'sumup_pos', direction: 'charge', status: 'failed', amount: 99 },
+  ];
+  const { byMethod } = summarizePaymentsByMethod(rows);
+  assert.deepEqual(byMethod.cash, { incasso: 15.5, rimborsato: 0, netto: 15.5 });
+  assert.deepEqual(byMethod.sumup_online, { incasso: 20, rimborsato: 4, netto: 16 });
+  // Un tentativo fallito non produce incasso ma la riga per il metodo esiste comunque (per il badge SumUp).
+  assert.deepEqual(byMethod.sumup_pos, { incasso: 0, rimborsato: 0, netto: 0 });
+});
+
+test('summarizePaymentsByMethod: badge SumUp conta i tentativi, solo su sumup_online/sumup_pos', () => {
+  const rows = [
+    { method: 'sumup_online', direction: 'charge', status: 'succeeded', amount: 10 },
+    { method: 'sumup_pos', direction: 'charge', status: 'succeeded', amount: 10 },
+    { method: 'sumup_online', direction: 'charge', status: 'pending', amount: 10 },
+    { method: 'sumup_pos', direction: 'charge', status: 'initiated', amount: 10 },
+    { method: 'sumup_online', direction: 'charge', status: 'failed', amount: 10 },
+    { method: 'cash', direction: 'charge', status: 'failed', amount: 10 }, // mai contato: non e' SumUp
+  ];
+  assert.deepEqual(summarizePaymentsByMethod(rows).sumup, { succeeded: 2, pending: 2, failed: 1 });
+});
+
+test('AC3: la somma per metodo coincide esattamente con summarizeServiceNightPayments sulle stesse righe', () => {
+  const rows = [
+    { method: 'cash', direction: 'charge', status: 'succeeded', amount: 15 },
+    { method: 'sumup_online', direction: 'charge', status: 'succeeded', amount: '7.50' },
+    { method: 'sumup_pos', direction: 'charge', status: 'failed', amount: 99 },
+    { method: 'card_counter_manual', direction: 'charge', status: 'initiated', amount: 12 },
+    { method: 'satispay_app', direction: 'refund', status: 'succeeded', amount: 5 },
+    { method: 'manual_comp', direction: 'refund', status: 'initiated', amount: 30 },
+  ];
+  const total = summarizeServiceNightPayments(rows);
+  const { byMethod } = summarizePaymentsByMethod(rows);
+  const round2 = (n) => Math.round(n * 100) / 100;
+  const sumIncasso = round2(Object.values(byMethod).reduce((acc, m) => acc + m.incasso, 0));
+  const sumRimborsato = round2(Object.values(byMethod).reduce((acc, m) => acc + m.rimborsato, 0));
+  assert.equal(sumIncasso, total.incasso);
+  assert.equal(sumRimborsato, total.rimborsato);
+  assert.equal(round2(sumIncasso - sumRimborsato), total.netto);
+});
+
+test('summarizePaymentsByMethod: nessuna riga = tutto a zero, mai NaN', () => {
+  for (const input of [[], null, undefined]) {
+    assert.deepEqual(summarizePaymentsByMethod(input), { byMethod: {}, sumup: { succeeded: 0, pending: 0, failed: 0 } });
   }
 });
 
