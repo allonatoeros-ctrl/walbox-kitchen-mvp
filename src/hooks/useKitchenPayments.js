@@ -1,48 +1,37 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { serviceNightWindow, summarizeServiceNightPayments } from '../lib/kitchenServiceRules';
 
 const VENUE_ID = 'walrus-main';
 const RECENT_LIMIT = 30;
 const POLL_MS = 15000;
 
-function todayLocalDate() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
+// INCASSO = SOLO kitchen_payments, SERATA = finestra 06:00 -> 06:00 su kitchen_orders.created_at.
+//
+// Prima questa summary arrivava da `kitchen_payments_daily_summary`, che raggruppa per
+// `date_trunc('day', kp.created_at)` (timezone del DB, di fatto UTC). Poi si era passati a
+// `kitchen_orders.service_day`, che pero' scatta a mezzanotte e taglia a meta' la serata reale
+// (finding live 2026-09-18). Ora la finestra e' quella della serata (vedi kitchenServiceRules):
+// filtra sul `created_at` dell'ORDINE, quindi un pagamento incassato dopo mezzanotte su un ordine
+// della sera prima resta contato nella serata giusta. Storico e Cassa usano la stessa finestra e
+// la stessa funzione di aggregazione: non possono divergere.
+//
+// Le righe sono aggregate qui e non da una view: nessuna migration, nessun dato toccato, e le
+// righe sono gia' leggibili dallo staff con la policy esistente `staff_select_venue_payments`.
 
-// kitchen_payments_daily_summary.day is a date_trunc('day', created_at) timestamptz (DB timezone,
-// not necessarily the browser's) — compared as a UTC calendar date, same known edge-of-midnight
-// caveat as the rest of this app's "today" logic (see StoricoView.jsx todayLocalDate).
-function isToday(dayValue) {
-  if (!dayValue) return false;
-  return String(dayValue).slice(0, 10) === todayLocalDate();
-}
-
-function summarizeToday(rows) {
-  const today = rows.filter((r) => isToday(r.day));
-  let incasso = 0;
-  let rimborsato = 0;
-  let inSospeso = 0;
-  let falliti = 0;
-  today.forEach((r) => {
-    const amount = Number(r.total_amount) || 0;
-    if (r.direction === 'charge' && r.status === 'succeeded') incasso += amount;
-    else if (r.direction === 'refund' && r.status === 'succeeded') rimborsato += amount;
-    else if (r.status === 'initiated' || r.status === 'pending') inSospeso += amount;
-    else if (r.status === 'failed') falliti += Number(r.attempt_count) || 0;
-  });
-  return { incasso, rimborsato, netto: incasso - rimborsato, inSospeso, falliti };
-}
+const EMPTY_SUMMARY = { incasso: 0, rimborsato: 0, netto: 0, inSospeso: 0, falliti: 0, incassiRiusciti: 0 };
 
 /**
  * Kitchen Payment Hub V1 — staff read-only data layer.
- * Reads kitchen_payments_daily_summary / kitchen_payments_provider_drift_candidates /
- * kitchen_payments directly (staff_select_venue_payments RLS) — no writes here.
+ * Reads kitchen_payments (scoped alla serata via kitchen_orders.created_at),
+ * kitchen_payments_provider_drift_candidates e kitchen_payments recenti direttamente
+ * (staff_select_venue_payments RLS) — no writes here.
  */
 export function useKitchenPayments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [todaySummary, setTodaySummary] = useState({ incasso: 0, rimborsato: 0, netto: 0, inSospeso: 0, falliti: 0 });
+  const [serviceNight, setServiceNight] = useState(() => serviceNightWindow().night);
+  const [todaySummary, setTodaySummary] = useState(EMPTY_SUMMARY);
   const [anomalies, setAnomalies] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
 
@@ -55,11 +44,17 @@ export function useKitchenPayments() {
         return;
       }
 
+      const night = serviceNightWindow();
+
       const [summaryRes, driftRes, recentRes] = await Promise.all([
+        // !inner + filtro sulla colonna embedded: solo i pagamenti degli ordini APERTI dentro la
+        // serata. Nessun filtro sul created_at del pagamento e nessun filtro su service_day.
         supabase
-          .from('kitchen_payments_daily_summary')
-          .select('*')
-          .eq('venue_id', VENUE_ID),
+          .from('kitchen_payments')
+          .select('id, direction, status, amount, kitchen_orders!inner(created_at)')
+          .eq('venue_id', VENUE_ID)
+          .gte('kitchen_orders.created_at', night.startIso)
+          .lt('kitchen_orders.created_at', night.endIso),
         supabase
           .from('kitchen_payments_provider_drift_candidates')
           .select('*')
@@ -90,7 +85,8 @@ export function useKitchenPayments() {
         orderCodeById = Object.fromEntries((orders ?? []).map((o) => [o.id, o.order_code]));
       }
 
-      setTodaySummary(summarizeToday(summaryRes.data ?? []));
+      setServiceNight(night.night);
+      setTodaySummary(summarizeServiceNightPayments(summaryRes.data));
       setAnomalies(drift.map((a) => ({ ...a, order_code: orderCodeById[a.order_id] ?? null })));
       setRecentPayments(recent.map((p) => ({ ...p, order_code: orderCodeById[p.order_id] ?? null })));
       setError(null);
@@ -113,5 +109,5 @@ export function useKitchenPayments() {
     return () => clearInterval(intervalId);
   }, []);
 
-  return { loading, error, refresh, todaySummary, anomalies, recentPayments };
+  return { loading, error, refresh, serviceNight, todaySummary, anomalies, recentPayments };
 }

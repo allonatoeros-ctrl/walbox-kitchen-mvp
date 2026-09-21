@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
+import { formatServiceNightLabel } from '../lib/kitchenServiceRules';
 import { supabase } from '../lib/supabaseClient';
 import './PaymentsViewDemo.css';
 
@@ -199,7 +200,11 @@ export default function PaymentsView({
   visibleAnomalyIds,
   allowReconcileFailed = true,
 } = {}) {
-  const { loading, error, refresh, todaySummary, anomalies, recentPayments } = usePaymentsData();
+  const { loading, error, refresh, todaySummary, anomalies, recentPayments, serviceNight } = usePaymentsData();
+  // Stessa finestra dello Storico (06:00 -> 06:00): il titolo deve dire QUALE serata, altrimenti
+  // dopo mezzanotte "oggi" e' ambiguo proprio quando serve di piu'. Gli harness demo non passano
+  // serviceNight: in quel caso resta il titolo neutro.
+  const nightLabel = formatServiceNightLabel(serviceNight);
   const visiblePayments = visiblePaymentIds
     ? recentPayments.filter((payment) => visiblePaymentIds.includes(payment.id))
     : recentPayments;
@@ -296,7 +301,7 @@ export default function PaymentsView({
 
       {/* CASSA OGGI */}
       <div>
-        <div className="kpd-section-title">Cassa oggi</div>
+        <div className="kpd-section-title">{nightLabel ? `Cassa serata ${nightLabel}` : 'Cassa oggi'}</div>
         <div className="kpd-cash-grid">
           <div className="kpd-cash-tile">
             <span className="kpd-cash-label">Incassato</span>

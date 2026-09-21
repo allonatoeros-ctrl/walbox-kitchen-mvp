@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { serviceNightWindowFor, isInServiceNight, formatServiceNightLabel } from '../lib/kitchenServiceRules';
 
 const HISTORY_PAGE_SIZE = 15;
 
@@ -6,12 +7,19 @@ function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
 }
 
-function todayLocalDate() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+function formatEuro(n) {
+  return `€ ${(Number(n) || 0).toFixed(2)}`;
 }
 
-export default function StoricoView({ orders }) {
+/**
+ * `paymentsSummary` arriva da useKitchenPayments (kitchen_payments), gia' filtrato sulla stessa
+ * finestra di serata usata qui.
+ * Contratto: gli ordini (consegnati/annullati/top prodotto) restano kitchen_orders, gli IMPORTI
+ * di cassa restano kitchen_payments. `order.total` e' il valore della comanda, non un incasso:
+ * non viene mai sommato come "incassato". Senza `paymentsSummary` (Preview/Demo, nessuna
+ * sessione staff) gli importi di cassa non vengono inventati: restano '—'.
+ */
+export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null }) {
   const [historySearch, setHistorySearch] = useState('');
 
   const summary = useMemo(() => {
@@ -22,15 +30,18 @@ export default function StoricoView({ orders }) {
     return { count, total, avg };
   }, [orders]);
 
+  // Serata: finestra 06:00 -> 06:00 Europe/Rome su kitchen_orders.created_at — la STESSA che
+  // filtra la Cassa/Payment Hub (useKitchenPayments). Mai service_day: scatta a mezzanotte.
+  // `serviceNight` arriva da useKitchenPayments ed e' riaggiornato a ogni poll: un solo orologio
+  // per Storico e Cassa. Senza hook (Preview/Demo) si ricade sulla serata corrente locale.
+  const night = useMemo(() => serviceNightWindowFor(serviceNight), [serviceNight]);
+
   const reportOggi = useMemo(() => {
-    const today = todayLocalDate();
-    const isToday = (o) => o.createdAt?.startsWith(today);
-    const todayDelivered = orders.filter((o) => o.status === 'delivered' && isToday(o));
-    const todayCancelled = orders.filter((o) => o.status === 'cancelled' && isToday(o));
+    const isTonight = (o) => isInServiceNight(o.createdAt, night);
+    const todayDelivered = orders.filter((o) => o.status === 'delivered' && isTonight(o));
+    const todayCancelled = orders.filter((o) => o.status === 'cancelled' && isTonight(o));
 
     const count = todayDelivered.length;
-    const incasso = todayDelivered.reduce((sum, o) => sum + (o.total ?? 0), 0);
-    const avg = count > 0 ? incasso / count : 0;
 
     const itemCounts = {};
     todayDelivered.forEach((o) => {
@@ -44,8 +55,17 @@ export default function StoricoView({ orders }) {
       else if (o.paymentMethod === 'card') byPayment.card++;
     });
 
-    return { count, incasso, avg, annullati: todayCancelled.length, topItem, byPayment };
-  }, [orders]);
+    return { count, annullati: todayCancelled.length, topItem, byPayment };
+  }, [orders, night]);
+
+  const cassa = paymentsSummary
+    ? {
+        incasso: formatEuro(paymentsSummary.incasso),
+        rimborsato: formatEuro(paymentsSummary.rimborsato),
+        netto: formatEuro(paymentsSummary.netto),
+        ticket: reportOggi.count > 0 ? formatEuro(paymentsSummary.netto / reportOggi.count) : formatEuro(0),
+      }
+    : { incasso: '—', rimborsato: '—', netto: '—', ticket: '—' };
 
   const historyOrders = useMemo(() => {
     const completed = orders
@@ -68,19 +88,24 @@ export default function StoricoView({ orders }) {
               <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4ade80' }}>{summary.count}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Totale incassato</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>€ {summary.total.toFixed(2)}</span>
+              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valore ordini consegnati</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>{formatEuro(summary.total)}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Media ticket</span>
-              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>€ {summary.avg.toFixed(2)}</span>
+              <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Valore medio ordine</span>
+              <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>{formatEuro(summary.avg)}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+              <span style={{ fontSize: '0.68rem', color: '#6b7280', maxWidth: '20rem', lineHeight: 1.3 }}>
+                Valore delle comande, non l&apos;incasso. L&apos;incasso reale è qui sotto e in CASSA.
+              </span>
             </div>
           </div>
 
-          {/* Report oggi / serata */}
+          {/* Report serata — stessa finestra e stessi importi della Cassa */}
           <div style={{ marginBottom: '1rem' }}>
             <div style={{ fontSize: '0.65rem', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' }}>
-              Oggi / serata
+              Serata {formatServiceNightLabel(night.night)} · dalle 06:00 alle 06:00
             </div>
             <div style={{ display: 'flex', gap: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', padding: '0.75rem 1rem', flexWrap: 'wrap', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -88,12 +113,20 @@ export default function StoricoView({ orders }) {
                 <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4ade80' }}>{reportOggi.count}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Incasso stimato</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>€ {reportOggi.incasso.toFixed(2)}</span>
+                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Incassato</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4ade80' }}>{cassa.incasso}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Rimborsato</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f87171' }}>{cassa.rimborsato}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Netto</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#facc15' }}>{cassa.netto}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Ticket medio</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>€ {reportOggi.avg.toFixed(2)}</span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: '#60a5fa' }}>{cassa.ticket}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 <span style={{ fontSize: '0.7rem', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Annullati</span>
@@ -112,6 +145,11 @@ export default function StoricoView({ orders }) {
                 </div>
               )}
             </div>
+            {!paymentsSummary && (
+              <div style={{ fontSize: '0.68rem', color: '#6b7280', marginTop: '0.4rem' }}>
+                Importi di cassa non disponibili qui — aprili in CASSA.
+              </div>
+            )}
           </div>
 
           <div className="ksd-history-search-wrap">

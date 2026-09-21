@@ -127,7 +127,10 @@ function KitchenSoloServiceLive() {
   // Micro-fase 1 (badge anomalie Payment Hub): read-only, nessuna azione — vedi
   // ai-ops/reports/kitchen-solo-payment-hub-integration-audit.md §5. Non montato in
   // Preview/Demo per restare isolati da Supabase (invariato).
-  const { anomalies: paymentAnomalies } = useKitchenPayments();
+  // Micro-fase 2 (Storico/Cassa allineati): la stessa summary kitchen_payments che alimenta
+  // la Cassa/Payment Hub viene passata allo Storico, con la giornata operativa (service_day)
+  // gia' risolta — cosi' le due schermate non possono divergere. Sempre read-only.
+  const { anomalies: paymentAnomalies, todaySummary: paymentsSummary, serviceNight } = useKitchenPayments();
 
   const [authChecked, setAuthChecked] = useState(
     () => import.meta.env.VITE_E2E_BYPASS_STAFF_AUTH === 'true'
@@ -188,6 +191,8 @@ function KitchenSoloServiceLive() {
       menuItems={menuItems}
       toggleAvailability={toggleAvailability}
       paymentAnomalies={paymentAnomalies}
+      paymentsSummary={paymentsSummary}
+      serviceNight={serviceNight}
       onLogout={handleLogout}
     />
   );
@@ -216,6 +221,7 @@ function KitchenSoloServicePreview() {
 export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
+  paymentsSummary = null, serviceNight = null,
   paymentsPath = '/kitchen/payments',
   // Default per Preview/Demo/Training (nessuna sessione reale da chiudere): solo navigazione.
   onLogout = () => navigate('/kitchen/login'),
@@ -878,7 +884,7 @@ export function KitchenSoloServiceView({
             </div>
             <div className="kss-overlay-body">
               {overlay === 'menu'    && <MenuView menuItems={menuItems} toggleAvailability={toggleAvailability} />}
-              {overlay === 'storico' && <StoricoView orders={orders} />}
+              {overlay === 'storico' && <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} />}
               {overlay === 'alert'   && <AlertView orders={orders} />}
             </div>
           </div>
