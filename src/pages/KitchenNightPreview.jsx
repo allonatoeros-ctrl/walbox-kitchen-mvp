@@ -10,8 +10,10 @@
 import { useMemo } from 'react';
 import { usePreviewKitchenNightOrders } from '../hooks/useKitchenNightPreviewOrders';
 import { usePreviewKitchenNightPayments } from '../hooks/useKitchenNightPreviewPayments';
+import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
 import { SERATA_WALRUS_NIGHT_START_ISO } from '../data/kitchenNightMockData.js';
-import { serviceNightWindow } from '../lib/kitchenServiceRules';
+import { serviceNightWindow, formatServiceNightLabel } from '../lib/kitchenServiceRules';
+import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
 import StoricoView from './StoricoView';
 import './KitchenStaffDashboard.css';
 
@@ -89,15 +91,17 @@ function SummaryTile({ label, value }) {
  */
 export default function KitchenNightPreview() {
   const { orders, resetToDemo } = usePreviewKitchenNightOrders();
-  const { todaySummary, anomalies, paymentsByMethod } = usePreviewKitchenNightPayments();
 
-  // Il dataset B1 e' fisso sulla notte del 2026-09-20 (SERATA_WALRUS_NIGHT_START_ISO): senza
-  // passare questo serviceNight a StoricoView, il componente ricade sulla serata "adesso" reale
-  // e non trova ne' gli ordini ne' i pagamenti del mock nella finestra 06:00->06:00, mostrando
-  // '-'/0 anche se il pannello Pagamenti qui sopra li mostra correttamente (mismatch da harness,
-  // non da dato mancante — vedi ai-ops/reports/kitchen-analytics-capability-audit-20260921.md).
-  const serviceNight = useMemo(
-    () => serviceNightWindow(new Date(SERATA_WALRUS_NIGHT_START_ISO)).night,
+  // Selettore condiviso Storico/Cassa (useSelectedServiceNight, Gate 1 approvato da Eros
+  // 2026-09-21): il DEV harness naviga la STESSA notte selezionata altrove nell'app, nessuno
+  // stato parallelo. Il dataset B1 e' fisso sulla notte 2026-09-20: su "OGGI" (notte reale
+  // corrente) o su qualunque altra notte diversa da 2026-09-20, KPI/Attenzione/fasce/top
+  // prodotti/Mix pagamento/Storico mostrano coerentemente "nessun dato", non i valori demo.
+  const { resolvedNight } = useSelectedServiceNight();
+  const { todaySummary, anomalies, paymentsByMethod } = usePreviewKitchenNightPayments({ night: resolvedNight });
+
+  const demoNightLabel = useMemo(
+    () => formatServiceNightLabel(serviceNightWindow(new Date(SERATA_WALRUS_NIGHT_START_ISO)).night),
     []
   );
 
@@ -119,6 +123,14 @@ export default function KitchenNightPreview() {
       </div>
 
       <div style={{ padding: '0 1rem 2rem' }}>
+        <div style={sectionTitleStyle}>Notte serata (selettore condiviso Storico/Cassa)</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <ServiceNightSelector />
+          <span style={{ fontSize: '0.7rem', color: '#888' }}>
+            Dataset demo "Serata Walrus" disponibile solo sulla notte {demoNightLabel}: su qualunque altra notte le sezioni sotto mostrano correttamente "nessun dato".
+          </span>
+        </div>
+
         <div style={sectionTitleStyle}>Ordini per stato</div>
         <div data-testid="night-preview-status-counts" style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
           {Object.entries(STATUS_LABELS).map(([status, label]) => (
@@ -140,7 +152,7 @@ export default function KitchenNightPreview() {
         {/* DEV harness: /kitchen/payments richiede sessione staff reale (pagina nera senza env
             Supabase). "Apri Cassa" qui punta al demo harness Cassa gia' esistente
             (/kitchen/staff-payments-demo, zero Supabase/auth), non alla route di produzione. */}
-        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={serviceNight} anomalies={anomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => navigate('/kitchen/staff-payments-demo')} />
+        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={resolvedNight} anomalies={anomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => navigate('/kitchen/staff-payments-demo')} />
       </div>
     </div>
   );
