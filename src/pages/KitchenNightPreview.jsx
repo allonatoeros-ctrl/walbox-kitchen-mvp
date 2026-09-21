@@ -10,6 +10,8 @@
 import { useMemo } from 'react';
 import { usePreviewKitchenNightOrders } from '../hooks/useKitchenNightPreviewOrders';
 import { usePreviewKitchenNightPayments } from '../hooks/useKitchenNightPreviewPayments';
+import { SERATA_WALRUS_NIGHT_START_ISO } from '../data/kitchenNightMockData.js';
+import { serviceNightWindow } from '../lib/kitchenServiceRules';
 import StoricoView from './StoricoView';
 import './KitchenStaffDashboard.css';
 
@@ -84,6 +86,16 @@ export default function KitchenNightPreview() {
   const { orders, resetToDemo } = usePreviewKitchenNightOrders();
   const { todaySummary, anomalies } = usePreviewKitchenNightPayments();
 
+  // Il dataset B1 e' fisso sulla notte del 2026-09-20 (SERATA_WALRUS_NIGHT_START_ISO): senza
+  // passare questo serviceNight a StoricoView, il componente ricade sulla serata "adesso" reale
+  // e non trova ne' gli ordini ne' i pagamenti del mock nella finestra 06:00->06:00, mostrando
+  // '-'/0 anche se il pannello Pagamenti qui sopra li mostra correttamente (mismatch da harness,
+  // non da dato mancante — vedi ai-ops/reports/kitchen-analytics-capability-audit-20260921.md).
+  const serviceNight = useMemo(
+    () => serviceNightWindow(new Date(SERATA_WALRUS_NIGHT_START_ISO)).night,
+    []
+  );
+
   const byStatus = useMemo(() => {
     const counts = {};
     orders.forEach((order) => {
@@ -120,7 +132,7 @@ export default function KitchenNightPreview() {
         </div>
 
         <div style={sectionTitleStyle}>Storico / Report Serata (componente reale, dataset mock)</div>
-        <StoricoView orders={orders} />
+        <StoricoView orders={orders} paymentsSummary={todaySummary} serviceNight={serviceNight} />
       </div>
     </div>
   );
