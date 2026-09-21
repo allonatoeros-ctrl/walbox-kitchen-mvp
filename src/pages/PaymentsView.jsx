@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
+import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
 import { formatServiceNightLabel } from '../lib/kitchenServiceRules';
 import { supabase } from '../lib/supabaseClient';
 import CassaControlSection from '../components/kitchen/CassaControlSection';
+import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
 import './PaymentsViewDemo.css';
 
 const METHOD_LABELS = {
@@ -201,7 +203,14 @@ export default function PaymentsView({
   visibleAnomalyIds,
   allowReconcileFailed = true,
 } = {}) {
-  const { loading, error, refresh, todaySummary, paymentsByMethod, anomalies, recentPayments, serviceNight } = usePaymentsData();
+  // Selettore service night (Gate 1 approvato da Eros 2026-09-21): condiviso con Storico via
+  // useSelectedServiceNight (modulo esterno) — stessa notte se lo staff naviga da Storico "Apri
+  // Cassa →". Mostrato solo quando questa vista usa i dati LIVE reali (default `useKitchenPayments`):
+  // gli harness demo/training passano un `usePaymentsData` custom con dataset statico, che il
+  // selettore non avrebbe nulla da far navigare — nessuna modifica al loro comportamento.
+  const isLiveData = usePaymentsData === useKitchenPayments;
+  const { selectedServiceNight } = useSelectedServiceNight();
+  const { loading, error, refresh, todaySummary, paymentsByMethod, anomalies, recentPayments, serviceNight } = usePaymentsData({ night: selectedServiceNight });
   // Stessa finestra dello Storico (06:00 -> 06:00): il titolo deve dire QUALE serata, altrimenti
   // dopo mezzanotte "oggi" e' ambiguo proprio quando serve di piu'. Gli harness demo non passano
   // serviceNight: in quel caso resta il titolo neutro.
@@ -271,6 +280,8 @@ export default function PaymentsView({
 
   return (
     <div className="kpd-page">
+
+      {isLiveData && <ServiceNightSelector />}
 
       {error && (
         <div style={{ background: '#3a0808', border: '1px solid #ef444455', color: '#ef4444', borderRadius: '8px', padding: '0.6rem 1rem', fontSize: '0.85rem' }}>

@@ -78,16 +78,22 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
       )
     : '—';
 
+  // Allineata alla stessa finestra serata di KPI/Attenzione/fasce/top prodotti sopra (CURRENT_LIMITS
+  // #3 dell'audit selettore): prima mostrava "sempre tutto lo storico" invece della sola notte
+  // selezionata, incoerenza visibile ora che la notte e' navigabile (RISKS #4 dello stesso audit).
   const historyOrders = useMemo(() => {
     const completed = orders
-      .filter((o) => o.status === 'delivered' || o.status === 'cancelled')
+      .filter((o) => (o.status === 'delivered' || o.status === 'cancelled') && isInServiceNight(o.createdAt, night))
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     if (!historySearch.trim()) return completed.slice(0, HISTORY_PAGE_SIZE);
     const term = historySearch.trim().toLowerCase();
     return completed.filter((o) => o.nickname?.toLowerCase().includes(term));
-  }, [orders, historySearch]);
+  }, [orders, historySearch, night]);
 
-  const historyTotal = orders.filter((o) => o.status === 'delivered' || o.status === 'cancelled').length;
+  const historyTotal = useMemo(
+    () => orders.filter((o) => (o.status === 'delivered' || o.status === 'cancelled') && isInServiceNight(o.createdAt, night)).length,
+    [orders, night]
+  );
 
   return (
     <div className="ksd-sections">

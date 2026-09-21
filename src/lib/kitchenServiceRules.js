@@ -150,6 +150,19 @@ export function serviceNightWindowFor(night) {
   return { night: `${year}-${pad2(month)}-${pad2(day)}`, start, end, startIso: new Date(start).toISOString(), endIso: new Date(end).toISOString() };
 }
 
+/**
+ * Sposta una serata nota di `deltaDays` giorni (interi, puo' essere negativo). Pura funzione di
+ * calendario, nessuna conversione fuso orario: la serata resta identificata dal suo giorno di
+ * apertura ('YYYY-MM-DD'), stesso pattern di `addDays` sopra ma esposto per il selettore UI
+ * (Kitchen Analytics V1 — selettore service night, Gate 1 approvato da Eros 2026-09-21).
+ */
+export function shiftServiceNight(night, deltaDays) {
+  const base = night ? String(night).slice(0, 10) : serviceNightWindow().night;
+  const [year, month, day] = base.split('-').map(Number);
+  const shifted = addDays(year, month, day, deltaDays);
+  return `${shifted.year}-${pad2(shifted.month)}-${pad2(shifted.day)}`;
+}
+
 // True se il timestamp appartiene alla serata. Confronto su istanti, mai tra stringhe: Supabase
 // serializza i timestamptz come '...+00:00', non come '...Z', e un confronto lessicografico
 // sbaglierebbe.

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
+import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
 import { resolveOrderAllergens } from '../lib/kitchenAllergens';
 import { STAFF_DISAMBIGUATION_LABEL } from '../lib/kitchenStaffLabels';
 import { getStaffSession, onAuthStateChange, isKitchenStaff, signOut } from '../lib/supabaseAuth';
@@ -9,6 +10,7 @@ import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPre
 import { useKitchenAudio } from '../hooks/useKitchenAudio';
 import MenuView from './MenuView';
 import StoricoView from './StoricoView';
+import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
 import AlertView from './AlertView';
 import './KitchenStaffDashboard.css';
 import './KitchenSoloService.css';
@@ -130,7 +132,11 @@ function KitchenSoloServiceLive() {
   // Micro-fase 2 (Storico/Cassa allineati): la stessa summary kitchen_payments che alimenta
   // la Cassa/Payment Hub viene passata allo Storico, con la giornata operativa (service_day)
   // gia' risolta — cosi' le due schermate non possono divergere. Sempre read-only.
-  const { anomalies: paymentAnomalies, todaySummary: paymentsSummary, serviceNight, paymentsByMethod } = useKitchenPayments();
+  // Selettore service night (Gate 1 approvato da Eros 2026-09-21): `selectedServiceNight` e'
+  // condiviso con PaymentsView/Cassa via useSelectedServiceNight (modulo esterno, non un nuovo
+  // stato locale) — la stessa notte scelta qui in Storico resta selezionata se lo staff apre Cassa.
+  const { selectedServiceNight } = useSelectedServiceNight();
+  const { anomalies: paymentAnomalies, todaySummary: paymentsSummary, serviceNight, paymentsByMethod } = useKitchenPayments({ night: selectedServiceNight });
 
   const [authChecked, setAuthChecked] = useState(
     () => import.meta.env.VITE_E2E_BYPASS_STAFF_AUTH === 'true'
@@ -194,6 +200,7 @@ function KitchenSoloServiceLive() {
       paymentsSummary={paymentsSummary}
       paymentsByMethod={paymentsByMethod}
       serviceNight={serviceNight}
+      showNightSelector
       onLogout={handleLogout}
     />
   );
@@ -224,6 +231,10 @@ export function KitchenSoloServiceView({
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
   paymentsSummary = null, paymentsByMethod = null, serviceNight = null,
   paymentsPath = '/kitchen/payments',
+  // Selettore service night: solo Live lo passa true (dati realmente parametrizzati su
+  // useKitchenPayments); Preview/Demo/Training restano invariati (dataset statico, il selettore
+  // non avrebbe nulla da far navigare).
+  showNightSelector = false,
   // Default per Preview/Demo/Training (nessuna sessione reale da chiudere): solo navigazione.
   onLogout = () => navigate('/kitchen/login'),
 }) {
@@ -885,7 +896,12 @@ export function KitchenSoloServiceView({
             </div>
             <div className="kss-overlay-body">
               {overlay === 'menu'    && <MenuView menuItems={menuItems} toggleAvailability={toggleAvailability} />}
-              {overlay === 'storico' && <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => navigate(paymentsPath)} />}
+              {overlay === 'storico' && (
+                <>
+                  {showNightSelector && <ServiceNightSelector />}
+                  <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => navigate(paymentsPath)} />
+                </>
+              )}
               {overlay === 'alert'   && <AlertView orders={orders} />}
             </div>
           </div>

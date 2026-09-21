@@ -16,6 +16,75 @@
   margin-bottom: 10px;
 }
 
+/* ── SELETTORE SERVICE NIGHT (Storico + Cassa, Gate 1 approvato da Eros 2026-09-21) ── */
+.ksn-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.ksn-selector-arrow {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f5f0e8;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  border-radius: 8px;
+  min-width: 40px;
+  min-height: 40px;
+  cursor: pointer;
+}
+.ksn-selector-arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+.ksn-selector-current {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 64px;
+  justify-content: center;
+}
+.ksn-selector-date {
+  font-size: 15px;
+  font-weight: 900;
+  color: #f5f0e8;
+  letter-spacing: 0.02em;
+}
+.ksn-selector-badge {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  color: #1b232c;
+  background: #eab308;
+  border-radius: 20px;
+  padding: 2px 8px;
+}
+.ksn-selector-today-btn {
+  background: rgba(234, 179, 8, 0.12);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+  color: #eab308;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 40px;
+  cursor: pointer;
+}
+.ksn-selector-date-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f5f0e8;
+  font-size: 12px;
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-height: 40px;
+  color-scheme: dark;
+}
+
 /* ── KPI STRIP — Sintesi serata (Fase 9B: 4 tile fisse, Incasso/Ordini/Ticket medio/Netto) ── */
 .kpd-kpi-grid {
   display: grid;

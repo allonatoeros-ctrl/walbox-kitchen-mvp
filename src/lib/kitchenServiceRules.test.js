@@ -125,6 +125,7 @@ import {
   WALRUS_SERVICE_HOUR_RANGES,
   computeTopProductsAndCategories,
   NON_MAPPED_CATEGORY,
+  shiftServiceNight,
 } from './kitchenServiceRules.js';
 
 // Orario da muro di Roma -> istante. A settembre l'Italia e' in CEST (+02:00).
@@ -505,6 +506,24 @@ test('serviceNightWindowFor ricostruisce la stessa finestra a partire dalla sera
     assert.equal(typeof w.start, 'number');
     assert.ok(w.end > w.start);
   }
+});
+
+// --- Kitchen Analytics V1 — selettore service night (Gate 1 approvato da Eros 2026-09-21) ---
+
+test('shiftServiceNight: avanti e indietro di un giorno', () => {
+  assert.equal(shiftServiceNight('2026-09-18', -1), '2026-09-17');
+  assert.equal(shiftServiceNight('2026-09-18', 1), '2026-09-19');
+  assert.equal(shiftServiceNight('2026-09-18', 0), '2026-09-18');
+});
+
+test('shiftServiceNight: attraversa il cambio mese e il cambio anno', () => {
+  assert.equal(shiftServiceNight('2026-10-01', -1), '2026-09-30');
+  assert.equal(shiftServiceNight('2026-12-31', 1), '2027-01-01');
+});
+
+test('shiftServiceNight: input assente ricade sulla serata corrente (now)', () => {
+  const oggi = serviceNightWindow().night;
+  assert.equal(shiftServiceNight(null, 0), oggi);
 });
 
 // ============================================================================

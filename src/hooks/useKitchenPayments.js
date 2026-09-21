@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { serviceNightWindow, summarizeServiceNightPayments, summarizePaymentsByMethod } from '../lib/kitchenServiceRules';
+import { serviceNightWindow, serviceNightWindowFor, summarizeServiceNightPayments, summarizePaymentsByMethod } from '../lib/kitchenServiceRules';
 
 const VENUE_ID = 'walrus-main';
 const RECENT_LIMIT = 30;
@@ -23,21 +23,43 @@ const EMPTY_SUMMARY = { incasso: 0, rimborsato: 0, netto: 0, inSospeso: 0, falli
 const EMPTY_BY_METHOD = { byMethod: {}, sumup: { succeeded: 0, pending: 0, failed: 0 } };
 
 /**
+ * Vero se `nightParam` risolve alla serata live/corrente (adesso). Pura, nessun side-effect —
+ * estratta cosi' da essere testabile senza renderizzare l'hook React (stesso motivo per cui
+ * useKitchenOrders.js esporta mergeFetchedOrders/supabaseUpdateOrder a parte). Governa il poll
+ * 15s: mai su una notte storica selezionata (decisione Eros, Gate 1 2026-09-21).
+ */
+export function isLiveServiceNight(nightParam, now = new Date()) {
+  return serviceNightWindowFor(nightParam).night === serviceNightWindow(now).night;
+}
+
+/**
  * Kitchen Payment Hub V1 — staff read-only data layer.
  * Reads kitchen_payments (scoped alla serata via kitchen_orders.created_at),
  * kitchen_payments_provider_drift_candidates e kitchen_payments recenti direttamente
  * (staff_select_venue_payments RLS) — no writes here.
+ *
+ * `night` (opzionale, 'YYYY-MM-DD' o assente/null = serata corrente) parametrizza la finestra
+ * interrogata — selettore Kitchen Analytics V1, Gate 1 approvato da Eros 2026-09-21. Il poll a
+ * 15s resta attivo SOLO quando la notte richiesta e' quella live/corrente: su una notte storica i
+ * dati sono immutabili, pollare sarebbe query sprecate — vedi
+ * ai-ops/reports/kitchen-analytics-service-night-selector-audit-20260921.md PAYMENTS_SUPPORT.
  */
-export function useKitchenPayments() {
+export function useKitchenPayments({ night: nightParam = null } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [serviceNight, setServiceNight] = useState(() => serviceNightWindow().night);
+  const [serviceNight, setServiceNight] = useState(() => serviceNightWindowFor(nightParam).night);
   const [todaySummary, setTodaySummary] = useState(EMPTY_SUMMARY);
   const [paymentsByMethod, setPaymentsByMethod] = useState(EMPTY_BY_METHOD);
   const [anomalies, setAnomalies] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
 
   const refresh = async () => {
+    // Risolta e pubblicata SUBITO, prima di qualunque chiamata di rete: StoricoView usa
+    // `serviceNight` per filtrare `orders` (dati locali, non da kitchen_payments) sulla notte
+    // selezionata — deve riflettere la navigazione anche se la query pagamenti fallisce/e' senza
+    // sessione, altrimenti lo storico resterebbe "agganciato" alla notte del primo mount.
+    const night = serviceNightWindowFor(nightParam);
+    setServiceNight(night.night);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -45,8 +67,6 @@ export function useKitchenPayments() {
         setLoading(false);
         return;
       }
-
-      const night = serviceNightWindow();
 
       const [summaryRes, driftRes, recentRes] = await Promise.all([
         // !inner + filtro sulla colonna embedded: solo i pagamenti degli ordini APERTI dentro la
@@ -87,7 +107,6 @@ export function useKitchenPayments() {
         orderCodeById = Object.fromEntries((orders ?? []).map((o) => [o.id, o.order_code]));
       }
 
-      setServiceNight(night.night);
       setTodaySummary(summarizeServiceNightPayments(summaryRes.data));
       setPaymentsByMethod(summarizePaymentsByMethod(summaryRes.data));
       setAnomalies(drift.map((a) => ({ ...a, order_code: orderCodeById[a.order_id] ?? null })));
@@ -102,15 +121,20 @@ export function useKitchenPayments() {
   };
 
   useEffect(() => {
-    // Initial fetch on mount, same pattern as useKitchenOrders.fetchSupabaseOrders.
+    // Fetch on mount e ad ogni cambio di notte richiesta (selettore Storico/Cassa).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
-  }, []);
+  }, [nightParam]);
 
   useEffect(() => {
-    const intervalId = setInterval(refresh, POLL_MS);
+    // Poll SOLO sulla serata live/corrente. Ricalcolato ad ogni tick perche' il rollover 06:00
+    // sposta la finestra "corrente" mentre nightParam resta null.
+    if (!isLiveServiceNight(nightParam)) return undefined;
+    const intervalId = setInterval(() => {
+      if (isLiveServiceNight(nightParam)) refresh();
+    }, POLL_MS);
     return () => clearInterval(intervalId);
-  }, []);
+  }, [nightParam]);
 
   return { loading, error, refresh, serviceNight, todaySummary, paymentsByMethod, anomalies, recentPayments };
 }
