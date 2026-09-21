@@ -3,8 +3,7 @@
 //
 // Storico (overlay dentro KitchenSoloService.jsx) e Cassa (route separata /kitchen/payments,
 // KitchenPayments.jsx) sono due alberi React montati in momenti diversi dallo stesso router SPA
-// (App.jsx: pushState/popstate, nessun full reload — vedi kitchen-night-preview-isolation test
-// per conferma dello stesso pattern). Un modulo esterno (useSyncExternalStore) sopravvive al
+// (App.jsx: pushState/popstate, nessun full reload). Un modulo esterno (useSyncExternalStore) sopravvive al
 // cambio di route esattamente come un Context lo farebbe, senza toccare il routing (area
 // protetta) ne' introdurre una dipendenza nuova: "Apri Cassa →" da uno Storico su una notte
 // passata ora apre la Cassa sulla STESSA notte, non su "oggi".
