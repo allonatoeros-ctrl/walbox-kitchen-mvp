@@ -381,15 +381,7 @@ test.describe('Kitchen Service Pressure Test', () => {
     await page.waitForURL('**/kitchen/login', { timeout: 10000 });
     await expect(page).toHaveURL(/\/kitchen\/login/);
   });
-
-  test('6. Pagamenti dal menu ALTRO apre /kitchen/payments direttamente (nessuna dipendenza da /kitchen/staff)', async ({ page }) => {
-    await page.goto('/kitchen/staff');
-    await page.waitForURL('**/kitchen/solo');
-
-    await page.getByRole('button', { name: /ALTRO/i }).click();
-    await page.getByRole('button', { name: 'Pagamenti' }).click();
-
-    await page.waitForURL('**/kitchen/payments', { timeout: 10000 });
-    await expect(page).toHaveURL(/\/kitchen\/payments/);
-  });
+  // Test 6 "Pagamenti dal menu ALTRO apre /kitchen/payments" rimosso (2026-09-22, decommission UI
+  // Payment Hub): la voce "Pagamenti" e la route /kitchen/payments non esistono più, vedi
+  // ai-ops/reports/kitchen-payment-hub-decommission-audit-20260922.md.
 });

@@ -4,7 +4,6 @@ import CustomerKitchenEntry from "./pages/CustomerKitchenEntry";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import CustomerOrderPayment from "./pages/CustomerOrderPayment";
 import KitchenStaffRedirect from "./pages/KitchenStaffRedirect";
-import KitchenPayments from "./pages/KitchenPayments";
 import KitchenSoloService from "./pages/KitchenSoloService";
 import CounterAssistedOrder from "./pages/CounterAssistedOrder";
 import KitchenSoloServiceDemo from "./pages/KitchenSoloServiceDemo";
@@ -45,8 +44,6 @@ export default function App() {
         return <CustomerOrderStatus />;
       case "/kitchen/staff":
         return <KitchenStaffRedirect />;
-      case "/kitchen/payments":
-        return <KitchenPayments />;
       case "/kitchen/solo":
         return <KitchenSoloService />;
       case "/kitchen/cassa":

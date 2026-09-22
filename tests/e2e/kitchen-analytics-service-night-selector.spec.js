@@ -3,9 +3,13 @@ import { serviceNightWindow, serviceNightWindowFor, shiftServiceNight } from '..
 
 // Kitchen Analytics V1 — selettore service night (Gate 1 approvato da Eros 2026-09-21).
 // Copre: (1) storico ordini scoped alla notte selezionata (fix CURRENT_LIMITS #3 dell'audit),
-// (2) selettore ‹prec|OGGI|succ› + pulsante OGGI, (3) selectedServiceNight condiviso tra Storico
-// (overlay in /kitchen/solo) e Cassa (/kitchen/payments) — "Apri Cassa →" non deve far perdere la
-// notte scelta. Vedi ai-ops/reports/kitchen-analytics-service-night-selector-audit-20260921.md.
+// (2) selettore ‹prec|OGGI|succ› + pulsante OGGI. Vedi
+// ai-ops/reports/kitchen-analytics-service-night-selector-audit-20260921.md.
+// NOTA (2026-09-22, decommission UI Payment Hub): il test "Apri Cassa →" che copriva
+// selectedServiceNight condiviso Storico -> /kitchen/payments è stato rimosso perché quel punto
+// di accesso non esiste più (vedi ai-ops/reports/kitchen-payment-hub-decommission-audit-20260922.md).
+// useSelectedServiceNight resta condiviso in codice (PaymentsView.jsx non è stato toccato), ma non
+// c'è più una UI live che lo eserciti da qui.
 const LS_ORDERS = 'walbox_kitchen_orders_demo';
 
 const todayNight = serviceNightWindow().night;
@@ -86,30 +90,5 @@ test.describe('Kitchen Analytics — selettore service night', () => {
     await expect(page.getByTestId('service-night-current')).toHaveText(todayLabel);
     await expect(page.getByText('Alice')).toBeVisible();
     await expect(page.getByText('Zoe')).toHaveCount(0);
-  });
-
-  test('la notte selezionata in Storico resta selezionata aprendo Cassa ("Apri Cassa →")', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.goto('/kitchen/solo');
-
-    await page.getByRole('button', { name: /ALTRO/ }).click();
-    await page.getByRole('button', { name: /Storico ordini/ }).click();
-
-    // Naviga indietro di una serata prima di aprire Cassa.
-    await page.getByTestId('service-night-prev').click();
-    const selectedLabel = await page.getByTestId('service-night-current').textContent();
-    await expect(page.getByTestId('service-night-today-btn')).toBeVisible();
-
-    await page.getByTestId('storico-open-cassa').click();
-    await expect(page).toHaveURL(/\/kitchen\/payments$/);
-
-    // Stessa notte, stesso stato "non oggi" — il selettore condiviso non è tornato a "oggi".
-    await expect(page.getByTestId('service-night-selector')).toBeVisible();
-    await expect(page.getByTestId('service-night-current')).toHaveText(selectedLabel);
-    await expect(page.getByTestId('service-night-today-btn')).toBeVisible();
-
-    // OGGI in Cassa riporta alla serata corrente (torna utile per il prossimo test/staff).
-    await page.getByTestId('service-night-today-btn').click();
-    await expect(page.getByTestId('service-night-today-btn')).toHaveCount(0);
   });
 });

@@ -231,7 +231,6 @@ export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
   paymentsSummary = null, paymentsByMethod = null, serviceNight = null,
-  paymentsPath = '/kitchen/payments',
   // Selettore service night: solo Live lo passa true (dati realmente parametrizzati su
   // useKitchenPayments); Preview/Demo/Training restano invariati (dataset statico, il selettore
   // non avrebbe nulla da far navigare).
@@ -877,16 +876,6 @@ export function KitchenSoloServiceView({
               <button className="kss-more-item" onClick={() => { requestFullscreenIfAllowed(); setOverlay('storico'); setMoreOpen(false); }}>
                 Storico ordini
               </button>
-              <button
-                className="kss-more-item"
-                onClick={() => {
-                  setMoreOpen(false);
-                  requestFullscreenIfAllowed();
-                  navigate(paymentsPath);
-                }}
-              >
-                Pagamenti
-              </button>
               <button className="kss-more-item kss-more-item--danger" disabled={!focusOrder} onClick={askCancel}>
                 Annulla ordine
               </button>
@@ -921,7 +910,7 @@ export function KitchenSoloServiceView({
               {overlay === 'storico' && (
                 <>
                   {showNightSelector && <ServiceNightSelector />}
-                  <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => { requestFullscreenIfAllowed(); navigate(paymentsPath); }} />
+                  <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} />
                 </>
               )}
               {overlay === 'alert'   && <AlertView orders={orders} />}
