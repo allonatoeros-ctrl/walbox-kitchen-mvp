@@ -30,10 +30,6 @@ function allSourceFiles(dir = SRC, acc = []) {
 }
 
 // ── 2. IMMAGINI BIRRA ────────────────────────────────────────────────────────
-// NOTA (2026-09-19): i frame birra dentro il combo (`.pm-beer-*`) non esistono piu' come UI —
-// FALLO PESANTE ha composizione fissa e non mostra piu' foto birra. Le regole CSS sono rimaste
-// nel file ma non sono piu' renderizzate, quindi non ha senso vincolarle qui: l'unico posto
-// dove una foto di birra arriva ancora al cliente e' BirreSection.
 test('ogni frame immagine birra usa contain: con cover di una bottiglia 1:2 se ne vedeva meta', () => {
   const br = read('components/kitchen/BirreSection.css');
   for (const sel of ['.br-card-photo', '.br-card-body-photo']) {
@@ -50,9 +46,9 @@ test('i frame birra sono piu piccoli di prima (card compatte su telefono)', () =
   assert.match(ruleBody(br, '.br-card-body-photo-wrap'), /height:\s*168px/); // era 220
 });
 
-test('tutte e 7 le birre hanno un asset: nessuna cade sul placeholder', () => {
+test('tutte e 6 le birre hanno un asset: nessuna cade sul placeholder', () => {
   const beers = kitchenMenuItems.filter((i) => i.category === 'birre' && i.tags?.includes('birre-v1'));
-  assert.equal(beers.length, 7);
+  assert.equal(beers.length, 6, 'Krombacher rimossa (2026-09-22): 6 bottiglie, non piu 7');
   for (const b of beers) assert.match(b.image ?? '', /^\/assets\/kitchen\/beers\/.+\.png$/, `${b.id} senza asset`);
 });
 
@@ -64,22 +60,22 @@ test('il combo non mostra alcun prezzo della birra inclusa', () => {
   assert.doesNotMatch(read('components/kitchen/PesiMassimiSection.css'), /pm-beer-detail-listino/);
 });
 
-// FALLO PESANTE a composizione fissa (2026-09-19, decisione Eros): panino + Patate al Forno +
-// Krombacher Pils. La scelta della birra non esiste piu' e non deve rientrare di soppiatto.
-test('il combo non ha nessuna UI di scelta birra', () => {
+// REGRESSION FIX (2026-09-22, correzione Eros): FALLO PESANTE include sempre `panino + Patate
+// al Forno + 1 birra a scelta` tra le 6 bottiglie rimaste (Krombacher esclusa). Il selettore
+// birra deve esserci, letto da `beerOptions` (prop), mai un id hardcoded nel componente.
+test('il combo mostra il selettore birra (pillole, dettaglio, conferma)', () => {
   const jsx = read('components/kitchen/PesiMassimiSection.jsx');
-  for (const gone of ['pm-beer-pill', 'pm-beer-detail', 'pm-beer-chosen', 'SCEGLI QUESTA BIRRA', 'beerOptions']) {
-    assert.ok(!jsx.includes(gone), `il selettore birra e' tornato nel combo: ${gone}`);
+  for (const needed of ['pm-beer-pill', 'pm-beer-detail', 'pm-beer-chosen', 'SCEGLI QUESTA BIRRA', 'beerOptions']) {
+    assert.ok(jsx.includes(needed), `selettore birra mancante: ${needed}`);
   }
-  // Gli inclusi arrivano da fuori, senza id hardcoded nel componente.
-  assert.match(jsx, /includedBeer/);
+  // Contorno e birre arrivano entrambi da fuori (props), nessun id hardcoded nel componente.
   assert.match(jsx, /includedSide/);
   assert.doesNotMatch(jsx, /item-05\d/);
 });
 
 test('il sottotitolo del combo dice esattamente cosa c\'e dentro', () => {
   for (const c of Object.values(kitchenPesiMassimiCombos)) {
-    assert.equal(c.subtitle, 'Patate al forno + Krombacher Pils', `${c.id} ha il sottotitolo sbagliato`);
+    assert.equal(c.subtitle, 'PANINO + BIRRA + PATATE AL FORNO', `${c.id} ha il sottotitolo sbagliato`);
   }
 });
 

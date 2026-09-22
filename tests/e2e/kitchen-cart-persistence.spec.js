@@ -4,11 +4,10 @@ import { test, expect } from '@playwright/test';
 
 const CART_KEY = 'walbox_kitchen_cart_v1';
 
-// FALLO PESANTE include sempre Krombacher Pils (2026-09-19), che e' `evening_only`: prima
-// delle 18:00 il combo non e' ordinabile per regola di servizio. Questi test riguardano la
-// persistenza del sacco, non quel gate, quindi l'orologio e' fissato a serata aperta.
+// FALLO PESANTE include sempre 1 birra a scelta tra le 6 rimaste (Krombacher rimossa dal
+// catalogo, correzione Eros 2026-09-22).
 const EVENING = new Date('2026-09-14T19:00:00');
-const INCLUDED_BEER = 'Krombacher Pils';
+const INCLUDED_BEER = 'Keiler Helles';
 
 async function gotoMenu(page) {
   await page.clock.setFixedTime(EVENING);
@@ -17,11 +16,13 @@ async function gotoMenu(page) {
 }
 
 /** Aggiunge un FALLO PESANTE: e' la riga carrello piu' fragile da ripristinare (id composito
- *  `combo::birra` + `includesBeerId`). La birra non si sceglie piu': e' fissa nel combo. */
+ *  `combo::birra` + `includesBeerId`). Sceglie sempre la stessa birra per determinismo. */
 async function addFalloPesante(page) {
   await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
   await page.locator('.pm-card-closed').first().click();
   const card = page.locator('.pm-card--open').first();
+  await card.locator('.pm-beer-pill', { hasText: INCLUDED_BEER }).click();
+  await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
   await expect(card.locator('.pm-btn-heavy')).toBeEnabled();
   await card.locator('.pm-btn-heavy').click();
   return INCLUDED_BEER;

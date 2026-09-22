@@ -169,17 +169,14 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
       }));
     });
 
-    expect(result.length).toBeGreaterThanOrEqual(7);
+    expect(result.length).toBeGreaterThanOrEqual(6);
     for (const { beerName, note } of result) {
       expect(note).toContain('BIRRA INCLUSA');
       expect(note).toContain(beerName.toUpperCase());
     }
   });
 
-  test('UI reale: FALLO PESANTE porta sempre Krombacher in carrello, e resta bloccato fuori orario', async ({ page }) => {
-    // Composizione fissa (2026-09-19): niente piu' selettore birra. La riga carrello deve
-    // comunque nascere con `includesBeerId` valorizzato — e' cio' che garantisce che P0-2
-    // (la birra arriva alla comanda via customer_note) abbia sempre un dato da cui partire.
+  test('UI reale: FALLO PESANTE porta la birra scelta in carrello, Krombacher non e selezionabile (rimossa dal catalogo)', async ({ page }) => {
     await page.clock.setFixedTime(new Date('2026-09-14T19:00:00'));
     await page.goto('/kitchen?nickname=Eros');
     // HOME -> CATEGORIE -> PESI MASSIMI (stessa navigazione di openCategoryList in
@@ -193,11 +190,15 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     const heavy = card.locator('.pm-btn-heavy');
     await expect(heavy).toBeVisible();
 
-    // Nessun selettore birra residuo: la scelta non esiste piu'.
-    await expect(card.locator('.pm-beer-pill')).toHaveCount(0);
-    await expect(card.locator('.pm-beer-detail')).toHaveCount(0);
+    // Krombacher rimossa dal catalogo (2026-09-22): non compare tra le pillole selezionabili.
+    await expect(card.locator('.pm-beer-pill', { hasText: 'Krombacher' })).toHaveCount(0);
 
-    // La sera il combo e' ordinabile direttamente, senza passaggi intermedi.
+    // Nessuna birra scelta: il combo resta disabilitato.
+    await expect(heavy).toBeDisabled();
+
+    await card.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
+    await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
+
     await expect(heavy).toBeEnabled();
     await expect(heavy).toHaveText('FALLO PESANTE');
     await heavy.scrollIntoViewIfNeeded();
@@ -206,19 +207,6 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     // La riga carrello porta la birra inclusa: e' l'input di buildIncludedBeersNote.
     await page.locator('.kitch-bottom-card, .kitch-cart-bar').first().click();
     await expect(page.locator('.kitch-drawer')).toBeVisible();
-    await expect(page.locator('.kitch-drawer')).toContainText('KROMBA');
-  });
-
-  test('UI reale: prima delle 18:00 FALLO PESANTE e bloccato, perche la birra inclusa e evening_only', async ({ page }) => {
-    await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
-    await page.goto('/kitchen?nickname=Eros');
-    await page.getByRole('button', { name: /ENTRA NEL MENU/i }).click();
-    await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
-    await page.locator('.pm-card-closed').first().click();
-
-    const heavy = page.locator('.pm-card--open').first().locator('.pm-btn-heavy');
-    await expect(heavy).toBeDisabled();
-    // La CTA dice il perche': mai un bottone spento e muto.
-    await expect(heavy).toHaveText('SOLO LA SERA');
+    await expect(page.locator('.kitch-drawer')).toContainText('KEILER HELLES');
   });
 });

@@ -18,7 +18,9 @@
 //   base (il Peso Massimo che il combo potenzia) ∪ contorno (Patate al Forno) ∪ birre incluse.
 // L'unione usa TUTTE le birre selezionabili nel combo, non quella scelta dal cliente: la scelta
 // non viaggia nel payload per item (vedi P0-2, arriva in `customer_note`), e mostrare l'unione è
-// la lettura prudente — mai meno allergeni di quelli realmente possibili nel piatto.
+// la lettura prudente — mai meno allergeni di quelli realmente possibili nel piatto. Dopo la
+// rimozione di Krombacher (correzione Eros, 2026-09-22) `falloPesanteBeerOptions()` filtra solo
+// le 6 bottiglie rimaste, quindi l'unione segue da sola.
 import { kitchenMenuItems, kitchenPesiMassimiCombos } from '../data/kitchenMockData.js';
 
 // Contorno incluso in ogni FALLO PESANTE (subtitle dei combo: "PANINO + BIRRA + PATATE AL FORNO").

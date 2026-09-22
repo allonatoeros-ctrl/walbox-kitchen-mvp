@@ -225,38 +225,6 @@ export const kitchenMenuItems = [
     ingredients: 'Birra in bottiglia, 33 cl.',
     allergens: ['glutine'],
   },
-  // Krombacher alla spina — solo la sera (§3 missione, BEER SPRINT V1 Fase E, 2026-09-14).
-  //
-  // FALLO PESANTE V2 / BIRRA UNICA (2026-09-19, decisione Eros): prezzo €5,00 (era €6).
-  // ATTENZIONE — il prezzo che il cliente PAGA non nasce qui: `kitchen_customer_create_order`
-  // riscrive name/price dal catalogo server (`kitchen_menu_items`, vedi
-  // 20260916120000_kitchen_menu_items_catalog_sync_v2.sql), dove item-057 vale ancora 6.
-  // Finché Eros non allinea quella riga, il cliente vede €5,00 e l'ordine viene creato a €6:
-  // divergenza nota e tracciata nel report di questa run, nessuna migration creata qui.
-  //
-  // Formato in cl NON confermato: `format` resta null
-  // (nessun dato inventato), `choiceLabel: 'ALLA SPINA'` copre la richiesta di mostrare
-  // "alla spina" dove il formato non c'è (unico punto che rende `item.format` in
-  // BirreSection.jsx). Orderable ora solo la sera (gate 18:00 già esistente da Fase B,
-  // confermato come soglia definitiva da Eros in questa fase).
-  {
-    id: 'item-057',
-    name: 'Krombacher Pils',
-    category: 'birre',
-    description: 'Alla spina, solo la sera.',
-    price: 5.0,
-    points: null,
-    tags: ['drink', 'v2', 'birre-v1'],
-    image: '/assets/kitchen/beers/krombacher-pils.png',
-    available: true,
-    format: null,
-    choiceLabel: 'ALLA SPINA',
-    story: 'Alla spina, fresca e secca. Una Pils dritta e senza complicazioni.',
-    tasteSignals: [],
-    availability: 'evening_only',
-    ingredients: 'Birra alla spina.',
-    allergens: ['glutine'],
-  },
   // AMERICAN BBQ (remapped da special)
   {
     id: 'item-009',
@@ -630,36 +598,32 @@ export const kitchenMenuItems = [
 // standalone nel catalogo/menu. Sono ordinabili solo dalla CTA FALLO PESANTE del
 // relativo Peso Massimo (PesiMassimiSection), tramite lo stesso addItem/payload ordine.
 //
-// FALLO PESANTE V2 (2026-09-19, decisione Eros): il combo non ha più una birra a scelta.
-// È sempre e solo `panino scelto + Patate al Forno + Krombacher Pils`, quindi il selettore
-// birra è stato rimosso da PesiMassimiSection.jsx e il sottotitolo dice esattamente cosa
-// c'è dentro. Prezzi del combo invariati (19/20/20): non erano in scope di questo cambio.
-//
-// Gli id qui sotto sono la fonte unica di "cosa c'è dentro il combo": PesiMassimiSection
-// li usa per leggere l'availability reale dei due inclusi (ESAURITO + gate serale di
-// Krombacher) e disabilitare FALLO PESANTE quando uno dei due non è servibile.
-export const FALLO_PESANTE_INCLUDED_BEER_ID = 'item-057';
+// FALLO PESANTE — regola corretta dopo rimozione Krombacher (correzione Eros 2026-09-22):
+// il combo resta `panino scelto + Patate al Forno + 1 birra a scelta` tra le 6 bottiglie
+// rimaste (item-051→056, Krombacher esclusa). Le birre selezionabili si leggono da
+// `falloPesanteBeerOptions()` (kitchenAllergens.js), filtro per tag `birre-v1`, non per id
+// fisso: seguono da sole se il catalogo birre cambia.
 export const FALLO_PESANTE_INCLUDED_SIDE_ID = 'item-058';
 
 export const kitchenPesiMassimiCombos = {
   'item-009': {
     id: 'item-040',
     name: 'Pulled Pork — Fallo Pesante',
-    subtitle: 'Patate al forno + Krombacher Pils',
+    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
     price: 19.0,
     image: '/assets/kitchen/photo-pulled-pork-special.webp',
   },
   'item-010': {
     id: 'item-041',
     name: 'Pastrami — Fallo Pesante',
-    subtitle: 'Patate al forno + Krombacher Pils',
+    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
     price: 20.0,
     image: '/assets/kitchen/photo-pastrami-special.webp',
   },
   'item-011': {
     id: 'item-042',
     name: 'Brisket — Fallo Pesante',
-    subtitle: 'Patate al forno + Krombacher Pils',
+    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
     price: 20.0,
     image: '/assets/kitchen/photo-brisket-special.webp',
   },
@@ -788,22 +752,17 @@ export const kitchenCategoryPromos = {
 // (§5 missione), non verità immutabile — cambiabili qui senza toccare la logica
 // che li legge (CustomerKitchenMenu.jsx).
 //
-// BIRRA UNICA — TEMPORANEO (2026-09-19, decisione Eros): le 6 bottiglie Keiler/Lupulus sono
-// nascoste al cliente (`CUSTOMER_HIDDEN_ITEM_IDS` in CustomerKitchenMenu.jsx), quindi ogni
-// pairing che le indicasse produrrebbe un CTA che aggiunge al sacco una birra non più a menu.
-// Tutti i pairing puntano perciò all'unica birra visibile, Krombacher (`item-057`). Quando le
-// bottiglie tornano a menu, questa mappa e `CUSTOMER_HIDDEN_ITEM_IDS` vanno ripristinate
-// INSIEME: sono le due metà della stessa decisione temporanea.
-// Nota: Krombacher è `evening_only`; `findRecommendedBeer` non la suggerisce fuori orario,
-// così il banner non propone mai una birra che non si può ordinare.
+// Pairing ripristinato (2026-09-22): tutte le 6 bottiglie visibili, nessuna birra unica.
+// Ogni categoria punta a Keiler Helles (item-051, `all_day`). Un pairing differenziato
+// per categoria va deciso da Eros se necessario.
 export const kitchenBeerPairing = {
   byItem: {},
   byCategory: {
-    panini: 'item-057',      // Krombacher — unica birra a menu (temporaneo)
-    cicchetti: 'item-057',   // Krombacher — unica birra a menu (temporaneo)
-    bbq: 'item-057',         // Krombacher — unica birra a menu (temporaneo)
-    tagliere: 'item-057',    // Krombacher — unica birra a menu (temporaneo)
-    insalatone: 'item-057',  // Krombacher — unica birra a menu (temporaneo)
-    tartare: 'item-057',     // Krombacher — unica birra a menu (temporaneo)
+    panini: 'item-051',
+    cicchetti: 'item-051',
+    bbq: 'item-051',
+    tagliere: 'item-051',
+    insalatone: 'item-051',
+    tartare: 'item-051',
   },
 };

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { kitchenCategoryPromos, kitchenBeerPairing, FALLO_PESANTE_INCLUDED_BEER_ID, FALLO_PESANTE_INCLUDED_SIDE_ID } from '../data/kitchenMockData';
+import { kitchenCategoryPromos, kitchenBeerPairing, FALLO_PESANTE_INCLUDED_SIDE_ID } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders, rememberOwnedOrderId, getOwnedOrderIds } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
@@ -138,14 +138,7 @@ const HOME_FEATURED = [
 // riportarle a menu basta svuotare questo array — insieme a `kitchenBeerPairing`
 // (kitchenMockData.js) e al sottotitolo della categoria BIRRE qui sotto, che sono le altre
 // due metà della stessa decisione.
-const CUSTOMER_HIDDEN_ITEM_IDS = [
-  'item-051', // Keiler Helles
-  'item-052', // Keiler Land-Pils
-  'item-053', // Keiler Kellerbier
-  'item-054', // Keiler Weisse
-  'item-055', // Keiler Dunkel Weisse
-  'item-056', // Lupulus
-];
+const CUSTOMER_HIDDEN_ITEM_IDS = [];
 
 
 // AUTO-SELLING V1 (BEER SPRINT V1 §5/§7-D): ordine di priorità quando il sacco
@@ -215,9 +208,7 @@ function getCategorySubtitle(cat) {
   if (cat === 'insalatone') return 'CAESAR · SALMON · VEGGY';
   if (cat === 'tartare') return 'CRUDA E CONTENTA · DOLCE MA CRUDA';
   if (cat === 'tagliere') return 'SALUMI SERISSIMI · FORMAGGI DISCUTIBILI · PACE FATTA';
-  // BIRRA UNICA — TEMPORANEO (2026-09-19): il sottotitolo elenca solo ciò che il cliente vede
-  // davvero. Va ripristinato insieme a `CUSTOMER_HIDDEN_ITEM_IDS` quando le bottiglie tornano.
-  if (cat === 'birre') return 'KROMBACHER PILS ALLA SPINA (SOLO SERA)';
+  if (cat === 'birre') return 'KEILER HELLES · LAND-PILS · KELLERBIER · WEISSE · DUNKEL WEISSE · LUPULUS';
   if (cat === 'contorni') return 'PATATE AL FORNO';
   if (cat === 'bevande') return 'ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · SCHWEPPES LEMON · SCHWEPPES TONICA';
   return null;
@@ -359,12 +350,13 @@ export default function CustomerKitchenMenu() {
 
   const pesiMassimiItems = customerItems.filter((i) => i.category === 'bbq');
 
-  // FALLO PESANTE (2026-09-19, decisione Eros): niente più scelta birra. I due inclusi fissi
-  // del combo si leggono dal catalogo REALE — così availability ed ESAURITO arrivano dalla
-  // stessa fonte del resto del menu (`useKitchenMenu`, override staff + Supabase) e non da
-  // una copia. Se uno dei due manca o è esaurito, PesiMassimiSection disabilita il combo.
-  const falloPesanteBeer = menuItems.find((i) => i.id === FALLO_PESANTE_INCLUDED_BEER_ID) ?? null;
+  // FALLO PESANTE — regola corretta dopo rimozione Krombacher (correzione Eros 2026-09-22):
+  // catalogo reale delle birre a scelta incluse nel combo, le 6 bottiglie rimaste (Krombacher
+  // esclusa). Filtro per tag `birre-v1`, non per id fisso.
   const falloPesanteSide = menuItems.find((i) => i.id === FALLO_PESANTE_INCLUDED_SIDE_ID) ?? null;
+  const falloPesanteBeerOptions = menuItems.filter(
+    (i) => i.category === 'birre' && i.tags?.includes('birre-v1'),
+  );
   const featuredItems = HOME_FEATURED
     .map(({ id, photoBg }) => {
       const item = customerItems.find((i) => i.id === id);
@@ -788,8 +780,8 @@ export default function CustomerKitchenMenu() {
         <PesiMassimiSection
           items={visibleItems}
           onAdd={addItem}
-          includedBeer={falloPesanteBeer}
           includedSide={falloPesanteSide}
+          beerOptions={falloPesanteBeerOptions}
         />
       )}
       {activeCategory === 'panini' && visibleItems.length > 0 && (

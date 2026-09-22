@@ -1,0 +1,56 @@
+-- Kitchen Menu Items — rimozione Krombacher Pils (item-057) dal catalogo server.
+--
+-- LOCAL BUILD ONLY — NOT APPLIED TO REMOTO. Serve il Gate 2 esplicito di Eros per l'apply
+-- (`ai-ops/SECURITY_POLICY.md` §5.1: solo `supabase db push --linked`).
+--
+-- PERCHE'
+-- Krombacher Pils (item-057) e' stata rimossa dal catalogo cliente (decisione Eros, 2026-09-22):
+-- non compare piu' in `kitchenMenuItems`, in nessun pairing birra e FALLO PESANTE non la include
+-- piu' (vedi src/data/kitchenMockData.js). La riga sopravvive pero' in `kitchen_menu_items`
+-- (inserita da 20260916120000_kitchen_menu_items_catalog_sync_v2.sql, prezzo 6) come dato orfano:
+-- nessun path client puo' piu' produrre un ordine con `item_id = 'item-057'`, ma la riga resta
+-- l'unica autorita' server su nome/prezzo e oggi descrive un prodotto che non esiste piu'.
+--
+-- COSA FA
+--   DELETE della sola riga ('walrus-main', 'item-057') da `kitchen_menu_items`. Idempotente:
+--   rieseguibile senza errori se la riga e' gia' assente.
+--
+-- COSA NON FA (deliberatamente)
+--   - Non tocca `kitchen_order_items`: quella tabella copia name/price al momento dell'ordine
+--     (colonne proprie, nessuna FK verso kitchen_menu_items — vedi
+--     20260710173936_kitchen_schema_baseline_v1.sql), quindi eventuali ordini storici con
+--     Krombacher restano leggibili invariati.
+--   - Non tocca `kitchen_menu_availability`: se esiste una riga ESAURITO/disponibile residua per
+--     item-057, resta orfana ma innocua (nessuna UI la legge senza una riga catalogo).
+--   - Non cancella l'asset `public/assets/kitchen/beers/krombacher-pils.png` (gia' rimosso lato
+--     client) ne' alcuna altra migration/RPC/policy.
+--   - A differenza del pattern usato per le righe legacy in 20260916120000 (§2, price -> NULL
+--     per preservare il riferimento storico leggibile), qui si usa un DELETE vero: e' l'istruzione
+--     esplicita di Eros per questo item, e non c'e' bisogno di preservare la riga come referimento
+--     futuro (item introdotto e ritirato nello stesso sprint, nessun catalogo storico da leggere
+--     a ritroso oltre a kitchen_order_items, gia' coperto sopra).
+--
+-- ROLLBACK
+--   Reinserire la riga con lo stesso valore della seed:
+--   INSERT INTO public.kitchen_menu_items (venue_id, item_id, name, price)
+--   VALUES ('walrus-main', 'item-057', 'Krombacher Pils', 6)
+--   ON CONFLICT (venue_id, item_id) DO UPDATE SET name = EXCLUDED.name, price = EXCLUDED.price, updated_at = now();
+
+DELETE FROM public.kitchen_menu_items
+ WHERE venue_id = 'walrus-main'
+   AND item_id = 'item-057';
+
+-- ---------------------------------------------------------------------------------------------
+-- VERIFICHE per il Gate 2 (da eseguire a mano, NON parte della migration)
+--
+-- V1  Riga rimossa (attesa: 0 righe):
+--     select * from kitchen_menu_items where venue_id = 'walrus-main' and item_id = 'item-057';
+--
+-- V2  Nessun'altra riga toccata (attesa: 39 righe, tutte identiche a prima tranne l'assenza di
+--     item-057 — 40 righe della seed 20260916120000 meno item-057):
+--     select count(*) from kitchen_menu_items where venue_id = 'walrus-main';
+--
+-- V3  Nessun ordine storico con item-057 e' compromesso (facoltativo, solo lettura):
+--     select order_id, name, price, quantity from kitchen_order_items
+--      where venue_id = 'walrus-main' and item_id = 'item-057';
+-- ---------------------------------------------------------------------------------------------

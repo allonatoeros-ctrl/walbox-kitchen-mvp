@@ -40,7 +40,7 @@ test('itemId fuori catalogo: known = false, MAI confuso con "nessun allergene"',
 
 test('ogni combo FALLO PESANTE e l unione derivata dei suoi componenti dichiarati', () => {
   const beers = falloPesanteBeerOptions();
-  assert.ok(beers.length >= 7, 'catalogo birre del combo inatteso');
+  assert.ok(beers.length >= 6, 'catalogo birre del combo inatteso');
   const side = byId(FALLO_PESANTE_SIDE_ITEM_ID);
   for (const [baseItemId, combo] of Object.entries(kitchenPesiMassimiCombos)) {
     const base = byId(baseItemId);

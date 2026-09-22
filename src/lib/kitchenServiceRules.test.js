@@ -37,7 +37,7 @@ function comboCartLine(baseItemId, beer, qty = 1) {
 }
 
 test('tutte le birre selezionabili nel combo finiscono nella nota, col nome reale del catalogo', () => {
-  assert.ok(beers.length >= 7, `attese >= 7 birre birre-v1, trovate ${beers.length}`);
+  assert.ok(beers.length >= 6, `attese >= 6 birre birre-v1, trovate ${beers.length}`);
   for (const beer of beers) {
     for (const baseItemId of Object.keys(kitchenPesiMassimiCombos)) {
       const note = buildIncludedBeersNote([comboCartLine(baseItemId, beer)], kitchenMenuItems);
@@ -61,11 +61,11 @@ test('due combo con la stessa birra: quantita sommata, non riga ripetuta', () =>
 
 test('due combo con birre diverse: entrambe presenti', () => {
   const note = buildIncludedBeersNote(
-    [comboCartLine('item-009', beers[3]), comboCartLine('item-011', beers[6])],
+    [comboCartLine('item-009', beers[3]), comboCartLine('item-011', beers[5])],
     kitchenMenuItems,
   );
   assert.ok(note.includes(beers[3].name.toUpperCase()), note);
-  assert.ok(note.includes(beers[6].name.toUpperCase()), note);
+  assert.ok(note.includes(beers[5].name.toUpperCase()), note);
 });
 
 test('birra non piu in catalogo: si degrada sull id, mai una nota vuota o un crash', () => {

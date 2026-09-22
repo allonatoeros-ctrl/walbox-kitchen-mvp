@@ -570,42 +570,77 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
     }
   };
 
-  // Cancel is a Payment Hub-guarded write (kitchen_order_cancel RPC rejects a currently-paid
-  // order with order_already_paid_cannot_cancel) — like confirmPayment, the server call must
-  // happen and succeed BEFORE the local state reflects "cancelled", never optimistically first,
-  // or a rejected cancel would still show as cancelled locally.
+  // Cancel is a Payment Hub-guarded write — like confirmPayment, the server call must happen
+  // and succeed BEFORE the local state reflects "cancelled", never optimistically first, or a
+  // rejected cancel would still show as cancelled locally.
+  //
+  // Payment Cancel Hardening (2026-09-22 wiring): goes through the dedicated staff endpoint
+  // api/kitchen-cancel-with-payment-check instead of the kitchen_order_cancel RPC directly. The
+  // RPC only ever checked kitchen_orders.payment_status='paid' — it never looked at a live SumUp
+  // charge attempt still 'initiated'/'pending', so a cancel could land while the customer's
+  // hosted checkout page was still open and payable underneath it. The endpoint checks SumUp
+  // authoritatively first (fail-closed on any indeterminate result) and only then calls the new
+  // atomic RPC kitchen_order_cancel_with_payment_attempt — same auth pattern (own staff JWT via
+  // supabase.auth.getSession()) as the sibling staff endpoints (see PaymentsView.jsx's
+  // liveReconcileAction/liveRefundAction).
   const cancelOrder = async (id, reason) => {
     const current = orders.find((o) => o.id === id);
     if (!current) return;
 
-    let data;
+    let body;
     try {
-      const rpcResult = await supabase.rpc('kitchen_order_cancel', {
-        p_order_id: id,
-        p_reason: reason ?? null,
-      });
-      const { error } = rpcResult;
-      if (error?.message?.includes('order_already_paid_cannot_cancel')) {
-        console.warn('[Walbox] Cancel blocked — order already paid', error);
-        applyLocalSyncStatus(id, 'error', 'Ordine già pagato — rimborsa prima di annullare', false);
-        return { ok: false, error, reason: 'order_already_paid_cannot_cancel' };
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.warn('[Walbox] Cancel order — missing staff session');
+        applyLocalSyncStatus(id, 'error', 'Sessione staff scaduta — ricarica e riprova');
+        return { ok: false, error: new Error('missing_session'), reason: 'missing_session' };
       }
-      if (error) throw error;
-      data = rpcResult.data;
+
+      const res = await fetch('/api/kitchen-cancel-with-payment-check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ order_id: id, reason: reason ?? null }),
+      });
+      body = await res.json();
+
+      if (!res.ok) {
+        if (body?.error === 'order_already_paid_cannot_cancel' || body?.error === 'cannot_cancel_already_paid') {
+          console.warn('[Walbox] Cancel blocked — order already paid', body);
+          applyLocalSyncStatus(id, 'error', 'Ordine già pagato — rimborsa prima di annullare', false);
+          return { ok: false, error: body, reason: 'order_already_paid_cannot_cancel' };
+        }
+        if (body?.error === 'payment_attempt_not_cancelable') {
+          console.warn('[Walbox] Cancel blocked — payment just confirmed concurrently', body);
+          applyLocalSyncStatus(id, 'error', 'Pagamento appena confermato — verifica prima di riprovare', false);
+          return { ok: false, error: body, reason: 'payment_attempt_not_cancelable' };
+        }
+        throw new Error(body?.error || `cancel_with_payment_check_failed_${res.status}`);
+      }
+
+      // 'unknown' = the live SumUp checkout couldn't be verified authoritatively (network/API
+      // failure, ambiguous provider_ref recovery): fail-closed, never cancel blind.
+      if (body.outcome === 'unknown') {
+        console.warn('[Walbox] Cancel order — SumUp checkout state unverifiable', body);
+        applyLocalSyncStatus(id, 'error', 'Verifica pagamento non riuscita — controlla manualmente prima di riprovare', false);
+        return { ok: false, error: body, reason: 'unknown' };
+      }
     } catch (err) {
-      console.warn('[Walbox] Cancel order RPC failed — order not cancelled', err);
+      console.warn('[Walbox] Cancel order failed — order not cancelled', err);
       applyLocalSyncStatus(id, 'error', 'Annullamento non riuscito — riprova');
       return { ok: false, error: err };
     }
 
-    const now = data?.cancelled_at ?? new Date().toISOString();
+    // 'already_cancelled' (idempotent double-click) carries no `order` row: fall back to now()
+    // exactly like the previous RPC-direct path did when the RPC's own row was unavailable.
+    const order = body.order ?? null;
+    const now = order?.cancelled_at ?? new Date().toISOString();
     setOrders((prev) => {
       const next = prev.map((o) => {
         if (o.id !== id) return o;
         const updated = {
           ...o,
           status: 'cancelled',
-          cancelReason: data?.cancel_reason ?? reason,
+          cancelReason: order?.cancel_reason ?? reason,
           cancelledAt: now,
           syncStatus: 'synced',
           syncError: null,

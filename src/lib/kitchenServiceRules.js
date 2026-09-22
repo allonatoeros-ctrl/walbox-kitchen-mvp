@@ -1,8 +1,8 @@
-// Regola di servizio condivisa (BEER SPRINT V1 §3/§7-E, confermata da Eros come regola
-// definitiva il 2026-09-14): le birre `evening_only` (oggi solo Krombacher Pils) diventano
-// ordinabili solo dalle 18:00 locali del device. Unica fonte del gate: BirreSection.jsx e
-// il selettore birra di FALLO PESANTE (PesiMassimiSection.jsx) lo importano da qui — mai
-// duplicato, per restare testabile in un solo punto.
+// Regola di servizio condivisa (BEER SPRINT V1 §3/§7-E): le birre `evening_only` diventano
+// ordinabili solo dalle 18:00 locali del device. Unica fonte del gate: BirreSection.jsx e il
+// selettore birra di FALLO PESANTE (PesiMassimiSection.jsx) lo importano da qui — mai duplicato.
+// Dopo la rimozione di Krombacher (correzione Eros, 2026-09-22) nessuna delle 6 birre rimaste
+// usa `evening_only` (tutte `all_day`): la regola resta infrastruttura viva per birre future.
 
 export const EVENING_SERVICE_START_HOUR = 18;
 
