@@ -28,8 +28,20 @@ function formatEuro(n) {
 /**
  * `paymentsByMethod` = { byMethod: { [method]: {incasso, rimborsato, netto} }, sumup: {succeeded, pending, failed} }.
  * `anomalyCount` = numero di anomalie gia' visibile nel blocco "⚠ Attenzione" sopra (AC5: stesso dato, non ricalcolato).
+ * `activeFilter`/`onFilterChange` = filtri cliccabili sulla lista "Pagamenti recenti" sotto (Cassa
+ * Payment Hub, 2026-09-22). Componente resta presentazionale: lo stato del filtro vive in
+ * PaymentsView, qui solo bottoni + classe attiva. I 3 filtri SumUp (riusciti/in corso/falliti)
+ * restano SumUp-only, coerenti col badge esistente — nessuna estensione di significato.
  */
-export default function CassaControlSection({ nightLabel, todaySummary, paymentsByMethod, anomalyCount = 0 }) {
+export default function CassaControlSection({
+  nightLabel,
+  todaySummary,
+  paymentsByMethod,
+  anomalyCount = 0,
+  activeFilter = 'all',
+  onFilterChange,
+}) {
+  const setFilter = (value) => onFilterChange?.(value);
   const byMethod = paymentsByMethod?.byMethod ?? {};
   const sumup = paymentsByMethod?.sumup ?? EMPTY_SUMUP;
   // Righe data-driven (solo i metodi presenti nella finestra serata), ordinate per incasso decrescente.
@@ -107,21 +119,54 @@ export default function CassaControlSection({ nightLabel, todaySummary, payments
       )}
 
       <div className="kpd-sumup-badges" data-testid="cassa-sumup-badges">
-        <span className="kpd-sumup-badge kpd-sumup-badge--ok" data-testid="cassa-sumup-succeeded">
+        <button
+          type="button"
+          className={`kpd-sumup-badge kpd-sumup-badge--neutral${activeFilter === 'all' ? ' kpd-sumup-badge--active' : ''}`}
+          data-testid="cassa-filter-all"
+          onClick={() => setFilter('all')}
+        >
+          Tutti
+        </button>
+        <button
+          type="button"
+          className={`kpd-sumup-badge kpd-sumup-badge--ok${activeFilter === 'sumup_succeeded' ? ' kpd-sumup-badge--active' : ''}`}
+          data-testid="cassa-sumup-succeeded"
+          onClick={() => setFilter('sumup_succeeded')}
+        >
           SumUp riusciti: {sumup.succeeded}
-        </span>
-        <span className="kpd-sumup-badge kpd-sumup-badge--pending" data-testid="cassa-sumup-pending">
+        </button>
+        <button
+          type="button"
+          className={`kpd-sumup-badge kpd-sumup-badge--pending${activeFilter === 'sumup_pending' ? ' kpd-sumup-badge--active' : ''}`}
+          data-testid="cassa-sumup-pending"
+          onClick={() => setFilter('sumup_pending')}
+        >
           In corso: {sumup.pending}
-        </span>
-        <span className="kpd-sumup-badge kpd-sumup-badge--failed" data-testid="cassa-sumup-failed">
+        </button>
+        <button
+          type="button"
+          className={`kpd-sumup-badge kpd-sumup-badge--failed${activeFilter === 'sumup_failed' ? ' kpd-sumup-badge--active' : ''}`}
+          data-testid="cassa-sumup-failed"
+          onClick={() => setFilter('sumup_failed')}
+        >
           Falliti: {sumup.failed}
-        </span>
-        <span
-          className={`kpd-sumup-badge ${anomalyCount > 0 ? 'kpd-sumup-badge--failed' : 'kpd-sumup-badge--ok'}`}
+        </button>
+        <button
+          type="button"
+          className={`kpd-sumup-badge kpd-sumup-badge--neutral${activeFilter === 'cash' ? ' kpd-sumup-badge--active' : ''}`}
+          data-testid="cassa-filter-cash"
+          onClick={() => setFilter('cash')}
+        >
+          Contanti
+        </button>
+        <button
+          type="button"
+          className={`kpd-sumup-badge ${anomalyCount > 0 ? 'kpd-sumup-badge--failed' : 'kpd-sumup-badge--ok'}${activeFilter === 'anomalies' ? ' kpd-sumup-badge--active' : ''}`}
           data-testid="cassa-anomaly-badge"
+          onClick={() => setFilter('anomalies')}
         >
           {anomalyCount > 0 ? `⚠ ${anomalyCount} anomalie da verificare` : '✓ Nessuna anomalia'}
-        </span>
+        </button>
       </div>
     </div>
   );

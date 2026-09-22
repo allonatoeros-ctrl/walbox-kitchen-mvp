@@ -1,11 +1,17 @@
-import { useState } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
+import { useFullscreenToggle } from '../hooks/useFullscreenToggle';
 import { formatServiceNightLabel } from '../lib/kitchenServiceRules';
 import { supabase } from '../lib/supabaseClient';
 import CassaControlSection from '../components/kitchen/CassaControlSection';
 import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
 import './PaymentsViewDemo.css';
+
+// Duplicato deliberatamente da kitchenServiceRules.js (stesso pattern di METHOD_LABELS sopra,
+// per evitare un import di un simbolo non esportato) — i filtri "SumUp riusciti/in corso/falliti"
+// restano SumUp-only, coerenti col badge esistente in CassaControlSection.
+const SUMUP_METHODS = new Set(['sumup_online', 'sumup_pos']);
 
 const METHOD_LABELS = {
   sumup_online: 'Carta (online)',
@@ -226,6 +232,44 @@ export default function PaymentsView({
   // order_id -> { status: 'loading'|'done'|'error', message }
   const [reconcileState, setReconcileState] = useState({});
 
+  // Filtri cliccabili (CassaControlSection) sulla lista "Pagamenti recenti" — stato locale, nessun
+  // impatto su payment state/RPC/fetch: filtra solo cosa e' gia' in `visiblePayments`.
+  const [activeFilter, setActiveFilter] = useState('all');
+  const anomalyOrderIds = useMemo(
+    () => new Set(visibleAnomalies.map((a) => a.order_id)),
+    [visibleAnomalies]
+  );
+  const filteredPayments = useMemo(() => {
+    switch (activeFilter) {
+      case 'sumup_succeeded':
+        return visiblePayments.filter((p) => SUMUP_METHODS.has(p.method) && p.status === 'succeeded');
+      case 'sumup_pending':
+        return visiblePayments.filter((p) => SUMUP_METHODS.has(p.method) && (p.status === 'initiated' || p.status === 'pending'));
+      case 'sumup_failed':
+        return visiblePayments.filter((p) => SUMUP_METHODS.has(p.method) && p.status === 'failed');
+      case 'cash':
+        return visiblePayments.filter((p) => p.method === 'cash');
+      case 'anomalies':
+        return visiblePayments.filter((p) => anomalyOrderIds.has(p.order_id));
+      default:
+        return visiblePayments;
+    }
+  }, [activeFilter, visiblePayments, anomalyOrderIds]);
+
+  // Fullscreen/tablet toggle (Cassa Payment Hub, 2026-09-22): tocca solo layout, nessuno stato
+  // pagamenti. Fallback su classe CSS "kiosk" quando la Fullscreen API non e' disponibile.
+  const pageRef = useRef(null);
+  const { isFullscreen, isSupported: fullscreenSupported, toggleFullscreen } = useFullscreenToggle(pageRef);
+  const [manualKiosk, setManualKiosk] = useState(false);
+  const kioskActive = fullscreenSupported ? isFullscreen : manualKiosk;
+  const handleFullscreenToggle = () => {
+    if (fullscreenSupported) {
+      toggleFullscreen();
+    } else {
+      setManualKiosk((prev) => !prev);
+    }
+  };
+
   const handleReconcile = async (orderId) => {
     setReconcileState((prev) => ({ ...prev, [orderId]: { status: 'loading', message: null } }));
 
@@ -279,7 +323,18 @@ export default function PaymentsView({
   );
 
   return (
-    <div className="kpd-page">
+    <div className={`kpd-page${kioskActive ? ' kpd-page--kiosk' : ''}`} ref={pageRef}>
+
+      <div className="kpd-fullscreen-row">
+        <button
+          type="button"
+          className="kpd-fullscreen-btn"
+          data-testid="kpd-fullscreen-toggle"
+          onClick={handleFullscreenToggle}
+        >
+          {kioskActive ? 'ESCI FULLSCREEN' : 'FULLSCREEN'}
+        </button>
+      </div>
 
       {isLiveData && <ServiceNightSelector />}
 
@@ -319,16 +374,20 @@ export default function PaymentsView({
         todaySummary={todaySummary}
         paymentsByMethod={paymentsByMethod}
         anomalyCount={visibleAnomalies.length}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
       />
 
       {/* PAGAMENTI RECENTI */}
       <div>
         <div className="kpd-section-title">Pagamenti recenti</div>
-        {visiblePayments.length === 0 ? (
-          <div className="kpd-empty">Nessun pagamento registrato.</div>
+        {filteredPayments.length === 0 ? (
+          <div className="kpd-empty">
+            {activeFilter === 'all' ? 'Nessun pagamento registrato.' : 'Nessun pagamento per questo filtro.'}
+          </div>
         ) : (
           <div className="kpd-payments-list">
-            {visiblePayments.map((p) => {
+            {filteredPayments.map((p) => {
               const canRefund = p.direction === 'charge' && p.status === 'succeeded' && !refundedOrderIds.has(p.order_id);
               const canReconcile = p.direction === 'charge' && p.provider === 'sumup' && p.status !== 'succeeded'
                 && (allowReconcileFailed || p.status !== 'failed');
@@ -338,12 +397,15 @@ export default function PaymentsView({
               const note = failureNote(p);
               return (
                 <div key={p.id} className="kpd-payment-row" data-testid={`payment-row-${p.id}`}>
-                  <span className="kpd-payment-order">{orderLabel(p)}</span>
+                  <span className="kpd-payment-time">{formatTime(p.created_at)}</span>
+                  <span className="kpd-payment-order">
+                    {orderLabel(p)}
+                    {p.nickname && <span className="kpd-payment-nickname"> · {p.nickname}</span>}
+                  </span>
+                  <span className="kpd-payment-amount">{formatEuro(p.amount)}</span>
                   <span className="kpd-payment-method">
                     {methodLabel(p)}{note ? ` · ${note}` : ''}
                   </span>
-                  <span className="kpd-payment-amount">{formatEuro(p.amount)}</span>
-                  <span className="kpd-payment-time">{formatTime(p.created_at)}</span>
                   <span className={`kpd-payment-status kpd-status--${info.cls}`}>{info.text}</span>
 
                   {canRefund && (

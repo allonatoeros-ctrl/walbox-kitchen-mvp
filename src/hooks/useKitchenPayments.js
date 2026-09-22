@@ -97,20 +97,28 @@ export function useKitchenPayments({ night: nightParam = null } = {}) {
       const recent = recentRes.data ?? [];
 
       const orderIds = [...new Set([...drift, ...recent].map((r) => r.order_id).filter(Boolean))];
-      let orderCodeById = {};
+      // `orderInfoById` porta anche `nickname` (Kitchen Analytics V1 — Cassa/Payment Hub filtri +
+      // colonna cliente, 2026-09-22): stessa query read-only gia' esistente, solo una colonna in
+      // piu' nella select, nessuna nuova RLS/migration (colonna gia' letta con lo stesso ruolo
+      // staff da StoricoView.jsx).
+      let orderInfoById = {};
       if (orderIds.length > 0) {
         const { data: orders, error: ordersError } = await supabase
           .from('kitchen_orders')
-          .select('id, order_code')
+          .select('id, order_code, nickname')
           .in('id', orderIds);
         if (ordersError) throw ordersError;
-        orderCodeById = Object.fromEntries((orders ?? []).map((o) => [o.id, o.order_code]));
+        orderInfoById = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
       }
 
       setTodaySummary(summarizeServiceNightPayments(summaryRes.data));
       setPaymentsByMethod(summarizePaymentsByMethod(summaryRes.data));
-      setAnomalies(drift.map((a) => ({ ...a, order_code: orderCodeById[a.order_id] ?? null })));
-      setRecentPayments(recent.map((p) => ({ ...p, order_code: orderCodeById[p.order_id] ?? null })));
+      setAnomalies(drift.map((a) => ({ ...a, order_code: orderInfoById[a.order_id]?.order_code ?? null })));
+      setRecentPayments(recent.map((p) => ({
+        ...p,
+        order_code: orderInfoById[p.order_id]?.order_code ?? null,
+        nickname: orderInfoById[p.order_id]?.nickname ?? null,
+      })));
       setError(null);
     } catch (err) {
       console.warn('[Walbox] useKitchenPayments refresh failed', err);
