@@ -76,6 +76,13 @@ export default function CoachOverlay({ step, stepLabel, onAdvance }) {
     );
   }
 
+  // Se il target ha una posizione ancorabile (sopra o sotto) che resta dentro il viewport, la usa;
+  // altrimenti (target troppo vicino al bordo o del tutto fuori viewport — es. 2026-09-22, riga
+  // pagamento spinta sotto il fold da un blocco filtri piu' alto) `tooltipPosition` ritorna `null`
+  // e si ricade sullo stesso fallback centrato gia' usato quando il target non si trova (classe
+  // "coach-tooltip--floating", nessuna nuova regola CSS). Lo spot resta comunque sul target reale.
+  const position = rect ? tooltipPosition(rect) : null;
+
   return (
     <div className="coach-dim" data-coach-overlay>
       {rect && (
@@ -85,8 +92,8 @@ export default function CoachOverlay({ step, stepLabel, onAdvance }) {
         />
       )}
       <div
-        className={`coach-tooltip ${rect ? '' : 'coach-tooltip--floating'}`}
-        style={rect ? tooltipPosition(rect) : undefined}
+        className={`coach-tooltip ${position ? '' : 'coach-tooltip--floating'}`}
+        style={position ?? undefined}
       >
         <div className="coach-step-label">{stepLabel}</div>
         <div className="coach-title">{step.title}</div>
@@ -111,10 +118,30 @@ function findTarget(step) {
   return null;
 }
 
+// Stima conservativa dell'altezza del tooltip (titolo + corpo + bottone, vedi CoachOverlay.css):
+// serve solo per decidere se un ancoraggio "sopra" resta davvero dentro il viewport, mai per il
+// layout vero (quello lo decide il DOM/CSS reale).
+const ESTIMATED_TOOLTIP_HEIGHT = 180;
+const VIEWPORT_MARGIN = 12;
+
 function tooltipPosition(rect) {
   const spaceBelow = window.innerHeight - rect.bottom;
   const placeBelow = spaceBelow > 200;
-  return placeBelow
-    ? { top: rect.bottom + 16, left: Math.max(12, Math.min(rect.left, window.innerWidth - 340)) }
-    : { top: Math.max(12, rect.top - 16), left: Math.max(12, Math.min(rect.left, window.innerWidth - 340)), transform: 'translateY(-100%)' };
+  if (placeBelow) {
+    return { top: rect.bottom + 16, left: Math.max(12, Math.min(rect.left, window.innerWidth - 340)) };
+  }
+  // Ancoraggio "sopra": il tooltip (bottom = rect.top - 16, top = bottom - altezza, per via del
+  // translateY(-100%) sotto) deve restare interamente dentro [VIEWPORT_MARGIN, innerHeight - VIEWPORT_MARGIN].
+  // Se il target e' troppo vicino al bordo del viewport o del tutto fuori (2026-09-22: riga
+  // pagamento sotto il fold in un training demo con blocco filtri piu' alto), nessuno dei due
+  // ancoraggi e' raggiungibile: si torna `null` e il chiamante ricade sul fallback centrato.
+  const anchoredBottom = rect.top - 16;
+  const anchoredTop = anchoredBottom - ESTIMATED_TOOLTIP_HEIGHT;
+  const fitsAbove = anchoredTop >= VIEWPORT_MARGIN && anchoredBottom <= window.innerHeight - VIEWPORT_MARGIN;
+  if (!fitsAbove) return null;
+  return {
+    top: anchoredBottom,
+    left: Math.max(12, Math.min(rect.left, window.innerWidth - 340)),
+    transform: 'translateY(-100%)',
+  };
 }

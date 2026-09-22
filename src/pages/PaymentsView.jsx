@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
 import { useFullscreenToggle } from '../hooks/useFullscreenToggle';
@@ -7,11 +7,6 @@ import { supabase } from '../lib/supabaseClient';
 import CassaControlSection from '../components/kitchen/CassaControlSection';
 import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
 import './PaymentsViewDemo.css';
-
-// Duplicato deliberatamente da kitchenServiceRules.js (stesso pattern di METHOD_LABELS sopra,
-// per evitare un import di un simbolo non esportato) — i filtri "SumUp riusciti/in corso/falliti"
-// restano SumUp-only, coerenti col badge esistente in CassaControlSection.
-const SUMUP_METHODS = new Set(['sumup_online', 'sumup_pos']);
 
 const METHOD_LABELS = {
   sumup_online: 'Carta (online)',
@@ -232,42 +227,75 @@ export default function PaymentsView({
   // order_id -> { status: 'loading'|'done'|'error', message }
   const [reconcileState, setReconcileState] = useState({});
 
-  // Filtri cliccabili (CassaControlSection) sulla lista "Pagamenti recenti" — stato locale, nessun
-  // impatto su payment state/RPC/fetch: filtra solo cosa e' gia' in `visiblePayments`.
-  const [activeFilter, setActiveFilter] = useState('all');
+  // Filtri "Pagamenti recenti" (CassaControlSection) — stato locale, nessun impatto su payment
+  // state/RPC/fetch: filtrano solo cosa e' gia' in `visiblePayments`. Due gruppi combinabili
+  // (METODO x STATO, sprint 2026-09-22 continuazione — corregge il filtro singolo a scelta
+  // esclusiva della sessione precedente, che non copriva POS e non permetteva di incrociare
+  // metodo+stato) piu' un terzo toggle indipendente per le anomalie.
+  const [methodFilter, setMethodFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [anomalyOnly, setAnomalyOnly] = useState(false);
   const anomalyOrderIds = useMemo(
     () => new Set(visibleAnomalies.map((a) => a.order_id)),
     [visibleAnomalies]
   );
+  // Conteggi STATO generici su tutti i metodi (non solo SumUp) per i badge del gruppo STATO —
+  // stesso criterio "in corso = initiated|pending" gia' usato da summarizeServiceNightPayments/
+  // summarizePaymentsByMethod in kitchenServiceRules.js, qui senza toccare quella funzione
+  // condivisa (usata anche da PaymentMixChart/StoricoView) ne' il suo scope SumUp-only.
+  const statusCounts = useMemo(() => {
+    const counts = { succeeded: 0, pending: 0, failed: 0 };
+    visiblePayments.forEach((p) => {
+      if (p.status === 'succeeded') counts.succeeded += 1;
+      else if (p.status === 'initiated' || p.status === 'pending') counts.pending += 1;
+      else if (p.status === 'failed') counts.failed += 1;
+    });
+    return counts;
+  }, [visiblePayments]);
   const filteredPayments = useMemo(() => {
-    switch (activeFilter) {
-      case 'sumup_succeeded':
-        return visiblePayments.filter((p) => SUMUP_METHODS.has(p.method) && p.status === 'succeeded');
-      case 'sumup_pending':
-        return visiblePayments.filter((p) => SUMUP_METHODS.has(p.method) && (p.status === 'initiated' || p.status === 'pending'));
-      case 'sumup_failed':
-        return visiblePayments.filter((p) => SUMUP_METHODS.has(p.method) && p.status === 'failed');
-      case 'cash':
-        return visiblePayments.filter((p) => p.method === 'cash');
-      case 'anomalies':
-        return visiblePayments.filter((p) => anomalyOrderIds.has(p.order_id));
-      default:
-        return visiblePayments;
-    }
-  }, [activeFilter, visiblePayments, anomalyOrderIds]);
+    return visiblePayments.filter((p) => {
+      if (methodFilter !== 'all' && p.method !== methodFilter) return false;
+      if (statusFilter === 'succeeded' && p.status !== 'succeeded') return false;
+      if (statusFilter === 'pending' && !(p.status === 'initiated' || p.status === 'pending')) return false;
+      if (statusFilter === 'failed' && p.status !== 'failed') return false;
+      if (anomalyOnly && !anomalyOrderIds.has(p.order_id)) return false;
+      return true;
+    });
+  }, [methodFilter, statusFilter, anomalyOnly, visiblePayments, anomalyOrderIds]);
+  const hasActiveFilter = methodFilter !== 'all' || statusFilter !== 'all' || anomalyOnly;
 
-  // Fullscreen/tablet toggle (Cassa Payment Hub, 2026-09-22): tocca solo layout, nessuno stato
-  // pagamenti. Fallback su classe CSS "kiosk" quando la Fullscreen API non e' disponibile.
-  const pageRef = useRef(null);
-  const { isFullscreen, isSupported: fullscreenSupported, toggleFullscreen } = useFullscreenToggle(pageRef);
-  const [manualKiosk, setManualKiosk] = useState(false);
-  const kioskActive = fullscreenSupported ? isFullscreen : manualKiosk;
+  // Fullscreen/tablet, auto all'apertura (Cassa Payment Hub, sprint 2026-09-22 continuazione):
+  // tocca solo layout, nessuno stato pagamenti. Solo su dati LIVE (isLiveData, stesso gate di
+  // ServiceNightSelector sopra): `manualKiosk` parte gia' attivo cosi' la modalita' full-viewport
+  // (classe CSS "kiosk") e' garantita subito, indipendentemente dal supporto/esito della vera
+  // Fullscreen API — quella resta un tentativo aggiuntivo (qui e/o dal click di navigazione che ha
+  // portato a questa pagina, vedi requestFullscreenBestEffort in useFullscreenToggle.js). Gli
+  // harness demo/training restano com'erano (kiosk disattivo, solo toggle manuale): la loro guida
+  // a coach-tip assume la tipografia normale, non quella ingrandita del kiosk.
+  const { isFullscreen, isSupported: fullscreenSupported, toggleFullscreen } = useFullscreenToggle();
+  const [manualKiosk, setManualKiosk] = useState(isLiveData);
+  const kioskActive = isFullscreen || manualKiosk;
+  useEffect(() => {
+    if (isLiveData && fullscreenSupported && !isFullscreen) {
+      // Tentativo automatico all'apertura: se non c'e' un gesture utente disponibile (es. refresh
+      // diretto su questa route) il browser lo rifiuta silenziosamente — errore gia' catturato
+      // dentro toggleFullscreen, il layout resta comunque full-viewport via manualKiosk sopra.
+      toggleFullscreen();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const handleFullscreenToggle = () => {
+    setManualKiosk((prev) => !prev);
     if (fullscreenSupported) {
       toggleFullscreen();
-    } else {
-      setManualKiosk((prev) => !prev);
     }
+  };
+  const handleBackToStaff = () => {
+    if (document.exitFullscreen && (document.fullscreenElement || document.webkitFullscreenElement)) {
+      document.exitFullscreen().catch(() => {});
+    }
+    window.history.pushState({}, '', '/kitchen/solo');
+    window.dispatchEvent(new PopStateEvent('popstate'));
   };
 
   const handleReconcile = async (orderId) => {
@@ -323,9 +351,19 @@ export default function PaymentsView({
   );
 
   return (
-    <div className={`kpd-page${kioskActive ? ' kpd-page--kiosk' : ''}`} ref={pageRef}>
+    <div className={`kpd-page${kioskActive ? ' kpd-page--kiosk' : ''}`}>
 
       <div className="kpd-fullscreen-row">
+        {isLiveData && (
+          <button
+            type="button"
+            className="kpd-staff-back-btn"
+            data-testid="kpd-back-to-staff"
+            onClick={handleBackToStaff}
+          >
+            ← STAFF
+          </button>
+        )}
         <button
           type="button"
           className="kpd-fullscreen-btn"
@@ -374,8 +412,13 @@ export default function PaymentsView({
         todaySummary={todaySummary}
         paymentsByMethod={paymentsByMethod}
         anomalyCount={visibleAnomalies.length}
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
+        methodFilter={methodFilter}
+        onMethodFilterChange={setMethodFilter}
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        statusCounts={statusCounts}
+        anomalyOnly={anomalyOnly}
+        onAnomalyOnlyChange={setAnomalyOnly}
       />
 
       {/* PAGAMENTI RECENTI */}
@@ -383,7 +426,7 @@ export default function PaymentsView({
         <div className="kpd-section-title">Pagamenti recenti</div>
         {filteredPayments.length === 0 ? (
           <div className="kpd-empty">
-            {activeFilter === 'all' ? 'Nessun pagamento registrato.' : 'Nessun pagamento per questo filtro.'}
+            {hasActiveFilter ? 'Nessun pagamento per questo filtro.' : 'Nessun pagamento registrato.'}
           </div>
         ) : (
           <div className="kpd-payments-list">

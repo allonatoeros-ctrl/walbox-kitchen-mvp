@@ -288,6 +288,7 @@ export default function KitchenTrainingDemo() {
               retrySync={retrySync}
               menuItems={menuItems}
               toggleAvailability={toggleAvailability}
+              allowFullscreen={false}
             />
           ) : (
             <div className="ksd-page">

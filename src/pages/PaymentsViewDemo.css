@@ -230,7 +230,8 @@
 .kpd-sumup-badge--neutral { background: rgba(255, 255, 255, 0.04); color: #f5f0e8; border: 1px solid rgba(255, 255, 255, 0.12); }
 
 /* Chip filtro cliccabili (Cassa Payment Hub, 2026-09-22): stesso badge, reso interattivo. */
-.kpd-sumup-badges button.kpd-sumup-badge {
+.kpd-sumup-badges button.kpd-sumup-badge,
+.kpd-filter-group button.kpd-sumup-badge {
   font-family: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -238,6 +239,24 @@
 .kpd-sumup-badge--active {
   outline: 2px solid #eab308;
   outline-offset: 1px;
+}
+
+/* Filtri METODO/STATO combinabili (sprint Cassa V2, 2026-09-22 continuazione): stesso chip di
+   .kpd-sumup-badges, due gruppi separati con etichetta. */
+.kpd-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.kpd-filter-label {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(245, 240, 232, 0.5);
+  margin-right: 2px;
 }
 
 /* ── PAGAMENTI RECENTI ────────────────────────────── */
@@ -464,12 +483,14 @@
   .kpd-payment-amount { grid-area: amount; }
 }
 
-/* ── FULLSCREEN / KIOSK — toggle tablet banco (Cassa Payment Hub, 2026-09-22) ── */
+/* ── FULLSCREEN / KIOSK — auto all'apertura, tablet banco (Cassa Payment Hub, 2026-09-22) ── */
 .kpd-fullscreen-row {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
 }
-.kpd-fullscreen-btn {
+.kpd-fullscreen-btn,
+.kpd-staff-back-btn {
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.14);
   color: #f5f0e8;
@@ -484,9 +505,10 @@
   font-family: inherit;
 }
 
-/* Applicata quando entra il vero fullscreen (browser lo supporta) oppure, se l'API non e'
-   disponibile, come fallback manuale: tipografia/padding piu' grandi per un tablet fisso al
-   banco. Non tocca `/kitchen/staff-payments-demo`, che parte sempre con kioskActive=false. */
+/* Attiva di default all'apertura su dati LIVE (garantita via CSS, indipendentemente dall'esito
+   della vera Fullscreen API — vedi PaymentsView.jsx; gli harness demo/training restano invariati,
+   kiosk disattivo di default): tipografia/padding piu' grandi per un tablet fisso al banco. Il
+   bottone FULLSCREEN/ESCI FULLSCREEN resta un toggle manuale sopra questo default. */
 .kpd-page--kiosk {
   font-size: 1.1em;
 }

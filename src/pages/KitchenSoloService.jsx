@@ -8,6 +8,7 @@ import { STAFF_DISAMBIGUATION_LABEL } from '../lib/kitchenStaffLabels';
 import { getStaffSession, onAuthStateChange, isKitchenStaff, signOut } from '../lib/supabaseAuth';
 import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPreviewFixtures';
 import { useKitchenAudio } from '../hooks/useKitchenAudio';
+import { requestFullscreenBestEffort } from '../hooks/useFullscreenToggle';
 import MenuView from './MenuView';
 import StoricoView from './StoricoView';
 import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
@@ -237,7 +238,16 @@ export function KitchenSoloServiceView({
   showNightSelector = false,
   // Default per Preview/Demo/Training (nessuna sessione reale da chiudere): solo navigazione.
   onLogout = () => navigate('/kitchen/login'),
+  // Gate vera Fullscreen API (2026-09-22, fix regressione training demo): Live la vuole (default
+  // true). Training/Demo la disattivano esplicitamente (`allowFullscreen={false}`) perche' questo
+  // componente e' riusato 1:1 dentro KitchenTrainingDemo.jsx e una vera richiesta fullscreen a
+  // meta' del flusso guidato cambia le dimensioni reali del viewport, disallineando il CoachOverlay
+  // (posizionato sulle coordinate pre-fullscreen) dal nuovo viewport.
+  allowFullscreen = true,
 }) {
+  const requestFullscreenIfAllowed = () => {
+    if (allowFullscreen) requestFullscreenBestEffort();
+  };
   const [focusId, setFocusId]         = useState(null);
   const [checked, setChecked]         = useState({});   // { [orderId]: { [idx]: true } }
   const [snoozed, setSnoozed]         = useState({});   // { [orderId]: timestamp }
@@ -245,6 +255,14 @@ export function KitchenSoloServiceView({
   const [search, setSearch]           = useState('');
   const [moreOpen, setMoreOpen]       = useState(false);
   const [overlay, setOverlay]         = useState(null); // 'menu' | 'storico' | 'alert'
+  // Chiusura overlay: esce anche dalla vera Fullscreen API se attiva (solo Storico la richiede,
+  // vedi requestFullscreenBestEffort sopra) — nessun ritorno "a meta'" full-viewport dopo CHIUDI.
+  const closeOverlay = () => {
+    if (document.exitFullscreen && (document.fullscreenElement || document.webkitFullscreenElement)) {
+      document.exitFullscreen().catch(() => {});
+    }
+    setOverlay(null);
+  };
   const [queueOpen, setQueueOpen]     = useState(false); // phone: coda a schermo intero
   const [, setTick]                   = useState(0);
   // Undo P0-B: { orderId, orderCode, fromStatus, actionLabel, expiresAt } | null — un solo undo alla volta.
@@ -509,7 +527,7 @@ export function KitchenSoloServiceView({
             <span aria-hidden="true">☰</span><span className="kss-secondary-label">MENU</span>
             {unavailableCount > 0 && <span className="kss-secondary-badge">{unavailableCount}</span>}
           </button>
-          <button className="kss-secondary-btn" onClick={() => setOverlay('storico')}>
+          <button className="kss-secondary-btn" onClick={() => { requestFullscreenIfAllowed(); setOverlay('storico'); }}>
             <span aria-hidden="true">🕘</span><span className="kss-secondary-label">STORICO</span>
           </button>
           <button className="kss-secondary-btn" onClick={() => setOverlay('alert')}>
@@ -856,13 +874,14 @@ export function KitchenSoloServiceView({
               <button className="kss-more-item" onClick={() => { setOverlay('menu'); setMoreOpen(false); }}>
                 Menu / disponibilità
               </button>
-              <button className="kss-more-item" onClick={() => { setOverlay('storico'); setMoreOpen(false); }}>
+              <button className="kss-more-item" onClick={() => { requestFullscreenIfAllowed(); setOverlay('storico'); setMoreOpen(false); }}>
                 Storico ordini
               </button>
               <button
                 className="kss-more-item"
                 onClick={() => {
                   setMoreOpen(false);
+                  requestFullscreenIfAllowed();
                   navigate(paymentsPath);
                 }}
               >
@@ -888,18 +907,21 @@ export function KitchenSoloServiceView({
 
       {/* OVERLAY secondari */}
       {overlay && (
-        <div className="kss-overlay" onClick={() => setOverlay(null)}>
+        <div
+          className={`kss-overlay${overlay === 'storico' ? ' kss-overlay--fullscreen' : ''}`}
+          onClick={() => closeOverlay()}
+        >
           <div className="kss-overlay-panel" onClick={(e) => e.stopPropagation()}>
             <div className="kss-overlay-head">
               <span>{overlay.toUpperCase()}</span>
-              <button className="kss-overlay-close" onClick={() => setOverlay(null)}>CHIUDI ✕</button>
+              <button className="kss-overlay-close" onClick={() => closeOverlay()}>CHIUDI ✕</button>
             </div>
             <div className="kss-overlay-body">
               {overlay === 'menu'    && <MenuView menuItems={menuItems} toggleAvailability={toggleAvailability} />}
               {overlay === 'storico' && (
                 <>
                   {showNightSelector && <ServiceNightSelector />}
-                  <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => navigate(paymentsPath)} />
+                  <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} onOpenCassa={() => { requestFullscreenIfAllowed(); navigate(paymentsPath); }} />
                 </>
               )}
               {overlay === 'alert'   && <AlertView orders={orders} />}

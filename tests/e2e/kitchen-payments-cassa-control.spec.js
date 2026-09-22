@@ -79,3 +79,63 @@ test.describe('Kitchen Payments — CONTROLLO SERATA/CASSA', () => {
     await expect(page.getByTestId('payment-row-pay-demo-5')).toContainText('Satispay');
   });
 });
+
+// Sprint Cassa V2 — continuazione (2026-09-22): filtri METODO x STATO combinabili, corregge il
+// filtro a scelta esclusiva della sessione precedente (non copriva POS, non permetteva di
+// incrociare metodo+stato). `/kitchen/staff-payments-demo` usa TUTTE le righe di
+// kitchenStaffPaymentsDemoFixtures.js (pay-demo-1..6 + le 8 pay-training-*, stessa
+// usePreviewKitchenPayments) — 14 righe totali, coerente con "SumUp riusciti: 6 / In corso: 5 /
+// Falliti: 1" gia' verificato da AC4 sopra (12 righe sumup + 2 non-sumup = 14). pay-demo-4
+// (sumup_pos/charge/failed) resta l'unica riga fallita su qualsiasi metodo; pay-demo-6
+// (cash/charge/succeeded) l'unica in contanti.
+test.describe('Kitchen Payments — filtri METODO/STATO combinabili', () => {
+
+  test('i due gruppi di filtro esistono con tutte le opzioni richieste', async ({ page }) => {
+    await page.goto(ROUTE);
+    for (const id of ['cassa-filter-method-all', 'cassa-filter-method-cash', 'cassa-filter-method-sumup_online', 'cassa-filter-method-pos']) {
+      await expect(page.getByTestId(id)).toBeVisible();
+    }
+    for (const id of ['cassa-filter-status-all', 'cassa-filter-status-succeeded', 'cassa-filter-status-pending', 'cassa-filter-status-failed']) {
+      await expect(page.getByTestId(id)).toBeVisible();
+    }
+  });
+
+  test('METODO=Contanti mostra solo la riga cash (pay-demo-6)', async ({ page }) => {
+    await page.goto(ROUTE);
+    await page.getByTestId('cassa-filter-method-cash').click();
+    await expect(page.getByTestId('payment-row-pay-demo-6')).toBeVisible();
+    await expect(page.locator('.kpd-payment-row')).toHaveCount(1);
+  });
+
+  test('METODO=Contanti + STATO=Riusciti restano combinati (AND), non si escludono a vicenda', async ({ page }) => {
+    await page.goto(ROUTE);
+    await page.getByTestId('cassa-filter-method-cash').click();
+    await page.getByTestId('cassa-filter-status-succeeded').click();
+    await expect(page.getByTestId('payment-row-pay-demo-6')).toBeVisible();
+    await expect(page.locator('.kpd-payment-row')).toHaveCount(1);
+    await expect(page.getByTestId('cassa-filter-method-cash')).toHaveClass(/kpd-sumup-badge--active/);
+    await expect(page.getByTestId('cassa-filter-status-succeeded')).toHaveClass(/kpd-sumup-badge--active/);
+  });
+
+  test('STATO=Falliti da solo filtra su tutti i metodi, non solo SumUp (pay-demo-4)', async ({ page }) => {
+    await page.goto(ROUTE);
+    await page.getByTestId('cassa-filter-status-failed').click();
+    await expect(page.getByTestId('payment-row-pay-demo-4')).toBeVisible();
+    await expect(page.locator('.kpd-payment-row')).toHaveCount(1);
+  });
+
+  test('METODO=Tutti + STATO=Tutti torna a mostrare tutte le 14 righe', async ({ page }) => {
+    await page.goto(ROUTE);
+    await page.getByTestId('cassa-filter-method-cash').click();
+    await page.getByTestId('cassa-filter-method-all').click();
+    await expect(page.locator('.kpd-payment-row')).toHaveCount(14);
+  });
+
+  test('i badge informativi SumUp riusciti/in corso/falliti restano di sola lettura (AC4 invariato)', async ({ page }) => {
+    await page.goto(ROUTE);
+    await expect(page.getByTestId('cassa-sumup-succeeded')).toHaveText('SumUp riusciti: 6');
+    // Non piu' cliccabili per filtrare: un click non deve cambiare la lista.
+    await page.getByTestId('cassa-sumup-succeeded').click({ force: true });
+    await expect(page.locator('.kpd-payment-row')).toHaveCount(14);
+  });
+});
