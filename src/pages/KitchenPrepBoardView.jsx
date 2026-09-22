@@ -7,13 +7,17 @@
 // Layout a 3 fasce:
 // - TOP "PRODUZIONE ORA": aggregato PREP_FOOD degli ordini `preparing` (aggregatePrepBoard.now).
 // - CENTER "ORDINI IN PREPARAZIONE": max 6 ticket grandi, uno per ordine `preparing`
-//   (buildPreparingTickets) — orderCode + food + quantita', allergeni/note sul ticket, nessuna
-//   interazione; oltre 6 solo un testo passivo "+N ordini in preparazione".
+//   (buildPreparingTickets) — orderCode + TUTTI gli item (food e drink), quantita', allergeni/note
+//   sul ticket, nessuna interazione; oltre 6 solo un testo passivo "+N ordini in preparazione".
 // - BOTTOM "CARICO IN ARRIVO": aggregato PREP_FOOD degli ordini `received` (aggregatePrepBoard.queue)
 //   + totale ordini in attesa.
 //
-// Drink esclusi ovunque (isGrabServeItem, gia' applicato dentro aggregatePrepBoard/
-// buildPreparingTickets). FALLO PESANTE resta atomico (una riga combo, mai scomposto).
+// Drink esclusi SOLO dalle bande aggregate ORA/IN CODA (isGrabServeItem dentro aggregatePrepBoard —
+// quelle restano metriche di carico cucina, solo PREP_FOOD). Il ticket CENTER mostra invece l'ordine
+// completo (decisione prodotto 2026-09-22): le righe drink/grab-serve sono marcate con
+// `line.isGrabServe` e riusano il pattern del tag staff (`kpb-staff-tag`) per distinguersi a colpo
+// d'occhio, un ordine di sole bevande produce comunque un ticket. FALLO PESANTE resta atomico (una
+// riga combo, mai scomposto).
 import { useEffect, useMemo, useState } from 'react';
 import { aggregatePrepBoard, buildPreparingTickets } from '../lib/kitchenPrepAggregation';
 import { kitchenMenuItems } from '../data/kitchenMockData';
@@ -101,6 +105,7 @@ function PrepTicket({ ticket }) {
               <span className="kpb-ticket-item-name">
                 {line.name}
                 {staffTag && <span className="kpb-staff-tag">[{staffTag}]</span>}
+                {line.isGrabServe && <span className="kpb-staff-tag">[DRINK]</span>}
               </span>
               <span className="kpb-ticket-item-qty">
                 <span className="kpb-x">x</span> {line.quantity}

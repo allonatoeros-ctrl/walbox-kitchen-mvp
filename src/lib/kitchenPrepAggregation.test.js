@@ -296,23 +296,56 @@ test('buildPreparingTickets: cap a 6, resto in overflowCount, mai un settimo tic
   assert.equal(overflowCount, 3);
 });
 
-test('buildPreparingTickets: drink escluso dalle righe, ordine di soli drink non produce ticket', () => {
+// PASSIVE KDS V2 — ticket ordine completo (decisione prodotto 2026-09-22): drink/grab-serve
+// restano nel ticket (marcati isGrabServe), un ordine di sole bevande produce comunque un ticket.
+// Le metriche di carico cucina (aggregatePrepBoard, bande ORA/IN CODA) continuano a contare/mostrare
+// solo PREP_FOOD, invariato — vedi i test dedicati piu' sotto.
+
+test('buildPreparingTickets: ordine di sole bevande (acqua) produce comunque un ticket visibile', () => {
   const orders = [
-    order({
-      orderCode: 'W30',
-      status: 'preparing',
-      items: [
-        { itemId: 'item-009', name: 'Pulled Pork', quantity: 1 },
-        { itemId: 'item-051', name: 'Birra', quantity: 2 },
-      ],
-    }),
-    order({ orderCode: 'W31', status: 'preparing', items: [{ itemId: 'item-051', name: 'Birra', quantity: 3 }] }),
+    order({ orderCode: 'W40', status: 'preparing', items: [{ itemId: 'item-038', name: 'Acqua', quantity: 1 }] }),
   ];
   const { tickets, totalCount } = buildPreparingTickets(orders);
   assert.equal(totalCount, 1);
-  assert.equal(tickets[0].orderCode, 'W30');
+  assert.equal(tickets[0].orderCode, 'W40');
   assert.equal(tickets[0].items.length, 1);
-  assert.equal(tickets[0].items[0].itemId, 'item-009');
+  assert.equal(tickets[0].items[0].itemId, 'item-038');
+  assert.equal(tickets[0].items[0].isGrabServe, true);
+});
+
+test('buildPreparingTickets: ordine misto panino+acqua mostra entrambe le righe sul ticket', () => {
+  const orders = [
+    order({
+      orderCode: 'W41',
+      status: 'preparing',
+      items: [
+        { itemId: 'item-009', name: 'Pulled Pork', quantity: 1 },
+        { itemId: 'item-038', name: 'Acqua', quantity: 1 },
+      ],
+    }),
+  ];
+  const { tickets } = buildPreparingTickets(orders);
+  assert.equal(tickets[0].items.length, 2);
+  const byId = Object.fromEntries(tickets[0].items.map((i) => [i.itemId, i]));
+  assert.equal(byId['item-009'].isGrabServe, false);
+  assert.equal(byId['item-038'].isGrabServe, true);
+});
+
+test('aggregatePrepBoard: workload di preparazione conta solo il panino, non l\'acqua, sullo stesso ordine', () => {
+  const orders = [
+    order({
+      orderCode: 'W42',
+      status: 'preparing',
+      items: [
+        { itemId: 'item-009', name: 'Pulled Pork', quantity: 1 },
+        { itemId: 'item-038', name: 'Acqua', quantity: 3 },
+      ],
+    }),
+  ];
+  const board = aggregatePrepBoard(orders);
+  assert.equal(board.now.rows.length, 1);
+  assert.equal(board.now.rows[0].itemId, 'item-009');
+  assert.equal(board.now.orderCount, 1);
 });
 
 test('buildPreparingTickets: FALLO PESANTE resta atomico (una riga combo, mai scomposto)', () => {

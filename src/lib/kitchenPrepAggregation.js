@@ -131,10 +131,13 @@ const DEFAULT_TICKET_LIMIT = 6;
 
 /**
  * PASSIVE KDS V2 — ticket singoli per gli ordini `preparing` (CENTER del board), a differenza di
- * `aggregatePrepBoard` che aggrega per prodotto. Ogni ticket è un ordine reale (orderCode, righe
- * PREP_FOOD con quantita', allergeni, nota), mai un'interazione: e' un display passivo.
- * - drink esclusi riga per riga (stesso `isGrabServeItem` di `aggregatePrepBoard`).
- * - un ordine di soli drink non produce un ticket (nulla da preparare in cucina).
+ * `aggregatePrepBoard` che aggrega per prodotto. Ogni ticket è un ordine reale (orderCode, TUTTE
+ * le righe incluse allergeni, nota), mai un'interazione: e' un display passivo.
+ * - ticket ordine completo (decisione prodotto 2026-09-22): drink/grab-serve restano nel ticket,
+ *   marcati con `isGrabServe: true` per riga (la view li distingue visivamente, stesso pattern del
+ *   tag staff), cosi' un ordine di sole bevande produce comunque un ticket visibile.
+ * - le METRICHE di carico cucina (`aggregatePrepBoard`, bande ORA/IN CODA) restano invariate: solo
+ *   PREP_FOOD, i drink continuano a non contribuire a righe/quantita' aggregate.
  * - FALLO PESANTE resta atomico: e' una singola riga combo, mai scomposto.
  * - ordinati per `createdAt` crescente (il piu' vecchio in preparazione per primo); fallback su
  *   `orderCode` se `createdAt` manca (dati di test/fixture minimi).
@@ -151,11 +154,12 @@ export function buildPreparingTickets(orders, { limit = DEFAULT_TICKET_LIMIT } =
       const note = typeof order.note === 'string' ? order.note.trim() : '';
       const { allergens, hasUnknown } = resolveOrderAllergens(order);
       const items = (order.items ?? [])
-        .filter((line) => line.itemId && !isGrabServeItem(line.itemId))
+        .filter((line) => line.itemId)
         .map((line) => ({
           itemId: line.itemId,
           name: line.name ?? line.itemId,
           quantity: Number(line.quantity) || 0,
+          isGrabServe: isGrabServeItem(line.itemId),
         }))
         .filter((line) => line.quantity > 0);
       return {
@@ -167,7 +171,7 @@ export function buildPreparingTickets(orders, { limit = DEFAULT_TICKET_LIMIT } =
         note,
       };
     })
-    // Un ordine di soli item GRAB_SERVE non ha nulla da preparare: niente ticket.
+    // Nessun item con itemId/quantita' valida (fixture minime): niente ticket fantasma.
     .filter((ticket) => ticket.items.length > 0)
     .sort((a, b) => {
       if (a.createdAt && b.createdAt) return new Date(a.createdAt) - new Date(b.createdAt);
