@@ -8,8 +8,21 @@ import TopProductsList from '../components/kitchen/TopProductsList';
 import TopCategoriesChart from '../components/kitchen/TopCategoriesChart';
 import PaymentMixChart from '../components/kitchen/PaymentMixChart';
 import './PaymentsViewDemo.css';
+import './StoricoView.css';
 
 const HISTORY_PAGE_SIZE = 15;
+
+const STATUS_FILTERS = [
+  { key: 'all', label: 'Tutti' },
+  { key: 'delivered', label: 'Ritirati' },
+  { key: 'cancelled', label: 'Annullati' },
+];
+
+const SORT_OPTIONS = [
+  { key: 'recent', label: 'Più recenti' },
+  { key: 'oldest', label: 'Più vecchi' },
+  { key: 'total', label: 'Totale più alto' },
+];
 
 function formatTime(isoString) {
   return new Date(isoString).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
@@ -29,6 +42,10 @@ function formatEuro(n) {
  */
 export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [], paymentsByMethod = null, onOpenCassa = null }) {
   const [historySearch, setHistorySearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortMode, setSortMode] = useState('recent');
+  const [pagination, setPagination] = useState({ key: '', count: HISTORY_PAGE_SIZE });
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   // Serata: finestra 06:00 -> 06:00 Europe/Rome su kitchen_orders.created_at — la STESSA che
   // filtra la Cassa/Payment Hub (useKitchenPayments). Mai service_day: scatta a mezzanotte.
@@ -78,22 +95,55 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
       )
     : '—';
 
-  // Allineata alla stessa finestra serata di KPI/Attenzione/fasce/top prodotti sopra (CURRENT_LIMITS
-  // #3 dell'audit selettore): prima mostrava "sempre tutto lo storico" invece della sola notte
-  // selezionata, incoerenza visibile ora che la notte e' navigabile (RISKS #4 dello stesso audit).
-  const historyOrders = useMemo(() => {
-    const completed = orders
-      .filter((o) => (o.status === 'delivered' || o.status === 'cancelled') && isInServiceNight(o.createdAt, night))
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    if (!historySearch.trim()) return completed.slice(0, HISTORY_PAGE_SIZE);
-    const term = historySearch.trim().toLowerCase();
-    return completed.filter((o) => o.nickname?.toLowerCase().includes(term));
-  }, [orders, historySearch, night]);
-
-  const historyTotal = useMemo(
-    () => orders.filter((o) => (o.status === 'delivered' || o.status === 'cancelled') && isInServiceNight(o.createdAt, night)).length,
+  // Storico V1 SaaS (2026-09-22): stesso filtro serata di KPI/Attenzione/fasce/top prodotti sopra
+  // (CURRENT_LIMITS #3 dell'audit selettore, invariato) — completed = solo delivered/cancelled
+  // della notte selezionata. Sopra questa base si combinano stato/ricerca/sort, tutti client-side
+  // sullo stesso array gia' in memoria (ai-ops/reports/kitchen-history-saas-audit-20260922.md).
+  const completedInNight = useMemo(
+    () => orders.filter((o) => (o.status === 'delivered' || o.status === 'cancelled') && isInServiceNight(o.createdAt, night)),
     [orders, night]
   );
+
+  const filteredOrders = useMemo(() => {
+    let list = completedInNight;
+
+    if (statusFilter !== 'all') {
+      list = list.filter((o) => o.status === statusFilter);
+    }
+
+    const term = historySearch.trim().toLowerCase();
+    if (term) {
+      list = list.filter((o) => {
+        if (o.nickname?.toLowerCase().includes(term)) return true;
+        if (o.orderCode?.toLowerCase().includes(term)) return true;
+        return o.items?.some((i) => i.name?.toLowerCase().includes(term));
+      });
+    }
+
+    const sorted = [...list];
+    if (sortMode === 'oldest') {
+      sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    } else if (sortMode === 'total') {
+      sorted.sort((a, b) => (Number(b.total) || 0) - (Number(a.total) || 0));
+    } else {
+      sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+    return sorted;
+  }, [completedInNight, statusFilter, historySearch, sortMode]);
+
+  // "Carica altri" invece dello slice fisso: quando cambia un filtro/ricerca/notte la paginazione
+  // torna a HISTORY_PAGE_SIZE, altrimenti si resterebbe bloccati su "0 risultati mostrati" dopo
+  // aver caricato piu' pagine su un filtro precedente. Reset durante il render (non in un effect)
+  // per evitare un giro di render in piu' — pattern raccomandato da React per "adjusting state
+  // when a prop changes" quando la chiave cambia rispetto all'ultimo render committato.
+  const paginationKey = `${statusFilter}::${historySearch.trim().toLowerCase()}::${sortMode}::${night.start}::${night.end}`;
+  const visibleCount = pagination.key === paginationKey ? pagination.count : HISTORY_PAGE_SIZE;
+  if (pagination.key !== paginationKey) {
+    setPagination({ key: paginationKey, count: HISTORY_PAGE_SIZE });
+  }
+
+  const visibleOrders = useMemo(() => filteredOrders.slice(0, visibleCount), [filteredOrders, visibleCount]);
+  const hasMore = visibleOrders.length < filteredOrders.length;
 
   return (
     <div className="ksd-sections">
@@ -151,7 +201,7 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
           <div className="ksd-history-search-wrap">
             <input
               className="ksd-history-search"
-              placeholder="Cerca per nickname..."
+              placeholder="Cerca per nome, codice o piatto..."
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
             />
@@ -160,59 +210,201 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
             )}
           </div>
 
-          {historyTotal === 0 ? (
+          <div className="kpd-filter-group" data-testid="storico-status-filters">
+            <span className="kpd-filter-label">Stato</span>
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className={`kpd-sumup-badge kpd-sumup-badge--neutral${statusFilter === f.key ? ' kpd-sumup-badge--active' : ''}`}
+                data-testid={`storico-filter-status-${f.key}`}
+                onClick={() => setStatusFilter(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="kpd-filter-group" data-testid="storico-sort-options">
+            <span className="kpd-filter-label">Ordina</span>
+            {SORT_OPTIONS.map((s) => (
+              <button
+                key={s.key}
+                type="button"
+                className={`kpd-sumup-badge kpd-sumup-badge--neutral${sortMode === s.key ? ' kpd-sumup-badge--active' : ''}`}
+                data-testid={`storico-sort-${s.key}`}
+                onClick={() => setSortMode(s.key)}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {completedInNight.length === 0 ? (
             <div className="ksd-history-empty">Nessun ordine nello storico.</div>
-          ) : historyOrders.length === 0 ? (
-            <div className="ksd-history-empty">Nessun ordine per &quot;{historySearch}&quot;</div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="ksd-history-empty">
+              {historySearch ? `Nessun ordine per "${historySearch}"` : 'Nessun ordine con questi filtri.'}
+            </div>
           ) : (
-            <div className="ksd-history-list">
-              {historyOrders.map((order) => {
-                const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
-                const isDelivered = order.status === 'delivered';
-                return (
-                  <div key={order.id} className="ksd-history-row" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                      <div className="ksd-history-row-left">
-                        {order.orderCode && <span className="ksd-row-code">#{order.orderCode}</span>}
-                        <span className="ksd-row-nickname">{order.nickname}</span>
-                        <span className="ksd-row-time">{formatTime(order.createdAt)}</span>
-                      </div>
-                      <div className="ksd-history-row-center">
-                        <div className="ksd-row-items">{itemsSummary}</div>
+            <div className="sv-table" data-testid="storico-table">
+              <div className="sv-table-head" aria-hidden="true">
+                <span className="sv-col-codice">Codice</span>
+                <span className="sv-col-ora">Ora</span>
+                <span className="sv-col-nome">Nome</span>
+                <span className="sv-col-articoli">Articoli</span>
+                <span className="sv-col-totale">Totale</span>
+                <span className="sv-col-stato">Stato</span>
+              </div>
+              <div className="ksd-history-list">
+                {visibleOrders.map((order) => {
+                  const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
+                  const isDelivered = order.status === 'delivered';
+                  return (
+                    <div
+                      key={order.id}
+                      className="ksd-history-row sv-table-row"
+                      data-testid={`storico-row-${order.id}`}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedOrder(order)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') setSelectedOrder(order);
+                      }}
+                    >
+                      <span className="sv-col-codice ksd-row-code" data-label="Codice">
+                        {order.orderCode ? `#${order.orderCode}` : '—'}
+                      </span>
+                      <span className="sv-col-ora ksd-row-time" data-label="Ora">{formatTime(order.createdAt)}</span>
+                      <span className="sv-col-nome ksd-row-nickname" data-label="Nome">{order.nickname}</span>
+                      <span className="sv-col-articoli" data-label="Articoli">
+                        <span className="sv-row-items ksd-row-items">{itemsSummary}</span>
                         {!isDelivered && order.cancelReason && (
-                          <div className="ksd-history-cancel-reason">{order.cancelReason}</div>
+                          <span className="ksd-history-cancel-reason">{order.cancelReason}</span>
                         )}
-                      </div>
-                      <div className="ksd-history-row-right">
-                        {order.total != null && (
-                          <span className="ksd-history-total">€ {order.total.toFixed(2)}</span>
-                        )}
+                      </span>
+                      <span className="sv-col-totale" data-label="Totale">
+                        {order.total != null ? formatEuro(order.total) : '—'}
+                      </span>
+                      <span className="sv-col-stato" data-label="Stato">
                         <span className={`ksd-history-status ksd-history-status--${isDelivered ? 'delivered' : 'cancelled'}`}>
                           {isDelivered ? 'RITIRATO' : 'ANNULLATO'}
                         </span>
-                      </div>
+                      </span>
                     </div>
-                    {order.actionLog?.length > 0 && (
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', paddingLeft: '0.25rem' }}>
-                        {order.actionLog.map((entry, i) => (
-                          <span key={i} style={{ fontSize: '0.68rem', color: '#6b7280', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', padding: '1px 6px' }}>
-                            {entry.action} {formatTime(entry.at)}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-              {!historySearch && historyTotal > HISTORY_PAGE_SIZE && (
-                <div className="ksd-history-more">
-                  Mostrati gli ultimi {HISTORY_PAGE_SIZE} su {historyTotal} totali
+                  );
+                })}
+              </div>
+              {hasMore && (
+                <div className="sv-load-more-row">
+                  <button
+                    type="button"
+                    className="ksd-btn-reset"
+                    data-testid="storico-load-more"
+                    onClick={() => setPagination((p) => ({ key: paginationKey, count: p.count + HISTORY_PAGE_SIZE }))}
+                  >
+                    Carica altri ({filteredOrders.length - visibleOrders.length})
+                  </button>
                 </div>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {selectedOrder && (
+        <div
+          className="sv-detail-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Dettaglio ordine"
+          data-testid="storico-detail-overlay"
+          onClick={() => setSelectedOrder(null)}
+        >
+          <div className="sv-detail-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="sv-detail-header">
+              <div>
+                <div className="sv-detail-code">{selectedOrder.orderCode ? `#${selectedOrder.orderCode}` : 'Ordine'}</div>
+                <div className="sv-detail-sub">{selectedOrder.nickname} · {formatTime(selectedOrder.createdAt)}</div>
+              </div>
+              <button
+                type="button"
+                className="ksd-btn-reset"
+                data-testid="storico-detail-close"
+                aria-label="Chiudi dettaglio ordine"
+                onClick={() => setSelectedOrder(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <span className={`ksd-history-status ksd-history-status--${selectedOrder.status === 'delivered' ? 'delivered' : 'cancelled'}`}>
+              {selectedOrder.status === 'delivered' ? 'RITIRATO' : 'ANNULLATO'}
+            </span>
+
+            {selectedOrder.status === 'cancelled' && selectedOrder.cancelReason && (
+              <div className="sv-detail-section">
+                <div className="sv-detail-label">Motivo annullamento</div>
+                <div className="sv-detail-text">{selectedOrder.cancelReason}</div>
+              </div>
+            )}
+
+            <div className="sv-detail-section">
+              <div className="sv-detail-label">Articoli</div>
+              <ul className="sv-detail-items">
+                {selectedOrder.items.map((item, i) => (
+                  <li key={i}>
+                    <span>{item.quantity}× {item.name}</span>
+                    {item.price != null && <span>{formatEuro(item.price * item.quantity)}</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {selectedOrder.note && (
+              <div className="sv-detail-section">
+                <div className="sv-detail-label">Nota cliente</div>
+                <div className="sv-detail-text">{selectedOrder.note}</div>
+              </div>
+            )}
+
+            {selectedOrder.staffNote && (
+              <div className="sv-detail-section">
+                <div className="sv-detail-label">Nota staff</div>
+                <div className="sv-detail-text">{selectedOrder.staffNote}</div>
+              </div>
+            )}
+
+            {selectedOrder.promoCode && (
+              <div className="sv-detail-section">
+                <div className="sv-detail-label">Promo applicata</div>
+                <div className="sv-detail-text">
+                  {selectedOrder.promoCode}
+                  {selectedOrder.discountAmount ? ` · -${formatEuro(selectedOrder.discountAmount)}` : ''}
+                </div>
+              </div>
+            )}
+
+            <div className="sv-detail-section">
+              <div className="sv-detail-label">Azioni</div>
+              {selectedOrder.actionLog?.length > 0 ? (
+                <div className="sv-detail-actionlog">
+                  {selectedOrder.actionLog.map((entry, i) => (
+                    <span key={i} className="sv-detail-action-chip">{entry.action} {formatTime(entry.at)}</span>
+                  ))}
+                </div>
+              ) : (
+                <div className="sv-detail-text sv-detail-text--muted">Non disponibile per ordini pre-esistenti.</div>
+              )}
+            </div>
+
+            <div className="sv-detail-total">
+              <span>Totale</span>
+              <span>{selectedOrder.total != null ? formatEuro(selectedOrder.total) : '—'}</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
