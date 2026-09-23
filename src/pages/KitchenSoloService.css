@@ -94,6 +94,15 @@
   cursor: pointer;
 }
 .kss-secondary-btn:hover { color: var(--kss-text); border-color: var(--kss-line); }
+.kss-service-toggle:disabled { opacity: 0.5; cursor: not-allowed; }
+.kss-service-toggle--closed { color: var(--kss-red); border-color: var(--kss-red); }
+.kss-service-toggle-error {
+  color: var(--kss-red);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  margin-left: 2px;
+}
 .kss-secondary-badge {
   position: absolute;
   top: -5px;

@@ -3,6 +3,7 @@ import { kitchenCategoryPromos, kitchenBeerPairing, FALLO_PESANTE_INCLUDED_SIDE_
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders, rememberOwnedOrderId, getOwnedOrderIds } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
+import { useKitchenServiceState } from '../hooks/useKitchenServiceState';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
 import PaniniSection from '../components/kitchen/PaniniSection';
@@ -279,6 +280,10 @@ export default function CustomerKitchenMenu() {
   // scope cliente: vedi CustomerOrderStatus — persistenza locale limitata agli ordini propri.
   const { addOrder, redeemPromo, orders } = useKitchenOrders({ scope: 'customer' });
   const { menuItems } = useKitchenMenu();
+  // KITCHEN_OPEN_CLOSE_V1: menu resta sempre navigabile, solo l'invio ordine e' bloccato quando
+  // lo staff chiude. Enforcement reale lato server (kitchen_customer_create_order); questo e'
+  // solo il segnale UI, cosi' il cliente non arriva mai fino al submit per scoprirlo.
+  const { isOpen: kitchenOpen } = useKitchenServiceState();
 
   const CATEGORIES = MENU_CATEGORIES;
 
@@ -489,7 +494,7 @@ export default function CustomerKitchenMenu() {
   // CONFERMA ORDINE non invia piu' direttamente: apre lo step nome. Il codice ordine nasce
   // solo dopo il submit dello step (vedi confirmCustomerName).
   const openNameStep = () => {
-    if (orderItems.length === 0 || submitting || !fulfillmentType) return;
+    if (orderItems.length === 0 || submitting || !fulfillmentType || !kitchenOpen) return;
     setNameError(null);
     setNameStepOpen(true);
   };
@@ -511,6 +516,14 @@ export default function CustomerKitchenMenu() {
     // Invio bloccato finché il cliente non sceglie esplicitamente dove mangia — nessun default
     // silenzioso. Il pagamento non è più un gate qui: si sceglie su /kitchen/payment.
     if (orderItems.length === 0 || submitting || !fulfillmentType) return;
+    // KITCHEN_OPEN_CLOSE_V1: difesa in profondità — il bottone è già disabilitato quando la
+    // cucina è chiusa, ma un client stale (tab aperta da prima della chiusura) potrebbe arrivare
+    // comunque qui. La RPC rifiuta comunque con 'kitchen_closed'; questo blocco evita solo la
+    // chiamata inutile e mostra subito il messaggio corretto.
+    if (!kitchenOpen) {
+      setOrderError('LA CUCINA È CHIUSA — NON PUOI INVIARE ORDINI ORA');
+      return;
+    }
     // Il nome è obbligatorio: senza, si torna allo step nome e nessun ordine viene creato.
     const nickname = normalizeCustomerName(confirmedName ?? customerName);
     if (!isValidCustomerName(nickname)) {
@@ -537,7 +550,10 @@ export default function CustomerKitchenMenu() {
     // e non viene mai mostrato un ordine fantasma (F02 — Phantom Order).
     const result = await addOrder(newOrder);
     if (!result.ok) {
-      setOrderError('Ordine non inviato — riprova');
+      // La cucina puo' essere stata chiusa nel frattempo (race tra apertura pagina e submit): la
+      // RPC alza 'kitchen_closed', il messaggio resta specifico invece del generico "riprova".
+      const closedByServer = result.error?.message?.includes('kitchen_closed');
+      setOrderError(closedByServer ? 'LA CUCINA È CHIUSA — NON PUOI INVIARE ORDINI ORA' : 'Ordine non inviato — riprova');
       setSubmitting(false);
       return;
     }
@@ -595,6 +611,24 @@ export default function CustomerKitchenMenu() {
           color: #1c1a14 !important;
         }
       `}</style>
+
+      {/* KITCHEN_OPEN_CLOSE_V1: banner cucina chiusa — sempre visibile, su tutte le view, il menu
+          resta comunque navigabile. Zero interazione: informa soltanto, il blocco vero è sulla
+          CTA di invio (vedi CONFERMA ORDINE) e sulla RPC server-side. */}
+      {!kitchenOpen && (
+        <div
+          data-testid="kitchen-closed-banner"
+          style={{
+            position: 'sticky', top: 0, zIndex: 81, width: '100%',
+            background: '#1c1a14', borderBottom: '2px solid #e03c2c',
+            padding: '10px 14px', textAlign: 'center',
+          }}
+        >
+          <span style={{ fontFamily: "'Anton', sans-serif", fontSize: 14, letterSpacing: '1px', color: '#ff9a8c' }}>
+            LA CUCINA È CHIUSA — NIENTE NUOVI ORDINI AL MOMENTO
+          </span>
+        </div>
+      )}
 
       {/* Active order banner */}
       {bannerOrderId && (
@@ -1094,14 +1128,14 @@ export default function CustomerKitchenMenu() {
                     className="kitch-btn-submit"
                     onClick={openNameStep}
                     aria-label="Invia ordine"
-                    disabled={submitting || !fulfillmentType}
+                    disabled={submitting || !fulfillmentType || !kitchenOpen}
                     data-testid="submit-order-btn"
-                    style={(submitting || !fulfillmentType) ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                    style={(submitting || !fulfillmentType || !kitchenOpen) ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
                   >
-                    {submitting ? 'INVIO IN CORSO…' : 'CONFERMA ORDINE'}
+                    {submitting ? 'INVIO IN CORSO…' : !kitchenOpen ? 'CUCINA CHIUSA' : 'CONFERMA ORDINE'}
                   </button>
                   <div className="kitch-secure-hint">
-                    {fulfillmentType ? 'Paghi dopo: al banco o dal telefono.' : 'Prima dicci: qui o via?'}
+                    {!kitchenOpen ? 'Riprova più tardi — lo staff ha chiuso la cucina.' : fulfillmentType ? 'Paghi dopo: al banco o dal telefono.' : 'Prima dicci: qui o via?'}
                   </div>
                 </>
               )}

@@ -529,3 +529,54 @@ test.describe('Kitchen — Solo Service Sprint 3A: notifica audio nuovo ordine',
     expect(await page.evaluate(() => window.__audioEvents.length)).toBe(8);
   });
 });
+
+const LS_SERVICE_STATE = 'walbox_kitchen_service_state';
+
+test.describe('Kitchen — Solo Service: KITCHEN_OPEN_CLOSE_V1', () => {
+
+  test('20. toggle cucina APERTA→CHIUSA chiede conferma; annullare la conferma non cambia stato', async ({ page }) => {
+    await page.goto('/kitchen/solo');
+    await expect(page.getByTestId('kitchen-service-toggle')).toContainText('CUCINA APERTA');
+
+    let dialogMessage = null;
+    page.once('dialog', (dialog) => { dialogMessage = dialog.message(); dialog.dismiss(); });
+    await page.getByTestId('kitchen-service-toggle').click();
+    await page.waitForTimeout(200);
+
+    expect(dialogMessage).toContain('Chiudere la cucina');
+    await expect(page.getByTestId('kitchen-service-toggle')).toContainText('CUCINA APERTA');
+  });
+
+  // Sandbox noto (vedi CHECKPOINT.md, P0 SAFETY 2026-09-21): VITE_SUPABASE_URL/ANON_KEY sono
+  // rimosse in questo worktree, quindi ogni scrittura Supabase fallisce per costruzione. Questo
+  // test verifica esattamente il comportamento voluto in quel caso — stesso principio P0-A delle
+  // altre mutazioni staff di questo file: nessun successo finto, l'errore è esplicito e lo stato
+  // locale resta quello confermato l'ultima volta dal server (APERTA).
+  test('21. confermare la chiusura senza un backend Supabase disponibile mostra errore, mai un falso successo', async ({ page }) => {
+    await page.goto('/kitchen/solo');
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByTestId('kitchen-service-toggle').click();
+
+    await expect(page.getByTestId('kitchen-service-toggle-error')).toBeVisible();
+    await expect(page.getByTestId('kitchen-service-toggle')).toContainText('CUCINA APERTA');
+  });
+
+  test('22. riaprire non chiede conferma, anche partendo da uno stato CHIUSA in cache locale', async ({ page }) => {
+    await page.goto('/kitchen/solo');
+    await page.evaluate(
+      ({ key }) => localStorage.setItem(key, JSON.stringify({ isOpen: false })),
+      { key: LS_SERVICE_STATE }
+    );
+    await page.reload();
+
+    await expect(page.getByTestId('kitchen-service-toggle')).toContainText('CUCINA CHIUSA');
+
+    let dialogSeen = false;
+    page.on('dialog', (dialog) => { dialogSeen = true; dialog.dismiss(); });
+    await page.getByTestId('kitchen-service-toggle').click();
+    await page.waitForTimeout(200);
+
+    expect(dialogSeen).toBe(false);
+  });
+});

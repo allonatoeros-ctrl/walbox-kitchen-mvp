@@ -9,6 +9,9 @@ const LS_MY_ORDERS = 'walbox_kitchen_my_orders';
 // P0 privacy (2026-09-16): registro degli ordini creati da QUESTO dispositivo — unica prova di
 // proprieta' accettata da /kitchen/status (vedi scenari 25-29 in fondo al file).
 const LS_OWNED_IDS = 'walbox_kitchen_my_order_ids';
+// KITCHEN_OPEN_CLOSE_V1 (2026-09-23): cache locale dello stato APERTA/CHIUSA della cucina, letta
+// da useKitchenServiceState come default veloce/resiliente prima dell'override Supabase.
+const LS_SERVICE_STATE = 'walbox_kitchen_service_state';
 
 async function seedOwnedOrderIds(page, ids) {
   await page.evaluate(
@@ -312,6 +315,60 @@ test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redire
   // pending_counter_payment finché una conferma reale non lo avanza — nessun phantom success.
   expect(latest.status).toBe('pending_counter_payment');
   expect(latest.paymentStatus).toBe('pending_counter_payment');
+});
+
+// KITCHEN_OPEN_CLOSE_V1 (2026-09-23): il menu resta sempre navigabile, solo l'invio è bloccato.
+// Stesso pattern double-goto di 3b (seed localStorage, poi reload) per far leggere l'hook al
+// primo mount con lo stato già chiuso in cache.
+test('3j. Cucina chiusa: banner visibile, menu navigabile, invio ordine bloccato lato cliente', async ({ page }) => {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await page.evaluate(
+    ({ key }) => localStorage.setItem(key, JSON.stringify({ isOpen: false })),
+    { key: LS_SERVICE_STATE },
+  );
+  await page.goto('/kitchen?table=12&nickname=Eros');
+
+  await expect(page.getByTestId('kitchen-closed-banner')).toBeVisible();
+  await expect(page.getByTestId('kitchen-closed-banner')).toContainText('LA CUCINA È CHIUSA');
+
+  // Il menu resta navigabile: si può entrare nel menu completo e vedere le categorie, il banner
+  // resta visibile (sticky, su tutte le view — non solo sulla Home).
+  await openFullMenu(page);
+  await expect(page.getByRole('button', { name: /PESI MASSIMI/i })).toBeVisible();
+  await expect(page.getByTestId('kitchen-closed-banner')).toBeVisible();
+
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'eat_here');
+
+  const submitBtn = page.getByTestId('submit-order-btn');
+  await expect(submitBtn).toBeDisabled();
+  await expect(submitBtn).toContainText('CUCINA CHIUSA');
+});
+
+// Difesa in profondità: anche se lo stato client dice "aperta" (client stale, tab aperta prima
+// della chiusura), il server rifiuta comunque con 'kitchen_closed' — nessun ordine fantasma,
+// messaggio specifico invece del generico "riprova".
+test('3m. RPC kitchen_closed (client stale): nessun ordine creato, messaggio specifico', async ({ page }) => {
+  await mockAnonymousSession(page);
+  await page.route('**/rest/v1/rpc/kitchen_customer_create_order', (route) =>
+    route.fulfill({
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 'P0001', message: 'kitchen_closed', details: null, hint: null }),
+    })
+  );
+
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'eat_here');
+  await submitOrder(page);
+
+  await expect(page).not.toHaveURL(/\/kitchen\/payment/);
+  await expect(page).not.toHaveURL(/\/kitchen\/status/);
+  await expect(page.getByTestId('order-submit-error')).toContainText(/CUCINA È CHIUSA/i);
 });
 
 // F02 (Phantom Order) invariato: se la RPC di creazione ordine fallisce, il cliente non deve mai

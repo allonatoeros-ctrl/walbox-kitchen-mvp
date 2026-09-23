@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
+import { useKitchenServiceState } from '../hooks/useKitchenServiceState';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
 import { resolveOrderAllergens } from '../lib/kitchenAllergens';
@@ -133,6 +134,10 @@ export default function KitchenSoloService() {
 function KitchenSoloServiceLive() {
   const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync, refundOrder } = useKitchenOrders();
   const { menuItems, toggleAvailability } = useKitchenMenu();
+  // KITCHEN_OPEN_CLOSE_V1: stato APERTA/CHIUSA, condiviso con il cliente (stessa tabella
+  // server-side). Segue lo stesso principio P0-A delle altre mutazioni staff di questo file:
+  // nessun successo finto, isOpen cambia solo dopo conferma Supabase.
+  const { isOpen: kitchenOpen, setKitchenOpen, writing: kitchenStateWriting, writeError: kitchenStateError } = useKitchenServiceState();
   // Micro-fase 1 (badge anomalie Payment Hub): read-only, nessuna azione — vedi
   // ai-ops/reports/kitchen-solo-payment-hub-integration-audit.md §5. Non montato in
   // Preview/Demo per restare isolati da Supabase (invariato).
@@ -210,6 +215,10 @@ function KitchenSoloServiceLive() {
       serviceNight={serviceNight}
       showNightSelector
       onLogout={handleLogout}
+      kitchenOpen={kitchenOpen}
+      setKitchenOpen={setKitchenOpen}
+      kitchenStateWriting={kitchenStateWriting}
+      kitchenStateError={kitchenStateError}
     />
   );
 }
@@ -218,6 +227,13 @@ function KitchenSoloServiceLive() {
 function KitchenSoloServicePreview() {
   const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote } = usePreviewKitchenOrders();
   const { menuItems, toggleAvailability } = usePreviewKitchenMenu();
+  // Preview e' isolata da Supabase per contratto (zero network call): stato open/close locale,
+  // finto ma coerente — nessuna chiamata reale da mockare qui.
+  const [kitchenOpen, setKitchenOpenPreview] = useState(true);
+  const setKitchenOpen = async (nextOpen) => {
+    setKitchenOpenPreview(nextOpen);
+    return { ok: true };
+  };
 
   return (
     <KitchenSoloServiceView
@@ -229,6 +245,8 @@ function KitchenSoloServicePreview() {
       menuItems={menuItems}
       toggleAvailability={toggleAvailability}
       isPreview
+      kitchenOpen={kitchenOpen}
+      setKitchenOpen={setKitchenOpen}
     />
   );
 }
@@ -250,9 +268,26 @@ export function KitchenSoloServiceView({
   // meta' del flusso guidato cambia le dimensioni reali del viewport, disallineando il CoachOverlay
   // (posizionato sulle coordinate pre-fullscreen) dal nuovo viewport.
   allowFullscreen = true,
+  // KITCHEN_OPEN_CLOSE_V1: Live e Preview passano tutti e 4; Demo/Training (non toccati da questo
+  // sprint) non li passano — default aperta, setKitchenOpen assente disabilita il bottone invece
+  // di rompere quelle superfici isolate.
+  kitchenOpen = true,
+  setKitchenOpen = null,
+  kitchenStateWriting = false,
+  kitchenStateError = null,
 }) {
   const requestFullscreenIfAllowed = () => {
     if (allowFullscreen) requestFullscreenBestEffort();
+  };
+  const handleToggleKitchenOpen = async () => {
+    if (!setKitchenOpen) return;
+    if (kitchenOpen) {
+      // RIAPRI ORDINI riattiva subito (nessuna conferma) — CHIUDI ORDINI la richiede sempre.
+      if (!window.confirm('Chiudere la cucina? Il cliente non potrà più inviare nuovi ordini finché non la riapri.')) return;
+      await setKitchenOpen(false);
+    } else {
+      await setKitchenOpen(true);
+    }
   };
   const [focusId, setFocusId]         = useState(null);
   const [checked, setChecked]         = useState({});   // { [orderId]: { [idx]: true } }
@@ -621,6 +656,24 @@ export function KitchenSoloServiceView({
           <button className="kss-secondary-btn" data-testid="go-cassa" onClick={() => navigate('/kitchen/cassa')}>
             <span aria-hidden="true">🧾</span><span className="kss-secondary-label">CASSA</span>
           </button>
+          {/* KITCHEN_OPEN_CLOSE_V1: CHIUDI richiede conferma, RIAPRI riattiva subito (vedi
+              handleToggleKitchenOpen). Disabilitato se setKitchenOpen non e' disponibile
+              (Demo/Training, non toccati da questo sprint) o durante una scrittura in corso. */}
+          <button
+            className={`kss-secondary-btn kss-service-toggle${kitchenOpen ? '' : ' kss-service-toggle--closed'}`}
+            data-testid="kitchen-service-toggle"
+            onClick={handleToggleKitchenOpen}
+            disabled={!setKitchenOpen || kitchenStateWriting}
+            aria-pressed={!kitchenOpen}
+          >
+            <span aria-hidden="true">{kitchenOpen ? '🟢' : '🔴'}</span>
+            <span className="kss-secondary-label">{kitchenOpen ? 'CUCINA APERTA' : 'CUCINA CHIUSA'}</span>
+          </button>
+          {kitchenStateError && (
+            <span className="kss-service-toggle-error" data-testid="kitchen-service-toggle-error">
+              Stato cucina non aggiornato — riprova
+            </span>
+          )}
         </div>
       </div>
 
