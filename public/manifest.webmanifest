@@ -1,0 +1,18 @@
+{
+  "name": "Walbox Kitchen — The Walrus Pub",
+  "short_name": "Walbox Kitchen",
+  "description": "Ordina dal tuo tavolo con Walbox Kitchen di The Walrus Pub Milano.",
+  "start_url": "/kitchen",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

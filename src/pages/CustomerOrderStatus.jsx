@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
 import { useKitchenOrders, getOwnedOrderIds, rememberOwnedOrderId } from '../hooks/useKitchenOrders';
 import CustomerOrderPanel from '../components/kitchen/CustomerOrderPanel';
+import NotificationOptIn from '../components/kitchen/NotificationOptIn';
 import './CustomerOrderStatus.css';
 
 function navigate(path) {
@@ -93,6 +94,7 @@ export default function CustomerOrderStatus() {
         </div>
       ) : (
         <>
+          <NotificationOptIn />
           {/* Striscia codici — il codice ordine resta visibile anche fuori dal riquardo (follow-up UX 2026-09-18) */}
           <div className="ost-codes-strip" data-testid="ost-codes-strip">
             {activeOrders.map((o) => (
