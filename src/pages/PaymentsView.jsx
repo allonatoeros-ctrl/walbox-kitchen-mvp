@@ -85,6 +85,36 @@ const RECONCILE_OUTCOME_LABELS = {
   pending: 'Ancora in corso — riprova tra poco.',
 };
 
+// "Passa al pagamento al banco" — chiusura esplicita di un checkout SumUp online non concluso.
+const CLOSE_FOR_COUNTER_CONFIRM_MESSAGE = 'Confermi che il cliente vuole pagare al banco? Il checkout online in corso verrà chiuso.';
+
+const CLOSE_FOR_COUNTER_ERROR_LABELS = {
+  missing_session: 'Sessione scaduta — ricarica la pagina.',
+  invalid_session: 'Sessione scaduta — ricarica la pagina.',
+  not_staff_for_venue: 'Non autorizzato per questo locale.',
+  order_not_found: 'Ordine non trovato.',
+  order_cancelled: 'Ordine annullato — nulla da chiudere.',
+  order_already_paid: 'Risulta già pagato.',
+  cannot_close_already_paid: 'Il cliente ha già pagato online — verificato ora.',
+  sumup_delete_indeterminate: 'Esito non determinabile — riprova.',
+  payment_attempt_not_found: 'Pagamento non trovato.',
+  invalid_attempt_status: 'Lo stato del pagamento è cambiato — verifica prima di riprovare.',
+  internal_server_error: 'Errore del server — riprova.',
+  server_configuration_error: 'Errore di configurazione server.',
+};
+
+const CLOSE_FOR_COUNTER_OUTCOME_LABELS = {
+  closed_for_counter: 'Checkout online chiuso — ora puoi incassare al banco.',
+  no_pending_attempt: 'Nessun pagamento online in sospeso per questo ordine.',
+  unknown: 'Esito non determinabile — verifica manualmente.',
+};
+
+const CLOSE_FOR_COUNTER_OUTCOME_TONE = {
+  closed_for_counter: 'ok',
+  no_pending_attempt: 'neutral',
+  unknown: 'warn',
+};
+
 function formatEuro(n) {
   return `€ ${(Number(n) || 0).toFixed(2)}`;
 }
@@ -190,6 +220,35 @@ async function liveReconcileAction(orderId) {
   return { ok: true, ...reconcileOutcomeMessage(body) };
 }
 
+function closeForCounterOutcomeMessage(body) {
+  return {
+    text: CLOSE_FOR_COUNTER_OUTCOME_LABELS[body.outcome] ?? 'Esito sconosciuto.',
+    tone: CLOSE_FOR_COUNTER_OUTCOME_TONE[body.outcome] ?? 'neutral',
+  };
+}
+
+// "Passa al pagamento al banco" reale di produzione: sessione staff + endpoint dedicato. Override
+// via prop `closeForCounterAction` per riusare questo stesso componente in un harness demo senza
+// rete/Supabase — stesso pattern di liveReconcileAction/liveRefundAction.
+async function liveCloseForCounterAction(orderId) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    return { ok: false, error: 'missing_session' };
+  }
+
+  const res = await fetch('/api/kitchen-staff-sumup-close-for-counter', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+    body: JSON.stringify({ order_id: orderId }),
+  });
+  const body = await res.json();
+
+  if (!res.ok) {
+    return { ok: false, error: body.error, message: CLOSE_FOR_COUNTER_ERROR_LABELS[body.error] };
+  }
+  return { ok: true, ...closeForCounterOutcomeMessage(body) };
+}
+
 /**
  * `usePaymentsData` e `refundAction` sono injection point opzionali: di default usano i dati/azioni
  * live (Supabase). Un harness demo può passare fixture locali + un'azione simulata senza toccare
@@ -199,7 +258,9 @@ export default function PaymentsView({
   usePaymentsData = useKitchenPayments,
   refundAction = liveRefundAction,
   reconcileAction = liveReconcileAction,
+  closeForCounterAction = liveCloseForCounterAction,
   confirmRefundMessage = DEFAULT_CONFIRM_MESSAGE,
+  confirmCloseForCounterMessage = CLOSE_FOR_COUNTER_CONFIRM_MESSAGE,
   visiblePaymentIds,
   visibleAnomalyIds,
   allowReconcileFailed = true,
@@ -226,6 +287,8 @@ export default function PaymentsView({
   const [refundState, setRefundState] = useState({});
   // order_id -> { status: 'loading'|'done'|'error', message }
   const [reconcileState, setReconcileState] = useState({});
+  // order_id -> { status: 'loading'|'done'|'error', message }
+  const [closeForCounterState, setCloseForCounterState] = useState({});
 
   // Filtri "Pagamenti recenti" (CassaControlSection) — stato locale, nessun impatto su payment
   // state/RPC/fetch: filtrano solo cosa e' gia' in `visiblePayments`. Due gruppi combinabili
@@ -315,6 +378,28 @@ export default function PaymentsView({
       refresh();
     } catch {
       setReconcileState((prev) => ({ ...prev, [orderId]: { status: 'done', tone: 'warn', message: 'Errore di rete — riprova.' } }));
+    }
+  };
+
+  const handleCloseForCounter = async (orderId) => {
+    if (!window.confirm(confirmCloseForCounterMessage)) return;
+
+    setCloseForCounterState((prev) => ({ ...prev, [orderId]: { status: 'loading', message: null } }));
+
+    try {
+      const result = await closeForCounterAction(orderId);
+
+      if (!result.ok) {
+        const message = result.message ?? CLOSE_FOR_COUNTER_ERROR_LABELS[result.error] ?? 'Errore imprevisto — riprova.';
+        setCloseForCounterState((prev) => ({ ...prev, [orderId]: { status: 'done', tone: 'warn', message } }));
+        refresh();
+        return;
+      }
+
+      setCloseForCounterState((prev) => ({ ...prev, [orderId]: { status: 'done', tone: result.tone, message: result.text } }));
+      refresh();
+    } catch {
+      setCloseForCounterState((prev) => ({ ...prev, [orderId]: { status: 'done', tone: 'warn', message: 'Errore di rete — riprova.' } }));
     }
   };
 
@@ -434,8 +519,17 @@ export default function PaymentsView({
               const canRefund = p.direction === 'charge' && p.status === 'succeeded' && !refundedOrderIds.has(p.order_id);
               const canReconcile = p.direction === 'charge' && p.provider === 'sumup' && p.status !== 'succeeded'
                 && (allowReconcileFailed || p.status !== 'failed');
+              // "Passa al pagamento al banco": per un checkout SumUp ancora aperto (initiated/
+              // pending), OPPURE già 'failed' ma ancora nella same-checkout retry window di F03
+              // (failure_reason='sumup_failed' — carta rifiutata, checkout ancora riattivabile).
+              // Un 'failed' con un altro motivo (già chiuso, scaduto, annullato) resta dominio
+              // esclusivo della ri-verifica autoritativa (VERIFICA STATO).
+              const canCloseForCounter = p.direction === 'charge' && p.provider === 'sumup'
+                && (p.status === 'initiated' || p.status === 'pending'
+                  || (p.status === 'failed' && p.failure_reason === 'sumup_failed'));
               const state = refundState[p.order_id];
               const rState = reconcileState[p.order_id];
+              const cState = closeForCounterState[p.order_id];
               const info = statusInfo(p);
               const note = failureNote(p);
               return (
@@ -485,6 +579,27 @@ export default function PaymentsView({
                           style={{ color: rState.tone === 'warn' ? '#f59e0b' : rState.tone === 'ok' ? '#4ade80' : 'rgba(245,240,232,0.7)' }}
                         >
                           {rState.message}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {canCloseForCounter && (
+                    <div className="kpd-payment-refund-row">
+                      <button
+                        className="ksd-btn-reset"
+                        data-testid={`close-for-counter-btn-${p.order_id}`}
+                        disabled={cState?.status === 'loading'}
+                        onClick={() => handleCloseForCounter(p.order_id)}
+                      >
+                        {cState?.status === 'loading' ? 'CHIUSURA IN CORSO…' : 'PASSA AL BANCO'}
+                      </button>
+                      {cState?.message && (
+                        <span
+                          className="kpd-refund-msg"
+                          style={{ color: cState.tone === 'warn' ? '#f59e0b' : cState.tone === 'ok' ? '#4ade80' : 'rgba(245,240,232,0.7)' }}
+                        >
+                          {cState.message}
                         </span>
                       )}
                     </div>
