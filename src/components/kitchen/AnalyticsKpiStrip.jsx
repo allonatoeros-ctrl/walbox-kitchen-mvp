@@ -9,11 +9,16 @@
 // medio arrivano gia' come stringa ('—' quando paymentsSummary non e' disponibile, stessa policy
 // del resto di StoricoView: mai inventare importi).
 //
-// Fase 9B: 4 tile fisse (Incasso, Ordini, Ticket medio, Netto) — Annullati/In sospeso/Falliti
+// Fase 9B: 4 tile fisse (Incasso, Consegnati, Ticket medio, Rimborsi) — Annullati/In sospeso/Falliti
 // spostati esclusivamente in AttentionSection, mai duplicati qui.
+// Decisione prodotto (2026-09-23, ai-ops/reports/audit-storico-incasso-netto.md): la card "Netto"
+// era ridondante con "Incasso" (che ora mostra il valore gia' netto di rimborsi, invariata la
+// formula sottostante in kitchenServiceRules.summarizeServiceNightPayments) — sostituita da
+// "Rimborsi", cifra separata gia' calcolata (paymentsSummary.rimborsato). "Ordini" rinominato in
+// "Consegnati" per non essere confuso col conteggio totale ordini (che include gli annullati).
 export default function AnalyticsKpiStrip({
   incassoDisplay,
-  nettoDisplay,
+  rimborsiDisplay,
   ticketMedioDisplay,
   ordiniConsegnati,
 }) {
@@ -26,7 +31,7 @@ export default function AnalyticsKpiStrip({
         </span>
       </div>
       <div className="kpd-cash-tile">
-        <span className="kpd-cash-label">Ordini</span>
+        <span className="kpd-cash-label">Consegnati</span>
         <span className="kpd-cash-value" style={{ color: '#4ade80' }} data-testid="kpi-ordini-consegnati">
           {ordiniConsegnati}
         </span>
@@ -38,9 +43,9 @@ export default function AnalyticsKpiStrip({
         </span>
       </div>
       <div className="kpd-cash-tile">
-        <span className="kpd-cash-label">Netto</span>
-        <span className="kpd-cash-value" style={{ color: '#facc15' }} data-testid="kpi-netto">
-          {nettoDisplay}
+        <span className="kpd-cash-label">Rimborsi</span>
+        <span className="kpd-cash-value" style={{ color: '#facc15' }} data-testid="kpi-rimborsi">
+          {rimborsiDisplay}
         </span>
       </div>
     </div>

@@ -305,6 +305,18 @@
   color: #ef444499;
   border: 1px solid #ef444433;
 }
+.ksd-history-refunded-tag {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #facc15;
+  border: 1px solid #facc1555;
+  border-radius: 8px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
 .ksd-history-more {
   font-size: 11px;
   color: #333;

@@ -80,15 +80,20 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
     [orders, night]
   );
 
+  // Decisione prodotto (2026-09-23, ai-ops/reports/audit-storico-incasso-netto.md): INCASSO in UI
+  // mostra ora il valore gia' calcolato come "netto" (charge succeeded - refund succeeded) —
+  // la card "Netto" separata era ridondante e fuorviante (un ordine pagato+rimborsato+annullato
+  // mostrava INCASSO lordo ma NETTO 0). Nessun cambio alla formula sottostante in
+  // kitchenServiceRules.summarizeServiceNightPayments: si riusa solo il campo gia' calcolato.
   const cassa = paymentsSummary
     ? {
-        incasso: formatEuro(paymentsSummary.incasso),
-        netto: formatEuro(paymentsSummary.netto),
+        incasso: formatEuro(paymentsSummary.netto),
+        rimborsi: formatEuro(paymentsSummary.rimborsato),
       }
-    : { incasso: '—', netto: '—' };
+    : { incasso: '—', rimborsi: '—' };
 
   // KPI strip (Kitchen Analytics V1 Fase 3) — ticket medio = netto / pagamenti succeeded
-  // (paymentsSummary.incassiRiusciti).
+  // (paymentsSummary.incassiRiusciti). Invariato: usa ancora paymentsSummary.netto internamente.
   const kpiTicketMedioDisplay = paymentsSummary
     ? formatEuro(
         paymentsSummary.incassiRiusciti > 0 ? paymentsSummary.netto / paymentsSummary.incassiRiusciti : 0
@@ -152,7 +157,7 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
           <div style={{ marginBottom: '1rem' }}>
             <AnalyticsKpiStrip
               incassoDisplay={cassa.incasso}
-              nettoDisplay={cassa.netto}
+              rimborsiDisplay={cassa.rimborsi}
               ticketMedioDisplay={kpiTicketMedioDisplay}
               ordiniConsegnati={reportOggi.count}
             />
@@ -260,6 +265,10 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
                 {visibleOrders.map((order) => {
                   const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
                   const isDelivered = order.status === 'delivered';
+                  // paymentStatus 'refunded' è l'enum server-side (kitchen_payment_refund_lifecycle_v1
+                  // SET payment_status = 'refunded'): un ordine annullato con rimborso confermato non
+                  // deve sembrare ancora "incassato" solo perché il totale originario resta visibile.
+                  const isRefunded = order.status === 'cancelled' && order.paymentStatus === 'refunded';
                   return (
                     <div
                       key={order.id}
@@ -285,6 +294,7 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
                       </span>
                       <span className="sv-col-totale" data-label="Totale">
                         {order.total != null ? formatEuro(order.total) : '—'}
+                        {isRefunded && <span className="ksd-history-refunded-tag">RIMBORSATO</span>}
                       </span>
                       <span className="sv-col-stato" data-label="Stato">
                         <span className={`ksd-history-status ksd-history-status--${isDelivered ? 'delivered' : 'cancelled'}`}>
@@ -400,7 +410,12 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
 
             <div className="sv-detail-total">
               <span>Totale</span>
-              <span>{selectedOrder.total != null ? formatEuro(selectedOrder.total) : '—'}</span>
+              <span>
+                {selectedOrder.total != null ? formatEuro(selectedOrder.total) : '—'}
+                {selectedOrder.status === 'cancelled' && selectedOrder.paymentStatus === 'refunded' && (
+                  <span className="ksd-history-refunded-tag">RIMBORSATO</span>
+                )}
+              </span>
             </div>
           </div>
         </div>
