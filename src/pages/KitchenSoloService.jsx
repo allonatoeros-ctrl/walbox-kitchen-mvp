@@ -131,7 +131,7 @@ export default function KitchenSoloService() {
 
 /** Live page: real Supabase-backed hooks + real staff auth guard. Unchanged behavior. */
 function KitchenSoloServiceLive() {
-  const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync } = useKitchenOrders();
+  const { orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync, refundOrder } = useKitchenOrders();
   const { menuItems, toggleAvailability } = useKitchenMenu();
   // Micro-fase 1 (badge anomalie Payment Hub): read-only, nessuna azione — vedi
   // ai-ops/reports/kitchen-solo-payment-hub-integration-audit.md §5. Non montato in
@@ -199,6 +199,7 @@ function KitchenSoloServiceLive() {
       updateOrderStatus={updateOrderStatus}
       confirmPayment={confirmPayment}
       cancelOrder={cancelOrder}
+      refundOrder={refundOrder}
       updateStaffNote={updateStaffNote}
       retrySync={retrySync}
       menuItems={menuItems}
@@ -234,7 +235,7 @@ function KitchenSoloServicePreview() {
 
 /** Shared UI for Live, DEV Preview and the isolated Demo Harness. No data source or auth logic lives here. */
 export function KitchenSoloServiceView({
-  orders, updateOrderStatus, confirmPayment, cancelOrder, updateStaffNote, retrySync,
+  orders, updateOrderStatus, confirmPayment, cancelOrder, refundOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
   paymentsSummary = null, paymentsByMethod = null, serviceNight = null,
   // Selettore service night: solo Live lo passa true (dati realmente parametrizzati su
@@ -357,6 +358,54 @@ export function KitchenSoloServiceView({
     const attempt = await fetchCloseForCounterEligibility(orderId);
     setCloseForCounter({ orderId, attempt, status: 'done', message, tone });
   };
+
+  // BUG B (ai-ops/reports/kitchen-bugA-bugB-audit-20260923.md) — dead-end ordine pagato: ANNULLA
+  // bloccato da kitchen-cancel-with-payment-check ("order_already_paid_cannot_cancel") senza via
+  // d'uscita. Flow: RIMBORSA (refundOrder, riusa /api/kitchen-sumup-refund invariato) -> solo dopo
+  // refunded/already_refunded E verifica server-side che payment_status non sia più 'paid'
+  // (condizione Gate 1 di Eros, 2026-09-23) -> ANNULLA riprova cancelOrder, che ora passa il guard.
+  const REFUND_CONFIRM_MESSAGE = {
+    sumup_online: 'Confermi il rimborso online (SumUp) di questo ordine? L\'operazione avvia un rimborso reale su SumUp.',
+    cash: 'Confermi di aver già restituito il contante al cliente? L\'ordine verrà segnato come rimborsato.',
+    card_counter_manual: 'Confermi di aver già stornato la carta/POS al banco? L\'ordine verrà segnato come rimborsato.',
+  };
+  const [refundFlow, setRefundFlow] = useState({ orderId: null, reason: null, status: 'idle', message: null, canRetry: true, readyToCancel: false });
+
+  const askCancel = async () => {
+    if (!focusOrder) return;
+    const reason = window.prompt(`Annullare ${focusOrder.orderCode}? Motivo:`, 'Fuori stock');
+    setMoreOpen(false);
+    if (!reason) return;
+    const orderId = focusOrder.id;
+    const result = await cancelOrder(orderId, reason);
+    if (result?.reason === 'order_already_paid_cannot_cancel' && refundOrder) {
+      setRefundFlow({ orderId, reason, status: 'idle', message: null, canRetry: true, readyToCancel: false });
+    }
+  };
+
+  const handleRefund = async () => {
+    if (!refundOrder || refundFlow.status === 'loading') return; // blocca doppio click durante la richiesta
+    const confirmMsg = REFUND_CONFIRM_MESSAGE[focusOrder?.paymentMethod] ?? 'Confermi il rimborso di questo ordine?';
+    if (!window.confirm(confirmMsg)) return;
+    const { orderId, reason } = refundFlow;
+    setRefundFlow((prev) => ({ ...prev, status: 'loading', message: null }));
+    const result = await refundOrder(orderId, reason);
+    setRefundFlow({
+      orderId, reason, status: 'idle',
+      message: result.message,
+      canRetry: result.canRetry !== false,
+      readyToCancel: result.readyToCancel === true,
+    });
+  };
+
+  const handleConfirmCancelAfterRefund = async () => {
+    if (!refundFlow.readyToCancel) return; // difesa aggiuntiva: mai annullare senza verifica payment_status confermata
+    const result = await cancelOrder(refundFlow.orderId, refundFlow.reason);
+    if (result?.ok) {
+      setRefundFlow({ orderId: null, reason: null, status: 'idle', message: null, canRetry: true, readyToCancel: false });
+    }
+  };
+
   const allergenInfo = focusOrder ? resolveOrderAllergens(focusOrder) : { allergens: [], unknownItems: [], hasUnknown: false };
   const allergens = allergenInfo.allergens;
   const lateFocus = focusOrder ? minutesSince(focusOrder.createdAt) >= 15 : false;
@@ -462,13 +511,6 @@ export function KitchenSoloServiceView({
       forOrder[idx] = !forOrder[idx];
       return { ...prev, [focusOrder.id]: forOrder };
     });
-  };
-
-  const askCancel = () => {
-    if (!focusOrder) return;
-    const reason = window.prompt(`Annullare ${focusOrder.orderCode}? Motivo:`, 'Fuori stock');
-    if (reason) cancelOrder(focusOrder.id, reason);
-    setMoreOpen(false);
   };
 
   const askStaffNote = () => {
@@ -693,6 +735,42 @@ export function KitchenSoloServiceView({
                     >
                       RIPROVA
                     </button>
+                  )}
+                </div>
+              )}
+
+              {refundFlow.orderId === focusOrder.id && (
+                <div className="kss-sync-error" data-testid="refund-flow-panel">
+                  {refundFlow.readyToCancel ? (
+                    <>
+                      <span>✓ {refundFlow.message ?? 'Rimborso confermato'} — ora puoi annullare l'ordine.</span>
+                      <button
+                        type="button"
+                        className="kss-sync-error-retry"
+                        data-testid="refund-confirm-cancel-btn"
+                        onClick={handleConfirmCancelAfterRefund}
+                      >
+                        ANNULLA ORDINE
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span>
+                        ⚠ Ordine già pagato — rimborsa per poter annullare
+                        {refundFlow.message ? ` — ${refundFlow.message}` : ''}
+                      </span>
+                      {refundFlow.canRetry !== false && (
+                        <button
+                          type="button"
+                          className="kss-sync-error-retry"
+                          data-testid="refund-btn"
+                          disabled={refundFlow.status === 'loading'}
+                          onClick={handleRefund}
+                        >
+                          {refundFlow.status === 'loading' ? 'RIMBORSO IN CORSO…' : 'RIMBORSA'}
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               )}

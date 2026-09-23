@@ -178,6 +178,118 @@ export async function supabaseUpdateOrder(id, patch) {
   }
 }
 
+// BUG B (ai-ops/reports/kitchen-bugA-bugB-audit-20260923.md) — refund/cancel dead-end.
+// Riusa esclusivamente api/kitchen-sumup-refund.js + kitchen_payment_refund* (invariati): la RPC
+// deriva provider/method dalla charge originale, quindi lo stesso endpoint copre sumup_online
+// (rimborso reale su SumUp) e cash/card_counter_manual (ramo ledger-only nell'handler, nessuna
+// chiamata esterna) — nessun branch per metodo necessario qui, vedi audit BUG B (Gate 1, 2026-09-23).
+const REFUND_ERROR_LABELS = {
+  missing_session: 'Sessione staff scaduta — ricarica e riprova',
+  not_staff_for_venue: 'Non autorizzato per questo locale',
+  not_authorized: 'Non autorizzato per questo locale',
+  order_not_found: 'Ordine non trovato',
+  no_succeeded_charge_to_refund: 'Nessun pagamento riuscito da rimborsare per questo ordine',
+  sumup_transaction_id_missing: 'Transazione originale non trovata — serve verifica manuale, non riprovare da qui',
+  internal_server_error: 'Errore del server — riprova',
+  server_configuration_error: 'Errore di configurazione server',
+};
+
+// Verifica server-side obbligatoria dopo un esito 'refunded'/'already_refunded' (condizione Gate 1
+// di Eros, 2026-09-23): la risposta dell'endpoint non è di per sé prova che kitchen_orders sia
+// stato aggiornato, ANNULLA deve sbloccarsi solo dopo aver riletto payment_status dal server.
+// Fail-closed su null: un errore di rete/RLS nella verifica non è mai trattato come "non più paid".
+async function isOrderStillPaid(orderId) {
+  try {
+    const { data, error } = await supabase
+      .from('kitchen_orders')
+      .select('payment_status')
+      .eq('id', orderId)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.payment_status === 'paid';
+  } catch (err) {
+    console.warn('[Walbox] isOrderStillPaid check failed', err);
+    return null;
+  }
+}
+
+// refundOrder è standalone (non chiusura sull'hook) come supabaseUpdateOrder: non tocca lo stato
+// locale ordini, la UI rilegge l'esito dal risultato e lo stato ordine reale arriva via il normale
+// poll/realtime di fetchSupabaseOrders dopo l'ANNULLA che segue.
+export async function refundOrder(id, reason) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      console.warn('[Walbox] Refund order — missing staff session');
+      return {
+        ok: false, outcome: null, error: 'missing_session',
+        message: REFUND_ERROR_LABELS.missing_session, canRetry: true, readyToCancel: false,
+      };
+    }
+
+    const res = await fetch('/api/kitchen-sumup-refund', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ order_id: id, reason: reason ?? null }),
+    });
+    const body = await res.json();
+
+    if (!res.ok) {
+      const code = body?.error || `refund_failed_${res.status}`;
+      console.warn('[Walbox] Refund order failed', body);
+      // sumup_transaction_id_missing: non retryable in modo sicuro senza intervento manuale
+      // (vedi audit BUG B) — mai riproporre RIMBORSA come se fosse un retry normale.
+      const terminal = code === 'sumup_transaction_id_missing';
+      return {
+        ok: false, outcome: code, error: code,
+        message: REFUND_ERROR_LABELS[code] ?? 'Rimborso non riuscito — riprova',
+        canRetry: !terminal, readyToCancel: false,
+      };
+    }
+
+    if (body.outcome === 'refunded' || body.outcome === 'already_refunded') {
+      const stillPaid = await isOrderStillPaid(id);
+      if (stillPaid !== false) {
+        // true (davvero ancora paid) o null (verifica non riuscita): mai sbloccare ANNULLA alla
+        // cieca solo perché l'endpoint ha risposto refunded/already_refunded.
+        return {
+          ok: true, outcome: body.outcome,
+          message: stillPaid === true
+            ? 'Rimborso registrato ma l\'ordine risulta ancora pagato — verifica prima di annullare'
+            : 'Rimborso registrato ma la verifica dello stato ordine non è riuscita — riprova a controllare',
+          canRetry: false, readyToCancel: false, syncMismatch: true,
+        };
+      }
+      return {
+        ok: true, outcome: body.outcome,
+        message: body.outcome === 'already_refunded' ? 'Ordine già rimborsato' : 'Rimborso completato',
+        canRetry: false, readyToCancel: true,
+      };
+    }
+
+    if (body.outcome === 'in_progress') {
+      return { ok: false, outcome: 'in_progress', message: 'Rimborso già in corso — attendi', canRetry: true, readyToCancel: false };
+    }
+
+    if (body.outcome === 'failed') {
+      return { ok: false, outcome: 'failed', message: 'Rimborso rifiutato — riprova', canRetry: true, readyToCancel: false };
+    }
+
+    // 'unknown': inconclusive (network/5xx lato SumUp) — mai dare per riuscito, mai ANNULLA.
+    return {
+      ok: false, outcome: 'unknown',
+      message: 'Esito rimborso non determinabile — verifica manualmente',
+      canRetry: false, readyToCancel: false,
+    };
+  } catch (err) {
+    console.warn('[Walbox] Refund order request failed', err);
+    return {
+      ok: false, outcome: null, error: 'network_error',
+      message: 'Rimborso non riuscito — riprova', canRetry: true, readyToCancel: false,
+    };
+  }
+}
+
 // export solo per il test mirato staff-cache-empty-supabase (funzione pura, nessun mock modulo
 // necessario); nessun nuovo consumer applicativo oltre a fetchSupabaseOrders dentro
 // useKitchenOrders.
@@ -668,5 +780,5 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
     setOrders(fresh);
   };
 
-  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote, retrySync, redeemPromo };
+  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote, retrySync, redeemPromo, refundOrder };
 }
