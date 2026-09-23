@@ -68,7 +68,7 @@ export default function CustomerOrderStatus() {
   const sumupReturnTargetId = sumupReturnRequested ? resolveUrlOrderId(ownedIds) : null;
 
   return (
-    <div className="ost-page">
+    <div className="ost-page notranslate" translate="no">
 
       {/* TopBar */}
       <div className="ost-topbar">

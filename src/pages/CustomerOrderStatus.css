@@ -121,15 +121,15 @@
 /* ── WalrusChefHero ──────────────────────────────── */
 .ost-hero {
   position: relative;
-  height: 366px;
+  min-height: 366px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: visible;
 }
 .ost-hero--pending-payment {
-  height: 180px;
+  min-height: 180px;
 }
 .ost-hero-glow {
   position: absolute;
