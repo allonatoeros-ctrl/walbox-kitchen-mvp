@@ -356,6 +356,20 @@ export function bucketOrdersByWalrusServiceHours(orders, night) {
  */
 export const NON_MAPPED_CATEGORY = 'non mappato';
 
+// Mapping esplicito per item che non possono essere risolti su `kitchenMenuItems`:
+// - item-040/041/042 sono i tre combo FALLO PESANTE, che vivono in `kitchenPesiMassimiCombos`
+//   (mai nel catalogo standalone) e appartengono ai Pesi Massimi (`bbq`);
+// - item-057 (Krombacher Pils) è stato rimosso dal catalogo cliente ma gli ordini storici
+//   restano `birre`.
+// `kitchenMenuItems` resta il lookup principale per tutto il resto; questa tabella copre solo
+// gli ID noti e non introduce alcuna euristica sul nome.
+const CATEGORY_BY_ITEM_ID = {
+  'item-040': 'bbq',
+  'item-041': 'bbq',
+  'item-042': 'bbq',
+  'item-057': 'birre',
+};
+
 export function computeTopProductsAndCategories(orders, night, menuItems = [], topN = 5) {
   const byId = new Map(menuItems.map((m) => [m.id, m]));
   const byName = new Map(menuItems.map((m) => [m.name, m]));
@@ -372,7 +386,8 @@ export function computeTopProductsAndCategories(orders, night, menuItems = [], t
       productCounts[i.name] = (productCounts[i.name] ?? 0) + qty;
 
       const menuItem = (i.itemId && byId.get(i.itemId)) || byName.get(i.name);
-      const category = menuItem?.category || NON_MAPPED_CATEGORY;
+      const category =
+        (i.itemId && CATEGORY_BY_ITEM_ID[i.itemId]) || menuItem?.category || NON_MAPPED_CATEGORY;
       categoryCounts[category] = (categoryCounts[category] ?? 0) + qty;
     });
   });

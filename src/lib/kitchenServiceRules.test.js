@@ -637,3 +637,85 @@ test('computeTopProductsAndCategories: nessun ordine = liste vuote, mai NaN', ()
     assert.deepEqual(topCategories, []);
   }
 });
+
+// Mapping esplicito ID -> categoria (item realmente ignoti al catalogo ma con categoria nota).
+test('computeTopProductsAndCategories: combo FALLO PESANTE (item-040/041/042) mappati su bbq', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  for (const id of ['item-040', 'item-041', 'item-042']) {
+    assert.ok(
+      !kitchenMenuItems.some((i) => i.id === id),
+      `${id} non deve stare in kitchenMenuItems (è un combo FALLO PESANTE)`
+    );
+  }
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'item-040', name: 'Pulled Pork — Fallo Pesante', quantity: 1 },
+      { itemId: 'item-041', name: 'Pastrami — Fallo Pesante', quantity: 1 },
+      { itemId: 'item-042', name: 'Brisket — Fallo Pesante', quantity: 1 },
+    ]),
+  ];
+  const { topCategories } = computeTopProductsAndCategories(orders, night, kitchenMenuItems, 5);
+  assert.deepEqual(topCategories, [{ category: 'bbq', quantity: 3 }]);
+});
+
+test('computeTopProductsAndCategories: item-057 (Krombacher) mappato su birre', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  assert.ok(
+    !kitchenMenuItems.some((i) => i.id === 'item-057'),
+    'item-057 non deve stare in kitchenMenuItems (rimosso dal catalogo cliente)'
+  );
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'item-057', name: 'Krombacher Pils', quantity: 2 },
+    ]),
+  ];
+  const { topCategories } = computeTopProductsAndCategories(orders, night, kitchenMenuItems, 5);
+  assert.deepEqual(topCategories, [{ category: 'birre', quantity: 2 }]);
+});
+
+test('computeTopProductsAndCategories: ID ignoto resta NON_MAPPED_CATEGORY, nessuna euristica sul nome', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'item-999-ghost', name: 'Fallo Pesante Qualunque', quantity: 3 },
+    ]),
+  ];
+  const { topCategories } = computeTopProductsAndCategories(orders, night, kitchenMenuItems, 5);
+  assert.deepEqual(topCategories, [{ category: NON_MAPPED_CATEGORY, quantity: 3 }]);
+});
+
+test('computeTopProductsAndCategories: item presenti nel catalogo mappano la loro category (comportamento invariato)', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'item-009', name: 'Pulled Pork', quantity: 2 },
+      { itemId: 'item-051', name: 'Keiler Helles', quantity: 1 },
+    ]),
+  ];
+  const { topCategories } = computeTopProductsAndCategories(orders, night, kitchenMenuItems, 5);
+  assert.deepEqual(topCategories, [
+    { category: 'bbq', quantity: 2 },
+    { category: 'birre', quantity: 1 },
+  ]);
+});
+
+test('computeTopProductsAndCategories: CATEGORY_BY_ITEM_ID ha precedenza su menuItem.category e sul fallback per nome', () => {
+  const night = serviceNightWindow(cest('2026-09-18T20:00:00'));
+  // Menu volontariamente in collisione: item-040 esiste con category diversa (match per id),
+  // item-057 matcha per nome un item catalogo con category diversa (fallback byName).
+  const menuWithCollision = [
+    { id: 'item-040', name: 'Fallo Pesante X', category: 'vegetariano' },
+    { id: 'item-057', name: 'Krombacher Pils', category: 'analcolici' },
+  ];
+  const orders = [
+    orderWithItems('o1', cest('2026-09-18T19:00:00').toISOString(), [
+      { itemId: 'item-040', name: 'Fallo Pesante X', quantity: 2 },
+      { itemId: 'item-057', name: 'Krombacher Pils', quantity: 1 },
+    ]),
+  ];
+  const { topCategories } = computeTopProductsAndCategories(orders, night, menuWithCollision, 5);
+  assert.deepEqual(topCategories, [
+    { category: 'bbq', quantity: 2 },
+    { category: 'birre', quantity: 1 },
+  ]);
+});
