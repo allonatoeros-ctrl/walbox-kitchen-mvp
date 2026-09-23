@@ -244,17 +244,45 @@ test('nessuna riga = tutto a zero, mai NaN', () => {
 
 test('summarizePaymentsByMethod: incasso/rimborsato/netto per metodo, solo succeeded', () => {
   const rows = [
-    { method: 'cash', direction: 'charge', status: 'succeeded', amount: 10 },
-    { method: 'cash', direction: 'charge', status: 'succeeded', amount: '5.50' },
-    { method: 'sumup_online', direction: 'charge', status: 'succeeded', amount: 20 },
-    { method: 'sumup_online', direction: 'refund', status: 'succeeded', amount: 4 },
-    { method: 'sumup_pos', direction: 'charge', status: 'failed', amount: 99 },
+    { order_id: 'o1', method: 'cash', direction: 'charge', status: 'succeeded', amount: 10 },
+    { order_id: 'o2', method: 'cash', direction: 'charge', status: 'succeeded', amount: '5.50' },
+    { order_id: 'o3', method: 'sumup_online', direction: 'charge', status: 'succeeded', amount: 20 },
+    { order_id: 'o3', method: 'sumup_online', direction: 'refund', status: 'succeeded', amount: 4 },
+    { order_id: 'o4', method: 'sumup_pos', direction: 'charge', status: 'failed', amount: 99 },
   ];
   const { byMethod } = summarizePaymentsByMethod(rows);
-  assert.deepEqual(byMethod.cash, { incasso: 15.5, rimborsato: 0, netto: 15.5, count: 2 });
-  assert.deepEqual(byMethod.sumup_online, { incasso: 20, rimborsato: 4, netto: 16, count: 1 });
+  assert.deepEqual(byMethod.cash, { incasso: 15.5, rimborsato: 0, netto: 15.5, count: 2, mixIncasso: 15.5, mixCount: 2 });
+  // o3 e' rimborsato: rimborsato/netto in CONTROLLO SERATA/CASSA invariati, ma mixIncasso/mixCount lo escludono.
+  assert.deepEqual(byMethod.sumup_online, { incasso: 20, rimborsato: 4, netto: 16, count: 1, mixIncasso: 0, mixCount: 0 });
   // Un tentativo fallito non produce incasso ma la riga per il metodo esiste comunque (per il badge SumUp).
-  assert.deepEqual(byMethod.sumup_pos, { incasso: 0, rimborsato: 0, netto: 0, count: 0 });
+  assert.deepEqual(byMethod.sumup_pos, { incasso: 0, rimborsato: 0, netto: 0, count: 0, mixIncasso: 0, mixCount: 0 });
+});
+
+test('MIX_PAYMENT_REFUND_FIX: un ordine con refund succeeded e escluso dal mix indipendentemente dal metodo', () => {
+  const rows = [
+    { order_id: 'o1', method: 'cash', direction: 'charge', status: 'succeeded', amount: 10 },
+    { order_id: 'o2', method: 'sumup_online', direction: 'charge', status: 'succeeded', amount: 20 },
+    // Refund su o2 fatto in contanti (metodo diverso dal charge originale): esclude comunque o2 dal mix.
+    { order_id: 'o2', method: 'cash', direction: 'refund', status: 'succeeded', amount: 20 },
+  ];
+  const { byMethod } = summarizePaymentsByMethod(rows);
+  assert.equal(byMethod.cash.mixIncasso, 10);
+  assert.equal(byMethod.cash.mixCount, 1);
+  assert.equal(byMethod.sumup_online.mixIncasso, 0);
+  assert.equal(byMethod.sumup_online.mixCount, 0);
+  // La vista contabile (CONTROLLO SERATA/CASSA) resta invariata: incasso/rimborsato/netto/count pieni.
+  assert.equal(byMethod.sumup_online.incasso, 20);
+  assert.equal(byMethod.cash.rimborsato, 20);
+});
+
+test('MIX_PAYMENT_REFUND_FIX: un refund pending/failed NON esclude l\'ordine dal mix', () => {
+  const rows = [
+    { order_id: 'o1', method: 'cash', direction: 'charge', status: 'succeeded', amount: 10 },
+    { order_id: 'o1', method: 'cash', direction: 'refund', status: 'pending', amount: 10 },
+  ];
+  const { byMethod } = summarizePaymentsByMethod(rows);
+  assert.equal(byMethod.cash.mixIncasso, 10);
+  assert.equal(byMethod.cash.mixCount, 1);
 });
 
 test('summarizePaymentsByMethod: count e il numero di pagamenti charge succeeded per metodo (Fase 7)', () => {

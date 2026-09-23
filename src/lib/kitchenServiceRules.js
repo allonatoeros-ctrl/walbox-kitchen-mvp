@@ -232,19 +232,38 @@ const SUMUP_METHODS = new Set(['sumup_online', 'sumup_pos']);
  * e pending sono entrambi "in corso", coerente col trattamento di inSospeso sopra.
  * `count` (Fase 7, MIX PAGAMENTI) e' il numero di pagamenti charge succeeded per metodo — stesso
  * filtro che alimenta `incasso`, nessun nuovo giro sulle righe.
+ *
+ * `mixIncasso`/`mixCount` (MIX_PAYMENT_REFUND_FIX): stesso filtro charge succeeded di
+ * incasso/count, ma un ordine con un refund succeeded (qualunque metodo) e' escluso del tutto dal
+ * MIX PAGAMENTO — importo, count e di conseguenza percentuale — indipendentemente dal metodo del
+ * charge originale. `incasso`/`rimborsato`/`netto`/`count` restano invariati: alimentano la vista
+ * CONTROLLO SERATA/CASSA, che deve continuare a mostrare il quadro contabile completo.
  */
 export function summarizePaymentsByMethod(rows) {
   const round2 = (n) => Math.round(n * 100) / 100;
   const byMethod = {};
   const sumup = { succeeded: 0, pending: 0, failed: 0 };
+  const safeRows = rows ?? [];
 
-  (rows ?? []).forEach((r) => {
+  const refundedOrderIds = new Set(
+    safeRows
+      .filter((r) => r.direction === 'refund' && r.status === 'succeeded' && r.order_id)
+      .map((r) => r.order_id)
+  );
+
+  safeRows.forEach((r) => {
     const method = r.method ?? 'unknown';
     const amount = Number(r.amount) || 0;
-    if (!byMethod[method]) byMethod[method] = { incasso: 0, rimborsato: 0, netto: 0, count: 0 };
+    if (!byMethod[method]) {
+      byMethod[method] = { incasso: 0, rimborsato: 0, netto: 0, count: 0, mixIncasso: 0, mixCount: 0 };
+    }
     if (r.direction === 'charge' && r.status === 'succeeded') {
       byMethod[method].incasso += amount;
       byMethod[method].count += 1;
+      if (!refundedOrderIds.has(r.order_id)) {
+        byMethod[method].mixIncasso += amount;
+        byMethod[method].mixCount += 1;
+      }
     } else if (r.direction === 'refund' && r.status === 'succeeded') {
       byMethod[method].rimborsato += amount;
     }
@@ -260,6 +279,7 @@ export function summarizePaymentsByMethod(rows) {
     m.incasso = round2(m.incasso);
     m.rimborsato = round2(m.rimborsato);
     m.netto = round2(m.incasso - m.rimborsato);
+    m.mixIncasso = round2(m.mixIncasso);
   });
 
   return { byMethod, sumup };

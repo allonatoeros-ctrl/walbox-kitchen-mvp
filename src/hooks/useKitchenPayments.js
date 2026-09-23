@@ -73,7 +73,7 @@ export function useKitchenPayments({ night: nightParam = null } = {}) {
         // serata. Nessun filtro sul created_at del pagamento e nessun filtro su service_day.
         supabase
           .from('kitchen_payments')
-          .select('id, direction, status, method, amount, kitchen_orders!inner(created_at)')
+          .select('id, order_id, direction, status, method, amount, kitchen_orders!inner(created_at)')
           .eq('venue_id', VENUE_ID)
           .gte('kitchen_orders.created_at', night.startIso)
           .lt('kitchen_orders.created_at', night.endIso),
