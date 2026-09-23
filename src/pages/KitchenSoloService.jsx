@@ -9,6 +9,12 @@ import { getStaffSession, onAuthStateChange, isKitchenStaff, signOut } from '../
 import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPreviewFixtures';
 import { useKitchenAudio } from '../hooks/useKitchenAudio';
 import { requestFullscreenBestEffort } from '../hooks/useFullscreenToggle';
+import {
+  fetchCloseForCounterEligibility,
+  liveCloseForCounterAction,
+  CLOSE_FOR_COUNTER_CONFIRM_MESSAGE,
+  CLOSE_FOR_COUNTER_ERROR_LABELS,
+} from '../lib/kitchenCloseForCounter';
 import MenuView from './MenuView';
 import StoricoView from './StoricoView';
 import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
@@ -315,6 +321,42 @@ export function KitchenSoloServiceView({
   const quickPayOrder = daPagare.find((o) => o.id !== focusOrder?.id) ?? null;
 
   const action    = nextActionFor(focusOrder);
+
+  // "PASSA AL BANCO" — bug reale: kitchen_payment_record_counter blocca l'incasso quando esiste
+  // un attempt SumUp online ancora aperto/retry-eligible (online_payment_in_progress, vedi
+  // useKitchenOrders.confirmPayment), senza via d'uscita da /kitchen/solo dopo il decommissioning
+  // del Payment Hub UI (b696070). Lookup mirata per il solo focusOrder (mai la lista aggregata
+  // "ultimi 30" di useKitchenPayments, che puo' non contenere l'attempt di un ordine piu' vecchio):
+  // vedi src/lib/kitchenCloseForCounter.js. Non montata in Preview/Demo/Training (nessuna sessione
+  // Supabase reale).
+  const [closeForCounter, setCloseForCounter] = useState({ orderId: null, attempt: null, status: 'idle', message: null, tone: null });
+  useEffect(() => {
+    if (isPreview) return undefined;
+    if (!focusOrder || focusOrder.status !== 'pending_counter_payment') {
+      setCloseForCounter({ orderId: null, attempt: null, status: 'idle', message: null, tone: null });
+      return undefined;
+    }
+    let cancelled = false;
+    setCloseForCounter({ orderId: focusOrder.id, attempt: null, status: 'checking', message: null, tone: null });
+    fetchCloseForCounterEligibility(focusOrder.id).then((attempt) => {
+      if (cancelled) return;
+      setCloseForCounter({ orderId: focusOrder.id, attempt, status: 'idle', message: null, tone: null });
+    });
+    return () => { cancelled = true; };
+  }, [isPreview, focusOrder?.id, focusOrder?.status]);
+
+  const handleCloseForCounter = async () => {
+    if (!focusOrder || !window.confirm(CLOSE_FOR_COUNTER_CONFIRM_MESSAGE)) return;
+    const orderId = focusOrder.id;
+    setCloseForCounter((prev) => ({ ...prev, status: 'loading', message: null, tone: null }));
+    const result = await liveCloseForCounterAction(orderId);
+    const message = result.ok ? result.text : (result.message ?? CLOSE_FOR_COUNTER_ERROR_LABELS[result.error] ?? 'Errore imprevisto — riprova.');
+    const tone = result.ok ? result.tone : 'warn';
+    // Ri-verifica sempre dopo l'azione: se chiuso, l'attempt sparisce (bottone si nasconde); se
+    // fallito, resta visibile per riprovare.
+    const attempt = await fetchCloseForCounterEligibility(orderId);
+    setCloseForCounter({ orderId, attempt, status: 'done', message, tone });
+  };
   const allergenInfo = focusOrder ? resolveOrderAllergens(focusOrder) : { allergens: [], unknownItems: [], hasUnknown: false };
   const allergens = allergenInfo.allergens;
   const lateFocus = focusOrder ? minutesSince(focusOrder.createdAt) >= 15 : false;
@@ -744,6 +786,28 @@ export function KitchenSoloServiceView({
                     >
                       CARTA/POS ✓
                     </button>
+                  )}
+                  {action?.kind === 'pay' && closeForCounter.orderId === focusOrder.id && closeForCounter.attempt && (
+                    <div data-testid="close-for-counter-row">
+                      <button
+                        type="button"
+                        className="kss-next-btn-alt"
+                        data-testid="close-for-counter-btn"
+                        disabled={closeForCounter.status === 'loading'}
+                        onClick={handleCloseForCounter}
+                      >
+                        {closeForCounter.status === 'loading' ? 'CHIUSURA IN CORSO…' : 'PASSA AL BANCO — sblocca il checkout online'}
+                      </button>
+                      {closeForCounter.message && (
+                        <div
+                          className="kss-quickpay-text"
+                          data-testid="close-for-counter-msg"
+                          style={{ color: closeForCounter.tone === 'warn' ? '#f59e0b' : closeForCounter.tone === 'ok' ? '#4ade80' : undefined }}
+                        >
+                          {closeForCounter.message}
+                        </div>
+                      )}
+                    </div>
                   )}
                   {/* Sola lettura: il codice si redime lato cliente prima del pagamento
                       (CustomerKitchenMenu.jsx). Lo staff non inserisce più codici qui. */}
