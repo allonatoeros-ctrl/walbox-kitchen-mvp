@@ -3,14 +3,34 @@
 // (fallback per chi torna lì senza aver completato la scelta). Puramente presentazionale:
 // tutto lo stato/logica vive in useOrderPaymentFlow.
 export default function OrderPaymentActions({ order, flow }) {
-  const { isPendingPayment, effectiveChoice, showCashFallback, sumup, choosePayment, handleChooseOnline, handlePaySumup, runReconciliation } = flow;
+  const { isPendingPayment, effectiveChoice, showCashFallback, onlinePaymentDisabled, sumup, choosePayment, handleChooseOnline, handlePaySumup, runReconciliation } = flow;
 
   if (!isPendingPayment) return null;
 
   return (
     <>
+      {/* BUG A fix: staff ha già chiuso il checkout online (PASSA AL BANCO) — nessun bivio, solo
+          un messaggio chiaro. Il codice ordine viene comunque mostrato subito sotto da
+          showCashFallback (effectiveChoice è forzato su 'counter' da useOrderPaymentFlow). */}
+      {onlinePaymentDisabled && (
+        <div style={{
+          margin: '0 20px 12px',
+          padding: '12px 16px',
+          borderRadius: '12px',
+          background: 'rgba(200,150,10,0.12)',
+          border: '2px solid #c8960a',
+          color: '#c8960a',
+          fontFamily: "'Montserrat', sans-serif",
+          fontSize: '13px',
+          fontWeight: 600,
+          textAlign: 'center',
+        }} data-testid="ost-online-payment-disabled-banner">
+          Pagamento al banco — comunica il codice ordine alla cassa.
+        </div>
+      )}
+
       {/* Payment method fork (AC1) */}
-      {!effectiveChoice && (
+      {!onlinePaymentDisabled && !effectiveChoice && (
         <div style={{ margin: '0 20px 20px' }} data-testid="ost-payment-fork">
           <div style={{
             fontFamily: "'Montserrat', sans-serif",

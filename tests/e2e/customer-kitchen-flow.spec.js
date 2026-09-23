@@ -1693,3 +1693,81 @@ test('41. /kitchen/status con più ordini resta compatto (codici in alto, dettag
   await expect(blockPrep.locator('.ost-timeline')).toBeVisible();
   await expect(blockPay.locator('.ost-timeline')).toHaveCount(0);
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// BUG A fix — online_payment_disabled (kitchen_orders) come fonte di verità server-side.
+// Migration: 20260923120000 (colonna) / 20260923121000 (PASSA AL BANCO la imposta) /
+// 20260923122000 (kitchen_payment_attempt_start la rispetta). Qui si verifica solo il lato
+// cliente (useOrderPaymentFlow/OrderPaymentActions): `onlinePaymentDisabled: true` sull'ordine
+// seedato simula un ordine per cui lo staff ha già eseguito PASSA AL BANCO — esattamente il campo
+// che mapSupabaseOrder popolerebbe da row.online_payment_disabled.
+// ═══════════════════════════════════════════════════════════════════
+
+test('42. BUG A: online_payment_disabled=true — niente bivio, niente CTA online, solo messaggio + codice banco', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({
+      id: 'order-online-disabled', orderCode: 'OD1', nickname: 'Eros',
+      status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment',
+      onlinePaymentDisabled: true,
+    }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-online-disabled']);
+
+  await page.goto('/kitchen/payment?orderId=order-online-disabled');
+
+  // Nessun bivio "COME VUOI PAGARE?", nessuna CTA PAGA ONLINE — mai mostrata a prescindere da
+  // localStorage: la scelta cliente non può più riaprire l'online per questo ordine.
+  await expect(page.getByTestId('ost-payment-fork')).toHaveCount(0);
+  await expect(page.getByTestId('ost-pay-online')).toHaveCount(0);
+  await expect(page.getByText('💳 PAGA ONLINE')).toHaveCount(0);
+
+  // Messaggio chiaro + codice ordine mostrato direttamente, come per la scelta CASSA esplicita.
+  await expect(page.getByTestId('ost-online-payment-disabled-banner')).toBeVisible();
+  await expect(page.getByText('Pagamento al banco — comunica il codice ordine alla cassa.')).toBeVisible();
+  await expect(page.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toBeVisible();
+  await expect(page.getByText('OD1', { exact: true }).first()).toBeVisible();
+});
+
+test('43. BUG A: online_payment_disabled=true sopravvive a una scelta ONLINE già salvata in localStorage sullo stesso device', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({
+      id: 'order-online-disabled-2', orderCode: 'OD2', nickname: 'Eros',
+      status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment',
+      onlinePaymentDisabled: true,
+    }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-online-disabled-2']);
+  // Simula un device che aveva scelto ONLINE prima che lo staff chiudesse il checkout (PASSA AL
+  // BANCO): il flag server-side deve comunque vincere, mai la scelta stale in localStorage.
+  await page.evaluate(() => localStorage.setItem('walbox_kitchen_payment_choice_order-online-disabled-2', 'online'));
+
+  await page.goto('/kitchen/payment?orderId=order-online-disabled-2');
+
+  await expect(page.getByTestId('ost-pay-online')).toHaveCount(0);
+  await expect(page.getByText('💳 PAGA ONLINE')).toHaveCount(0);
+  await expect(page.getByTestId('ost-online-payment-disabled-banner')).toBeVisible();
+  await expect(page.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toBeVisible();
+});
+
+test('44. Regressione: ordine normale (online_payment_disabled assente/false) — bivio e CTA online invariati', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({
+      id: 'order-normal-pay', orderCode: 'NP1', nickname: 'Eros',
+      status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment',
+    }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-normal-pay']);
+
+  await page.goto('/kitchen/payment?orderId=order-normal-pay');
+
+  await expect(page.getByTestId('ost-online-payment-disabled-banner')).toHaveCount(0);
+  await expect(page.getByTestId('ost-payment-fork')).toBeVisible();
+  await expect(page.getByTestId('ost-pay-counter')).toBeVisible();
+  await expect(page.getByTestId('ost-pay-online')).toBeVisible();
+});

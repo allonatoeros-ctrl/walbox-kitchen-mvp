@@ -138,6 +138,7 @@ function mapSupabaseOrder(row) {
     total:         row.total,
     paymentStatus: row.payment_status,
     paymentMethod: row.payment_method ?? null,
+    onlinePaymentDisabled: row.online_payment_disabled ?? false,
     fulfillmentType: row.fulfillment_type ?? null,
     paidAt:        row.paid_at ?? null,
     createdAt:     row.created_at,

@@ -22,6 +22,7 @@ const SUMUP_ERROR_MESSAGES = {
   order_cancelled: 'Questo ordine è stato annullato.',
   amount_mismatch: 'Importo non allineato all’ordine. Riprova o paga alla cassa.',
   invalid_attempt_status: 'Pagamento già in corso. Attendi qualche secondo e riprova.',
+  online_payment_disabled: 'Pagamento al banco — comunica il codice ordine alla cassa.',
 };
 
 function friendlySumupError(err) {
@@ -81,12 +82,20 @@ export function useOrderPaymentFlow(order, isReturnTarget) {
     : false;
   const displayStatus = order ? (isPendingPayment ? 'pending_counter_payment' : order.status) : null;
 
-  const effectiveChoice = paymentChoice || (sumup.state !== 'idle' ? 'online' : null);
+  // BUG A fix: online_payment_disabled è la fonte di verità server-side (kitchen_orders, impostata
+  // atomicamente da kitchen_payment_attempt_close_unpaid quando lo staff esegue "PASSA AL BANCO").
+  // Quando è true il bivio cliente è forzato su 'counter', indipendentemente da cosa dice ancora
+  // walbox_kitchen_payment_choice_<orderId> in localStorage su questo o un altro device — nessuna
+  // CTA PAGA ONLINE viene più mostrata per questo ordine (vedi OrderPaymentActions).
+  const onlinePaymentDisabled = !!(order && order.onlinePaymentDisabled);
+  const effectiveChoice = onlinePaymentDisabled
+    ? 'counter'
+    : (paymentChoice || (sumup.state !== 'idle' ? 'online' : null));
   const showCashFallback = effectiveChoice === 'counter'
     || (effectiveChoice === 'online' && ['error', 'pending', 'unknown'].includes(sumup.state));
 
   const handlePaySumup = async () => {
-    if (!order) return;
+    if (!order || order.onlinePaymentDisabled) return;
     setSumup({ state: 'loading', error: null });
     try {
       let { data: { session } } = await supabase.auth.getSession();
@@ -192,6 +201,7 @@ export function useOrderPaymentFlow(order, isReturnTarget) {
     paymentChoice,
     effectiveChoice,
     showCashFallback,
+    onlinePaymentDisabled,
     isClosedStatus,
     isPendingPayment,
     displayStatus,
