@@ -968,43 +968,42 @@ export default function CustomerKitchenMenu() {
         />
       ))}
 
-      {/* Bottom cart bar */}
-      <div className="kitch-bottom-spacer" />
-      <div className="kitch-bottom-bar">
-        <div className={`kitch-bottom-card${itemCount > 0 ? ' kitch-bottom-card--filled' : ''}${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
-          <div
-            className="kitch-bottom-left"
-            onClick={() => { if (itemCount > 0) setCartOpen(true); }}
-            role="button"
-            aria-label="Apri carrello"
-          >
-            <div className="kitch-cart-icon-wrap" ref={cartIconRef}>
-              <svg className="kitch-cart-svg" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
-                <circle cx="23" cy="27" r="2" fill="#e8ddb8"/>
-              </svg>
-              <div className="kitch-cart-badge">{itemCount}</div>
-            </div>
-            <div className="kitch-bottom-text-wrap">
-              <div className="kitch-bottom-title">IL TUO SACCO</div>
-              <div className="kitch-bottom-total">
-                {itemCount === 0
-                  ? 'Nessun articolo · €0,00'
-                  : `${itemCount} ${itemCount === 1 ? 'articolo' : 'articoli'} · €${total.toFixed(2).replace('.', ',')}`}
+      {itemCount > 0 && (
+        <>
+          <div className="kitch-bottom-spacer" />
+          <div className="kitch-bottom-bar">
+            <div className={`kitch-bottom-card kitch-bottom-card--filled${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
+              <div
+                className="kitch-bottom-left"
+                onClick={() => setCartOpen(true)}
+                role="button"
+                aria-label="Apri carrello"
+              >
+                <div className="kitch-cart-icon-wrap" ref={cartIconRef}>
+                  <svg className="kitch-cart-svg" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
+                    <circle cx="23" cy="27" r="2" fill="#e8ddb8"/>
+                  </svg>
+                  <div className="kitch-cart-badge">{itemCount}</div>
+                </div>
+                <div className="kitch-bottom-text-wrap">
+                  <div className="kitch-bottom-title">IL TUO SACCO</div>
+                  <div className="kitch-bottom-total">
+                    {`${itemCount} ${itemCount === 1 ? 'articolo' : 'articoli'} · €${total.toFixed(2).replace('.', ',')}`}
+                  </div>
+                </div>
               </div>
+              <button
+                className="kitch-btn-vai"
+                onClick={() => setCartOpen(true)}
+              >
+                VAI ALL'ORDINE
+              </button>
             </div>
           </div>
-          <button
-            className="kitch-btn-vai"
-            onClick={() => { if (itemCount > 0) setCartOpen(true); }}
-            disabled={itemCount === 0}
-            style={itemCount === 0 ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-          >
-            {itemCount === 0 ? 'AGGIUNGI QUALCOSA' : "VAI ALL'ORDINE"}
-          </button>
-        </div>
-      </div>
+        </>
+      )}
 
       {/* Backdrop */}
       {cartOpen && <div className="kitch-backdrop" onClick={() => setCartOpen(false)} />}

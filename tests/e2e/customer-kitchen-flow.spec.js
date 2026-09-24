@@ -76,7 +76,9 @@ async function openCategoryList(page, categoryName) {
 async function addFirstOrderableItem(page) {
   await page.getByRole('button', { name: /PESI MASSIMI/i }).click();
   await page.locator('.pm-card-closed').first().click();
-  await page.getByRole('button', { name: 'AGGIUNGI AL SACCO' }).first().click();
+  // Default della card aperta è SOLO PANINO (2026-09-24): la CTA è dinamica e
+  // include il prezzo, "AGGIUNGI AL SACCO" non è mai il suo testo reale.
+  await page.getByRole('button', { name: /AGGIUNGI SOLO PANINO/i }).first().click();
 }
 
 // Il Sacco Pulito (2026-09-13): unica scelta obbligatoria nel drawer prima che "Invia ordine"
@@ -412,37 +414,30 @@ test('3b. Sold-out item shows ESAURITO overlay and disabled ESAURITO CTA', async
   await expect(soldOutButton).toBeDisabled();
 });
 
-test('3c. Empty cart bar persists, disabled CTA, no drawer; refills after last item removed', async ({ page }) => {
+test('3c. Empty cart hides the bottom bar entirely; appears on first item, disappears after last removed', async ({ page }) => {
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
 
-  // Empty state: bar visible with 0 count, €0,00 total, disabled CTA
-  const addCta = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
-  await expect(addCta).toBeVisible();
-  await expect(addCta).toBeDisabled();
-  await expect(page.getByText('Nessun articolo')).toBeVisible();
-  await expect(page.getByText('€0,00')).toBeVisible();
+  // Empty state: no bottom bar in the DOM, no disabled CTA, nothing to open
+  await expect(page.locator('.kitch-bottom-bar')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' })).toHaveCount(0);
+  await expect(page.getByText('Nessun articolo')).toHaveCount(0);
 
-  // Clicking the empty bar must not open the drawer
-  await page.locator('.kitch-bottom-left').click();
-  await expect(page.locator('.kitch-drawer')).toHaveCount(0);
-
-  // Add a product: normal behavior
+  // Add a product: the compact sticky cart appears
   await addFirstOrderableItem(page);
-  await expect(page.getByRole('button', { name: "VAI ALL'ORDINE" })).toBeEnabled();
+  const bar = page.locator('.kitch-bottom-bar');
+  await expect(bar).toBeVisible();
+  await expect(bar.getByRole('button', { name: "VAI ALL'ORDINE" })).toBeEnabled();
 
   // Remove the last product from the drawer
-  await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+  await bar.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
   await expect(page.locator('.kitch-drawer')).toBeVisible();
   await page.getByRole('button', { name: '🗑️' }).first().click();
 
-  // Back to persistent empty state, drawer closed
+  // Back to zero items: bar hidden again, drawer closed
   await expect(page.locator('.kitch-drawer')).toHaveCount(0);
-  const addCtaAfter = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
-  await expect(addCtaAfter).toBeVisible();
-  await expect(addCtaAfter).toBeDisabled();
-  await expect(page.getByText('Nessun articolo')).toBeVisible();
-  await expect(page.getByText('€0,00')).toBeVisible();
+  await expect(page.locator('.kitch-bottom-bar')).toHaveCount(0);
+  await expect(page.getByText('Nessun articolo')).toHaveCount(0);
 });
 
 test('3e. All panini sold out: every CTA disabled, category still browsable, nothing addable to cart', async ({ page }) => {
@@ -478,9 +473,9 @@ test('3e. All panini sold out: every CTA disabled, category still browsable, not
   }
 
   const addCta = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
-  await expect(addCta).toBeVisible();
-  await expect(addCta).toBeDisabled();
-  await expect(page.getByText('Nessun articolo')).toBeVisible();
+  await expect(addCta).toHaveCount(0);
+  await expect(page.locator('.kitch-bottom-bar')).toHaveCount(0);
+  await expect(page.getByText('Nessun articolo')).toHaveCount(0);
 });
 
 test('3f. Category with zero items shows "NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA"', async ({ page }) => {

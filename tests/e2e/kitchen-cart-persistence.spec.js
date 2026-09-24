@@ -99,9 +99,9 @@ test('svuotamento esplicito col cestino: sacco vuoto, e resta vuoto dopo il refr
   await openCart(page);
   await page.locator('.kitch-drawer').getByRole('button', { name: '🗑️' }).first().click();
 
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('0 ROBE NEL SACCO');
+  await expect(page.locator('.kitch-bottom-bar')).toHaveCount(0);
   await page.reload();
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('0 ROBE NEL SACCO');
+  await expect(page.locator('.kitch-bottom-bar')).toHaveCount(0);
 
   // nota e scelta di ritiro non sopravvivono a un sacco buttato: finirebbero su un altro ordine
   const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), CART_KEY);
