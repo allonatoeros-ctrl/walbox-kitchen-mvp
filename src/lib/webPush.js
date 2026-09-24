@@ -30,6 +30,46 @@ export function resolvePushStatus({ supported, hasVapidKey, permission }) {
   return 'idle';
 }
 
+// F6 Notification Decision Gate (2026-09-24): decide se mostrare l'overlay di scelta sulle
+// notifiche. Regole: mai se l'utente ha già deciso per questo ordine, mai se il browser non
+// supporta / la feature non è configurata, mai se il permesso è già granted (niente overlay per
+// chi è già avvisabile) o denied (niente loop dopo un rifiuto). Pura: nessun accesso a DOM/browser.
+export function shouldShowNotificationGate({ status, permission, dismissed }) {
+  if (dismissed) return false;
+  if (permission === 'granted' || permission === 'denied') return false;
+  if (status === 'subscribed' || status === 'denied') return false;
+  if (status === 'unsupported' || status === 'not-configured') return false;
+  return true;
+}
+
+// F6 final UX patch (2026-09-24): su iPhone/iPad Safari NON installato come PWA la Web Push non è
+// disponibile (Notification/PushManager assenti), quindi lo stato è `unsupported` e il gate
+// classico non comparirebbe mai. Lì mostriamo un gate informativo (come aggiungere a Home) invece
+// di nulla, senza mai tentare `Notification.requestPermission()` (impossibile in quello stato).
+export function isIosNonPwa() {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const isIos =
+    /iPad|iPhone|iPod/.test(ua) ||
+    (ua.includes('Macintosh') && typeof document !== 'undefined' && 'ontouchend' in document);
+  if (!isIos) return false;
+  const standalone =
+    navigator.standalone === true ||
+    (typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(display-mode: standalone)').matches);
+  return !standalone;
+}
+
+// Pura: decide se mostrare il gate informativo iOS. Solo quando il browser non supporta la push,
+// l'utente è su iOS Safari non-PWA e non ha già scelto "CONTINUA" per quell'ordine.
+export function shouldShowIosInstallGate({ supported, iosNonPwa, dismissed }) {
+  if (supported) return false;
+  if (!iosNonPwa) return false;
+  if (dismissed) return false;
+  return true;
+}
+
 // applicationServerKey vuole un Uint8Array, PushManager.subscribe non accetta la stringa raw.
 export function urlBase64ToUint8Array(base64String) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);

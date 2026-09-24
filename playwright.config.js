@@ -6,7 +6,10 @@ export default defineConfig({
   // che gira SENZA VITE_E2E_BYPASS_STAFF_AUTH per testare il guard reale. Escluso qui perche'
   // questo config inietta il bypass sotto (vedi webServer.env) e farebbe fallire per costruzione
   // i test che assumono guard attivo (T1, P1). Vedi docs/sprint3b-f-sec-2-storage-state-contract.md.
-  testIgnore: ['**/f-sec-2-kitchen-guard.spec.js'],
+  // F6 Notification Decision Gate: l'overlay esiste solo con VAPID configurata, che questo config
+  // NON imposta (per non far comparire l'overlay nelle suite esistenti). Harness dedicato in
+  // playwright.notif.config.js che inietta VITE_WEB_PUSH_VAPID_PUBLIC_KEY e limita lo scope.
+  testIgnore: ['**/f-sec-2-kitchen-guard.spec.js', '**/kitchen-notification-gate.spec.js'],
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: 0,

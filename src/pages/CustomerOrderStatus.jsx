@@ -94,7 +94,7 @@ export default function CustomerOrderStatus() {
         </div>
       ) : (
         <>
-          <NotificationOptIn />
+          <NotificationOptIn orderId={activeOrders[0].id} orderCode={activeOrders[0].orderCode} />
           {/* Striscia codici — il codice ordine resta visibile anche fuori dal riquardo (follow-up UX 2026-09-18) */}
           <div className="ost-codes-strip" data-testid="ost-codes-strip">
             {activeOrders.map((o) => (

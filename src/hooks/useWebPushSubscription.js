@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import {
   VAPID_PUBLIC_KEY,
@@ -24,6 +24,30 @@ export function useWebPushSubscription() {
     })
   );
   const [error, setError] = useState(null);
+  const permission =
+    typeof Notification !== 'undefined' ? Notification.permission : 'default';
+
+  // F6 Notification Decision Gate (2026-09-24): al mount, se il permesso è già concesso, verifica
+  // se esiste una subscription attiva e in tal caso segnala 'subscribed' — così un device già
+  // iscritto non rivede mai l'overlay dopo un reload. Nessun prompt: getSubscription non chiede
+  // permessi (il permesso resta richiesto SOLO dal click sulla CTA primaria, dentro `activate`).
+  useEffect(() => {
+    if (!isPushSupported()) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+        const registration = await navigator.serviceWorker.getRegistration();
+        const subscription = registration ? await registration.pushManager.getSubscription() : null;
+        if (subscription && !cancelled) setStatus('subscribed');
+      } catch {
+        // nessuna subscription rilevabile: lo stato iniziale resta valido
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const activate = useCallback(async () => {
     if (status === 'unsupported' || status === 'not-configured' || status === 'subscribing') return;
@@ -77,5 +101,5 @@ export function useWebPushSubscription() {
     }
   }, [status]);
 
-  return { status, error, activate };
+  return { status, error, activate, permission };
 }
