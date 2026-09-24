@@ -142,7 +142,7 @@ const HOME_FEATURED = [
 const CUSTOMER_HIDDEN_ITEM_IDS = [];
 
 
-// AUTO-SELLING V1 (BEER SPRINT V1 §5/§7-D): ordine di priorità quando il sacco
+// Auto-selling V1 (BEER SPRINT V1 §5/§7-D): ordine di priorità quando il sacco
 // contiene più categorie food mappate — un solo suggerimento principale, mai
 // una lista. Stesso ordine delle categorie nel menu (panini prima, tartare per
 // ultima), scelta arbitraria ma stabile e prevedibile.
@@ -296,6 +296,17 @@ export default function CustomerKitchenMenu() {
   const [orderItems, setOrderItems] = useState([]);
   const [cartRestored, setCartRestored] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
+  // Feedback add-to-cart (2026-09-24): toast breve + pulse del sacco + thumbnail che vola.
+  const [addedToast, setAddedToast] = useState(null);
+  const [cartPulse, setCartPulse] = useState(false);
+  const [flyers, setFlyers] = useState([]);
+  const cartIconRef = useRef(null);
+  const pointerRef = useRef(null);
+  const toastTimerRef = useRef(null);
+  const pulseTimerRef = useRef(null);
+  // Contatore monotono per l'id delle thumbnail di feedback add-to-cart (solo lato UI,
+  // volatile: non persiste e non finisce mai nel payload ordine).
+  const flyerSeqRef = useRef(0);
   const [customerNote, setCustomerNote] = useState(restoredCart.note);
   // Se il sacco ripristinato porta con se' una nota, il pannello parte aperto: una nota salvata
   // ma nascosta dietro un accordion chiuso, per il cliente, e' una nota persa.
@@ -347,6 +358,18 @@ export default function CustomerKitchenMenu() {
     if (!cartRestored) return;
     saveCart({ items: orderItems, note: customerNote, fulfillmentType }, undefined);
   }, [cartRestored, orderItems, customerNote, fulfillmentType]);
+
+  // Feedback add-to-cart: memorizza l'ultimo punto di tap (per l'animazione thumbnail)
+  // e pulisce i timer al unmount. Nessuna dipendenza nuova, solo listener nativi.
+  useEffect(() => {
+    const onPointerDown = (e) => { pointerRef.current = { x: e.clientX, y: e.clientY }; };
+    window.addEventListener('pointerdown', onPointerDown, { passive: true });
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    };
+  }, []);
 
   // I piatti senza prezzo restano visibili con `PREZZO IN ARRIVO` (CTA disabilitata):
   // nessun prezzo inventato, nessuna categoria vuota nel menu approvato.
@@ -466,7 +489,7 @@ export default function CustomerKitchenMenu() {
   // (BEER SPRINT V1 Fase E) usa un `id` composito solo per distinguere le righe
   // carrello per birra, ma `baseId` resta il vero id del combo — vedi
   // PesiMassimiSection.jsx per il razionale completo.
-  const addItem = (item) => {
+  const pushCartItem = (item) => {
     setOrderItems((prev) => {
       const existing = prev.find((o) => o.id === item.id);
       if (existing) {
@@ -474,6 +497,39 @@ export default function CustomerKitchenMenu() {
       }
       return [...prev, { id: item.id, baseId: item.baseId || item.id, name: item.name, price: item.price, qty: 1, image: item.image, includesBeerId: item.includesBeerId }];
     });
+  };
+
+  // Thumbnail che "vola" verso il sacco: parte dall'ultimo punto di tap (pointerdown) e
+  // arriva sull'icona del carrello. Solo se il prodotto ha un'immagine e le coordinate
+  // sono disponibili; altrimenti resta il feedback toast + pulse.
+  const spawnFlyer = (item) => {
+    const origin = pointerRef.current;
+    const target = cartIconRef.current?.getBoundingClientRect();
+    if (!origin || !target || !item.image) return;
+    flyerSeqRef.current += 1;
+    const id = `fly-${flyerSeqRef.current}`;
+    setFlyers((prev) => [...prev, {
+      id,
+      image: item.image,
+      fromX: origin.x,
+      fromY: origin.y,
+      dx: target.left + target.width / 2 - origin.x,
+      dy: target.top + target.height / 2 - origin.y,
+    }]);
+    window.setTimeout(() => setFlyers((prev) => prev.filter((f) => f.id !== id)), 700);
+  };
+
+  // Punto unico di add-to-cart (scheda prodotto, drawer, pairing, FALLO PESANTE):
+  // aggiunge al sacco e fa partire il feedback visivo.
+  const addItem = (item) => {
+    pushCartItem(item);
+    setAddedToast({ name: item.name });
+    setCartPulse(true);
+    spawnFlyer(item);
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    toastTimerRef.current = window.setTimeout(() => setAddedToast(null), 1200);
+    pulseTimerRef.current = window.setTimeout(() => setCartPulse(false), 600);
   };
 
   const removeItem = (id) => {
@@ -710,7 +766,7 @@ export default function CustomerKitchenMenu() {
                     disabled={soldOut || noPrice}
                     onClick={() => addItem(item)}
                   >
-                    {soldOut ? 'ESAURITO' : 'LO VOGLIO'}
+                    {soldOut ? 'ESAURITO' : 'AGGIUNGI AL SACCO'}
                   </button>
                 </article>
               );
@@ -884,7 +940,7 @@ export default function CustomerKitchenMenu() {
                   onClick={() => addItem(item)}
                   disabled={item.available === false || item.price == null}
                   style={item.available === false || item.price == null ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
-                >{item.available === false ? 'ESAURITO' : 'LO VOGLIO'}</button>
+                >{item.available === false ? 'ESAURITO' : 'AGGIUNGI AL SACCO'}</button>
               </div>
             </div>
           </div>
@@ -894,17 +950,35 @@ export default function CustomerKitchenMenu() {
       </>
       )}
 
+      {/* Feedback add-to-cart: toast breve + thumbnail che vola verso il sacco. */}
+      {addedToast && (
+        <div className="kitch-add-toast" data-testid="add-to-cart-toast" role="status">
+          {addedToast.name && <span className="kitch-add-toast-name">{addedToast.name.toUpperCase()}</span>}
+          <span className="kitch-add-toast-text"> aggiunto al sacco ✓</span>
+        </div>
+      )}
+      {flyers.map((f) => (
+        <img
+          key={f.id}
+          src={f.image}
+          alt=""
+          aria-hidden="true"
+          className="kitch-fly-thumb"
+          style={{ left: f.fromX, top: f.fromY, '--fly-dx': `${f.dx}px`, '--fly-dy': `${f.dy}px` }}
+        />
+      ))}
+
       {/* Bottom cart bar */}
       <div className="kitch-bottom-spacer" />
       <div className="kitch-bottom-bar">
-        <div className="kitch-bottom-card">
+        <div className={`kitch-bottom-card${itemCount > 0 ? ' kitch-bottom-card--filled' : ''}${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
           <div
             className="kitch-bottom-left"
             onClick={() => { if (itemCount > 0) setCartOpen(true); }}
             role="button"
             aria-label="Apri carrello"
           >
-            <div className="kitch-cart-icon-wrap">
+            <div className="kitch-cart-icon-wrap" ref={cartIconRef}>
               <svg className="kitch-cart-svg" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
@@ -913,10 +987,12 @@ export default function CustomerKitchenMenu() {
               <div className="kitch-cart-badge">{itemCount}</div>
             </div>
             <div className="kitch-bottom-text-wrap">
-              <div className="kitch-bottom-title">
-                {itemCount === 0 ? '0 ROBE NEL SACCO' : itemCount === 1 ? '1 ROBA NEL SACCO' : `${itemCount} ROBE NEL SACCO`}
+              <div className="kitch-bottom-title">IL TUO SACCO</div>
+              <div className="kitch-bottom-total">
+                {itemCount === 0
+                  ? 'Nessun articolo · €0,00'
+                  : `${itemCount} ${itemCount === 1 ? 'articolo' : 'articoli'} · €${total.toFixed(2).replace('.', ',')}`}
               </div>
-              <div className="kitch-bottom-total">€{total.toFixed(2).replace('.', ',')}</div>
             </div>
           </div>
           <button

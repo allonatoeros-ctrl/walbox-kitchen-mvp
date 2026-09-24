@@ -10,9 +10,11 @@ import './PesiMassimiSection.css';
  *   HERO 128:2 · CLOSED 129:2 · EXPANDED 130:59 / 130:121 / 130:183
  *
  * Interazione: CLOSED → tap → EXPANDED (una card aperta alla volta) → CHIUDI ↑.
- * LO VOGLIO aggiunge il panino singolo, FALLO PESANTE aggiunge il combo relativo:
- * entrambi passano dallo stesso `onAdd` (= addItem del menu), quindi il payload
- * ordine resta invariato.
+ * SCEGLI COME LO VUOI (2026-09-24): nel prodotto aperto la scelta SOLO PANINO / MENU ·
+ * FALLO PESANTE è esplicita, con default SOLO PANINO. Il selettore birra appare solo col
+ * MENU; la CTA finale è unica e dinamica ("AGGIUNGI SOLO PANINO · €X" / "AGGIUNGI IL MENU
+ * · €X"). Entrambi i rami passano dallo stesso `onAdd` (= addItem del menu), quindi il
+ * payload ordine resta invariato.
  *
  * REGRESSION FIX (2026-09-22, correzione Eros): dopo la rimozione di Krombacher dal
  * catalogo, un passaggio precedente aveva erroneamente rimosso la scelta birra dal
@@ -82,6 +84,9 @@ export default function PesiMassimiSection({
   const [openId, setOpenId] = useState(null);
   const [selectedBeerByItem, setSelectedBeerByItem] = useState({});
   const [previewBeerByItem, setPreviewBeerByItem] = useState({});
+  // SCEGLI COME LO VUOI (2026-09-24): scelta esplicita e visibile tra SOLO PANINO e MENU
+  // per ogni prodotto aperto. Default SOLO PANINO — il selettore birra compare solo col MENU.
+  const [choiceByItem, setChoiceByItem] = useState({});
   const listRef = useRef(null);
   const bodyRefs = useRef({});
 
@@ -146,9 +151,8 @@ export default function PesiMassimiSection({
           const sideMissing = !includedSide || includedSide.available === false || includedSide.price == null;
           const comboBlocked = soldOut || sideMissing;
           const beerNotChosen = beerOptions.length > 0 && !selectedBeerByItem[item.id];
-          let comboCtaLabel = 'FALLO PESANTE';
-          if (soldOut) comboCtaLabel = 'ESAURITO';
-          else if (sideMissing) comboCtaLabel = 'NON DISPONIBILE';
+          // SCEGLI COME LO VUOI (2026-09-24): default SOLO PANINO, il MENU si sceglie.
+          const isMenuChoice = (choiceByItem[item.id] ?? 'solo') === 'menu';
           return (
             <article
               key={item.id}
@@ -199,45 +203,74 @@ export default function PesiMassimiSection({
                   <p className="pm-card-ingredients">{item.ingredients}</p>
                   <AllergenBadges allergens={item.allergens} />
                   <div className="pm-card-rule" />
-                  <div className="pm-price-row">
-                    <span className="pm-price-block">
-                      <span className="pm-price-value">{formatPrice(item.price, forceDecimals)}</span>
-                      <span className="pm-price-note">{item.priceNote ?? 'SOLO PANINO'}</span>
-                    </span>
-                    <button
-                      type="button"
-                      className="pm-btn-want"
-                      disabled={soldOut}
-                      tabIndex={isOpen ? 0 : -1}
-                      onClick={() => onAdd({
-                        id: item.id,
-                        name: item.name,
-                        price: item.price,
-                        image: item.image,
-                      })}
-                    >
-                      {soldOut ? 'ESAURITO' : 'LO VOGLIO'}
-                    </button>
-                  </div>
+                  {combo ? (
+                    <>
+                      {/* SCEGLI COME LO VUOI (2026-09-24): scelta esplicita e visibile tra
+                          SOLO PANINO e MENU · FALLO PESANTE. Una sola CTA finale, dinamica. */}
+                      <p className="pm-choose-title">SCEGLI COME LO VUOI</p>
+                      <div
+                        className="pm-choose"
+                        data-testid="fallo-pesante-choose"
+                        role="group"
+                        aria-label="Scegli come lo vuoi"
+                      >
+                        <button
+                          type="button"
+                          className={`pm-choose-option${!isMenuChoice ? ' pm-choose-option--selected' : ''}`}
+                          aria-pressed={!isMenuChoice}
+                          tabIndex={isOpen ? 0 : -1}
+                          data-testid="choose-solo"
+                          onClick={() => setChoiceByItem((prev) => ({ ...prev, [item.id]: 'solo' }))}
+                        >
+                          <span className="pm-choose-radio" aria-hidden="true" />
+                          <span className="pm-choose-option-body">
+                            <span className="pm-choose-option-name">SOLO PANINO</span>
+                            <span className="pm-choose-option-sub">{item.name}</span>
+                            <span className="pm-choose-option-price">{formatPrice(item.price, forceDecimals)}</span>
+                          </span>
+                        </button>
 
-                  {combo && (
-                    <div className="pm-upsell">
-                      <div className="pm-upsell-accent" />
-                      <p className="pm-upsell-title">FALLO PESANTE</p>
-                      <p className="pm-upsell-sub">{combo.subtitle}</p>
+                        <button
+                          type="button"
+                          className={`pm-choose-option${isMenuChoice ? ' pm-choose-option--selected' : ''}`}
+                          aria-pressed={isMenuChoice}
+                          tabIndex={isOpen ? 0 : -1}
+                          data-testid="choose-menu"
+                          onClick={() => setChoiceByItem((prev) => ({ ...prev, [item.id]: 'menu' }))}
+                        >
+                          <span className="pm-choose-radio" aria-hidden="true" />
+                          <span className="pm-choose-option-body">
+                            <span className="pm-choose-option-name">MENU · FALLO PESANTE</span>
+                            <span className="pm-choose-option-sub" data-testid="fallo-pesante-includes">
+                              {combo.subtitle}
+                            </span>
+                            <span className="pm-choose-option-price">{formatPrice(combo.price, forceDecimals)}</span>
+                          </span>
+                        </button>
+                      </div>
 
-                      {!comboBlocked && beerOptions.length > 0 && (
+                      {/* Il selettore birra esiste SOLO quando il MENU è selezionato: con
+                          SOLO PANINO resta nascosto (non disabilitato). */}
+                      {isMenuChoice && !comboBlocked && beerOptions.length > 0 && (
                         <div className="pm-upsell-beer-picker" role="group" aria-label="Scegli la birra inclusa">
-                          <p className="pm-upsell-beer-label">
-                            {chosenBeer ? 'BIRRA INCLUSA SCELTA' : 'SCEGLI LA BIRRA INCLUSA'}
-                          </p>
+                          {/* STEP 2 (2026-09-24): scelta birra obbligatoria del MENU, resa
+                              come step numerato molto evidente + badge OBBLIGATORIO. */}
+                          <div className="pm-beer-step">
+                            <h4 className="pm-beer-step-title" data-testid="fallo-pesante-beer-step">
+                              2 · SCEGLI LA TUA BIRRA
+                            </h4>
+                            <span className="pm-beer-step-badge">OBBLIGATORIO</span>
+                          </div>
+                          <p className="pm-beer-step-sub">Seleziona una birra inclusa nel menu</p>
 
                           {chosenBeer && (
                             <div className="pm-beer-chosen">
                               {chosenBeer.image && (
                                 <img className="pm-beer-chosen-photo" src={chosenBeer.image} alt="" />
                               )}
-                              <span className="pm-beer-chosen-name">{chosenBeer.name.toUpperCase()}</span>
+                              <span className="pm-beer-chosen-name" data-testid="fallo-pesante-beer-chosen">
+                                ✓ {chosenBeer.name.toUpperCase()} SELEZIONATA
+                              </span>
                               <button
                                 type="button"
                                 className="pm-beer-chosen-change"
@@ -335,28 +368,62 @@ export default function PesiMassimiSection({
                         </div>
                       )}
 
-                      <div className="pm-upsell-row">
-                        <p className="pm-upsell-price">{formatPrice(combo.price, forceDecimals)}</p>
+                      <div className="pm-choose-cta-row">
                         <button
                           type="button"
-                          className="pm-btn-heavy"
-                          disabled={comboBlocked || beerNotChosen}
+                          className={isMenuChoice ? 'pm-btn-heavy pm-choose-final' : 'pm-choose-final pm-choose-final--solo'}
+                          disabled={isMenuChoice ? (comboBlocked || beerNotChosen) : soldOut}
                           tabIndex={isOpen ? 0 : -1}
+                          data-testid="fallo-pesante-cta"
                           onClick={() => {
-                            if (comboBlocked || beerNotChosen) return;
-                            onAdd({
-                              id: chosenBeer ? `${combo.id}::${chosenBeer.id}` : combo.id,
-                              baseId: combo.id,
-                              name: chosenBeer ? `${combo.name} · ${chosenBeer.name}` : combo.name,
-                              price: combo.price,
-                              image: combo.image,
-                              includesBeerId: chosenBeer?.id,
-                            });
+                            if (isMenuChoice) {
+                              if (comboBlocked || beerNotChosen) return;
+                              onAdd({
+                                id: chosenBeer ? `${combo.id}::${chosenBeer.id}` : combo.id,
+                                baseId: combo.id,
+                                name: chosenBeer ? `${combo.name} · ${chosenBeer.name}` : combo.name,
+                                price: combo.price,
+                                image: combo.image,
+                                includesBeerId: chosenBeer?.id,
+                              });
+                              return;
+                            }
+                            if (soldOut) return;
+                            onAdd({ id: item.id, name: item.name, price: item.price, image: item.image });
                           }}
                         >
-                          {comboCtaLabel}
+                          {isMenuChoice
+                            ? (soldOut
+                              ? 'ESAURITO'
+                              : sideMissing
+                                ? 'NON DISPONIBILE'
+                                : beerNotChosen
+                                  ? 'SCEGLI UNA BIRRA PER CONTINUARE'
+                                  : `AGGIUNGI IL MENU · ${formatPrice(combo.price, forceDecimals)}`)
+                            : (soldOut ? 'ESAURITO' : `AGGIUNGI SOLO PANINO · ${formatPrice(item.price, forceDecimals)}`)}
                         </button>
                       </div>
+                    </>
+                  ) : (
+                    <div className="pm-price-row">
+                      <span className="pm-price-block">
+                        <span className="pm-price-value">{formatPrice(item.price, forceDecimals)}</span>
+                        <span className="pm-price-note">{item.priceNote ?? 'SOLO PANINO'}</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="pm-btn-want"
+                        disabled={soldOut}
+                        tabIndex={isOpen ? 0 : -1}
+                        onClick={() => onAdd({
+                          id: item.id,
+                          name: item.name,
+                          price: item.price,
+                          image: item.image,
+                        })}
+                      >
+                        {soldOut ? 'ESAURITO' : 'AGGIUNGI AL SACCO'}
+                      </button>
                     </div>
                   )}
                 </div>

@@ -446,14 +446,17 @@
 
 .pm-btn-want {
   flex-shrink: 0;
-  width: 144px;
+  min-width: 144px;
+  width: auto;
+  padding: 0 14px;
+  white-space: nowrap;
   height: 44px;
   border: none;
   border-radius: 10px;
   background: var(--pm-red);
   color: #fff;
   font-family: inherit;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 900;
   line-height: 18px;
   cursor: pointer;
@@ -494,6 +497,60 @@
   color: var(--pm-sand);
 }
 
+/* FALLO PESANTE riconoscibile come MENU (2026-09-24): badge + inclusi come chip. */
+.pm-upsell-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pm-upsell-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--pm-gold);
+  color: var(--pm-bg);
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.pm-upsell-includes {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pm-upsell-include {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pm-upsell-plus {
+  color: var(--pm-gold);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.pm-upsell-include-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(200, 150, 10, 0.55);
+  color: var(--pm-cream);
+  font-size: 12px;
+  line-height: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
 .pm-upsell-row {
   display: flex;
   align-items: center;
@@ -515,12 +572,42 @@
   margin-top: 12px;
 }
 
-.pm-upsell-beer-label {
-  margin: 0 0 8px;
+/* STEP 2 — scelta birra obbligatoria (2026-09-24): step numerato molto evidente. */
+.pm-beer-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.pm-beer-step-title {
+  margin: 0;
+  font-size: 17px;
+  line-height: 20px;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: var(--pm-gold);
+}
+
+.pm-beer-step-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--pm-gold);
+  color: var(--pm-bg);
   font-size: 11px;
   line-height: 14px;
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
+}
+
+.pm-beer-step-sub {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 16px;
+  font-weight: 700;
   color: var(--pm-sand);
 }
 
@@ -771,7 +858,10 @@
 
 .pm-btn-heavy {
   flex-shrink: 0;
-  width: 146px;
+  min-width: 146px;
+  width: auto;
+  padding: 0 14px;
+  white-space: nowrap;
   height: 40px;
   border: none;
   border-radius: 10px;
@@ -786,6 +876,133 @@
 
 /* stato esaurito — riusa la semantica già presente nel menu */
 .pm-card--soldout { opacity: 0.6; }
+
+/* ── SCEGLI COME LO VUOI (2026-09-24) ────────────────────────────────────
+   Due opzioni esplicite (SOLO PANINO / MENU · FALLO PESANTE), default SOLO
+   PANINO, e una sola CTA finale dinamica. */
+.pm-choose-title {
+  margin: 22px 18px 0;
+  font-size: 15px;
+  line-height: 17px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: var(--pm-cream-hi);
+}
+
+.pm-choose {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 12px 0;
+}
+
+.pm-choose-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--pm-rule);
+  border-radius: 12px;
+  background: #191710;
+  color: var(--pm-cream);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease;
+}
+
+.pm-choose-option--selected {
+  border-color: var(--pm-gold);
+  background: rgba(200, 150, 10, 0.12);
+}
+
+.pm-choose-radio {
+  position: relative;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--pm-sand);
+  border-radius: 999px;
+  transition: border-color 180ms ease;
+}
+
+.pm-choose-option--selected .pm-choose-radio {
+  border-color: var(--pm-gold);
+}
+
+.pm-choose-option--selected .pm-choose-radio::after {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 999px;
+  background: var(--pm-gold);
+}
+
+.pm-choose-option-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pm-choose-option-name {
+  font-size: 16px;
+  line-height: 18px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  color: var(--pm-cream-hi);
+}
+
+.pm-choose-option-sub {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 15px;
+  font-weight: 700;
+  color: var(--pm-sand);
+  overflow-wrap: anywhere;
+}
+
+.pm-choose-option-body > .pm-choose-option-price {
+  margin-top: 4px;
+}
+
+.pm-choose-option-price {
+  font-size: 24px;
+  line-height: 26px;
+  font-weight: 900;
+  color: var(--pm-gold);
+}
+
+.pm-choose-cta-row {
+  display: flex;
+  margin: 14px 12px;
+}
+
+.pm-choose-final {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--pm-gold);
+  color: var(--pm-bg);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.pm-choose-final--solo {
+  background: var(--pm-red);
+  color: #fff;
+}
+
+.pm-choose-final:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .pm-btn-want:disabled,
 .pm-btn-heavy:disabled,
@@ -803,7 +1020,9 @@
   .pm-card-hero-name,
   .pm-card-close,
   .pm-card-body,
-  .pm-card-caret {
+  .pm-card-caret,
+  .pm-choose-option,
+  .pm-choose-radio {
     transition-duration: 1ms;
   }
 }
