@@ -7,6 +7,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { kitchenMenuItems, kitchenPesiMassimiCombos } from '../data/kitchenMockData.js';
 import { loadCart, saveCart, clearCart, reconcileCartItems, cartTotal, CART_STORAGE_KEY } from './kitchenCart.js';
+import { buildFalloPesanteCartLine } from './kitchenPesiMassimi.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const menuSrc = readFileSync(join(__dirname, '../pages/CustomerKitchenMenu.jsx'), 'utf8');
@@ -123,6 +124,29 @@ test('chiave cliente separata da staff/cassa', () => {
   const cassa = readFileSync(join(__dirname, '../pages/CounterAssistedOrder.jsx'), 'utf8');
   assert.doesNotMatch(cassa, /kitchenCart|CART_STORAGE_KEY|walbox_kitchen_cart/);
   assert.doesNotMatch(cassa, /localStorage/);
+});
+
+// PESI MASSIMI MENU PARITY (2026-09-24): la cassa vende i 3 FALLO PESANTE con la stessa forma di
+// riga del cliente, ma il payload ordine resta sul baseId del combo (allowlist server/promo).
+test('buildFalloPesanteCartLine: id composito solo-UI, baseId reale, birra inclusa', () => {
+  const beer = kitchenMenuItems.find((i) => i.id === 'item-051');
+  const line = buildFalloPesanteCartLine(COMBO, beer);
+  assert.equal(line.id, `${COMBO.id}::${beer.id}`);
+  assert.equal(line.baseId, COMBO.id);
+  assert.equal(line.name, `${COMBO.name} · ${beer.name}`);
+  assert.equal(line.price, COMBO.price);
+  assert.equal(line.includesBeerId, beer.id);
+  assert.equal(line.qty, 1);
+});
+
+test('la cassa mappa il payload sul baseId (combo) e mette la birra inclusa in nota', () => {
+  const cassa = readFileSync(join(__dirname, '../pages/CounterAssistedOrder.jsx'), 'utf8');
+  // riusa l'helper condiviso neutro, MAI il modulo carrello cliente
+  assert.match(cassa, /import \{ buildFalloPesanteCartLine \} from '\.\.\/lib\/kitchenPesiMassimi'/);
+  // itemId del payload = baseId || id (per un combo è item-040/041/042, non l'id composito)
+  assert.match(cassa, /itemId: l\.baseId \|\| l\.id/);
+  // la birra scelta viaggia in nota con la stessa funzione del flusso cliente
+  assert.match(cassa, /buildIncludedBeersNote\(cart, menuItems\)/);
 });
 
 test('il carrello viene svuotato SOLO dopo un ordine confermato dal server', () => {

@@ -110,6 +110,9 @@
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
 }
+/* Cella catalogo: item singolo (+ eventuale chip MENU per i Pesi Massimi con combo). */
+.kca-cell { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kca-cell .kca-item { flex: 1 1 auto; }
 .kca-item {
   display: flex;
   flex-direction: column;
@@ -131,6 +134,66 @@
 .kca-item--blocked { opacity: 0.42; cursor: not-allowed; }
 .kca-item--blocked .kca-item-price { color: var(--kca-muted); font-size: 12px; letter-spacing: 0.8px; }
 .kca-empty { color: var(--kca-muted); font-size: 13px; padding: 18px 4px; }
+
+/* ---------- PESI MASSIMI: chip MENU + pannello FALLO PESANTE ---------- */
+.kca-combo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 12px;
+  background: #1b2530;
+  border: 1px dashed var(--kca-orange);
+  border-radius: 10px;
+  color: var(--kca-orange);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+}
+.kca-combo--blocked { border-style: solid; border-color: var(--kca-line); color: var(--kca-muted); cursor: not-allowed; opacity: 0.5; }
+
+.kca-combo-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--kca-panel-2);
+  border: 1px solid var(--kca-orange);
+  border-radius: 12px;
+}
+.kca-combo-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kca-combo-title { font-size: 13px; font-weight: 900; letter-spacing: 0.6px; }
+.kca-combo-price { font-size: 15px; font-weight: 900; color: var(--kca-orange); }
+.kca-combo-close {
+  margin-left: auto;
+  min-height: 40px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--kca-line);
+  border-radius: 8px;
+  color: var(--kca-muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+}
+.kca-combo-sub { font-size: 11px; color: var(--kca-muted); letter-spacing: 0.9px; font-weight: 700; }
+.kca-combo-beers { display: flex; flex-wrap: wrap; gap: 8px; }
+.kca-combo-beer {
+  min-height: 44px;
+  padding: 9px 14px;
+  background: var(--kca-panel);
+  border: 1px solid var(--kca-line);
+  border-radius: 999px;
+  color: var(--kca-text);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.kca-combo-beer--on { background: var(--kca-orange); border-color: var(--kca-orange); color: #10141a; }
+.kca-combo-beer:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ---------- Carrello ---------- */
 .kca-cart {

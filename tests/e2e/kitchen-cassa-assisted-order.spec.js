@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { kitchenMenuItems } from '../../src/data/kitchenMockData.js';
 
 // MODALITÀ CASSA — ordine assistito staff (/kitchen/cassa).
 //
@@ -49,6 +50,14 @@ async function mockAnonymousAuth(page) {
   );
   await page.route('**/auth/v1/token*', (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body })
+  );
+}
+
+// Availability menu "vuota" = catalogo tutto disponibile, deterministico (senza leggere righe
+// reali da Supabase): serve ai test Pesi Massimi, che dipendono dal contorno/birre disponibili.
+async function mockEmptyMenuAvailability(page) {
+  await page.route('**/rest/v1/kitchen_menu_availability*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
   );
 }
 
@@ -288,4 +297,72 @@ test('C10. Da /kitchen/solo si raggiunge la cassa con un tocco', async ({ page }
   await page.getByTestId('go-cassa').click();
   await expect(page).toHaveURL(/\/kitchen\/cassa/);
   await expect(page.getByTestId('cassa-page')).toBeVisible();
+});
+
+// ── PESI MASSIMI MENU PARITY ────────────────────────────────────────────────
+// La cassa deve vendere gli stessi 3 FALLO PESANTE del menu cliente (SOLO/MENU), leggendo la
+// stessa source of truth. I 37 item base (qui 36 su frontend: item-057 Krombacher è solo
+// catalogo server) restano invariati.
+
+test('C11. Catalogo base invariato + 3 MENU FALLO PESANTE esposti nei Pesi Massimi', async ({ page }) => {
+  await mockAnonymousAuth(page);
+  await mockEmptyMenuAvailability(page);
+  await page.goto('/kitchen/cassa');
+
+  // Ogni item base del catalogo frontend resta renderizzato come item singolo.
+  const categories = [...new Set(kitchenMenuItems.map((i) => i.category))];
+  let rendered = 0;
+  for (const cat of categories) {
+    await page.getByTestId(`cassa-tab-${cat}`).click();
+    rendered += await page.locator('.kca-item').count();
+  }
+  expect(rendered).toBe(kitchenMenuItems.length);
+
+  // Pesi Massimi: i 3 Peso Massimo con combo hanno un controllo MENU dedicato.
+  await page.getByTestId('cassa-tab-bbq').click();
+  await expect(page.getByTestId('cassa-menu-item-009')).toBeVisible();
+  await expect(page.getByTestId('cassa-menu-item-010')).toBeVisible();
+  await expect(page.getByTestId('cassa-menu-item-011')).toBeVisible();
+  // Box Pulled Pork (bbq, senza combo) non ne ha uno.
+  await expect(page.getByTestId('cassa-menu-item-018')).toHaveCount(0);
+});
+
+test('C12. MENU FALLO PESANTE: birra obbligatoria, riga carrello e totale corretti', async ({ page }) => {
+  await mockAnonymousAuth(page);
+  await mockEmptyMenuAvailability(page);
+  await page.goto('/kitchen/cassa');
+  await page.getByTestId('cassa-tab-bbq').click();
+
+  await page.getByTestId('cassa-menu-item-009').click();
+  await expect(page.getByTestId('cassa-combo-panel')).toBeVisible();
+  // Senza birra scelta il MENU non è aggiungibile.
+  await expect(page.getByTestId('cassa-combo-add')).toBeDisabled();
+  await page.getByTestId('cassa-combo-beer-item-051').click();
+  await expect(page.getByTestId('cassa-combo-add')).toBeEnabled();
+  await page.getByTestId('cassa-combo-add').click();
+  await expect(page.getByTestId('cassa-combo-panel')).toHaveCount(0);
+
+  // Riga carrello del combo (id composito solo-UI) + totale €19,00 — prezzo dal catalogo combo.
+  await expect(page.getByTestId('cassa-line-item-040::item-051')).toBeVisible();
+  await expect(page.getByTestId('cassa-total')).toHaveText('€ 19.00');
+  await expect(page.getByTestId('cassa-count')).toHaveText('1');
+});
+
+test('C13. MENU: stesso Peso Massimo con birre diverse resta su due righe distinte', async ({ page }) => {
+  await mockAnonymousAuth(page);
+  await mockEmptyMenuAvailability(page);
+  await page.goto('/kitchen/cassa');
+  await page.getByTestId('cassa-tab-bbq').click();
+
+  await page.getByTestId('cassa-menu-item-009').click();
+  await page.getByTestId('cassa-combo-beer-item-051').click();
+  await page.getByTestId('cassa-combo-add').click();
+
+  await page.getByTestId('cassa-menu-item-009').click();
+  await page.getByTestId('cassa-combo-beer-item-052').click();
+  await page.getByTestId('cassa-combo-add').click();
+
+  await expect(page.getByTestId('cassa-count')).toHaveText('2');
+  await expect(page.getByTestId('cassa-line-item-040::item-051')).toBeVisible();
+  await expect(page.getByTestId('cassa-line-item-040::item-052')).toBeVisible();
 });

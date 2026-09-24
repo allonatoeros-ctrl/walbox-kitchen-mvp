@@ -1,7 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
-import { isEveningServiceActive } from '../lib/kitchenServiceRules';
+import { isEveningServiceActive, buildIncludedBeersNote } from '../lib/kitchenServiceRules';
+import { falloPesanteBeerOptions } from '../lib/kitchenAllergens';
+import { buildFalloPesanteCartLine } from '../lib/kitchenPesiMassimi';
+import { kitchenPesiMassimiCombos, FALLO_PESANTE_INCLUDED_SIDE_ID } from '../data/kitchenMockData';
 import { getStaffSession, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
 import './CounterAssistedOrder.css';
 
@@ -130,6 +133,10 @@ function CounterAssistedOrderView() {
   const [error, setError] = useState(null);
   const [createdOrder, setCreatedOrder] = useState(null);
   const [paidMethod, setPaidMethod] = useState(null);
+  // PESI MASSIMI MENU PARITY: scelta SOLO/MENU al banco. `comboOpenId` = Peso Massimo di cui è
+  // aperto il pannello MENU; `comboBeerByItem` = birra inclusa scelta per quel Peso Massimo.
+  const [comboOpenId, setComboOpenId] = useState(null);
+  const [comboBeerByItem, setComboBeerByItem] = useState({});
 
   const categories = useMemo(() => {
     const present = [...new Set(menuItems.map((i) => i.category).filter(Boolean))];
@@ -146,16 +153,58 @@ function CounterAssistedOrderView() {
     [menuItems, currentCategory]
   );
 
+  // Inclusi del FALLO PESANTE: contorno (Patate al Forno, id dalla source of truth) e birre
+  // selezionabili. La lista birre è quella canonica (`falloPesanteBeerOptions`), risolta sulle
+  // righe LIVE di `menuItems` così availability/`evening_only` sono quelle reali del device.
+  const falloPesanteSide = useMemo(
+    () => menuItems.find((i) => i.id === FALLO_PESANTE_INCLUDED_SIDE_ID) ?? null,
+    [menuItems]
+  );
+  const falloSideMissing = !falloPesanteSide || falloPesanteSide.available === false || falloPesanteSide.price == null;
+  const falloBeerOptions = useMemo(() => {
+    const liveById = new Map(menuItems.map((i) => [i.id, i]));
+    return falloPesanteBeerOptions().map((b) => liveById.get(b.id) ?? b);
+  }, [menuItems]);
+
   const total = cart.reduce((sum, l) => sum + l.price * l.qty, 0);
   const itemCount = cart.reduce((sum, l) => sum + l.qty, 0);
 
-  const addItem = (item) => {
+  // Unica primitiva di aggiunta: vale per item singoli e per combo. `baseId` è ciò che finisce
+  // nel payload RPC (per un combo è item-040/041/042, mai l'id composito solo-UI).
+  const addLine = (line) => {
     setError(null);
     setCart((prev) => {
-      const existing = prev.find((l) => l.id === item.id);
-      if (existing) return prev.map((l) => (l.id === item.id ? { ...l, qty: l.qty + 1 } : l));
-      return [...prev, { id: item.id, name: item.name, price: item.price, qty: 1 }];
+      const existing = prev.find((l) => l.id === line.id);
+      if (existing) return prev.map((l) => (l.id === line.id ? { ...l, qty: l.qty + 1 } : l));
+      return [...prev, { ...line, baseId: line.baseId || line.id, qty: line.qty ?? 1 }];
     });
+  };
+
+  const addItem = (item) => {
+    addLine({ id: item.id, name: item.name, price: item.price });
+  };
+
+  const openCombo = (itemId) => {
+    setError(null);
+    setComboOpenId(itemId);
+  };
+
+  const closeCombo = () => setComboOpenId(null);
+
+  const chooseComboBeer = (itemId, beerId) => {
+    setComboBeerByItem((prev) => ({ ...prev, [itemId]: beerId }));
+  };
+
+  const comboOpenItem = comboOpenId ? menuItems.find((i) => i.id === comboOpenId) ?? null : null;
+  const comboOpenCombo = comboOpenItem ? kitchenPesiMassimiCombos[comboOpenItem.id] ?? null : null;
+  const comboOpenBeerId = comboOpenItem ? comboBeerByItem[comboOpenItem.id] ?? null : null;
+
+  const addCombo = () => {
+    if (!comboOpenCombo || !comboOpenBeerId) return;
+    const beer = falloBeerOptions.find((b) => b.id === comboOpenBeerId);
+    if (!beer) return;
+    addLine(buildFalloPesanteCartLine(comboOpenCombo, beer));
+    closeCombo();
   };
 
   const decItem = (id) => {
@@ -176,15 +225,17 @@ function CounterAssistedOrderView() {
     setCreatedOrder(null);
     setPaidMethod(null);
     setError(null);
+    setComboOpenId(null);
     setStep('compose');
   };
 
-  // La nota porta sempre il marcatore assistito in testa; l'eventuale nota dettata dal cliente
-  // ("senza cipolla") la segue sulla stessa riga, così la card NOTE di Solo Service la mostra
-  // già oggi senza nessuna modifica lato cucina.
+  // La nota porta sempre il marcatore assistito in testa; poi l'eventuale birra inclusa nei
+  // FALLO PESANTE (stessa funzione del flusso cliente, così la cucina la legge sulla comanda) e
+  // infine l'eventuale nota dettata dal cliente ("senza cipolla").
   const buildNote = () => {
+    const beerNote = buildIncludedBeersNote(cart, menuItems);
     const extra = staffNote.trim();
-    return extra ? `${ASSISTED_ORDER_MARKER} · ${extra}` : ASSISTED_ORDER_MARKER;
+    return [ASSISTED_ORDER_MARKER, beerNote, extra].filter(Boolean).join(' · ');
   };
 
   const handleCreateOrder = async () => {
@@ -195,7 +246,14 @@ function CounterAssistedOrderView() {
     // server conferma id + order_code — nessun ordine fantasma mostrato al banco.
     const result = await addOrder({
       nickname: ASSISTED_ORDER_NICKNAME,
-      items: cart.map((l) => ({ itemId: l.id, name: l.name, quantity: l.qty, price: l.price })),
+      // `baseId` = id reale di catalogo: per un FALLO PESANTE è item-040/041/042 (allowlist
+      // server/promo), mai l'id composito solo-UI. Per gli item singoli coincide con l'id.
+      items: cart.map((l) => ({
+        itemId: l.baseId || l.id,
+        name: l.name,
+        quantity: l.qty,
+        price: l.price,
+      })),
       total,
       note: buildNote(),
       status: 'pending_counter_payment',
@@ -266,30 +324,116 @@ function CounterAssistedOrderView() {
                   aria-selected={cat === currentCategory}
                   data-testid={`cassa-tab-${cat}`}
                   className={`kca-tab ${cat === currentCategory ? 'kca-tab--active' : ''}`}
-                  onClick={() => setActiveCategory(cat)}
+                  onClick={() => { setActiveCategory(cat); setComboOpenId(null); }}
                 >
                   {categoryLabel(cat)}
                 </button>
               ))}
             </div>
 
+            {/* PESI MASSIMI — scelta SOLO/MENU. Il pannello costruisce il FALLO PESANTE dai dati
+                condivisi (combo, contorno incluso, birre): nessun prezzo né composizione
+                hardcoded, stessa source of truth del menu cliente. */}
+            {comboOpenItem && comboOpenCombo && (
+              <div className="kca-combo-panel" data-testid="cassa-combo-panel">
+                <div className="kca-combo-head">
+                  <span className="kca-combo-title">
+                    {comboOpenItem.name.toUpperCase()} — {comboOpenCombo.subtitle}
+                  </span>
+                  <span className="kca-combo-price">€ {comboOpenCombo.price.toFixed(2)}</span>
+                  <button
+                    type="button"
+                    className="kca-combo-close"
+                    data-testid="cassa-combo-close"
+                    onClick={closeCombo}
+                  >
+                    CHIUDI
+                  </button>
+                </div>
+                {falloPesanteSide && (
+                  <div className="kca-combo-sub">
+                    INCLUDE {falloPesanteSide.name.toUpperCase()} + 1 BIRRA
+                  </div>
+                )}
+                {falloBeerOptions.length > 0 ? (
+                  <div className="kca-combo-beers" role="group" aria-label="Scegli la birra inclusa">
+                    {falloBeerOptions.map((beer) => {
+                      const beerLocked = beer.availability === 'evening_only' && !isEveningServiceActive();
+                      const selected = comboOpenBeerId === beer.id;
+                      return (
+                        <button
+                          key={beer.id}
+                          type="button"
+                          disabled={beerLocked}
+                          aria-pressed={selected}
+                          data-testid={`cassa-combo-beer-${beer.id}`}
+                          className={`kca-combo-beer${selected ? ' kca-combo-beer--on' : ''}`}
+                          onClick={() => chooseComboBeer(comboOpenItem.id, beer.id)}
+                        >
+                          {beer.name}{beerLocked ? ' · SOLO SERA' : ''}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="kca-combo-sub">NESSUNA BIRRA DISPONIBILE</div>
+                )}
+                <button
+                  type="button"
+                  className="kca-primary"
+                  data-testid="cassa-combo-add"
+                  disabled={!comboOpenBeerId || falloSideMissing}
+                  onClick={addCombo}
+                >
+                  {falloSideMissing
+                    ? 'CONTORNO NON DISPONIBILE'
+                    : comboOpenBeerId
+                      ? `AGGIUNGI MENU · € ${comboOpenCombo.price.toFixed(2)}`
+                      : 'SCEGLI UNA BIRRA'}
+                </button>
+              </div>
+            )}
+
             <div className="kca-grid">
               {visibleItems.map((item) => {
                 const blocked = counterItemBlockReason(item);
+                const combo = kitchenPesiMassimiCombos[item.id] ?? null;
+                const menuBlocked = !!blocked || falloSideMissing || falloBeerOptions.length === 0;
                 return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    disabled={!!blocked}
-                    data-testid={`cassa-item-${item.id}`}
-                    className={`kca-item ${blocked ? 'kca-item--blocked' : ''}`}
-                    onClick={() => addItem(item)}
-                  >
-                    <span className="kca-item-name">{item.name.toUpperCase()}</span>
-                    <span className="kca-item-price">
-                      {blocked ?? `€ ${item.price.toFixed(2)}`}
-                    </span>
-                  </button>
+                  <div className="kca-cell" key={item.id}>
+                    <button
+                      type="button"
+                      disabled={!!blocked}
+                      data-testid={`cassa-item-${item.id}`}
+                      className={`kca-item ${blocked ? 'kca-item--blocked' : ''}`}
+                      onClick={() => addItem(item)}
+                    >
+                      <span className="kca-item-name">{item.name.toUpperCase()}</span>
+                      <span className="kca-item-price">
+                        {blocked ?? (combo ? `SOLO · € ${item.price.toFixed(2)}` : `€ ${item.price.toFixed(2)}`)}
+                      </span>
+                    </button>
+                    {combo && (
+                      <button
+                        type="button"
+                        disabled={menuBlocked}
+                        data-testid={`cassa-menu-${item.id}`}
+                        className={`kca-combo${menuBlocked ? ' kca-combo--blocked' : ''}`}
+                        onClick={() => openCombo(item.id)}
+                      >
+                        <span>
+                          {blocked
+                            ? 'MENU'
+                            : falloSideMissing
+                              ? 'MENU · CONTORNO NON DISP.'
+                              : falloBeerOptions.length === 0
+                                ? 'MENU · NO BIRRE'
+                                : 'MENU'}
+                        </span>
+                        {!menuBlocked && <span>€ {combo.price.toFixed(2)}</span>}
+                      </button>
+                    )}
+                  </div>
                 );
               })}
               {visibleItems.length === 0 && (

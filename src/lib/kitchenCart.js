@@ -13,6 +13,8 @@
 // Cosa NON fa: non si fida dei prezzi salvati. Al ripristino ogni riga viene riconciliata col
 // catalogo corrente (vedi reconcileCartItems): nome e prezzo tornano dal catalogo, e cio' che non
 // e' piu' ordinabile viene scartato. Il totale e' sempre ricalcolato, mai lo snapshot salvato.
+import { buildFalloPesanteCartLine } from './kitchenPesiMassimi.js';
+
 export const CART_STORAGE_KEY = 'walbox_kitchen_cart_v1';
 
 const MAX_QTY = 99;
@@ -105,15 +107,7 @@ export function reconcileCartItems(savedItems, menuItems, combos) {
       if (!beer || !isOrderable(beer)) { dropped.push(line.baseId); continue; }
       const base = byId.get(comboRef.baseItemId);
       if (!isOrderable(base)) { dropped.push(line.baseId); continue; }
-      items.push({
-        id: `${comboRef.combo.id}::${beer.id}`,
-        baseId: comboRef.combo.id,
-        name: `${comboRef.combo.name} · ${beer.name}`,
-        price: comboRef.combo.price,
-        qty: line.qty,
-        image: comboRef.combo.image,
-        includesBeerId: beer.id,
-      });
+      items.push(buildFalloPesanteCartLine(comboRef.combo, beer, line.qty));
       continue;
     }
 
