@@ -74,9 +74,23 @@ test('dispatch: payload verso la Edge Function contiene order_id e ready_event_i
   assert.match(fnBlock, /body := jsonb_build_object\('order_id', NEW\.id, 'ready_event_id', NEW\.ready_event_id\)/);
 });
 
-test('URL della Edge Function è un placeholder esplicito, non un dominio Supabase reale', () => {
-  assert.match(src, /v_edge_function_url\s+text := '<KITCHEN_PUSH_EDGE_FUNCTION_URL>'/);
-  assert.doesNotMatch(src, /https:\/\/[a-z0-9]{15,}\.supabase\.co/);
+test('URL della Edge Function è l\'endpoint di produzione finalizzato al Gate 2, non più il placeholder', () => {
+  assert.match(
+    src,
+    /v_edge_function_url\s+text := 'https:\/\/pcrqfdzipotprqtuemso\.supabase\.co\/functions\/v1\/send-order-ready-push'/
+  );
+  assert.doesNotMatch(src, /<KITCHEN_PUSH_EDGE_FUNCTION_URL>/);
+});
+
+test('nessun secret/VAPID/private key hardcoded nel file, solo l\'URL pubblico della Edge Function', () => {
+  assert.doesNotMatch(src, /Bearer [A-Za-z0-9+/=_-]{20,}/, 'nessun token letterale deve comparire nel file');
+  assert.doesNotMatch(src, /-----BEGIN [A-Z ]*PRIVATE KEY-----/, 'nessuna chiave privata deve comparire nel file');
+  assert.doesNotMatch(src, /vapid[_-]?private/i, 'nessun riferimento a VAPID private key deve comparire nel file');
+  assert.match(
+    src,
+    /FROM vault\.decrypted_secrets\s+WHERE name = 'kitchen_push_webhook_secret'/,
+    'il secret di dispatch deve continuare a essere letto dal Vault per nome, mai hardcoded'
+  );
 });
 
 test('pg_net dichiarata (prerequisito), non installata per assunzione — solo CREATE EXTENSION IF NOT EXISTS', () => {

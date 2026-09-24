@@ -86,7 +86,7 @@ SET search_path TO 'public', 'pg_temp'
 AS $function$
 DECLARE
   v_secret             text;
-  v_edge_function_url  text := '<KITCHEN_PUSH_EDGE_FUNCTION_URL>'; -- GATE: sostituire al deploy
+  v_edge_function_url  text := 'https://pcrqfdzipotprqtuemso.supabase.co/functions/v1/send-order-ready-push'; -- Gate 2 URL finalization (2026-09-24)
 BEGIN
   -- Il secret vive SOLO in Supabase Vault, creato fuori da qualunque migration versionata
   -- (vedi runbook ai-ops/runbooks/kitchen-f6-webpush-vault-secret-setup.md). Qui compare solo il
