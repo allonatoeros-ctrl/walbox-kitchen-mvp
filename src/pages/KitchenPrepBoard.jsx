@@ -47,28 +47,32 @@ export default function KitchenPrepBoard() {
   useEffect(() => {
     if (previewMode || import.meta.env.VITE_E2E_BYPASS_STAFF_AUTH === 'true') return undefined;
 
+    // ?next=/kitchen/prep: KitchenLogin.jsx torna qui dopo il login invece del default
+    // /kitchen/solo. Non cambia il comportamento degli altri ingressi (loro non passano next).
+    const goToLogin = () => navigate('/kitchen/login?next=/kitchen/prep');
+
     let subscription;
     try {
       getStaffSession()
         .then(async (session) => {
-          if (!session) { navigate('/kitchen/login'); return; }
+          if (!session) { goToLogin(); return; }
           try {
             const ok = await isKitchenStaff('walrus-main');
-            if (!ok) { navigate('/kitchen/login'); return; }
+            if (!ok) { goToLogin(); return; }
           } catch {
-            navigate('/kitchen/login');
+            goToLogin();
             return;
           } finally {
             setAuthChecked(true);
           }
         })
-        .catch(() => navigate('/kitchen/login'));
+        .catch(() => goToLogin());
 
       subscription = onAuthStateChange((s) => {
-        if (!s) navigate('/kitchen/login');
+        if (!s) goToLogin();
       }).data.subscription;
     } catch {
-      navigate('/kitchen/login');
+      goToLogin();
     }
 
     return () => subscription?.unsubscribe();
