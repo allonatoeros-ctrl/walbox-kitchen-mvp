@@ -6,6 +6,20 @@ function navigate(path) {
   window.dispatchEvent(new PopStateEvent('popstate'))
 }
 
+// Ritorna alla pagina Kitchen da cui arriva il redirect (?next=/kitchen/...), es. /kitchen/prep.
+// Allowlist esplicita (mai un percorso qualsiasi dalla query string) per non aprire un open
+// redirect: solo destinazioni Kitchen note tornano al posto del default /kitchen/solo.
+const ALLOWED_NEXT_PATHS = ['/kitchen/prep', '/kitchen/solo', '/kitchen/cassa']
+
+function resolveNextPath() {
+  try {
+    const next = new URLSearchParams(window.location.search).get('next')
+    return ALLOWED_NEXT_PATHS.includes(next) ? next : '/kitchen/solo'
+  } catch {
+    return '/kitchen/solo'
+  }
+}
+
 export default function KitchenLogin() {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -19,7 +33,7 @@ export default function KitchenLogin() {
     const { error: authError } = await signInWithEmail(email, password)
     setLoading(false)
     if (authError) { setError(authError.message); return }
-    navigate('/kitchen/solo')
+    navigate(resolveNextPath())
   }
 
   return (
