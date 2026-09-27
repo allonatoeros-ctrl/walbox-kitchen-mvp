@@ -481,13 +481,13 @@
 
 .kpb-ticket-note {
   margin: clamp(6px, 0.8vh, 10px) 0 0;
-  font-size: clamp(11px, 1vw, 14px);
-  color: var(--kpb-muted);
-  font-weight: 600;
+  font-size: clamp(15px, 1.4vw, 20px);
+  color: var(--kpb-cream);
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   flex: 0 0 auto;
 }

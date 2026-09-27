@@ -429,6 +429,12 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
   // orderId -> last patch sent to Supabase, present while a write is in-flight or failed.
   // Used to (a) skip clobbering that order on the next poll and (b) support retry.
   const pendingWritesRef = useRef(new Map());
+  // Sequence id monotono: poll (10s) e realtime possono invocare fetchSupabaseOrders in
+  // sovrapposizione e le risposte possono arrivare fuori ordine. Solo la fetch piu' recente
+  // AVVIATA puo' applicare il proprio risultato — una risposta piu' vecchia che arriva dopo
+  // una piu' recente viene scartata invece di sovrascrivere lo stato appena applicato (root
+  // cause del flicker sul riepilogo Solo Service, vedi audit).
+  const fetchSeqRef = useRef(0);
 
   useEffect(() => {
     const refresh = () => setOrders(loadOrders(scope));
@@ -452,6 +458,7 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
   }, [scope, storageKey]);
 
   const fetchSupabaseOrders = async () => {
+    const seq = ++fetchSeqRef.current;
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -463,6 +470,10 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      // Una fetch piu' recente e' stata avviata mentre questa era in volo: la sua risposta,
+      // qualunque sia l'ordine di arrivo, e' quella che deve vincere. Scarta questa come stale.
+      if (seq !== fetchSeqRef.current) return;
 
       setOrders((prev) => {
         const next = mergeFetchedOrders(prev, data ?? [], pendingWritesRef.current);
