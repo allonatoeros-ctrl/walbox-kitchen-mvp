@@ -5,12 +5,6 @@ import { test, expect } from '@playwright/test';
  * zero polling, isolamento rete completo. Nessuna dipendenza da localStorage/auth reale.
  */
 
-// CODA ORDINI non è più visibile di default su tablet/desktop (vedi kitchen-solo-service.spec.js):
-// CERCA ORDINE la apre on-demand, la selezione di un ordine la richiude.
-async function openQueue(page) {
-  await page.getByRole('button', { name: /CERCA ORDINE/ }).click();
-}
-
 test.describe('Kitchen — Solo Service Live Demo Harness', () => {
 
   test('1. banner DEMO evidente + 4 stati coperti dalle 6 fixture', async ({ page }) => {
@@ -28,7 +22,6 @@ test.describe('Kitchen — Solo Service Live Demo Harness', () => {
 
   test('2. allergene reale visibile su un ordine in coda', async ({ page }) => {
     await page.goto('/kitchen/solo-demo');
-    await openQueue(page);
     await page.locator('[data-order="D095"]').click();
     await expect(page.getByTestId('focus-allergeni')).toContainText(/glutine|uova|senape/i);
   });
@@ -38,7 +31,6 @@ test.describe('Kitchen — Solo Service Live Demo Harness', () => {
     page.on('request', (req) => requests.push(req.url()));
 
     await page.goto('/kitchen/solo-demo');
-    await openQueue(page);
     await page.locator('[data-order="D101"]').click();
     await page.getByTestId('next-action').click(); // paga D101
     await page.waitForTimeout(300);
@@ -55,7 +47,6 @@ test.describe('Kitchen — Solo Service Live Demo Harness', () => {
     await page.goto('/kitchen/solo-demo');
 
     await page.getByTestId('demo-simulate-sync-error').click();
-    await openQueue(page);
     await expect(page.getByTestId('sync-error-tag-D085')).toBeVisible();
 
     await page.locator('[data-order="D085"]').click();
@@ -71,10 +62,9 @@ test.describe('Kitchen — Solo Service Live Demo Harness', () => {
     await page.goto('/kitchen/solo-demo');
 
     // altero stato: pago un ordine e apro la ricerca
-    await openQueue(page);
     await page.locator('[data-order="D101"]').click();
     await page.getByTestId('next-action').click();
-    await openQueue(page); // CERCA ORDINE riapre coda+ricerca (side effect di setSearchOpen(true))
+    await page.getByRole('button', { name: 'TUTTI ⌄' }).click();
 
     await page.getByTestId('demo-reset').click();
 

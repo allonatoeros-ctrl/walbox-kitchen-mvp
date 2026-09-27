@@ -47,19 +47,14 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-// Tablet/desktop: CODA ORDINI non è più visibile di default (duplicava l'ordine in focus),
-// CERCA ORDINE la apre on-demand. Helper condiviso dai test che devono cliccare una card in coda.
-async function openQueue(page) {
-  await page.getByRole('button', { name: /CERCA ORDINE/ }).click();
-}
-
 test.describe('Kitchen — Solo Service Mode V2', () => {
 
-  test('1. tablet: al caricamento KPI visibili e CODA ORDINI nascosta; CERCA ORDINE la apre', async ({ page }) => {
+  test('1. tablet: CODA + ORDINE IN FOCUS con KPI PAGA/DA FARE/PRONTI', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/kitchen/solo');
 
     await expect(page.getByText('SOLO SERVICE MODE')).toBeVisible();
+    await expect(page.getByText('CODA ORDINI')).toBeVisible();
 
     await expect(page.getByTestId('kpi-paga')).toHaveText('1');
     await expect(page.getByTestId('kpi-dafare')).toHaveText('2');
@@ -68,12 +63,7 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     // Focus di default = ordine "da fare" più vecchio
     await expect(page.getByTestId('focus-code')).toHaveText('W43');
 
-    // CODA ORDINI non è visibile di default: duplicava l'ordine già in focus a destra.
-    await expect(page.getByText('CODA ORDINI')).toHaveCount(0);
-
-    // CERCA ORDINE apre la coda con i suoi gruppi.
-    await openQueue(page);
-    await expect(page.getByText('CODA ORDINI')).toBeVisible();
+    // Gruppi coda
     await expect(page.getByText('DA INCASSARE', { exact: true })).toBeVisible();
     await expect(page.getByText('DA FARE', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('PRONTI', { exact: true }).first()).toBeVisible();
@@ -153,7 +143,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('focus-code')).toHaveText('W43');
 
     // L'errore semantico è visibile in coda sull'ordine bloccato (non un generico "successo").
-    await openQueue(page);
     await expect(page.getByTestId('sync-error-tag-W47')).toBeVisible();
   });
 
@@ -161,7 +150,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/kitchen/solo');
 
-    await openQueue(page);
     await page.locator('.kss-qcard[data-order="W47"]').click();
     await expect(page.getByTestId('focus-code')).toHaveText('W47');
     await expect(page.getByTestId('next-action')).toContainText('CONFERMA PAGAMENTO');
@@ -218,7 +206,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
 
     await expect(page.getByTestId('focus-code')).toHaveText('W44');
     // W43 resta in coda, solo rinviato
-    await openQueue(page);
     await expect(page.locator('.kss-qcard[data-order="W43"]')).toBeVisible();
     await expect(page.getByTestId('kpi-dafare')).toHaveText('2');
   });
@@ -237,7 +224,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     // W43 passa a "pronto" nella UI (ottimistico), ma la sync verso Supabase fallisce
     // (ambiente senza .env): deve comparire un indicatore di errore sulla card, non un
     // successo silenzioso.
-    await openQueue(page);
     await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
 
     // Il dettaglio in focus (aprendo la card) mostra il banner con motivo e RIPROVA.
@@ -253,7 +239,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await page.goto('/kitchen/solo');
 
     await page.getByTestId('next-action').click();
-    await openQueue(page);
     await page.locator('.kss-qcard[data-order="W43"]').click();
 
     const banner = page.getByTestId('sync-error-banner');
@@ -263,7 +248,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     // ma il banner/tag devono restare — mai un falso "sincronizzato".
     await page.getByRole('button', { name: 'RIPROVA' }).click();
     await expect(banner).toBeVisible();
-    await openQueue(page);
     await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
     await expect(page.getByTestId('focus-code')).toHaveText('W43'); // stato locale coerente, nessun crash
   });
@@ -280,7 +264,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     // Ordine passato a "pronto" (ottimistico); la sync verso Supabase fallisce subito
     // (ambiente senza .env) e resta segnalata.
     await expect(page.getByTestId('kpi-pronti')).toHaveText('2');
-    await openQueue(page);
     await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
 
     // Il poll gira ogni 10s: aspettiamo un ciclo pieno. Prima della fix, il poll
@@ -289,7 +272,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await page.waitForTimeout(11000);
 
     await expect(page.getByTestId('kpi-pronti')).toHaveText('2');
-    await openQueue(page);
     await expect(page.locator('.kss-qcard[data-order="W43"]')).toBeVisible();
   });
 
@@ -322,7 +304,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/kitchen/solo');
 
-    await openQueue(page);
     await page.locator('.kss-qcard[data-order="W41"]').click();
     await expect(page.getByTestId('focus-code')).toHaveText('W41');
     await expect(page.getByTestId('next-action')).toContainText('RITIRATO');
@@ -361,7 +342,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await page.goto('/kitchen/solo');
 
     await page.getByTestId('next-action').click(); // W43 -> pronto, sync fallisce già qui (ambiente senza .env)
-    await openQueue(page);
     await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
 
     await page.getByTestId('undo-btn').click(); // reverse esplicito: ritenta la sync sul patch inverso
@@ -370,7 +350,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     // sull'operazione di undo resta segnalato: mai un successo silenzioso.
     await expect(page.getByTestId('focus-code')).toHaveText('W43');
     await expect(page.getByTestId('next-action')).toContainText('PRONTO');
-    await openQueue(page);
     await expect(page.getByTestId('sync-error-tag-W43')).toBeVisible();
   });
 
@@ -383,7 +362,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
 
     // Selezione manuale esplicita (anche sull'ordine già in focus): fissa focusId, come farebbe
     // uno staff che tocca la coda per orientarsi — precondizione del bug P0-1.
-    await openQueue(page);
     await page.locator('.kss-qcard[data-order="W43"]').click();
     await expect(page.getByTestId('focus-code')).toHaveText('W43');
     await expect(page.getByTestId('next-action')).toContainText('PRONTO');
@@ -396,7 +374,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('focus-code')).toHaveText('W44');
     await expect(page.getByTestId('next-action')).toContainText('INIZIA');
     // W43 resta in coda, ora tra i PRONTI: nessun ordine perso.
-    await openQueue(page);
     await expect(page.locator('.kss-qcard[data-order="W43"]')).toBeVisible();
   });
 
@@ -409,7 +386,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await expect(page.getByTestId('focus-code')).toHaveText('W44');
 
     // Lo staff torna manualmente su W43 (rinviato ma ancora attivo) per completarlo.
-    await openQueue(page);
     await page.locator('.kss-qcard[data-order="W43"]').click();
     await expect(page.getByTestId('focus-code')).toHaveText('W43');
     await expect(page.getByTestId('next-action')).toContainText('PRONTO');
@@ -429,7 +405,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     await page.goto('/kitchen/solo');
 
     // Ordine senza promo (seed di default): nessun bottone/handler d'inserimento.
-    await openQueue(page);
     await page.locator('.kss-qcard[data-order="W47"]').click();
     await expect(page.getByTestId('focus-code')).toHaveText('W47');
     await expect(page.getByTestId('promo-code-btn')).toHaveCount(0);
@@ -454,7 +429,6 @@ test.describe('Kitchen — Solo Service Mode V2', () => {
     );
     await page.goto('/kitchen/solo');
 
-    await openQueue(page);
     await page.locator('.kss-qcard[data-order="W47"]').click();
     await expect(page.getByTestId('focus-code')).toHaveText('W47');
 
