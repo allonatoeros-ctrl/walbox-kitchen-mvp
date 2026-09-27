@@ -523,6 +523,7 @@ export function KitchenSoloServiceView({
     }
     setFocusId(order.id);
     setQueueOpen(false);
+    setSearchOpen(false);
   };
 
   const snoozeFocus = () => {
@@ -698,40 +699,46 @@ export function KitchenSoloServiceView({
             </div>
           </div>
 
-          <div className="kss-queue">
-            <div className="kss-queue-head">
-              <span className="kss-queue-title">CODA ORDINI</span>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <button className="kss-filter" onClick={() => { setSearchOpen((v) => !v); setSearch(''); }}>
-                  {searchOpen ? 'CHIUDI' : 'TUTTI ⌄'}
-                </button>
-                {queueOpen && (
-                  <button className="kss-filter" onClick={() => setQueueOpen(false)}>FOCUS</button>
+          {/* CODA ORDINI: nascosta di default su tablet/desktop (duplicava l'ordine in focus a
+              destra) — visibile solo mentre lo staff la sta usando, via CERCA ORDINE o (su
+              phone) il pulsante CODA. Il phone Focus Mode restava già così (CSS su
+              kss-page--queue-open), qui replichiamo lo stesso "on-demand" anche sopra 820px. */}
+          {(queueOpen || searchOpen) && (
+            <div className="kss-queue">
+              <div className="kss-queue-head">
+                <span className="kss-queue-title">CODA ORDINI</span>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button className="kss-filter" onClick={() => { setSearchOpen((v) => !v); setSearch(''); }}>
+                    {searchOpen ? 'CHIUDI' : 'TUTTI ⌄'}
+                  </button>
+                  {queueOpen && (
+                    <button className="kss-filter" onClick={() => { setQueueOpen(false); setSearchOpen(false); }}>FOCUS</button>
+                  )}
+                </div>
+              </div>
+
+              {searchOpen && (
+                <div className="kss-search">
+                  <input
+                    autoFocus
+                    placeholder="Cerca ordine: codice, tavolo, nickname"
+                    aria-label="Cerca ordine"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </div>
+              )}
+
+              <div className="kss-queue-scroll">
+                {renderGroup('pagare', 'DA INCASSARE', daPagare, 'pagare')}
+                {renderGroup('fare',   'DA FARE',   daFare,   'fare')}
+                {renderGroup('pronti', 'PRONTI',    pronti,   'pronti')}
+                {daPagare.length + daFare.length + pronti.length === 0 && (
+                  <div className="kss-queue-empty">Nessun ordine attivo. Coda pulita.</div>
                 )}
               </div>
             </div>
-
-            {searchOpen && (
-              <div className="kss-search">
-                <input
-                  autoFocus
-                  placeholder="Cerca ordine: codice, tavolo, nickname"
-                  aria-label="Cerca ordine"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
-            )}
-
-            <div className="kss-queue-scroll">
-              {renderGroup('pagare', 'DA INCASSARE', daPagare, 'pagare')}
-              {renderGroup('fare',   'DA FARE',   daFare,   'fare')}
-              {renderGroup('pronti', 'PRONTI',    pronti,   'pronti')}
-              {daPagare.length + daFare.length + pronti.length === 0 && (
-                <div className="kss-queue-empty">Nessun ordine attivo. Coda pulita.</div>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* COLONNA DESTRA — ORDINE IN FOCUS */}
