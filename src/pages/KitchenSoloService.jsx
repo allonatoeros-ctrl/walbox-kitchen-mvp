@@ -598,7 +598,6 @@ export function KitchenSoloServiceView({
                   <span className="kss-qcard-dot">·</span>
                   <span className="kss-qcard-min">{mins} min</span>
                 </span>
-                <span className="kss-qcard-line2">{itemsLine(o)}</span>
               </span>
               <span className="kss-qcard-right">
                 {o.fulfillmentType && (
