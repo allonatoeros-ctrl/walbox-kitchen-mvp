@@ -33,6 +33,34 @@ export function isLiveServiceNight(nightParam, now = new Date()) {
 }
 
 /**
+ * Poll visibility-aware (P3a). Pura rispetto a React (testabile con un `doc` finto): con la tab
+ * nascosta l'intervallo e' fermo (zero query); al ritorno visibile fa UN solo refresh immediato e
+ * riparte il poll. Non fa mai un refresh in fase di setup (il fetch su mount/cambio notte e'
+ * dell'effect dedicato) cosi' visibility + cambio notte non producono un doppio refresh.
+ * `isLive` e' rivalutata a ogni tick/ritorno visibile (rollover 06:00 con nightParam null).
+ * Ritorna la funzione di cleanup.
+ */
+export function startVisibilityAwarePoll(refresh, isLive, { doc = document, intervalMs = POLL_MS } = {}) {
+  let intervalId = null;
+  const stop = () => {
+    if (intervalId !== null) { clearInterval(intervalId); intervalId = null; }
+  };
+  const start = () => {
+    if (intervalId !== null) return;
+    intervalId = setInterval(() => { if (isLive()) refresh(); }, intervalMs);
+  };
+  const onVisibility = () => {
+    if (doc.hidden) { stop(); return; }
+    stop();
+    if (isLive()) refresh();
+    start();
+  };
+  if (!doc.hidden) start();
+  doc.addEventListener('visibilitychange', onVisibility);
+  return () => { stop(); doc.removeEventListener('visibilitychange', onVisibility); };
+}
+
+/**
  * Kitchen Payment Hub V1 — staff read-only data layer.
  * Reads kitchen_payments (scoped alla serata via kitchen_orders.created_at),
  * kitchen_payments_provider_drift_candidates e kitchen_payments recenti direttamente
@@ -44,7 +72,7 @@ export function isLiveServiceNight(nightParam, now = new Date()) {
  * dati sono immutabili, pollare sarebbe query sprecate — vedi
  * ai-ops/reports/kitchen-analytics-service-night-selector-audit-20260921.md PAYMENTS_SUPPORT.
  */
-export function useKitchenPayments({ night: nightParam = null } = {}) {
+export function useKitchenPayments({ night: nightParam = null, includeRecent = true } = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [serviceNight, setServiceNight] = useState(() => serviceNightWindowFor(nightParam).night);
@@ -68,6 +96,9 @@ export function useKitchenPayments({ night: nightParam = null } = {}) {
         return;
       }
 
+      // `includeRecent:false` (P3b, KitchenSoloService): solo Q1 summary + Q2 drift. Niente "ultimi
+      // 30" (Q3) ne' lookup order_code/nickname (Q4): quel consumer legge solo summary,
+      // paymentsByMethod e il conteggio anomalie. Default true = PaymentsView invariata.
       const [summaryRes, driftRes, recentRes] = await Promise.all([
         // !inner + filtro sulla colonna embedded: solo i pagamenti degli ordini APERTI dentro la
         // serata. Nessun filtro sul created_at del pagamento e nessun filtro su service_day.
@@ -81,12 +112,14 @@ export function useKitchenPayments({ night: nightParam = null } = {}) {
           .from('kitchen_payments_provider_drift_candidates')
           .select('*')
           .eq('venue_id', VENUE_ID),
-        supabase
-          .from('kitchen_payments')
-          .select('id, order_id, provider, method, direction, status, amount, failure_reason, created_at')
-          .eq('venue_id', VENUE_ID)
-          .order('created_at', { ascending: false })
-          .limit(RECENT_LIMIT),
+        includeRecent
+          ? supabase
+            .from('kitchen_payments')
+            .select('id, order_id, provider, method, direction, status, amount, failure_reason, created_at')
+            .eq('venue_id', VENUE_ID)
+            .order('created_at', { ascending: false })
+            .limit(RECENT_LIMIT)
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       if (summaryRes.error) throw summaryRes.error;
@@ -96,7 +129,9 @@ export function useKitchenPayments({ night: nightParam = null } = {}) {
       const drift = driftRes.data ?? [];
       const recent = recentRes.data ?? [];
 
-      const orderIds = [...new Set([...drift, ...recent].map((r) => r.order_id).filter(Boolean))];
+      const orderIds = includeRecent
+        ? [...new Set([...drift, ...recent].map((r) => r.order_id).filter(Boolean))]
+        : [];
       // `orderInfoById` porta anche `nickname` (Kitchen Analytics V1 — Cassa/Payment Hub filtri +
       // colonna cliente, 2026-09-22): stessa query read-only gia' esistente, solo una colonna in
       // piu' nella select, nessuna nuova RLS/migration (colonna gia' letta con lo stesso ruolo
@@ -132,17 +167,13 @@ export function useKitchenPayments({ night: nightParam = null } = {}) {
     // Fetch on mount e ad ogni cambio di notte richiesta (selettore Storico/Cassa).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
-  }, [nightParam]);
+  }, [nightParam, includeRecent]);
 
   useEffect(() => {
-    // Poll SOLO sulla serata live/corrente. Ricalcolato ad ogni tick perche' il rollover 06:00
-    // sposta la finestra "corrente" mentre nightParam resta null.
+    // Poll SOLO sulla serata live/corrente e SOLO a tab visibile (P3a): vedi startVisibilityAwarePoll.
     if (!isLiveServiceNight(nightParam)) return undefined;
-    const intervalId = setInterval(() => {
-      if (isLiveServiceNight(nightParam)) refresh();
-    }, POLL_MS);
-    return () => clearInterval(intervalId);
-  }, [nightParam]);
+    return startVisibilityAwarePoll(refresh, () => isLiveServiceNight(nightParam));
+  }, [nightParam, includeRecent]);
 
   return { loading, error, refresh, serviceNight, todaySummary, paymentsByMethod, anomalies, recentPayments };
 }
