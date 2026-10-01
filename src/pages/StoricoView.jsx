@@ -40,7 +40,7 @@ function formatEuro(n) {
  * non viene mai sommato come "incassato". Senza `paymentsSummary` (Preview/Demo, nessuna
  * sessione staff) gli importi di cassa non vengono inventati: restano '—'.
  */
-export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [], paymentsByMethod = null, onOpenCassa = null }) {
+export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [], paymentsByMethod = null, onOpenCassa = null, historyStatus = 'ready' }) {
   const [historySearch, setHistorySearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortMode, setSortMode] = useState('recent');
@@ -154,6 +154,19 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
     <div className="ksd-sections">
       <div className="ksd-history" style={{ borderTop: 'none' }}>
         <div className="ksd-history-body">
+          {/* P2: gli ordini di una serata passata arrivano on-demand (useKitchenOrderHistory).
+              Mentre la fetch e' in corso, o se fallisce, KPI e lista sarebbero a zero come se la
+              serata fosse davvero vuota: lo stato e' esplicito, mai un "0" muto. */}
+          {historyStatus === 'loading' && (
+            <div className="ksd-history-empty" role="status" data-testid="storico-history-loading">
+              Caricamento storico della serata…
+            </div>
+          )}
+          {historyStatus === 'error' && (
+            <div className="ksd-history-empty" role="alert" data-testid="storico-history-error">
+              Impossibile caricare lo storico di questa serata — cambia serata e riprova.
+            </div>
+          )}
           <div style={{ marginBottom: '1rem' }}>
             <AnalyticsKpiStrip
               incassoDisplay={cassa.incasso}

@@ -4,6 +4,7 @@ import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { useKitchenServiceState } from '../hooks/useKitchenServiceState';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
 import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
+import { useKitchenOrderHistory } from '../hooks/useKitchenOrderHistory';
 import { resolveOrderAllergens } from '../lib/kitchenAllergens';
 import { STAFF_DISAMBIGUATION_LABEL } from '../lib/kitchenStaffLabels';
 import { getStaffSession, onAuthStateChange, isKitchenStaff, signOut } from '../lib/supabaseAuth';
@@ -149,6 +150,9 @@ function KitchenSoloServiceLive() {
   // stato locale) — la stessa notte scelta qui in Storico resta selezionata se lo staff apre Cassa.
   const { selectedServiceNight } = useSelectedServiceNight();
   const { anomalies: paymentAnomalies, todaySummary: paymentsSummary, serviceNight, paymentsByMethod } = useKitchenPayments({ night: selectedServiceNight });
+  // P2: `orders` (live) copre solo la serata corrente + ordini aperti. Lo Storico di una serata
+  // passata legge i propri ordini chiusi on-demand; sulla serata corrente e' `orders`, senza fetch.
+  const { orders: historyOrders, status: historyStatus } = useKitchenOrderHistory({ night: selectedServiceNight, liveOrders: orders });
 
   const [authChecked, setAuthChecked] = useState(
     () => import.meta.env.VITE_E2E_BYPASS_STAFF_AUTH === 'true'
@@ -213,6 +217,8 @@ function KitchenSoloServiceLive() {
       paymentsSummary={paymentsSummary}
       paymentsByMethod={paymentsByMethod}
       serviceNight={serviceNight}
+      historyOrders={historyOrders}
+      historyStatus={historyStatus}
       showNightSelector
       onLogout={handleLogout}
       kitchenOpen={kitchenOpen}
@@ -256,6 +262,9 @@ export function KitchenSoloServiceView({
   orders, updateOrderStatus, confirmPayment, cancelOrder, refundOrder, updateStaffNote, retrySync,
   menuItems, toggleAvailability, isPreview = false, paymentAnomalies = [],
   paymentsSummary = null, paymentsByMethod = null, serviceNight = null,
+  // P2: ordini dello Storico (serata passata caricata on-demand). Preview/Demo non li passano:
+  // Storico ripiega su `orders` e historyStatus 'ready', comportamento invariato.
+  historyOrders = null, historyStatus = 'ready',
   // Selettore service night: solo Live lo passa true (dati realmente parametrizzati su
   // useKitchenPayments); Preview/Demo/Training restano invariati (dataset statico, il selettore
   // non avrebbe nulla da far navigare).
@@ -1104,7 +1113,7 @@ export function KitchenSoloServiceView({
               {overlay === 'storico' && (
                 <>
                   {showNightSelector && <ServiceNightSelector />}
-                  <StoricoView orders={orders} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} />
+                  <StoricoView orders={historyOrders ?? orders} historyStatus={historyStatus} paymentsSummary={paymentsSummary} serviceNight={serviceNight} anomalies={paymentAnomalies} paymentsByMethod={paymentsByMethod} />
                 </>
               )}
               {overlay === 'alert'   && <AlertView orders={orders} />}
