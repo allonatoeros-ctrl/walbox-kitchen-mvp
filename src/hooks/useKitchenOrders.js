@@ -313,8 +313,9 @@ export function mergeFetchedOrders(prev, data, pendingWrites) {
 }
 
 // export solo per il test mirato Sprint 3B (mock.channel/.on/.subscribe); nessun nuovo
-// consumer applicativo oltre a useKitchenOrders.
-export function subscribeToKitchenOrdersRealtime(onChange) {
+// consumer applicativo oltre a useKitchenOrders. `onStatus(status, err)` (opzionale) riceve lo
+// stato del canale (SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT / CLOSED) per lo scheduler adattivo.
+export function subscribeToKitchenOrdersRealtime(onChange, onStatus) {
   return supabase
     .channel('realtime:kitchen_orders')
     .on(
@@ -324,7 +325,124 @@ export function subscribeToKitchenOrdersRealtime(onChange) {
     )
     .subscribe((status, err) => {
       if (err) console.warn('[Walbox] kitchen_orders realtime subscribe error:', err);
+      if (onStatus) onStatus(status, err);
     });
+}
+
+// Scheduler adattivo di sync (P1 Supabase Sync Optimization). Realtime e' il canale primario;
+// il poll e' una rete di sicurezza: lento con Realtime sano, rapido altrimenti, fermo con tab
+// hidden, con backoff sugli errori. Gli eventi Realtime sono debounced e coalescati con la
+// fetch in volo (una sola fetch di coda). Puro e iniettabile (timer/clock/visibilita') per i test;
+// la query resta quella di fetchSupabaseOrders, passata come `fetchFn` (ritorna true/false).
+export const SYNC_TIMING = {
+  safetyPollMs: { staff: 45000, customer: 90000 },
+  fallbackPollMs: { staff: 10000, customer: 15000 },
+  backoffMs: [10000, 20000, 40000, 60000],
+  debounceMs: 400,
+  resumeMinHiddenMs: 5000,
+  jitter: 0.1,
+};
+
+export function createOrdersSyncScheduler({
+  fetchFn,
+  role = 'staff',
+  isHidden = () => (typeof document !== 'undefined' && document.hidden),
+  now = () => Date.now(),
+  timers = { setTimeout: (...a) => setTimeout(...a), clearTimeout: (...a) => clearTimeout(...a) },
+  random = Math.random,
+} = {}) {
+  const T = SYNC_TIMING;
+  let healthy = false;
+  let stopped = true;
+  let inFlight = false;
+  let dirty = false;
+  let failures = 0;
+  let pollTimer = null;
+  let debounceTimer = null;
+  let hiddenSince = null;
+  let staleWhileHidden = false;
+
+  const clearPoll = () => { if (pollTimer != null) { timers.clearTimeout(pollTimer); pollTimer = null; } };
+
+  const nextDelay = () => {
+    const base = failures > 0
+      ? T.backoffMs[Math.min(failures - 1, T.backoffMs.length - 1)]
+      : (healthy ? T.safetyPollMs : T.fallbackPollMs)[role === 'customer' ? 'customer' : 'staff'];
+    return Math.round(base * (1 + (random() * 2 - 1) * T.jitter));
+  };
+
+  const schedule = () => {
+    clearPoll();
+    if (stopped || isHidden()) return; // tab hidden: nessun timer
+    pollTimer = timers.setTimeout(() => { pollTimer = null; run(); }, nextDelay());
+  };
+
+  async function run() {
+    if (stopped) return;
+    if (inFlight) { dirty = true; return; } // coalescing: una sola fetch di coda al termine
+    clearPoll();
+    inFlight = true;
+    let ok = true;
+    try { ok = (await fetchFn()) !== false; } catch { ok = false; }
+    inFlight = false;
+    failures = ok ? 0 : failures + 1;
+    if (stopped) return;
+    if (dirty) {
+      dirty = false;
+      if (ok && !isHidden()) { run(); return; }
+      if (ok) staleWhileHidden = true;
+    }
+    schedule();
+  }
+
+  return {
+    start() { stopped = false; if (isHidden()) hiddenSince = now(); run(); },
+    stop() {
+      stopped = true;
+      clearPoll();
+      if (debounceTimer != null) { timers.clearTimeout(debounceTimer); debounceTimer = null; }
+    },
+    // Evento Realtime: trailing debounce; se la tab e' hidden non fetcha, segna "stale".
+    notifyRealtimeEvent() {
+      if (stopped) return;
+      if (debounceTimer != null) timers.clearTimeout(debounceTimer);
+      debounceTimer = timers.setTimeout(() => {
+        debounceTimer = null;
+        if (isHidden()) { staleWhileHidden = true; return; }
+        run();
+      }, T.debounceMs);
+    },
+    // Stato canale: non-SUBSCRIBED -> SUBSCRIBED = catch-up immediato (eventi persi nel gap).
+    setRealtimeStatus(status) {
+      const next = status === 'SUBSCRIBED';
+      const wasHealthy = healthy;
+      healthy = next;
+      if (stopped) return;
+      if (next && !wasHealthy) { if (isHidden()) staleWhileHidden = true; else run(); }
+      else if (next !== wasHealthy && !inFlight) schedule();
+    },
+    // visibilitychange: hidden ferma il poll; visible dopo una pausa >= soglia (o con eventi
+    // persi) fa un catch-up immediato e riavvia il timer.
+    onVisibilityChange() {
+      if (stopped) return;
+      if (isHidden()) {
+        if (hiddenSince == null) hiddenSince = now();
+        clearPoll();
+        return;
+      }
+      const away = hiddenSince == null ? 0 : now() - hiddenSince;
+      hiddenSince = null;
+      if (away >= T.resumeMinHiddenMs || staleWhileHidden) { staleWhileHidden = false; run(); }
+      else schedule();
+    },
+    // online: catch-up immediato (se visibile); il backoff riparte da zero.
+    onOnline() {
+      if (stopped) return;
+      failures = 0;
+      if (isHidden()) { staleWhileHidden = true; return; }
+      run();
+    },
+  };
 }
 
 async function supabaseInsertActionLog({ order_id, action, from_status, to_status, reason, metadata, created_at }) {
@@ -429,7 +547,7 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
   // orderId -> last patch sent to Supabase, present while a write is in-flight or failed.
   // Used to (a) skip clobbering that order on the next poll and (b) support retry.
   const pendingWritesRef = useRef(new Map());
-  // Sequence id monotono: poll (10s) e realtime possono invocare fetchSupabaseOrders in
+  // Sequence id monotono: poll e realtime possono invocare fetchSupabaseOrders in
   // sovrapposizione e le risposte possono arrivare fuori ordine. Solo la fetch piu' recente
   // AVVIATA puo' applicare il proprio risultato — una risposta piu' vecchia che arriva dopo
   // una piu' recente viene scartata invece di sovrascrivere lo stato appena applicato (root
@@ -461,7 +579,7 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
     const seq = ++fetchSeqRef.current;
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) return true;
 
       const { data, error } = await supabase
         .from('kitchen_orders')
@@ -473,7 +591,7 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
 
       // Una fetch piu' recente e' stata avviata mentre questa era in volo: la sua risposta,
       // qualunque sia l'ordine di arrivo, e' quella che deve vincere. Scarta questa come stale.
-      if (seq !== fetchSeqRef.current) return;
+      if (seq !== fetchSeqRef.current) return true;
 
       setOrders((prev) => {
         const next = mergeFetchedOrders(prev, data ?? [], pendingWritesRef.current);
@@ -485,38 +603,48 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
         if (scope !== SCOPE_CUSTOMER) saveOrders(scope, next);
         return next;
       });
+      return true;
     } catch (err) {
       console.warn('[Walbox] Supabase read failed — using localStorage', err);
+      return false;
     }
   };
 
-  useEffect(() => {
-    fetchSupabaseOrders();
-  }, []);
-
-  useEffect(() => {
-    const intervalId = setInterval(fetchSupabaseOrders, 10000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // Realtime: rileva nuovi/aggiornati kitchen_orders quasi immediatamente. Il poll 10s sopra
-  // resta come fallback (rete instabile, realtime non disponibile, ecc.). Nessun mapping
-  // parallelo: alla notifica si rilancia lo stesso fetch canonico usato dal poll, così lo
-  // stato resta identico indipendentemente dalla fonte del trigger (nessun doppio inserimento).
+  // Sync adattivo: Realtime = canale primario, poll = rete di sicurezza (lento con Realtime
+  // sano, rapido altrimenti, fermo con tab hidden, backoff sugli errori). Resume/online/
+  // reconnect = catch-up immediato; eventi Realtime debounced + coalescati con la fetch in volo.
+  // Nessun mapping parallelo: ogni trigger rilancia lo stesso fetch canonico (fetchSeqRef
+  // continua a scartare le risposte fuori ordine), cosi' lo stato resta identico per ogni fonte.
   useEffect(() => {
     let channel;
     let cancelled = false;
+    const scheduler = createOrdersSyncScheduler({
+      fetchFn: fetchSupabaseOrders,
+      role: isCustomer ? 'customer' : 'staff',
+    });
+
+    const onVisibilityChange = () => scheduler.onVisibilityChange();
+    const onOnline = () => scheduler.onOnline();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('online', onOnline);
+    scheduler.start();
 
     async function init() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session || cancelled) return;
-      channel = subscribeToKitchenOrdersRealtime(() => fetchSupabaseOrders());
+      channel = subscribeToKitchenOrdersRealtime(
+        () => scheduler.notifyRealtimeEvent(),
+        (status) => scheduler.setRealtimeStatus(status)
+      );
     }
 
     init();
 
     return () => {
       cancelled = true;
+      scheduler.stop();
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('online', onOnline);
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
