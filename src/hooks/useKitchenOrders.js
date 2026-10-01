@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { demoKitchenOrders } from '../data/kitchenMockData';
 import { supabase } from '../lib/supabaseClient';
+import { serviceNightWindow } from '../lib/kitchenServiceRules';
 
 // Storage cliente vs storage staff/cassa (privacy client-side, 2026-09-16).
 //
@@ -127,7 +128,8 @@ function appendLog(order, action) {
   return { ...order, actionLog: log };
 }
 
-function mapSupabaseOrder(row) {
+// export per useKitchenOrderHistory (stesso mapping della lista live, nessuna copia parallela).
+export function mapSupabaseOrder(row) {
   return {
     id:            row.id,
     orderCode:     row.order_code,
@@ -157,6 +159,21 @@ function mapSupabaseOrder(row) {
       price:    i.price,
     })),
   };
+}
+
+// P2 — Kitchen Orders Payload Reduction. La lista LIVE dello staff non legge piu' tutto lo
+// storico del locale: solo la serata corrente (06:00 -> 06:00 Europe/Rome, su created_at) piu'
+// gli ordini ANCORA APERTI anche se piu' vecchi (un ordine dimenticato di ieri resta operativo
+// finche' non e' chiuso). Le notti passate si leggono on-demand da useKitchenOrderHistory.
+// Lista positiva di stati aperti (non `not.in`): sicura sui NULL e senza dipendere da nuovi stati.
+export const OPEN_ORDER_STATUSES = ['pending_counter_payment', 'received', 'preparing', 'ready'];
+
+// Filtro PostgREST `or` della lista live. `win` = serviceNightWindow(): va ricalcolata ad ogni
+// fetch (mai al mount) cosi' il rollover delle 06:00 sposta la finestra anche su una TV accesa
+// tutta la notte. Nessun limite superiore: un orologio device in anticipo non deve escludere
+// ordini appena creati.
+export function buildLiveOrdersFilter(win) {
+  return `created_at.gte.${win.startIso},status.in.(${OPEN_ORDER_STATUSES.join(',')})`;
 }
 
 // export solo per il test mirato P0-A (mock.module su ../lib/supabaseClient); nessun
@@ -581,11 +598,15 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return true;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('kitchen_orders')
         .select('*, kitchen_order_items(*)')
-        .eq('venue_id', 'walrus-main')
-        .order('created_at', { ascending: false });
+        .eq('venue_id', 'walrus-main');
+      // P2: solo lo scope staff e' ristretto alla serata corrente + ordini aperti. Lo scope
+      // cliente resta invariato (la RLS customer_select_own_orders gia' gli restituisce solo i
+      // propri ordini, e un suo ordine vecchio deve restare leggibile su /kitchen/status).
+      if (!isCustomer) query = query.or(buildLiveOrdersFilter(serviceNightWindow()));
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
