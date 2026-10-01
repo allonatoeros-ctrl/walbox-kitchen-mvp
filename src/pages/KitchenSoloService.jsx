@@ -149,7 +149,7 @@ function KitchenSoloServiceLive() {
   // condiviso con PaymentsView/Cassa via useSelectedServiceNight (modulo esterno, non un nuovo
   // stato locale) — la stessa notte scelta qui in Storico resta selezionata se lo staff apre Cassa.
   const { selectedServiceNight } = useSelectedServiceNight();
-  const { anomalies: paymentAnomalies, todaySummary: paymentsSummary, serviceNight, paymentsByMethod } = useKitchenPayments({ night: selectedServiceNight });
+  const { anomalies: paymentAnomalies, todaySummary: paymentsSummary, serviceNight, paymentsByMethod } = useKitchenPayments({ night: selectedServiceNight, includeRecent: false });
   // P2: `orders` (live) copre solo la serata corrente + ordini aperti. Lo Storico di una serata
   // passata legge i propri ordini chiusi on-demand; sulla serata corrente e' `orders`, senza fetch.
   const { orders: historyOrders, status: historyStatus } = useKitchenOrderHistory({ night: selectedServiceNight, liveOrders: orders });
