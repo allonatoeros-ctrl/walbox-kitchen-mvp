@@ -20,6 +20,7 @@ const SUMUP_ERROR_MESSAGES = {
   not_order_owner: 'Sessione ordine non riconosciuta su questo dispositivo. Paga alla cassa.',
   order_already_paid: 'Questo ordine risulta già pagato.',
   order_cancelled: 'Questo ordine è stato annullato.',
+  amount_mismatch_live_attempt: 'Importo del pagamento non più allineato all’ordine. Paga alla cassa.',
   amount_mismatch: 'Importo non allineato all’ordine. Riprova o paga alla cassa.',
   invalid_attempt_status: 'Pagamento già in corso. Attendi qualche secondo e riprova.',
   online_payment_disabled: 'Pagamento al banco — comunica il codice ordine alla cassa.',

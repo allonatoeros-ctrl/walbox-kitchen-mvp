@@ -143,7 +143,7 @@ test('create-checkout: ordine gia pagato tra attempt_start e create-checkout -> 
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-1', order_id: 'ord-1', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge' }, error: null },
-      kitchen_orders: { data: { id: 'ord-1', payment_status: 'paid' }, error: null },
+      kitchen_orders: { data: { id: 'ord-1', total: 10, payment_status: 'paid' }, error: null },
     },
     rpc: { kitchen_payment_fail: { data: {}, error: null } },
   });
@@ -168,7 +168,7 @@ test('create-checkout: ordine non pagato -> procede, checkout creato e provider_
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-2', order_id: 'ord-2', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null }, error: null },
-      kitchen_orders: { data: { id: 'ord-2', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-2', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {
       kitchen_payment_attempt_claim_checkout: { data: { id: 'att-2', provider_ref: null }, error: null },
@@ -202,7 +202,7 @@ test('create-checkout: provider_ref assente, claim RPC perde la race -> 409 chec
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-20', order_id: 'ord-20', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null }, error: null },
-      kitchen_orders: { data: { id: 'ord-20', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-20', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: { kitchen_payment_attempt_claim_checkout: { data: null, error: null } },
   });
@@ -230,7 +230,7 @@ test('create-checkout: claim RPC perde la race con la reale forma PostgREST (rig
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-20b', order_id: 'ord-20b', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null }, error: null },
-      kitchen_orders: { data: { id: 'ord-20b', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-20b', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {
       kitchen_payment_attempt_claim_checkout: {
@@ -262,7 +262,7 @@ test('create-checkout: provider_ref gia presente + SumUp GET PENDING -> riusa lo
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-21', order_id: 'ord-21', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-21' }, error: null },
-      kitchen_orders: { data: { id: 'ord-21', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-21', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {},
   });
@@ -292,7 +292,7 @@ test('create-checkout: provider_ref presente + SumUp GET PAID -> resolve/confirm
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-22', order_id: 'ord-22', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-22' }, error: null },
-      kitchen_orders: { data: { id: 'ord-22', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-22', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: { kitchen_payment_confirm: { data: { status: 'succeeded' }, error: null } },
   });
@@ -318,7 +318,7 @@ test('create-checkout: provider_ref presente + SumUp GET FAILED (sumup_failed) -
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-23', order_id: 'ord-23', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-23' }, error: null },
-      kitchen_orders: { data: { id: 'ord-23', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-23', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: { kitchen_payment_fail: { data: { status: 'failed' }, error: null } },
   });
@@ -347,7 +347,7 @@ test('create-checkout: provider_ref presente + SumUp GET EXPIRED -> fail applica
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-24', order_id: 'ord-24', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-24' }, error: null },
-      kitchen_orders: { data: { id: 'ord-24', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-24', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: { kitchen_payment_fail: { data: { status: 'failed' }, error: null } },
   });
@@ -375,7 +375,7 @@ test('create-checkout: provider_ref presente + GET SumUp fallisce (network/5xx) 
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-25', order_id: 'ord-25', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-25' }, error: null },
-      kitchen_orders: { data: { id: 'ord-25', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-25', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {},
   });
@@ -396,7 +396,7 @@ test('create-checkout: provider_ref presente + checkout_reference non corrispond
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-26', order_id: 'ord-26', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-26' }, error: null },
-      kitchen_orders: { data: { id: 'ord-26', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-26', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {},
   });
@@ -417,7 +417,7 @@ test('create-checkout: provider_ref presente + PENDING ma senza hosted_checkout_
   const admin = makeSupabaseAdminMock({
     tables: {
       kitchen_payments: { data: { id: 'att-27', order_id: 'ord-27', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-27' }, error: null },
-      kitchen_orders: { data: { id: 'ord-27', payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { id: 'ord-27', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {},
   });

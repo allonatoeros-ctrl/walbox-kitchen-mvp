@@ -59,7 +59,7 @@ export default async function handler(req, res) {
   // earlier attempt_start result as still true.
   const { data: order, error: orderError } = await supabaseAdmin
     .from('kitchen_orders')
-    .select('id, payment_status')
+    .select('id, payment_status, total')
     .eq('id', order_id)
     .maybeSingle();
 
@@ -80,6 +80,16 @@ export default async function handler(req, res) {
       console.error('[kitchen-sumup-create-checkout] failed to close race-orphaned attempt', failError);
     }
     return res.status(409).json({ error: 'order_already_paid' });
+  }
+
+  // S0.5 F1 (Amount Integrity): l'attempt e uno snapshot dell'importo; il totale autorevole e
+  // kitchen_orders.total, riletto qui server-side. Se divergono, fail closed PRIMA di riusare o
+  // creare qualsiasi checkout (nessun claim, nessuna fetch SumUp, nessun PATCH per "correggere").
+  if (Number(attempt.amount) !== Number(order.total)) {
+    console.error('[kitchen-sumup-create-checkout] attempt/order amount mismatch', {
+      attemptId: attempt.id, attemptAmount: attempt.amount, orderTotal: order.total,
+    });
+    return res.status(409).json({ error: 'amount_mismatch' });
   }
 
   // Duplicate live checkout guard (P0): an attempt that already has a provider_ref means a SumUp
