@@ -1,5 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { applySumupCheckoutResult } from './_lib/sumupPaymentResolution.js';
+import { recoverSumupProviderRef } from './_lib/sumupProviderRefRecovery.js';
+
+// S0.5 F7: timeout applicativi sulle fetch SumUp. La lease DB della claim e 20 s: la POST di creazione
+// non deve partire troppo tardi dopo la claim, altrimenti un retry concorrente potrebbe sovrapporsi.
+const SUMUP_GET_TIMEOUT_MS = 5000;
+const SUMUP_POST_TIMEOUT_MS = 8000;
+const POST_START_DEADLINE_MS = 6000;
 
 // Kitchen Payment Hub V1 — SumUp sandbox, create checkout.
 //
@@ -155,42 +162,84 @@ export default async function handler(req, res) {
     return res.status(409).json({ error: 'checkout_creation_in_progress' });
   }
 
-  try {
-    const sumupRes = await fetch('https://api.sumup.com/v0.1/checkouts', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${sumupApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        checkout_reference: attempt.id,
-        amount: attempt.amount,
-        currency: 'EUR',
-        merchant_code: sumupMerchantCode,
-        description: `Walrus Pub — ordine ${order_id}`,
-        redirect_url: `${productionOrigin}/kitchen/status?orderId=${encodeURIComponent(order_id)}&sumup=return`,
-        return_url: `${productionOrigin}/api/kitchen-sumup-webhook`,
-        hosted_checkout: { enabled: true },
-      }),
-    });
+  // S0.5 F7: List-first. Dopo la claim e PRIMA di ogni POST, cerca per checkout_reference (= attempt.id)
+  // un checkout gia creato da una request precedente rimasta in volo oltre la lease. Mai POST se il
+  // lookup fallisce o e ambiguo: l'esito della create resterebbe sconosciuto.
+  const claimedAt = Date.now();
+  const lookup = await recoverSumupProviderRef({ sumupApiKey, attemptId: attempt.id, fetchImpl: sumupGetFetch });
+  if (lookup.reason !== 'not_found') {
+    return resolveLookupOutcome({ res, supabaseAdmin, attempt, sumupApiKey, lookup });
+  }
 
-    const sumupData = await sumupRes.json();
+  if (Date.now() - claimedAt > POST_START_DEADLINE_MS) {
+    console.error('[kitchen-sumup-create-checkout] POST start deadline exceeded, create not attempted');
+    return outcomeUnknown(res);
+  }
+
+  try {
+    let sumupRes;
+    try {
+      sumupRes = await fetch('https://api.sumup.com/v0.1/checkouts', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${sumupApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          checkout_reference: attempt.id,
+          amount: attempt.amount,
+          currency: 'EUR',
+          merchant_code: sumupMerchantCode,
+          description: `Walrus Pub — ordine ${order_id}`,
+          redirect_url: `${productionOrigin}/kitchen/status?orderId=${encodeURIComponent(order_id)}&sumup=return`,
+          return_url: `${productionOrigin}/api/kitchen-sumup-webhook`,
+          hosted_checkout: { enabled: true },
+        }),
+        signal: AbortSignal.timeout(SUMUP_POST_TIMEOUT_MS),
+      });
+    } catch (err) {
+      // Timeout / errore di rete: SumUp potrebbe aver creato il checkout. UNKNOWN, mai FAILED.
+      console.error('[kitchen-sumup-create-checkout] create checkout POST outcome unknown', err);
+      return outcomeUnknown(res);
+    }
+
+    let sumupData = null;
+    let bodyParsed = true;
+    try {
+      sumupData = await sumupRes.json();
+    } catch {
+      bodyParsed = false;
+    }
+
+    if (sumupRes.status >= 500) {
+      console.error('[kitchen-sumup-create-checkout] SumUp 5xx on create, outcome unknown', sumupRes.status);
+      return outcomeUnknown(res);
+    }
+
+    if (sumupRes.status === 409 && bodyParsed && sumupData?.error_code === 'DUPLICATED_CHECKOUT') {
+      // Il checkout esiste gia: recupero via List, mai una seconda POST nella stessa request.
+      const dup = await recoverSumupProviderRef({ sumupApiKey, attemptId: attempt.id, fetchImpl: sumupGetFetch });
+      return resolveLookupOutcome({ res, supabaseAdmin, attempt, sumupApiKey, lookup: dup });
+    }
 
     if (!sumupRes.ok) {
       console.error('[kitchen-sumup-create-checkout] SumUp API error', sumupRes.status, sumupData);
-      return res.status(502).json({ error: 'sumup_create_checkout_failed' });
-    }
-    if (!sumupData.hosted_checkout_url) {
-      console.error('[kitchen-sumup-create-checkout] missing hosted_checkout_url in SumUp response');
-      return res.status(502).json({ error: 'sumup_create_checkout_failed' });
+      if (DOCUMENTED_CREATE_ERROR_STATUSES.has(sumupRes.status)) {
+        return res.status(502).json({ error: 'sumup_create_checkout_failed' });
+      }
+      // 4xx non previsto dal contratto: non implica "checkout sicuramente non creato".
+      return outcomeUnknown(res);
     }
 
-    // Best-effort: persist the SumUp checkout id onto the attempt now, so lost-webhook
-    // reconciliation (api/kitchen-sumup-reconcile.js) has a reliable id to re-check later even if
-    // the webhook never arrives. Never blocks the checkout redirect on this write succeeding — a
-    // failure here only degrades a later reconciliation attempt to UNKNOWN (still safe, still
-    // blocking, never a false confirm), it does not affect the webhook path at all.
-    if (sumupData.id) {
+    if (!bodyParsed) {
+      console.error('[kitchen-sumup-create-checkout] 2xx create response with unparsable body, outcome unknown');
+      return outcomeUnknown(res);
+    }
+
+    // S0.5 F7 (G4): appena l'id SumUp e noto, persisti provider_ref PRIMA di controllare l'URL, cosi un
+    // retry futuro entra nel ramo di riuso invece di creare un secondo checkout. Best-effort: un
+    // fallimento qui degrada la reconciliation a UNKNOWN (sicuro), non blocca il redirect.
+    if (sumupData?.id) {
       const { error: refError } = await supabaseAdmin.rpc('kitchen_payment_attempt_set_provider_ref', {
         p_attempt_id: attempt.id,
         p_provider_ref: sumupData.id,
@@ -198,6 +247,11 @@ export default async function handler(req, res) {
       if (refError) {
         console.warn('[kitchen-sumup-create-checkout] failed to persist provider_ref', refError);
       }
+    }
+
+    if (!sumupData?.hosted_checkout_url) {
+      console.error('[kitchen-sumup-create-checkout] missing hosted_checkout_url in SumUp response');
+      return res.status(502).json({ error: 'sumup_create_checkout_failed' });
     }
 
     return res.status(200).json({
@@ -208,6 +262,42 @@ export default async function handler(req, res) {
     console.error('[kitchen-sumup-create-checkout] unexpected error', err);
     return res.status(500).json({ error: 'internal_server_error' });
   }
+}
+
+// Fetch con timeout GET, iniettata nell'helper di recovery (List-by-checkout_reference).
+function sumupGetFetch(url, opts = {}) {
+  return fetch(url, { ...opts, signal: AbortSignal.timeout(SUMUP_GET_TIMEOUT_MS) });
+}
+
+// 4xx documentati e gia gestiti dal contratto corrente (failure HTTP esplicito).
+const DOCUMENTED_CREATE_ERROR_STATUSES = new Set([400, 401, 403]);
+
+// S0.5 F7: l'esito della create e sconosciuto. Attempt lasciato recuperabile (nessun kitchen_payment_fail).
+function outcomeUnknown(res) {
+  return res.status(503).json({ error: 'checkout_outcome_unknown', retryable: true });
+}
+
+// S0.5 F7: esito di List-by-checkout_reference (dopo claim o dopo 409 DUPLICATED_CHECKOUT).
+// 1 match -> lega provider_ref e passa al ramo di riuso/verifica; ambiguous -> riconciliazione
+// manuale; not_found/lookup_failed -> UNKNOWN. In nessun caso crea un checkout.
+async function resolveLookupOutcome({ res, supabaseAdmin, attempt, sumupApiKey, lookup }) {
+  if (lookup.reason === 'ambiguous') {
+    console.error('[kitchen-sumup-create-checkout] ambiguous checkout_reference lookup', { attemptId: attempt.id });
+    return res.status(409).json({ error: 'needs_manual_reconciliation' });
+  }
+  const foundId = lookup.checkout?.id;
+  if (lookup.reason || typeof foundId !== 'string' || !foundId) {
+    return outcomeUnknown(res);
+  }
+  const { error: refError } = await supabaseAdmin.rpc('kitchen_payment_attempt_set_provider_ref', {
+    p_attempt_id: attempt.id,
+    p_provider_ref: foundId,
+  });
+  if (refError) {
+    console.error('[kitchen-sumup-create-checkout] failed to bind recovered provider_ref', refError);
+    return outcomeUnknown(res);
+  }
+  return resolveExistingCheckout({ res, supabaseAdmin, attempt: { ...attempt, provider_ref: foundId }, sumupApiKey });
 }
 
 // S0.5 F5: unica authority per gli URL SumUp. Ritorna `https://<hostname>` oppure null (fail closed)
@@ -229,6 +319,7 @@ async function resolveExistingCheckout({ res, supabaseAdmin, attempt, sumupApiKe
   try {
     const sumupRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${attempt.provider_ref}`, {
       headers: { Authorization: `Bearer ${sumupApiKey}` },
+      signal: AbortSignal.timeout(SUMUP_GET_TIMEOUT_MS),
     });
     checkout = await sumupRes.json();
     if (!sumupRes.ok) {

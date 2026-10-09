@@ -137,6 +137,9 @@ function jsonFetchResponse(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
+// S0.5 F7: dopo la claim il create-checkout fa una List-by-checkout_reference prima di ogni POST.
+const isListUrl = (url) => String(url).includes('/v0.1/checkouts?checkout_reference=');
+
 const CALLER_ID = 'cust-1';
 const CALLER_AUTH = { data: { user: { id: CALLER_ID } }, error: null };
 const AUTH_HEADERS = { authorization: 'Bearer valid-token' };
@@ -184,7 +187,7 @@ test('create-checkout: ordine non pagato -> procede, checkout creato e provider_
     },
   });
 
-  await withFetch(async () => jsonFetchResponse(200, { id: 'co-2', hosted_checkout_url: 'https://pay.sumup.com/y' }), async () => {
+  await withFetch(async (url) => (isListUrl(url) ? jsonFetchResponse(200, []) : jsonFetchResponse(200, { id: 'co-2', hosted_checkout_url: 'https://pay.sumup.com/y' })), async () => {
     await withAdmin(admin, async () => {
       const req = makeReq({ body: { order_id: 'ord-2', payment_attempt_id: 'att-2' }, headers: AUTH_HEADERS });
       const res = makeRes();
@@ -473,7 +476,9 @@ async function runF4({ headers = AUTH_HEADERS, authUser = CALLER_AUTH, order = f
   const res = makeRes();
   await withFetch(async (url, opts) => {
     fetchCalls.push(String(url));
-    return fetchImpl ? fetchImpl(url, opts) : jsonFetchResponse(200, { id: 'co-f4', hosted_checkout_url: 'https://pay.sumup.com/f4' });
+    if (fetchImpl) return fetchImpl(url, opts);
+    if (isListUrl(url)) return jsonFetchResponse(200, []);
+    return jsonFetchResponse(200, { id: 'co-f4', hosted_checkout_url: 'https://pay.sumup.com/f4' });
   }, () => withAdmin(admin, () => createCheckoutHandler(makeReq({ body, headers }), res)));
   const mutations = admin.__rpcCalls.filter((c) => MUTATING_RPCS.includes(c.name));
   return { res, admin, fetchCalls, mutations };
@@ -504,7 +509,7 @@ test('F4 T3: customer A + order A + attempt A valido -> checkout creato come pri
   });
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.hosted_checkout_url, 'https://pay.sumup.com/f4');
-  assert.equal(fetchCalls.length, 1);
+  assert.equal(fetchCalls.length, 2, 'List-first + una sola POST');
   assert.ok(admin.__rpcCalls.find((c) => c.name === 'kitchen_payment_attempt_claim_checkout'));
 });
 
@@ -1231,6 +1236,7 @@ async function runF5({ env = {}, headers = AUTH_HEADERS, ...rest } = {}) {
     const out = await runF4({
       headers, rpc: F5_RPC, ...rest,
       fetchImpl: async (url, opts) => {
+        if (isListUrl(url)) return jsonFetchResponse(200, []);
         if (opts?.body) sent.push(JSON.parse(opts.body));
         return jsonFetchResponse(200, { id: 'co-f4', hosted_checkout_url: 'https://pay.sumup.com/f4' });
       },
@@ -1319,6 +1325,244 @@ test('F5: sorgente create-checkout non legge piu Host / X-Forwarded-* ne VERCEL_
   const src = fs.readFileSync(path.join(ROOT, 'api/kitchen-sumup-create-checkout.js'), 'utf8')
     .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
   assert.doesNotMatch(src, /x-forwarded|headers\.host|VERCEL_URL/i);
+});
+
+
+// ================================================================================================
+// S0.5 F7 — timeout SumUp + List-first recovery + 409 DUPLICATED_CHECKOUT recovery
+// ================================================================================================
+
+const F7_URL = 'https://api.sumup.com/v0.1/checkouts';
+const F7_RPC = {
+  kitchen_payment_attempt_claim_checkout: { data: { id: 'att-f4' }, error: null },
+  kitchen_payment_attempt_set_provider_ref: { data: {}, error: null },
+};
+const F7_HOSTED = { id: 'co-f7', hosted_checkout_url: 'https://pay.sumup.com/f7' };
+const F7_EXISTING = { id: 'co-f7', status: 'PENDING', amount: 10, checkout_reference: 'att-f4', hosted_checkout_url: 'https://pay.sumup.com/existing' };
+const timeoutErr = () => Object.assign(new Error('timeout'), { name: 'TimeoutError' });
+
+// router: list / post / get (by id). Ogni handler e una funzione o un valore (response).
+async function runF7({ list, post, get, rpc = F7_RPC, attempt = f4Attempt() } = {}) {
+  const calls = [];
+  const out = await runF4({
+    rpc, attempt,
+    fetchImpl: async (url, opts) => {
+      const u = String(url);
+      const kind = isListUrl(u) ? 'list' : opts?.method === 'POST' ? 'post' : 'get';
+      calls.push({ kind, url: u, opts });
+      const h = { list, post, get }[kind];
+      const r = typeof h === 'function' ? await h() : h;
+      return r;
+    },
+  });
+  const count = (k) => calls.filter((c) => c.kind === k).length;
+  const rpcCount = (n) => out.admin.__rpcCalls.filter((c) => c.name === n).length;
+  return { ...out, calls, count, rpcCount };
+}
+const noPostNoFail = (r) => {
+  assert.equal(r.count('post'), 0, '0 POST');
+  assert.equal(r.rpcCount('kitchen_payment_fail'), 0, '0 kitchen_payment_fail');
+};
+
+test('F7 T1: List timeout -> 503 checkout_outcome_unknown retryable, 0 POST', async () => {
+  const r = await runF7({ list: () => { throw timeoutErr(); } });
+  assert.equal(r.res.statusCode, 503);
+  assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+  assert.equal(r.res.body.retryable, true);
+  noPostNoFail(r);
+});
+
+test('F7 T2: GET riuso timeout -> fail closed esistente (502 sumup_verify_failed), nessuna mutazione', async () => {
+  const r = await runF7({ attempt: f4Attempt({ provider_ref: 'co-f7' }), get: () => { throw timeoutErr(); } });
+  assert.equal(r.res.statusCode, 502);
+  assert.equal(r.res.body.error, 'sumup_verify_failed');
+  assert.equal(r.admin.__rpcCalls.length, 0);
+  assert.ok(r.calls[0].opts.signal, 'GET con timeout (AbortSignal)');
+});
+
+test('F7 T3/T12: POST timeout / TypeError -> 503 UNKNOWN, 0 kitchen_payment_fail, 0 set_provider_ref', async () => {
+  for (const err of [timeoutErr(), new TypeError('fetch failed')]) {
+    const r = await runF7({ list: jsonFetchResponse(200, []), post: () => { throw err; } });
+    assert.equal(r.res.statusCode, 503);
+    assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+    assert.equal(r.res.body.retryable, true);
+    assert.equal(r.count('post'), 1);
+    assert.equal(r.rpcCount('kitchen_payment_fail'), 0);
+    assert.equal(r.rpcCount('kitchen_payment_attempt_set_provider_ref'), 0);
+    assert.ok(r.calls.find((c) => c.kind === 'post').opts.signal, 'POST con timeout (AbortSignal)');
+  }
+});
+
+test('F7 T4: retry successivo, List trova 1 checkout -> set_provider_ref, GET riuso, 200, 0 POST', async () => {
+  const r = await runF7({ list: jsonFetchResponse(200, [{ id: 'co-f7', checkout_reference: 'att-f4' }]), get: jsonFetchResponse(200, F7_EXISTING) });
+  assert.equal(r.res.statusCode, 200);
+  assert.equal(r.res.body.hosted_checkout_url, 'https://pay.sumup.com/existing');
+  assert.equal(r.count('post'), 0);
+  const ref = r.admin.__rpcCalls.find((c) => c.name === 'kitchen_payment_attempt_set_provider_ref');
+  assert.equal(ref.params.p_provider_ref, 'co-f7');
+  assert.match(r.calls.find((c) => c.kind === 'get').url, /checkouts\/co-f7$/);
+});
+
+test('F7 T5/T18: List [] -> esattamente 1 POST, 201, provider_ref persistito, response invariata', async () => {
+  const r = await runF7({ list: jsonFetchResponse(200, []), post: jsonFetchResponse(201, F7_HOSTED) });
+  assert.equal(r.res.statusCode, 200);
+  assert.deepEqual(r.res.body, { checkout_id: 'co-f7', hosted_checkout_url: 'https://pay.sumup.com/f7' });
+  assert.equal(r.count('post'), 1);
+  assert.deepEqual(r.calls.map((c) => c.kind), ['list', 'post']);
+  assert.equal(r.admin.__rpcCalls.find((c) => c.name === 'kitchen_payment_attempt_set_provider_ref').params.p_provider_ref, 'co-f7');
+});
+
+test('F7 T6: POST 409 DUPLICATED_CHECKOUT -> List 1 match -> set_provider_ref -> GET riuso -> success, nessuna seconda POST', async () => {
+  let listN = 0;
+  const r = await runF7({
+    list: () => (++listN === 1 ? jsonFetchResponse(200, []) : jsonFetchResponse(200, [{ id: 'co-f7', checkout_reference: 'att-f4' }])),
+    post: jsonFetchResponse(409, { error_code: 'DUPLICATED_CHECKOUT' }),
+    get: jsonFetchResponse(200, F7_EXISTING),
+  });
+  assert.equal(r.res.statusCode, 200);
+  assert.equal(r.res.body.checkout_id, 'co-f7');
+  assert.equal(r.count('post'), 1);
+  assert.equal(r.count('list'), 2);
+  assert.equal(r.rpcCount('kitchen_payment_attempt_set_provider_ref'), 1);
+  assert.equal(r.rpcCount('kitchen_payment_fail'), 0);
+});
+
+test('F7 T7: 409 DUPLICATED + List ambiguous -> 409 needs_manual_reconciliation, nessuna seconda POST', async () => {
+  let listN = 0;
+  const r = await runF7({
+    list: () => (++listN === 1 ? jsonFetchResponse(200, []) : jsonFetchResponse(200, [{ id: 'a', checkout_reference: 'att-f4' }, { id: 'b', checkout_reference: 'att-f4' }])),
+    post: jsonFetchResponse(409, { error_code: 'DUPLICATED_CHECKOUT' }),
+  });
+  assert.equal(r.res.statusCode, 409);
+  assert.equal(r.res.body.error, 'needs_manual_reconciliation');
+  assert.equal(r.count('post'), 1);
+  assert.equal(r.rpcCount('kitchen_payment_attempt_set_provider_ref'), 0);
+});
+
+test('F7 T8: 409 DUPLICATED + recovery not_found / lookup_failed -> 503 UNKNOWN, nessuna seconda POST', async () => {
+  for (const second of [() => jsonFetchResponse(200, []), () => jsonFetchResponse(500, {}), () => { throw timeoutErr(); }]) {
+    let listN = 0;
+    const r = await runF7({
+      list: () => (++listN === 1 ? jsonFetchResponse(200, []) : second()),
+      post: jsonFetchResponse(409, { error_code: 'DUPLICATED_CHECKOUT' }),
+    });
+    assert.equal(r.res.statusCode, 503);
+    assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+    assert.equal(r.res.body.retryable, true);
+    assert.equal(r.count('post'), 1);
+    assert.equal(r.rpcCount('kitchen_payment_fail'), 0);
+  }
+});
+
+test('F7 T9: List ambiguous prima della create -> 409 needs_manual_reconciliation, 0 POST', async () => {
+  const r = await runF7({ list: jsonFetchResponse(200, [{ id: 'a', checkout_reference: 'att-f4' }, { id: 'b', checkout_reference: 'att-f4' }]) });
+  assert.equal(r.res.statusCode, 409);
+  assert.equal(r.res.body.error, 'needs_manual_reconciliation');
+  noPostNoFail(r);
+  assert.equal(r.rpcCount('kitchen_payment_attempt_set_provider_ref'), 0);
+});
+
+test('F7 T10: List lookup_failed (5xx / non-array) -> 503 UNKNOWN, 0 POST', async () => {
+  for (const list of [jsonFetchResponse(500, {}), jsonFetchResponse(200, { not: 'array' })]) {
+    const r = await runF7({ list });
+    assert.equal(r.res.statusCode, 503);
+    assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+    noPostNoFail(r);
+  }
+});
+
+test('F7 T11: POST start deadline superato (> 6 s dalla claim) -> 503 UNKNOWN, 0 POST', async () => {
+  const realNow = Date.now;
+  let t = 1_000_000;
+  Date.now = () => t;
+  try {
+    const r = await runF7({
+      rpc: { ...F7_RPC, kitchen_payment_attempt_claim_checkout: () => { t += 0; return { data: { id: 'att-f4' }, error: null }; } },
+      list: () => { t += 6001; return jsonFetchResponse(200, []); },
+    });
+    assert.equal(r.res.statusCode, 503);
+    assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+    assert.equal(r.res.body.retryable, true);
+    noPostNoFail(r);
+  } finally {
+    Date.now = realNow;
+  }
+});
+
+test('F7 T13: POST 5xx -> 503 UNKNOWN, 0 kitchen_payment_fail, 0 set_provider_ref', async () => {
+  const r = await runF7({ list: jsonFetchResponse(200, []), post: jsonFetchResponse(502, { message: 'bad gateway' }) });
+  assert.equal(r.res.statusCode, 503);
+  assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+  assert.equal(r.rpcCount('kitchen_payment_fail'), 0);
+  assert.equal(r.rpcCount('kitchen_payment_attempt_set_provider_ref'), 0);
+  assert.equal(r.count('post'), 1);
+});
+
+test('F7 T14: POST con body non-JSON (5xx o 2xx) -> 503 UNKNOWN', async () => {
+  const nonJson = (status) => ({ ok: status < 300, status, json: async () => { throw new SyntaxError('Unexpected token <'); } });
+  for (const status of [200, 201, 502]) {
+    const r = await runF7({ list: jsonFetchResponse(200, []), post: nonJson(status) });
+    assert.equal(r.res.statusCode, 503, `status ${status}`);
+    assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+    assert.equal(r.rpcCount('kitchen_payment_fail'), 0);
+    assert.equal(r.rpcCount('kitchen_payment_attempt_set_provider_ref'), 0);
+  }
+});
+
+test('F7 T15: 400 / 401 / 403 documentati -> 502 sumup_create_checkout_failed come prima, 1 sola POST', async () => {
+  for (const status of [400, 401, 403]) {
+    const r = await runF7({ list: jsonFetchResponse(200, []), post: jsonFetchResponse(status, { message: 'x' }) });
+    assert.equal(r.res.statusCode, 502, `status ${status}`);
+    assert.equal(r.res.body.error, 'sumup_create_checkout_failed');
+    assert.equal(r.count('post'), 1);
+    assert.equal(r.rpcCount('kitchen_payment_fail'), 0);
+  }
+});
+
+test('F7 T16: 4xx non previsto (404/422/429 e 409 senza DUPLICATED) -> fail conservativo UNKNOWN, nessun retry cieco', async () => {
+  const cases = [[404, {}], [422, {}], [429, {}], [409, { error_code: 'OTHER' }]];
+  for (const [status, body] of cases) {
+    const r = await runF7({ list: jsonFetchResponse(200, []), post: jsonFetchResponse(status, body) });
+    assert.equal(r.res.statusCode, 503, `status ${status}`);
+    assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+    assert.equal(r.count('post'), 1, 'nessuna seconda POST');
+    assert.equal(r.count('list'), 1, 'nessun recovery per 409 non-DUPLICATED');
+    assert.equal(r.rpcCount('kitchen_payment_fail'), 0);
+  }
+});
+
+test('F7 T17 (G4): 201 con id ma senza hosted_checkout_url -> set_provider_ref chiamato, poi errore, id non perso', async () => {
+  const r = await runF7({ list: jsonFetchResponse(200, []), post: jsonFetchResponse(201, { id: 'co-f7' }) });
+  assert.equal(r.res.statusCode, 502);
+  assert.equal(r.res.body.error, 'sumup_create_checkout_failed');
+  const ref = r.admin.__rpcCalls.find((c) => c.name === 'kitchen_payment_attempt_set_provider_ref');
+  assert.ok(ref, 'provider_ref persistito');
+  assert.equal(ref.params.p_provider_ref, 'co-f7');
+  assert.equal(r.rpcCount('kitchen_payment_fail'), 0);
+});
+
+test('F7 T19: provider_ref gia presente -> niente claim, niente List, niente POST; solo GET riuso', async () => {
+  const r = await runF7({ attempt: f4Attempt({ provider_ref: 'co-f7' }), get: jsonFetchResponse(200, F7_EXISTING) });
+  assert.equal(r.res.statusCode, 200);
+  assert.deepEqual(r.calls.map((c) => c.kind), ['get']);
+  assert.equal(r.rpcCount('kitchen_payment_attempt_claim_checkout'), 0);
+});
+
+test('F7: recovery trovato ma set_provider_ref fallisce -> 503 UNKNOWN, 0 POST', async () => {
+  const r = await runF7({
+    list: jsonFetchResponse(200, [{ id: 'co-f7', checkout_reference: 'att-f4' }]),
+    rpc: { ...F7_RPC, kitchen_payment_attempt_set_provider_ref: { data: null, error: { message: 'db down' } } },
+  });
+  assert.equal(r.res.statusCode, 503);
+  assert.equal(r.res.body.error, 'checkout_outcome_unknown');
+  noPostNoFail(r);
+});
+
+test('F7: List usa il timeout GET (AbortSignal) e checkout_reference = attempt.id', async () => {
+  const r = await runF7({ list: jsonFetchResponse(200, []), post: jsonFetchResponse(201, F7_HOSTED) });
+  const list = r.calls.find((c) => c.kind === 'list');
+  assert.ok(list.opts.signal);
+  assert.equal(list.url, `${F7_URL}?checkout_reference=att-f4`);
 });
 
 console.log('sumup-payment-reliability.test.mjs: tutti i test superati.');
