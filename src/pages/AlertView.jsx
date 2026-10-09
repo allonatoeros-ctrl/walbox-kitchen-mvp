@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { resolveOrderAllergens } from '../lib/kitchenAllergens';
+import { isStaffOperationalOrder } from '../lib/kitchenServiceRules';
 
 function elapsedMinutes(isoString) {
   return Math.floor((Date.now() - new Date(isoString).getTime()) / 60000);
@@ -28,7 +29,7 @@ export default function AlertView({ orders }) {
   }, []);
 
   const activeOrders = orders.filter(
-    (o) => o.status !== 'pending_counter_payment' && o.status !== 'delivered' && o.status !== 'cancelled'
+    (o) => isStaffOperationalOrder(o) && o.status !== 'pending_counter_payment'
   );
 
   const urgentOrders = activeOrders.filter((o) => elapsedMinutes(o.createdAt) >= 10);

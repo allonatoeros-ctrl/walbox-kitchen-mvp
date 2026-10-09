@@ -423,3 +423,48 @@ export function computeTopProductsAndCategories(orders, night, menuItems = [], t
 
   return { topProducts, topCategories };
 }
+
+// ============================================================================
+// STATI OPERATIVI STAFF (S1, Kitchen Order/Payment Lifecycle V2) — allow-list condivisa.
+//
+// Solo Service, Alert e TV mostrano in coda solo ordini in uno di questi stati. E' una lista
+// POSITIVA (mai `!== 'delivered' && !== 'cancelled'`): uno stato futuro come
+// `pending_online_payment` o `payment_abandoned` (ordine online non ancora pagato / abbandonato)
+// non deve comparire nelle code operative finche' non viene aggiunto qui di proposito.
+// Non descrive transizioni: quelle (e il pagamento) restano nelle RPC/endpoint server.
+// ============================================================================
+export const STAFF_OPERATIONAL_STATUSES = Object.freeze([
+  'pending_counter_payment',
+  'received',
+  'preparing',
+  'ready',
+]);
+
+export function isStaffOperationalStatus(status) {
+  return STAFF_OPERATIONAL_STATUSES.includes(status);
+}
+
+export function isStaffOperationalOrder(order) {
+  return isStaffOperationalStatus(order?.status);
+}
+
+// Ordini visibili sulla TV (S1). La TV e' una superficie staff pubblica nel locale: senza sessione
+// staff valida non mostra nulla (la cache locale `walbox_kitchen_orders_demo` puo' contenere dati
+// di una sessione/serata precedente). Finche' non c'e' stata una risposta Supabase in questa
+// pagina (`hasSynced` false) `orders` e' solo cache: si mostrano solo ordini creati nella serata
+// corrente. Dopo la prima sync il server e' la fonte e restano solo gli stati operativi.
+// Ritorna { state: 'checking' | 'no-session' | 'ready', orders }.
+export function selectTvOrders({ orders, sessionStatus, hasSynced, now = new Date() }) {
+  if (sessionStatus === 'checking') return { state: 'checking', orders: [] };
+  if (sessionStatus !== 'authenticated') return { state: 'no-session', orders: [] };
+  const operational = (Array.isArray(orders) ? orders : []).filter(isStaffOperationalOrder);
+  if (hasSynced) return { state: 'ready', orders: operational };
+  const startMs = serviceNightWindow(now).start;
+  return {
+    state: 'ready',
+    orders: operational.filter((o) => {
+      const t = Date.parse(o?.createdAt);
+      return Number.isFinite(t) && t >= startMs;
+    }),
+  };
+}

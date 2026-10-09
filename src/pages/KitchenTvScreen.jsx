@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { selectTvOrders } from '../lib/kitchenServiceRules';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
 import './KitchenTvScreen.css';
 
@@ -21,10 +22,11 @@ const isJustReady = (order) => {
 };
 
 const KitchenTvScreen = () => {
-  const { orders } = useKitchenOrders();
+  const { orders, sessionStatus, hasSynced } = useKitchenOrders();
 
-  // Ensure orders is an array
-  const validOrders = Array.isArray(orders) ? orders : [];
+  // S1: senza sessione staff valida (o con sola cache non ancora sincronizzata) la TV non mostra
+  // dati staff obsoleti — vedi selectTvOrders.
+  const { state: tvState, orders: validOrders } = selectTvOrders({ orders, sessionStatus, hasSynced });
 
   const readyOrders = validOrders
     .filter(o => o.status === 'ready')
@@ -42,6 +44,22 @@ const KitchenTvScreen = () => {
     const interval = setInterval(() => setNow(Date.now()), 30000); // 30 sec
     return () => clearInterval(interval);
   }, []);
+
+  if (tvState !== 'ready') {
+    return (
+      <div className="kitchen-tv-container">
+        <div className="tv-noise-overlay"></div>
+        <main className="tv-main">
+          <div className="empty-state">
+            <span className="empty-title">{tvState === 'checking' ? 'CARICAMENTO…' : 'SESSIONE STAFF NON ATTIVA'}</span>
+            {tvState === 'no-session' && (
+              <span className="empty-subtitle">ACCEDI DA /kitchen/login SU QUESTO SCHERMO.</span>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="kitchen-tv-container">

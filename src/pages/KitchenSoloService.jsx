@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { isStaffOperationalOrder } from '../lib/kitchenServiceRules';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { useKitchenServiceState } from '../hooks/useKitchenServiceState';
 import { useKitchenPayments } from '../hooks/useKitchenPayments';
@@ -337,7 +338,7 @@ export function KitchenSoloServiceView({
   }, [undo]);
 
   const active = useMemo(
-    () => orders.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled'),
+    () => orders.filter(isStaffOperationalOrder),
     [orders]
   );
 

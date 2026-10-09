@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { demoKitchenOrders } from '../data/kitchenMockData';
 import { supabase } from '../lib/supabaseClient';
-import { serviceNightWindow } from '../lib/kitchenServiceRules';
+import { serviceNightWindow, STAFF_OPERATIONAL_STATUSES } from '../lib/kitchenServiceRules';
 
 // Storage cliente vs storage staff/cassa (privacy client-side, 2026-09-16).
 //
@@ -166,7 +166,7 @@ export function mapSupabaseOrder(row) {
 // gli ordini ANCORA APERTI anche se piu' vecchi (un ordine dimenticato di ieri resta operativo
 // finche' non e' chiuso). Le notti passate si leggono on-demand da useKitchenOrderHistory.
 // Lista positiva di stati aperti (non `not.in`): sicura sui NULL e senza dipendere da nuovi stati.
-export const OPEN_ORDER_STATUSES = ['pending_counter_payment', 'received', 'preparing', 'ready'];
+export const OPEN_ORDER_STATUSES = [...STAFF_OPERATIONAL_STATUSES];
 
 // Filtro PostgREST `or` della lista live. `win` = serviceNightWindow(): va ricalcolata ad ogni
 // fetch (mai al mount) cosi' il rollover delle 06:00 sposta la finestra anche su una TV accesa
@@ -344,6 +344,90 @@ export function subscribeToKitchenOrdersRealtime(onChange, onStatus) {
       if (err) console.warn('[Walbox] kitchen_orders realtime subscribe error:', err);
       if (onStatus) onStatus(status, err);
     });
+}
+
+// S1 — Realtime lifecycle. Il canale non puo' piu' dipendere da un'unica `getSession()` al mount:
+// (a) con login DOPO il mount non esisteva subscription (solo poll); (b) dopo CLOSED /
+// CHANNEL_ERROR / TIMED_OUT il canale restava morto. Il manager e' puro e iniettabile (timer,
+// subscribe, removeChannel) per i test. `ensure(session)` e' idempotente: crea il canale solo se
+// c'e' una sessione e non ne esiste gia' uno; `teardown()` lo rimuove (logout / unmount).
+// Uno stato terminale (CLOSED/CHANNEL_ERROR/TIMED_OUT) pianifica un re-subscribe con backoff; se il
+// client Supabase si riconnette da solo (SUBSCRIBED) il timer viene annullato. Le callback di un
+// canale sostituito sono ignorate (generation). Il catch-up dei dati dopo SUBSCRIBED lo fa lo
+// scheduler tramite onStatus (setRealtimeStatus), invariato.
+export const REALTIME_RESUBSCRIBE_MS = [2000, 5000, 15000, 30000];
+
+export function createRealtimeChannelManager({
+  subscribe = subscribeToKitchenOrdersRealtime,
+  removeChannel = (ch) => supabase.removeChannel(ch),
+  onChange,
+  onStatus,
+  timers = { setTimeout: (...a) => setTimeout(...a), clearTimeout: (...a) => clearTimeout(...a) },
+  delays = REALTIME_RESUBSCRIBE_MS,
+} = {}) {
+  let channel = null;
+  let generation = 0;
+  let attempts = 0;
+  let retryTimer = null;
+  let hasSession = false;
+  let stopped = false;
+
+  const clearRetry = () => { if (retryTimer != null) { timers.clearTimeout(retryTimer); retryTimer = null; } };
+
+  const drop = () => {
+    generation += 1;
+    clearRetry();
+    if (channel) {
+      const old = channel;
+      channel = null;
+      try { removeChannel(old); } catch (err) { console.warn('[Walbox] removeChannel failed', err); }
+    }
+  };
+
+  const open = () => {
+    if (stopped || !hasSession || channel) return;
+    const gen = ++generation;
+    channel = subscribe(
+      () => { if (gen === generation) onChange?.(); },
+      (status, err) => {
+        if (gen !== generation) return; // canale sostituito/rimosso: callback tardiva
+        if (status === 'SUBSCRIBED') { attempts = 0; clearRetry(); }
+        onStatus?.(status, err);
+        if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') scheduleResubscribe();
+      }
+    );
+  };
+
+  function scheduleResubscribe() {
+    if (stopped || !hasSession || retryTimer != null) return;
+    const delay = delays[Math.min(attempts, delays.length - 1)];
+    attempts += 1;
+    retryTimer = timers.setTimeout(() => {
+      retryTimer = null;
+      if (stopped || !hasSession) return;
+      drop();
+      open();
+    }, delay);
+  }
+
+  return {
+    // session: oggetto sessione Supabase oppure null/undefined (assenza esplicita di sessione).
+    ensure(session) {
+      if (stopped) return;
+      if (!session) { this.noSession(); return; }
+      hasSession = true;
+      open();
+    },
+    noSession() {
+      hasSession = false;
+      attempts = 0;
+      const had = channel != null;
+      drop();
+      if (had) onStatus?.('CLOSED', null); // cosi' lo scheduler passa a poll rapido/backoff
+    },
+    stop() { stopped = true; hasSession = false; drop(); },
+    hasChannel: () => channel != null,
+  };
 }
 
 // Scheduler adattivo di sync (P1 Supabase Sync Optimization). Realtime e' il canale primario;
@@ -570,6 +654,14 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
   // una piu' recente viene scartata invece di sovrascrivere lo stato appena applicato (root
   // cause del flicker sul riepilogo Solo Service, vedi audit).
   const fetchSeqRef = useRef(0);
+  // S1: 'checking' (prima risposta di getSession) | 'authenticated' | 'none'. Le superfici staff
+  // (TV) lo usano per non mostrare la cache locale senza una sessione valida. `hasSynced` diventa
+  // true alla prima risposta Supabase applicata in questa sessione di pagina: prima di allora
+  // `orders` puo' essere solo cache del dispositivo (anche di una serata precedente).
+  const [sessionStatus, setSessionStatusState] = useState('checking');
+  const [hasSynced, setHasSynced] = useState(false);
+  const sessionStatusRef = useRef('checking');
+  const setSessionStatus = (next) => { sessionStatusRef.current = next; setSessionStatusState(next); };
 
   useEffect(() => {
     const refresh = () => setOrders(loadOrders(scope));
@@ -596,6 +688,9 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
     const seq = ++fetchSeqRef.current;
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      // Nessuna sessione: nulla da leggere (la RLS restituirebbe 0 righe e svuoterebbe la cache
+      // per errore). Non e' un errore di rete => niente backoff; lo stato e' esposto da
+      // sessionStatus e il poll riprende da solo appena arriva una sessione.
       if (!session) return true;
 
       let query = supabase
@@ -624,6 +719,7 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
         if (scope !== SCOPE_CUSTOMER) saveOrders(scope, next);
         return next;
       });
+      setHasSynced(true);
       return true;
     } catch (err) {
       console.warn('[Walbox] Supabase read failed — using localStorage', err);
@@ -637,12 +733,29 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
   // Nessun mapping parallelo: ogni trigger rilancia lo stesso fetch canonico (fetchSeqRef
   // continua a scartare le risposte fuori ordine), cosi' lo stato resta identico per ogni fonte.
   useEffect(() => {
-    let channel;
     let cancelled = false;
     const scheduler = createOrdersSyncScheduler({
       fetchFn: fetchSupabaseOrders,
       role: isCustomer ? 'customer' : 'staff',
     });
+    const manager = createRealtimeChannelManager({
+      onChange: () => scheduler.notifyRealtimeEvent(),
+      onStatus: (status) => scheduler.setRealtimeStatus(status),
+    });
+
+    // Sessione valida per lo scope: lo staff richiede un utente non anonimo, il cliente accetta
+    // anche la sessione anonima. Senza sessione valida: nessun canale, stato esplicito 'none'.
+    const isValidSession = (session) => !!session && (isCustomer || !session.user?.is_anonymous);
+    const applySession = (session) => {
+      if (cancelled) return;
+      if (isValidSession(session)) {
+        setSessionStatus('authenticated');
+        manager.ensure(session);
+      } else {
+        setSessionStatus('none');
+        manager.noSession();
+      }
+    };
 
     const onVisibilityChange = () => scheduler.onVisibilityChange();
     const onOnline = () => scheduler.onOnline();
@@ -650,23 +763,27 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
     window.addEventListener('online', onOnline);
     scheduler.start();
 
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session || cancelled) return;
-      channel = subscribeToKitchenOrdersRealtime(
-        () => scheduler.notifyRealtimeEvent(),
-        (status) => scheduler.setRealtimeStatus(status)
-      );
-    }
+    // Login/logout/refresh dopo il mount: prima non esisteva alcuna subscription in questi casi.
+    // INITIAL_SESSION e' coperto da getSession() qui sotto; SIGNED_IN dopo il mount => canale +
+    // catch-up immediato (il poll lento/hidden non deve ritardare i primi ordini dopo il login).
+    const authSub = supabase.auth.onAuthStateChange?.((event, session) => {
+      if (cancelled || event === 'INITIAL_SESSION') return;
+      const wasNone = sessionStatusRef.current !== 'authenticated';
+      applySession(session);
+      if (event === 'SIGNED_IN' && isValidSession(session) && wasNone) scheduler.onOnline();
+    });
 
-    init();
+    supabase.auth.getSession()
+      .then(({ data }) => applySession(data?.session ?? null))
+      .catch(() => applySession(null));
 
     return () => {
       cancelled = true;
       scheduler.stop();
       document.removeEventListener('visibilitychange', onVisibilityChange);
       window.removeEventListener('online', onOnline);
-      if (channel) supabase.removeChannel(channel);
+      authSub?.data?.subscription?.unsubscribe?.();
+      manager.stop();
     };
   }, []);
 
@@ -941,5 +1058,5 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
     setOrders(fresh);
   };
 
-  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote, retrySync, redeemPromo, refundOrder };
+  return { orders, updateOrderStatus, addOrder, confirmPayment, cancelOrder, resetToDemo, updateStaffNote, retrySync, redeemPromo, refundOrder, sessionStatus, hasSynced };
 }
