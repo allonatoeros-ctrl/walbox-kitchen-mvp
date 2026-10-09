@@ -21,6 +21,14 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'missing_order_id_or_payment_attempt_id' });
   }
 
+  // S0.5 F4: possedere order_id/payment_attempt_id non e autorizzazione. Nessuna lettura/mutazione/
+  // fetch SumUp prima di: caller autenticato -> proprietario dell'ordine -> attempt di quell'ordine.
+  const authHeader = req.headers?.authorization || '';
+  const accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+  if (!accessToken) {
+    return res.status(401).json({ error: 'missing_session' });
+  }
+
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const sumupApiKey = process.env.SUMUP_API_KEY;
@@ -32,6 +40,31 @@ export default async function handler(req, res) {
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+
+  // Identita del caller risolta server-side dal bearer token (mai da id forniti dal client).
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(accessToken);
+  if (userError || !userData?.user) {
+    return res.status(401).json({ error: 'invalid_session' });
+  }
+  const callerId = userData.user.id;
+
+  const { data: order, error: orderError } = await supabaseAdmin
+    .from('kitchen_orders')
+    .select('id, customer_id, payment_status, total')
+    .eq('id', order_id)
+    .maybeSingle();
+
+  if (orderError) {
+    console.error('[kitchen-sumup-create-checkout] order lookup failed', orderError);
+    return res.status(500).json({ error: 'internal_server_error' });
+  }
+  if (!order) {
+    return res.status(404).json({ error: 'order_not_found' });
+  }
+  // Ownership PRIMA di qualsiasi lettura dell'attempt o informazione sullo stato di pagamento.
+  if (!order.customer_id || order.customer_id !== callerId) {
+    return res.status(403).json({ error: 'not_order_owner' });
+  }
 
   const { data: attempt, error: attemptError } = await supabaseAdmin
     .from('kitchen_payments')
@@ -57,19 +90,6 @@ export default async function handler(req, res) {
   // still get paid (e.g. cash at the counter) in the gap between that RPC call and this request.
   // Re-check server-side right before creating a real hosted checkout — never trust the client's
   // earlier attempt_start result as still true.
-  const { data: order, error: orderError } = await supabaseAdmin
-    .from('kitchen_orders')
-    .select('id, payment_status, total')
-    .eq('id', order_id)
-    .maybeSingle();
-
-  if (orderError) {
-    console.error('[kitchen-sumup-create-checkout] order lookup failed', orderError);
-    return res.status(500).json({ error: 'internal_server_error' });
-  }
-  if (!order) {
-    return res.status(404).json({ error: 'order_not_found' });
-  }
   if (order.payment_status === 'paid') {
     const { error: failError } = await supabaseAdmin.rpc('kitchen_payment_fail', {
       p_attempt_id: attempt.id,

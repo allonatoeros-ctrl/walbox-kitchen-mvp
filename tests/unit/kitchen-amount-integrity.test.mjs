@@ -60,7 +60,7 @@ function makeAdmin({ attempt, order }) {
     };
     return b;
   };
-  return { from, rpc: async (name, params) => { rpcCalls.push({ name, params }); return { data: null, error: null }; }, __rpcCalls: rpcCalls };
+  return { from, auth: { getUser: async () => ({ data: { user: { id: 'cust-1' } }, error: null }) }, rpc: async (name, params) => { rpcCalls.push({ name, params }); return { data: null, error: null }; }, __rpcCalls: rpcCalls };
 }
 
 async function run({ attempt, order }) {
@@ -71,7 +71,7 @@ async function run({ attempt, order }) {
   globalThis.fetch = async (url, opts) => { fetchCalls.push({ url: String(url), method: opts?.method ?? 'GET' }); throw new Error('SumUp must not be called'); };
   const res = makeRes();
   try {
-    await createCheckoutHandler({ method: 'POST', body: { order_id: 'ord-1', payment_attempt_id: 'att-1' }, headers: {} }, res);
+    await createCheckoutHandler({ method: 'POST', body: { order_id: 'ord-1', payment_attempt_id: 'att-1' }, headers: { authorization: 'Bearer valid-token' } }, res);
   } finally {
     globalThis.fetch = original;
   }
@@ -79,7 +79,7 @@ async function run({ attempt, order }) {
 }
 
 const baseAttempt = { id: 'att-1', order_id: 'ord-1', provider: 'sumup', method: 'sumup_online', amount: 100, status: 'initiated', direction: 'charge', provider_ref: null };
-const baseOrder = { id: 'ord-1', payment_status: 'pending_counter_payment', total: 90 };
+const baseOrder = { id: 'ord-1', payment_status: 'pending_counter_payment', total: 90, customer_id: 'cust-1' };
 
 test('create-checkout: attempt.amount != order.total (path nuovo checkout) -> 409 amount_mismatch, nessuna fetch SumUp, nessun claim', async () => {
   const { res, admin, fetchCalls } = await run({ attempt: baseAttempt, order: baseOrder });

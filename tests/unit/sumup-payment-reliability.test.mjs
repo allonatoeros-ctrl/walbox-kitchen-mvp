@@ -135,15 +135,20 @@ function jsonFetchResponse(status, body) {
   return { ok: status >= 200 && status < 300, status, json: async () => body };
 }
 
+const CALLER_ID = 'cust-1';
+const CALLER_AUTH = { data: { user: { id: CALLER_ID } }, error: null };
+const AUTH_HEADERS = { authorization: 'Bearer valid-token' };
+
 // ================================================================================================
 // FASE 1 — create-checkout: race guard "ordine gia pagato" (P1-2 / Test #3)
 // ================================================================================================
 
 test('create-checkout: ordine gia pagato tra attempt_start e create-checkout -> 409, checkout mai creato', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-1', order_id: 'ord-1', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge' }, error: null },
-      kitchen_orders: { data: { id: 'ord-1', total: 10, payment_status: 'paid' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-1', total: 10, payment_status: 'paid' }, error: null },
     },
     rpc: { kitchen_payment_fail: { data: {}, error: null } },
   });
@@ -151,7 +156,7 @@ test('create-checkout: ordine gia pagato tra attempt_start e create-checkout -> 
   let sumupCalled = false;
   await withFetch(async () => { sumupCalled = true; return jsonFetchResponse(200, { id: 'co-1', hosted_checkout_url: 'https://pay.sumup.com/x' }); }, async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-1', payment_attempt_id: 'att-1' } });
+      const req = makeReq({ body: { order_id: 'ord-1', payment_attempt_id: 'att-1' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 409);
@@ -166,9 +171,10 @@ test('create-checkout: ordine gia pagato tra attempt_start e create-checkout -> 
 
 test('create-checkout: ordine non pagato -> procede, checkout creato e provider_ref persistito', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-2', order_id: 'ord-2', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null }, error: null },
-      kitchen_orders: { data: { id: 'ord-2', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-2', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {
       kitchen_payment_attempt_claim_checkout: { data: { id: 'att-2', provider_ref: null }, error: null },
@@ -178,7 +184,7 @@ test('create-checkout: ordine non pagato -> procede, checkout creato e provider_
 
   await withFetch(async () => jsonFetchResponse(200, { id: 'co-2', hosted_checkout_url: 'https://pay.sumup.com/y' }), async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-2', payment_attempt_id: 'att-2' } });
+      const req = makeReq({ body: { order_id: 'ord-2', payment_attempt_id: 'att-2' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 200);
@@ -200,9 +206,10 @@ test('create-checkout: ordine non pagato -> procede, checkout creato e provider_
 
 test('create-checkout: provider_ref assente, claim RPC perde la race -> 409 checkout_creation_in_progress, SumUp mai chiamato', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-20', order_id: 'ord-20', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null }, error: null },
-      kitchen_orders: { data: { id: 'ord-20', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-20', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: { kitchen_payment_attempt_claim_checkout: { data: null, error: null } },
   });
@@ -210,7 +217,7 @@ test('create-checkout: provider_ref assente, claim RPC perde la race -> 409 chec
   let sumupCalled = false;
   await withFetch(async () => { sumupCalled = true; return jsonFetchResponse(200, { id: 'co-20', hosted_checkout_url: 'https://pay.sumup.com/x' }); }, async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-20', payment_attempt_id: 'att-20' } });
+      const req = makeReq({ body: { order_id: 'ord-20', payment_attempt_id: 'att-20' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 409);
@@ -228,9 +235,10 @@ test('create-checkout: claim RPC perde la race con la reale forma PostgREST (rig
   // una race persa come vinta. Verificato a livello SQL diretto su Supabase che
   // row_to_json(claim_fallita) produce esattamente questa forma, non `null`.
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-20b', order_id: 'ord-20b', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null }, error: null },
-      kitchen_orders: { data: { id: 'ord-20b', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-20b', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {
       kitchen_payment_attempt_claim_checkout: {
@@ -248,7 +256,7 @@ test('create-checkout: claim RPC perde la race con la reale forma PostgREST (rig
   let sumupCalled = false;
   await withFetch(async () => { sumupCalled = true; return jsonFetchResponse(200, { id: 'co-20b', hosted_checkout_url: 'https://pay.sumup.com/x' }); }, async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-20b', payment_attempt_id: 'att-20b' } });
+      const req = makeReq({ body: { order_id: 'ord-20b', payment_attempt_id: 'att-20b' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 409);
@@ -260,9 +268,10 @@ test('create-checkout: claim RPC perde la race con la reale forma PostgREST (rig
 
 test('create-checkout: provider_ref gia presente + SumUp GET PENDING -> riusa lo stesso checkout, SumUp POST mai chiamato', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-21', order_id: 'ord-21', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-21' }, error: null },
-      kitchen_orders: { data: { id: 'ord-21', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-21', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {},
   });
@@ -273,7 +282,7 @@ test('create-checkout: provider_ref gia presente + SumUp GET PENDING -> riusa lo
     return jsonFetchResponse(200, { id: 'co-21', status: 'PENDING', amount: 10, checkout_reference: 'att-21', hosted_checkout_url: 'https://pay.sumup.com/existing' });
   }, async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-21', payment_attempt_id: 'att-21' } });
+      const req = makeReq({ body: { order_id: 'ord-21', payment_attempt_id: 'att-21' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 200);
@@ -290,9 +299,10 @@ test('create-checkout: provider_ref gia presente + SumUp GET PENDING -> riusa lo
 
 test('create-checkout: provider_ref presente + SumUp GET PAID -> resolve/confirm, 409 order_already_paid, nessun nuovo checkout', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-22', order_id: 'ord-22', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-22' }, error: null },
-      kitchen_orders: { data: { id: 'ord-22', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-22', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: { kitchen_payment_confirm: { data: { status: 'succeeded' }, error: null } },
   });
@@ -303,7 +313,7 @@ test('create-checkout: provider_ref presente + SumUp GET PAID -> resolve/confirm
     return jsonFetchResponse(200, { id: 'co-22', status: 'PAID', amount: 10, checkout_reference: 'att-22' });
   }, async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-22', payment_attempt_id: 'att-22' } });
+      const req = makeReq({ body: { order_id: 'ord-22', payment_attempt_id: 'att-22' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 409);
@@ -316,9 +326,10 @@ test('create-checkout: provider_ref presente + SumUp GET PAID -> resolve/confirm
 
 test('create-checkout: provider_ref presente + SumUp GET FAILED (sumup_failed) -> fail applicato, riusa lo STESSO checkout (retry preservato)', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-23', order_id: 'ord-23', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-23' }, error: null },
-      kitchen_orders: { data: { id: 'ord-23', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-23', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: { kitchen_payment_fail: { data: { status: 'failed' }, error: null } },
   });
@@ -329,7 +340,7 @@ test('create-checkout: provider_ref presente + SumUp GET FAILED (sumup_failed) -
     return jsonFetchResponse(200, { id: 'co-23', status: 'FAILED', amount: 10, checkout_reference: 'att-23', hosted_checkout_url: 'https://pay.sumup.com/retry-same' });
   }, async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-23', payment_attempt_id: 'att-23' } });
+      const req = makeReq({ body: { order_id: 'ord-23', payment_attempt_id: 'att-23' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 200);
@@ -345,9 +356,10 @@ test('create-checkout: provider_ref presente + SumUp GET FAILED (sumup_failed) -
 
 test('create-checkout: provider_ref presente + SumUp GET EXPIRED -> fail applicato, checkout non riusabile, nessun nuovo checkout da qui', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-24', order_id: 'ord-24', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-24' }, error: null },
-      kitchen_orders: { data: { id: 'ord-24', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-24', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: { kitchen_payment_fail: { data: { status: 'failed' }, error: null } },
   });
@@ -358,7 +370,7 @@ test('create-checkout: provider_ref presente + SumUp GET EXPIRED -> fail applica
     return jsonFetchResponse(200, { id: 'co-24', status: 'EXPIRED', amount: 10, checkout_reference: 'att-24' });
   }, async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-24', payment_attempt_id: 'att-24' } });
+      const req = makeReq({ body: { order_id: 'ord-24', payment_attempt_id: 'att-24' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 409);
@@ -373,16 +385,17 @@ test('create-checkout: provider_ref presente + SumUp GET EXPIRED -> fail applica
 
 test('create-checkout: provider_ref presente + GET SumUp fallisce (network/5xx) -> fail closed, nessuna azione', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-25', order_id: 'ord-25', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-25' }, error: null },
-      kitchen_orders: { data: { id: 'ord-25', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-25', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {},
   });
 
   await withFetch(async () => { throw new Error('network down'); }, async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-25', payment_attempt_id: 'att-25' } });
+      const req = makeReq({ body: { order_id: 'ord-25', payment_attempt_id: 'att-25' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 502);
@@ -394,16 +407,17 @@ test('create-checkout: provider_ref presente + GET SumUp fallisce (network/5xx) 
 
 test('create-checkout: provider_ref presente + checkout_reference non corrisponde -> 409, mai risolto', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-26', order_id: 'ord-26', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-26' }, error: null },
-      kitchen_orders: { data: { id: 'ord-26', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-26', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {},
   });
 
   await withFetch(async () => jsonFetchResponse(200, { id: 'co-26', status: 'PENDING', amount: 10, checkout_reference: 'someone-elses-attempt', hosted_checkout_url: 'https://pay.sumup.com/z' }), async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-26', payment_attempt_id: 'att-26' } });
+      const req = makeReq({ body: { order_id: 'ord-26', payment_attempt_id: 'att-26' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 409);
@@ -415,22 +429,169 @@ test('create-checkout: provider_ref presente + checkout_reference non corrispond
 
 test('create-checkout: provider_ref presente + PENDING ma senza hosted_checkout_url in risposta -> fail closed, nessuna ricostruzione URL', async () => {
   const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
     tables: {
       kitchen_payments: { data: { id: 'att-27', order_id: 'ord-27', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-27' }, error: null },
-      kitchen_orders: { data: { id: 'ord-27', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-27', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
     rpc: {},
   });
 
   await withFetch(async () => jsonFetchResponse(200, { id: 'co-27', status: 'PENDING', amount: 10, checkout_reference: 'att-27' }), async () => {
     await withAdmin(admin, async () => {
-      const req = makeReq({ body: { order_id: 'ord-27', payment_attempt_id: 'att-27' } });
+      const req = makeReq({ body: { order_id: 'ord-27', payment_attempt_id: 'att-27' }, headers: AUTH_HEADERS });
       const res = makeRes();
       await createCheckoutHandler(req, res);
       assert.equal(res.statusCode, 409);
       assert.equal(res.body.error, 'checkout_retry_unavailable');
     });
   });
+});
+
+// ================================================================================================
+// S0.5 F4 — create-checkout: authentication & ownership (auth -> owner -> attempt -> F1 -> SumUp)
+// ================================================================================================
+
+const MUTATING_RPCS = ['kitchen_payment_fail', 'kitchen_payment_attempt_claim_checkout', 'kitchen_payment_attempt_set_provider_ref', 'kitchen_payment_confirm'];
+
+function f4Attempt(over = {}) {
+  return { id: 'att-f4', order_id: 'ord-f4', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null, ...over };
+}
+function f4Order(over = {}) {
+  return { id: 'ord-f4', customer_id: CALLER_ID, total: 10, payment_status: 'pending_counter_payment', ...over };
+}
+
+async function runF4({ headers = AUTH_HEADERS, authUser = CALLER_AUTH, order = f4Order(), attempt = f4Attempt(), rpc = {}, fetchImpl, body = { order_id: 'ord-f4', payment_attempt_id: 'att-f4' } } = {}) {
+  const admin = makeSupabaseAdminMock({
+    authUser,
+    tables: { kitchen_orders: { data: order, error: null }, kitchen_payments: { data: attempt, error: null } },
+    rpc,
+  });
+  const fetchCalls = [];
+  const res = makeRes();
+  await withFetch(async (url, opts) => {
+    fetchCalls.push(String(url));
+    return fetchImpl ? fetchImpl(url, opts) : jsonFetchResponse(200, { id: 'co-f4', hosted_checkout_url: 'https://pay.sumup.com/f4' });
+  }, () => withAdmin(admin, () => createCheckoutHandler(makeReq({ body, headers }), res)));
+  const mutations = admin.__rpcCalls.filter((c) => MUTATING_RPCS.includes(c.name));
+  return { res, admin, fetchCalls, mutations };
+}
+
+test('F4 T1: nessun Authorization -> 401 missing_session, 0 RPC, 0 fetch SumUp', async () => {
+  const { res, admin, fetchCalls } = await runF4({ headers: {} });
+  assert.equal(res.statusCode, 401);
+  assert.equal(res.body.error, 'missing_session');
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T2: token invalido -> 401 invalid_session, 0 RPC, 0 fetch SumUp', async () => {
+  const { res, admin, fetchCalls } = await runF4({ authUser: { data: { user: null }, error: new Error('bad jwt') } });
+  assert.equal(res.statusCode, 401);
+  assert.equal(res.body.error, 'invalid_session');
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T3: customer A + order A + attempt A valido -> checkout creato come prima', async () => {
+  const { res, admin, fetchCalls } = await runF4({
+    rpc: {
+      kitchen_payment_attempt_claim_checkout: { data: { id: 'att-f4' }, error: null },
+      kitchen_payment_attempt_set_provider_ref: { data: {}, error: null },
+    },
+  });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.hosted_checkout_url, 'https://pay.sumup.com/f4');
+  assert.equal(fetchCalls.length, 1);
+  assert.ok(admin.__rpcCalls.find((c) => c.name === 'kitchen_payment_attempt_claim_checkout'));
+});
+
+test('F4 T4: customer A + order di B -> 403 not_order_owner, 0 claim, 0 fail, 0 fetch', async () => {
+  const { res, admin, fetchCalls } = await runF4({ order: f4Order({ customer_id: 'cust-B' }) });
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.body.error, 'not_order_owner');
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T5: order A ma attempt appartenente a order B -> 404 payment_attempt_not_found, 0 claim, 0 fetch', async () => {
+  const { res, admin, fetchCalls } = await runF4({ attempt: f4Attempt({ order_id: 'ord-B' }) });
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.body.error, 'payment_attempt_not_found');
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T6: order.customer_id NULL -> 403, 0 mutazioni, 0 fetch', async () => {
+  const { res, admin, fetchCalls } = await runF4({ order: f4Order({ customer_id: null }) });
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.body.error, 'not_order_owner');
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T7: order di B gia paid richiesto da A -> 403 (non order_already_paid), nessuna mutazione', async () => {
+  const { res, admin, mutations, fetchCalls } = await runF4({ order: f4Order({ customer_id: 'cust-B', payment_status: 'paid' }) });
+  assert.equal(res.statusCode, 403);
+  assert.equal(res.body.error, 'not_order_owner');
+  assert.equal(mutations.length, 0);
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T8: owner autorizzato ma attempt.amount != order.total -> 409 amount_mismatch (F1 preservata)', async () => {
+  const { res, admin, fetchCalls } = await runF4({ attempt: f4Attempt({ amount: 99 }) });
+  assert.equal(res.statusCode, 409);
+  assert.equal(res.body.error, 'amount_mismatch');
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T9: owner autorizzato + provider_ref presente -> reuse invariato (GET, nessun POST)', async () => {
+  const { res, fetchCalls } = await runF4({
+    attempt: f4Attempt({ provider_ref: 'co-f4' }),
+    fetchImpl: async () => jsonFetchResponse(200, { id: 'co-f4', status: 'PENDING', amount: 10, checkout_reference: 'att-f4', hosted_checkout_url: 'https://pay.sumup.com/reuse' }),
+  });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.hosted_checkout_url, 'https://pay.sumup.com/reuse');
+  assert.equal(fetchCalls.length, 1);
+  assert.match(fetchCalls[0], /\/checkouts\/co-f4$/);
+});
+
+test('F4 T10: order inesistente con token valido -> 404 order_not_found, 0 fetch', async () => {
+  const { res, admin, fetchCalls } = await runF4({ order: null, attempt: null });
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.body.error, 'order_not_found');
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T10b: ordine proprio ma attempt inesistente -> 404 payment_attempt_not_found, 0 fetch', async () => {
+  const { res, admin, fetchCalls } = await runF4({ attempt: null });
+  assert.equal(res.statusCode, 404);
+  assert.equal(res.body.error, 'payment_attempt_not_found');
+  assert.equal(admin.__rpcCalls.length, 0);
+  assert.equal(fetchCalls.length, 0);
+});
+
+test('F4 T11: sorgente — getUser e check ownership precedono ogni RPC con effetti e fetch SumUp', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(path.join(ROOT, 'api/kitchen-sumup-create-checkout.js'), 'utf8');
+  const idx = (needle) => { const i = src.indexOf(needle); assert.ok(i >= 0, `manca: ${needle}`); return i; };
+  const ownership = idx("res.status(403).json({ error: 'not_order_owner' })");
+  assert.ok(idx('auth.getUser(accessToken)') < ownership);
+  assert.ok(src.indexOf("kitchen_payments") > ownership, 'lookup attempt dopo ownership');
+  for (const needle of ["rpc('kitchen_payment_fail'", "rpc('kitchen_payment_attempt_claim_checkout'", "rpc('kitchen_payment_attempt_set_provider_ref'", 'fetch(', 'resolveExistingCheckout({']) {
+    assert.ok(idx(needle) > ownership, `${needle} deve seguire il check ownership`);
+  }
+  assert.doesNotMatch(src, /getSession\(/);
+});
+
+test('F4 T12: useOrderPaymentFlow invia Authorization Bearer alla create-checkout', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(path.join(ROOT, 'src/hooks/useOrderPaymentFlow.js'), 'utf8');
+  const call = src.slice(src.indexOf("fetch('/api/kitchen-sumup-create-checkout'"));
+  assert.match(call.slice(0, 400), /Authorization:\s*`Bearer \$\{session\.access_token\}`/);
 });
 
 // ================================================================================================
