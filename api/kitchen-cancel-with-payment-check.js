@@ -15,20 +15,25 @@ import { recoverSumupProviderRef } from './_lib/sumupProviderRefRecovery.js';
 // capture money on that checkout underneath it.
 //
 // Flow (design approved by Eros):
-//   1. Look up the order + the live charge attempt (if any). No live attempt, or a non-sumup
-//      attempt -> nothing to check remotely, go straight to the atomic cancel RPC.
+//   1. Look up the order + the live charge attempt (if any): 'initiated'/'pending', OR 'failed' with
+//      provider='sumup' AND failure_reason='sumup_failed' (card declined but the checkout is still
+//      inside the same-checkout retry window — the customer can pay it again with another card on
+//      the same hosted page). No such attempt, or a non-sumup attempt -> nothing to check remotely,
+//      go straight to the atomic cancel RPC.
 //   2. Live sumup attempt -> GET the checkout from SumUp (authoritative, never trust local state).
 //   3. checkout.status === 'PAID' -> resolve it via the SAME shared resolver the webhook/reconcile
 //      endpoints use (applySumupCheckoutResult) and STOP: the order is never cancelled once the
 //      money has actually landed.
-//   4. Not paid -> DELETE the checkout. A clean delete (204/404) proceeds straight to cancel. A
-//      delete REJECTED by SumUp (4xx — e.g. the checkout is no longer in a cancellable state, which
-//      can mean it just turned PAID) is treated as a signal to re-verify, not ignore: one more
-//      authoritative GET + the same shared resolver, and STOP if that resolves to PAID. A network
-//      error or 5xx on the delete call is FAIL-CLOSED (P0 fix), not best-effort: it tells us
-//      nothing about whether the checkout got deactivated, so it may still be live and payable —
-//      never proceed to cancel on that uncertainty. The caller gets a retryable/blocked error
-//      instead, order/attempt state is left untouched.
+//   4. EXPIRED or CANCELLED -> the checkout can no longer be paid: proceed straight to cancel, no
+//      DELETE needed. Any other status (PENDING, FAILED — which is NOT terminal on SumUp — or
+//      anything unrecognized) -> DELETE the checkout AND VERIFY the outcome with one more GET.
+//      Fail-closed: a network error or 5xx on the DELETE tells us nothing about whether the checkout
+//      got deactivated (P0 fix) -> retryable 502, order/attempt untouched. Any other DELETE response
+//      (2xx, 404, other 4xx) is NOT proof of closure either: the follow-up GET decides. GET not
+//      verifiable -> blocked ('unknown'); PAID -> same shared resolver and STOP; EXPIRED/CANCELLED
+//      -> really closed, proceed to cancel; any other status (still PENDING/FAILED/...) -> the
+//      checkout may still be payable, blocked ('unknown', reason 'checkout_close_unverified').
+//      "Blocked" = the atomic cancel RPC is never called.
 //   5. Atomic DB cancel: kitchen_order_cancel_with_payment_attempt (see the Payment Cancel
 //      Hardening migration) locks the live attempt row before the order row — same lock order as
 //      kitchen_payment_confirm — cancels the attempt and the order in one transaction, and re-checks
@@ -122,10 +127,11 @@ export default async function handler(req, res) {
 
   const { data: attempt, error: attemptError } = await supabaseAdmin
     .from('kitchen_payments')
-    .select('id, amount, provider, status, provider_ref')
+    .select('id, amount, provider, status, failure_reason, provider_ref')
     .eq('order_id', order_id)
     .eq('direction', 'charge')
-    .in('status', ['initiated', 'pending'])
+    .in('status', ['initiated', 'pending', 'failed'])
+    .or('status.neq.failed,and(provider.eq.sumup,failure_reason.eq.sumup_failed)')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -135,6 +141,10 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'internal_server_error' });
   }
 
+  // 'initiated'/'pending', or 'failed' still inside the same-checkout retry window (same predicate as
+  // api/kitchen-staff-sumup-close-for-counter.js / kitchen_payment_record_counter): a 'failed'
+  // sumup checkout may still be payable with another card, so it must be deactivated before cancel.
+  //
   // No live attempt, or a live attempt on a provider we never check remotely (e.g. a stray
   // counter-channel 'initiated' row — cash/manual counter payments settle synchronously and never
   // stay 'initiated' in normal operation): nothing to verify against SumUp, go straight to the
@@ -169,55 +179,67 @@ export default async function handler(req, res) {
     return resolveAsPaidAndStop({ res, supabaseAdmin, attempt, checkout: checkout.data });
   }
 
-  // Not paid: best-effort DELETE, but "best-effort" only covers a SumUp-side rejection that
-  // itself carries a clear signal (4xx — see 'rejected' below). A network error or 5xx tells us
-  // NOTHING about whether the checkout got deactivated: it may still be live and payable on
-  // SumUp's side while we go on to cancel locally — a customer could still complete payment on an
-  // already-open hosted checkout page after the order shows 'cancelled'. Fail-closed policy
-  // (P0 fix): when the delete's outcome is genuinely indeterminate, never proceed to cancel.
-  let deleteOutcome;
+  if (checkout.data.status !== 'EXPIRED' && checkout.data.status !== 'CANCELLED') {
+    // PENDING, FAILED or any other non-final status: the checkout may still be live and payable
+    // (FAILED included: the customer can retry with another card on the same hosted page). A
+    // customer could otherwise complete payment after the order shows 'cancelled'. DELETE + verify
+    // GET, fail-closed: cancel only proceeds if SumUp confirms EXPIRED/CANCELLED afterwards.
+    const deactivation = await deactivateAndVerify({ sumupApiKey, providerRef, attempt });
+    if (deactivation.kind === 'indeterminate') {
+      return res.status(502).json({ error: 'sumup_delete_indeterminate', retryable: true });
+    }
+    if (deactivation.kind === 'unknown') {
+      return res.status(200).json({ outcome: 'unknown' });
+    }
+    if (deactivation.kind === 'paid') {
+      return resolveAsPaidAndStop({ res, supabaseAdmin, attempt, checkout: deactivation.data });
+    }
+    if (deactivation.kind === 'unverified') {
+      return res.status(200).json({ outcome: 'unknown', reason: 'checkout_close_unverified' });
+    }
+    // deactivation.kind === 'closed': EXPIRED/CANCELLED confirmed — the atomic RPC's own re-check
+    // under FOR UPDATE is the final authority.
+  }
+
+  return runAtomicCancel({ res, supabaseAsStaff, order_id, reason });
+}
+
+// DELETE the SumUp checkout and verify the outcome authoritatively. A DELETE response (even 2xx/404)
+// does not by itself prove the checkout is closed: the only proof is a follow-up GET reporting
+// EXPIRED/CANCELLED. Returns: 'indeterminate' (5xx/network on the DELETE), 'unknown' (verify GET
+// unreliable), 'paid' (+ data), 'closed' (EXPIRED/CANCELLED), 'unverified' (any other status).
+async function deactivateAndVerify({ sumupApiKey, providerRef, attempt }) {
   try {
     const delRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${providerRef}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${sumupApiKey}` },
     });
-    if (delRes.ok || delRes.status === 404) {
-      deleteOutcome = 'deleted';
-    } else if (delRes.status >= 400 && delRes.status < 500) {
-      // SumUp rejected the delete — the checkout may have just moved to a terminal state
-      // (possibly PAID) underneath us. Never proceed blind: re-verify authoritatively.
-      deleteOutcome = 'rejected';
-    } else {
+    if (delRes.status >= 500) {
       // 5xx: SumUp's own infra hiccup — we don't know if the delete landed or not. Indeterminate,
       // fail-closed (never "best-effort proceed" — that was the P0 bug: a live, still-payable
       // checkout could be left behind while the order/attempt show cancelled).
       console.error('[kitchen-cancel-with-payment-check] SumUp DELETE checkout returned 5xx — fail-closed', delRes.status);
-      deleteOutcome = 'indeterminate';
+      return { kind: 'indeterminate' };
     }
   } catch (err) {
     // Network error: same indeterminate/fail-closed outcome as 5xx above — we cannot tell whether
     // the checkout was deactivated, so we never assume it's safe to cancel.
     console.error('[kitchen-cancel-with-payment-check] SumUp DELETE checkout errored — fail-closed', err);
-    deleteOutcome = 'indeterminate';
+    return { kind: 'indeterminate' };
   }
 
-  if (deleteOutcome === 'indeterminate') {
-    return res.status(502).json({ error: 'sumup_delete_indeterminate', retryable: true });
+  const verify = await getSumupCheckout({ sumupApiKey, providerRef, attempt });
+  if (verify.outcome === 'unknown') {
+    return { kind: 'unknown' };
   }
-
-  if (deleteOutcome === 'rejected') {
-    const recheck = await getSumupCheckout({ sumupApiKey, providerRef, attempt });
-    if (recheck.outcome === 'unknown') {
-      return res.status(200).json({ outcome: 'unknown' });
-    }
-    if (recheck.data.status === 'PAID') {
-      return resolveAsPaidAndStop({ res, supabaseAdmin, attempt, checkout: recheck.data });
-    }
-    // Genuinely not paid (FAILED/EXPIRED/CANCELLED/still PENDING) despite the delete rejection:
-    // proceed to cancel — the atomic RPC's own re-check under FOR UPDATE is the final authority.
+  if (verify.data.status === 'PAID') {
+    return { kind: 'paid', data: verify.data };
   }
-
-  return runAtomicCancel({ res, supabaseAsStaff, order_id, reason });
+  if (verify.data.status === 'EXPIRED' || verify.data.status === 'CANCELLED') {
+    return { kind: 'closed' };
+  }
+  console.error('[kitchen-cancel-with-payment-check] checkout still not closed after DELETE — fail-closed', verify.data.status);
+  return { kind: 'unverified' };
 }
 
 // Authoritative GET, same defensive checkout_reference check as api/kitchen-sumup-reconcile.js —

@@ -25,13 +25,20 @@ import { recoverSumupProviderRef } from './_lib/sumupProviderRefRecovery.js';
 //      l'attempt e' gia' 'failed' localmente (un webhook/reconcile puo' averlo capovolto in PAID
 //      dopo l'ultimo check). PAID -> risolto via lo stesso resolver condiviso di webhook/reconcile
 //      (applySumupCheckoutResult) e STOP: mai chiudere un attempt che ha realmente incassato.
-//   4. SumUp conferma un esito terminale non-pagato (FAILED/EXPIRED/CANCELLED) -> il checkout e'
-//      gia' morto lato SumUp, nessun DELETE necessario: si procede direttamente alla chiusura (5).
-//   5. Altrimenti (tipicamente PENDING per un attempt ancora 'initiated'/'pending' localmente) ->
-//      DELETE del checkout, stessa policy fail-closed di kitchen-cancel-with-payment-check.js: un
-//      5xx/errore di rete e' indeterminato e blocca l'operazione (mai procedere alla chiusura su un
-//      checkout che potrebbe essere ancora vivo su SumUp); un rifiuto 4xx forza una ri-verifica GET
-//      prima di procedere.
+//   4. SumUp conferma EXPIRED o CANCELLED -> il checkout non e' piu' pagabile (non riattivabile dal
+//      cliente): nessun DELETE necessario, si procede direttamente alla chiusura (6).
+//   5. Qualunque altro stato non pagato — **incluso FAILED** — e PENDING -> DELETE del checkout e
+//      VERIFICA dell'esito con un GET successivo. FAILED NON e' terminale su SumUp: la hosted checkout
+//      page lascia riprovare il cliente con un'altra carta sullo stesso checkout (assunto F03/Long
+//      Session F, vedi api/_lib/sumupPaymentResolution.js), quindi chiudere solo localmente
+//      permetterebbe un doppio incasso (online dopo il banco). Policy fail-closed:
+//        - DELETE 5xx/errore di rete -> 502 sumup_delete_indeterminate, blocca;
+//        - qualunque altra risposta al DELETE (2xx, 404, altri 4xx) NON e' una prova di chiusura: si
+//          rilegge il checkout via GET. GET non verificabile -> blocca (outcome 'unknown'); PAID ->
+//          risolto via resolver condiviso e STOP; EXPIRED/CANCELLED -> checkout davvero chiuso,
+//          si procede; qualunque altro stato (PENDING/FAILED/...) -> checkout ancora potenzialmente
+//          pagabile, blocca (outcome 'unknown', reason 'checkout_close_unverified').
+//      "Blocca" = nessuna chiamata alla RPC di chiusura, nessun attempt marcato chiuso.
 //   6. Chiusura atomica: kitchen_payment_attempt_close_unpaid marca/converte solo l'attempt come
 //      failed/staff_closed_for_counter (mai l'ordine) — kitchen_payment_record_counter si sblocca
 //      immediatamente dopo sullo stesso ordine, e l'attempt non e' piu' retry-eligible per un
@@ -174,54 +181,62 @@ export default async function handler(req, res) {
     return resolveAsPaidAndStop({ res, supabaseAdmin, attempt, checkout: checkout.data });
   }
 
-  if (checkout.data.status === 'FAILED' || checkout.data.status === 'EXPIRED' || checkout.data.status === 'CANCELLED') {
-    // SumUp conferma un esito terminale non-pagato: il checkout e' gia' morto lato SumUp, nessun
-    // DELETE necessario (cancellare un checkout gia' terminale non aggiunge garanzie). Procede
-    // direttamente alla chiusura — la RPC ri-verifica lo stato locale sotto lock come autorita'
-    // finale.
-    return closeAttempt({ res, supabaseAsStaff, attemptId: attempt.id, note });
+  if (checkout.data.status !== 'EXPIRED' && checkout.data.status !== 'CANCELLED') {
+    // PENDING, FAILED o qualunque altro stato non terminale-irreversibile: il checkout puo' essere
+    // ancora pagabile (FAILED incluso: retry con un'altra carta sulla stessa pagina hosted). DELETE
+    // + verifica GET, fail-closed — la chiusura locale avviene solo se SumUp conferma
+    // EXPIRED/CANCELLED dopo il DELETE.
+    const deactivation = await deactivateAndVerify({ sumupApiKey, providerRef, attempt });
+    if (deactivation.kind === 'indeterminate') {
+      return res.status(502).json({ error: 'sumup_delete_indeterminate', retryable: true });
+    }
+    if (deactivation.kind === 'unknown') {
+      return res.status(200).json({ outcome: 'unknown' });
+    }
+    if (deactivation.kind === 'paid') {
+      return resolveAsPaidAndStop({ res, supabaseAdmin, attempt, checkout: deactivation.data });
+    }
+    if (deactivation.kind === 'unverified') {
+      return res.status(200).json({ outcome: 'unknown', reason: 'checkout_close_unverified' });
+    }
+    // deactivation.kind === 'closed': EXPIRED/CANCELLED confermato — la RPC ri-verifica lo stato
+    // locale sotto lock come autorita' finale.
   }
 
-  // Non pagato e non ancora terminale lato SumUp (tipicamente PENDING): DELETE del checkout,
-  // stessa policy fail-closed di
-  // kitchen-cancel-with-payment-check.js — un esito indeterminato (5xx/network) non dice nulla su
-  // se il checkout sia stato davvero disattivato: mai procedere alla chiusura su quell'incertezza.
-  let deleteOutcome;
+  return closeAttempt({ res, supabaseAsStaff, attemptId: attempt.id, note });
+}
+
+// DELETE del checkout SumUp + verifica autoritativa dell'esito. Un esito del DELETE (anche 2xx/404)
+// non prova da solo che il checkout sia chiuso: l'unica prova e' un GET successivo che riporta
+// EXPIRED/CANCELLED. Ritorna: 'indeterminate' (5xx/rete sul DELETE), 'unknown' (GET di verifica non
+// affidabile), 'paid' (+ data), 'closed' (EXPIRED/CANCELLED), 'unverified' (qualunque altro stato).
+async function deactivateAndVerify({ sumupApiKey, providerRef, attempt }) {
   try {
     const delRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${providerRef}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${sumupApiKey}` },
     });
-    if (delRes.ok || delRes.status === 404) {
-      deleteOutcome = 'deleted';
-    } else if (delRes.status >= 400 && delRes.status < 500) {
-      deleteOutcome = 'rejected';
-    } else {
+    if (delRes.status >= 500) {
       console.error('[kitchen-staff-sumup-close-for-counter] SumUp DELETE checkout returned 5xx — fail-closed', delRes.status);
-      deleteOutcome = 'indeterminate';
+      return { kind: 'indeterminate' };
     }
   } catch (err) {
     console.error('[kitchen-staff-sumup-close-for-counter] SumUp DELETE checkout errored — fail-closed', err);
-    deleteOutcome = 'indeterminate';
+    return { kind: 'indeterminate' };
   }
 
-  if (deleteOutcome === 'indeterminate') {
-    return res.status(502).json({ error: 'sumup_delete_indeterminate', retryable: true });
+  const verify = await getSumupCheckout({ sumupApiKey, providerRef, attempt });
+  if (verify.outcome === 'unknown') {
+    return { kind: 'unknown' };
   }
-
-  if (deleteOutcome === 'rejected') {
-    const recheck = await getSumupCheckout({ sumupApiKey, providerRef, attempt });
-    if (recheck.outcome === 'unknown') {
-      return res.status(200).json({ outcome: 'unknown' });
-    }
-    if (recheck.data.status === 'PAID') {
-      return resolveAsPaidAndStop({ res, supabaseAdmin, attempt, checkout: recheck.data });
-    }
-    // Genuinamente non pagato nonostante il rifiuto del delete: procedi alla chiusura — la RPC
-    // stessa ri-verifica lo stato sotto lock come autorita' finale.
+  if (verify.data.status === 'PAID') {
+    return { kind: 'paid', data: verify.data };
   }
-
-  return closeAttempt({ res, supabaseAsStaff, attemptId: attempt.id, note });
+  if (verify.data.status === 'EXPIRED' || verify.data.status === 'CANCELLED') {
+    return { kind: 'closed' };
+  }
+  console.error('[kitchen-staff-sumup-close-for-counter] checkout still not closed after DELETE — fail-closed', verify.data.status);
+  return { kind: 'unverified' };
 }
 
 // Stessa logica difensiva di kitchen-cancel-with-payment-check.js / kitchen-staff-sumup-reconcile.js.

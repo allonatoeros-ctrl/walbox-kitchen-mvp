@@ -86,17 +86,39 @@ function withFetch(impl, fn) {
   return Promise.resolve(fn()).finally(() => { globalThis.fetch = original; });
 }
 
+// Fetch mock: GET sequenziali (l'ultimo status si ripete), DELETE con risposta configurabile.
+function seqFetch({ coId, attId, statuses, del = { ok: true, status: 204 }, calls = [] }) {
+  let getCount = 0;
+  const impl = async (url, opts) => {
+    const method = opts?.method ?? 'GET';
+    calls.push({ url: String(url), method });
+    if (method === 'DELETE') {
+      if (del instanceof Error) throw del;
+      return { ...del, json: async () => ({}) };
+    }
+    const status = statuses[Math.min(getCount, statuses.length - 1)];
+    getCount += 1;
+    return jsonFetchResponse(200, { id: coId, status, amount: 10, checkout_reference: attId });
+  };
+  impl.calls = calls;
+  return impl;
+}
+
 // ---- admin client mock (service_role): auth.getUser, kitchen_orders/kitchen_payments, RPC --------
 
 function makeAdminClient({ authUser, order, attempt, rpc = {} } = {}) {
   const rpcCalls = [];
   const fromCalls = [];
+  const attemptQuery = { select: null, in: null, or: null };
   const from = (table) => {
     fromCalls.push(table);
     const builder = {
-      select: () => builder,
+      select: (cols) => { if (table === 'kitchen_payments') attemptQuery.select = cols; return builder; },
       eq: () => builder,
-      in: () => builder,
+      in: (col, vals) => { if (table === 'kitchen_payments') attemptQuery.in = { col, vals }; return builder; },
+      // Il mock non filtra i dati: il fixture `attempt` e' gia la riga che il DB restituirebbe.
+      // Registra solo gli argomenti cosi' un test puo' asserire il predicato di lookup.
+      or: (expr) => { if (table === 'kitchen_payments') attemptQuery.or = expr; return builder; },
       order: () => builder,
       limit: () => builder,
       maybeSingle: async () => {
@@ -118,6 +140,7 @@ function makeAdminClient({ authUser, order, attempt, rpc = {} } = {}) {
     },
     __rpcCalls: rpcCalls,
     __fromCalls: fromCalls,
+    __attemptQuery: attemptQuery,
   };
 }
 
@@ -308,17 +331,13 @@ test('cancel-check: attempt live non-sumup -> cancel diretto via RPC atomica, ne
 // Attempt live SumUp — PENDING/non-PAID -> delete best-effort + cancel
 // ================================================================================================
 
-test('cancel-check: initiated/pending sumup, checkout PENDING, delete pulito -> cancella', async () => {
+test('cancel-check: initiated/pending sumup, checkout PENDING, delete pulito + verify GET EXPIRED -> cancella', async () => {
   const attempt = { id: 'att-1', amount: 10, provider: 'sumup', status: 'initiated', provider_ref: 'co-1' };
   const admin = makeAdminClient({ authUser: { data: { user: { id: 'staff-1' } }, error: null }, order: BASE_ORDER, attempt });
   const staff = makeStaffClient({ isStaff: true });
 
   const calls = [];
-  await withFetch(async (url, opts) => {
-    calls.push({ url: String(url), method: opts?.method ?? 'GET' });
-    if ((opts?.method ?? 'GET') === 'DELETE') return { ok: true, status: 204, json: async () => ({}) };
-    return jsonFetchResponse(200, { id: 'co-1', status: 'PENDING', amount: 10, checkout_reference: 'att-1' });
-  }, async () => {
+  await withFetch(seqFetch({ coId: 'co-1', attId: 'att-1', statuses: ['PENDING', 'EXPIRED'], calls }), async () => {
     await withClients({ staff, admin }, async () => {
       const req = makeReq({ body: { order_id: 'ord-1' } });
       const res = makeRes();
@@ -327,20 +346,17 @@ test('cancel-check: initiated/pending sumup, checkout PENDING, delete pulito -> 
       assert.equal(res.body.outcome, 'cancelled');
     });
   });
-  assert.ok(calls.some((c) => c.method === 'GET' && c.url.includes('checkouts/co-1')));
-  assert.ok(calls.some((c) => c.method === 'DELETE' && c.url.includes('checkouts/co-1')));
+  assert.deepEqual(calls.map((c) => c.method), ['GET', 'DELETE', 'GET'], 'GET iniziale, DELETE, GET di verifica');
+  assert.ok(calls.every((c) => c.url.includes('checkouts/co-1')));
   assert.equal(admin.__rpcCalls.some((c) => c.name === 'kitchen_payment_confirm' || c.name === 'kitchen_payment_fail'), false);
 });
 
-test('cancel-check: pending attempt, checkout status PENDING (initiated->pending in flight) -> cancella comunque', async () => {
+test('cancel-check: pending attempt, checkout status PENDING (initiated->pending in flight), delete pulito + verify CANCELLED -> cancella', async () => {
   const attempt = { id: 'att-1b', amount: 10, provider: 'sumup', status: 'pending', provider_ref: 'co-1b' };
   const admin = makeAdminClient({ authUser: { data: { user: { id: 'staff-1' } }, error: null }, order: BASE_ORDER, attempt });
   const staff = makeStaffClient({ isStaff: true });
 
-  await withFetch(async (url, opts) => {
-    if ((opts?.method ?? 'GET') === 'DELETE') return { ok: true, status: 204, json: async () => ({}) };
-    return jsonFetchResponse(200, { id: 'co-1b', status: 'PENDING', amount: 10, checkout_reference: 'att-1b' });
-  }, async () => {
+  await withFetch(seqFetch({ coId: 'co-1b', attId: 'att-1b', statuses: ['PENDING', 'CANCELLED'] }), async () => {
     await withClients({ staff, admin }, async () => {
       const req = makeReq({ body: { order_id: 'ord-1' } });
       const res = makeRes();
@@ -348,6 +364,72 @@ test('cancel-check: pending attempt, checkout status PENDING (initiated->pending
       assert.equal(res.body.outcome, 'cancelled');
     });
   });
+});
+
+// Nuova regola: un DELETE pulito NON prova la chiusura. Se la GET di verifica mostra ancora un
+// checkout vivo (PENDING) -> bloccato, la RPC di cancel non viene MAI chiamata.
+test('cancel-check: delete pulito ma verify GET ancora PENDING -> unknown/checkout_close_unverified, RPC cancel mai chiamata', async () => {
+  const attempt = { id: 'att-1c', amount: 10, provider: 'sumup', status: 'initiated', provider_ref: 'co-1c' };
+  const admin = makeAdminClient({ authUser: { data: { user: { id: 'staff-1' } }, error: null }, order: BASE_ORDER, attempt });
+  const staff = makeStaffClient({ isStaff: true });
+
+  const calls = [];
+  await withFetch(seqFetch({ coId: 'co-1c', attId: 'att-1c', statuses: ['PENDING', 'PENDING'], calls }), async () => {
+    await withClients({ staff, admin }, async () => {
+      const req = makeReq({ body: { order_id: 'ord-1' } });
+      const res = makeRes();
+      await cancelHandler(req, res);
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.body.outcome, 'unknown');
+      assert.equal(res.body.reason, 'checkout_close_unverified');
+    });
+  });
+  assert.deepEqual(calls.map((c) => c.method), ['GET', 'DELETE', 'GET']);
+  assert.equal(staff.__rpcCalls.some((c) => c.name === 'kitchen_order_cancel_with_payment_attempt'), false, 'mai la RPC di cancel se la chiusura non e verificata');
+  assert.equal(admin.__rpcCalls.some((c) => c.name === 'kitchen_payment_confirm' || c.name === 'kitchen_payment_fail'), false);
+});
+
+// Attempt 'failed' con failure_reason 'sumup_failed': il checkout puo essere ancora pagabile con
+// un'altra carta -> va disattivato (GET + DELETE + verify) prima del cancel.
+test('cancel-check: attempt failed/sumup_failed -> lookup include failed, GET+DELETE+verify prima del cancel', async () => {
+  const attempt = { id: 'att-1d', amount: 10, provider: 'sumup', status: 'failed', failure_reason: 'sumup_failed', provider_ref: 'co-1d' };
+  const admin = makeAdminClient({ authUser: { data: { user: { id: 'staff-1' } }, error: null }, order: BASE_ORDER, attempt });
+  const staff = makeStaffClient({ isStaff: true });
+
+  const calls = [];
+  await withFetch(seqFetch({ coId: 'co-1d', attId: 'att-1d', statuses: ['FAILED', 'EXPIRED'], calls }), async () => {
+    await withClients({ staff, admin }, async () => {
+      const req = makeReq({ body: { order_id: 'ord-1' } });
+      const res = makeRes();
+      await cancelHandler(req, res);
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.body.outcome, 'cancelled');
+    });
+  });
+  assert.deepEqual(calls.map((c) => c.method), ['GET', 'DELETE', 'GET']);
+  assert.deepEqual(admin.__attemptQuery.in.vals, ['initiated', 'pending', 'failed']);
+  assert.equal(admin.__attemptQuery.or, 'status.neq.failed,and(provider.eq.sumup,failure_reason.eq.sumup_failed)');
+  assert.match(admin.__attemptQuery.select, /failure_reason/);
+});
+
+// GET iniziale gia EXPIRED: il checkout non e piu pagabile, nessun DELETE necessario.
+test('cancel-check: GET iniziale EXPIRED -> nessun DELETE, cancella', async () => {
+  const attempt = { id: 'att-1e', amount: 10, provider: 'sumup', status: 'initiated', provider_ref: 'co-1e' };
+  const admin = makeAdminClient({ authUser: { data: { user: { id: 'staff-1' } }, error: null }, order: BASE_ORDER, attempt });
+  const staff = makeStaffClient({ isStaff: true });
+
+  const calls = [];
+  await withFetch(seqFetch({ coId: 'co-1e', attId: 'att-1e', statuses: ['EXPIRED'], calls }), async () => {
+    await withClients({ staff, admin }, async () => {
+      const req = makeReq({ body: { order_id: 'ord-1' } });
+      const res = makeRes();
+      await cancelHandler(req, res);
+      assert.equal(res.statusCode, 200);
+      assert.equal(res.body.outcome, 'cancelled');
+    });
+  });
+  assert.deepEqual(calls.map((c) => c.method), ['GET'], 'nessun DELETE quando il checkout e gia EXPIRED');
+  assert.ok(staff.__rpcCalls.some((c) => c.name === 'kitchen_order_cancel_with_payment_attempt'));
 });
 
 // ================================================================================================
@@ -500,10 +582,13 @@ test('cancel-check: race confirm-vs-cancel — la RPC atomica rifiuta payment_at
     cancel: { data: null, error: { message: 'payment_attempt_not_cancelable' } },
   });
 
+  let getCount = 0;
   await withFetch(async (url, opts) => {
     const method = opts?.method ?? 'GET';
     if (method === 'DELETE') return { ok: true, status: 204, json: async () => ({}) };
-    return jsonFetchResponse(200, { id: 'co-6', status: 'PENDING', amount: 10, checkout_reference: 'att-6' });
+    // GET iniziale PENDING -> DELETE pulito -> GET di verifica EXPIRED -> si arriva alla RPC che rifiuta.
+    getCount += 1;
+    return jsonFetchResponse(200, { id: 'co-6', status: getCount === 1 ? 'PENDING' : 'EXPIRED', amount: 10, checkout_reference: 'att-6' });
   }, async () => {
     await withClients({ staff, admin }, async () => {
       const req = makeReq({ body: { order_id: 'ord-1' } });
@@ -513,6 +598,8 @@ test('cancel-check: race confirm-vs-cancel — la RPC atomica rifiuta payment_at
       assert.equal(res.body.error, 'payment_attempt_not_cancelable');
     });
   });
+  assert.equal(getCount, 2, 'la RPC e raggiunta solo dopo la GET di verifica');
+  assert.ok(staff.__rpcCalls.some((c) => c.name === 'kitchen_order_cancel_with_payment_attempt'));
 });
 
 test('cancel-check: la RPC atomica rifiuta order_already_paid_cannot_cancel (race tardiva) -> 409, propagato pulito', async () => {
@@ -586,10 +673,7 @@ test('regressione: un cancel non-paid non chiama mai kitchen_payment_confirm/kit
   const admin = makeAdminClient({ authUser: { data: { user: { id: 'staff-1' } }, error: null }, order: BASE_ORDER, attempt });
   const staff = makeStaffClient({ isStaff: true });
 
-  await withFetch(async (url, opts) => {
-    if ((opts?.method ?? 'GET') === 'DELETE') return { ok: true, status: 204, json: async () => ({}) };
-    return jsonFetchResponse(200, { id: 'co-9', status: 'FAILED', amount: 10, checkout_reference: 'att-9' });
-  }, async () => {
+  await withFetch(seqFetch({ coId: 'co-9', attId: 'att-9', statuses: ['FAILED', 'CANCELLED'] }), async () => {
     await withClients({ staff, admin }, async () => {
       const req = makeReq({ body: { order_id: 'ord-1' } });
       const res = makeRes();
