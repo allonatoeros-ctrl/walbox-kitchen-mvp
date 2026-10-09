@@ -12,14 +12,35 @@ import { applySumupCheckoutResult } from './_lib/sumupPaymentResolution.js';
 // Server-side only: SUMUP_API_KEY / SUPABASE_SERVICE_ROLE_KEY read from process.env, never exposed
 // to the client. Only calls the Payment Hub V1 RPCs (webhook_ingest, confirm, fail) — no direct
 // UPDATE/INSERT on kitchen_orders/kitchen_payments from here.
+const MAX_CHECKOUT_ID_LENGTH = 128;
+
+// Shape guard only (not a UUID contract): rejects non-strings, empty/whitespace, over-long input,
+// control chars, whitespace, path/query/fragment/escape characters ( / \ ? # % ) and dot-segments.
+function isSafeCheckoutId(id) {
+  if (typeof id !== 'string') return false;
+  if (id.length === 0 || id.length > MAX_CHECKOUT_ID_LENGTH) return false;
+  if (id.trim() !== id) return false;
+  if (/[\u0000-\u0020\u007f-\u009f/\\?#%]/.test(id)) return false;
+  if (id.includes('..') || id === '.') return false;
+  return true;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'method_not_allowed' });
   }
 
-  const checkoutId = req.body?.id;
-  if (!checkoutId) {
+  const rawId = req.body?.id;
+  if (rawId === undefined || rawId === null || rawId === '') {
     // Nothing usable in the payload (e.g. a sandbox test ping) — ack so SumUp doesn't retry forever.
+    return res.status(200).json({ ok: true });
+  }
+
+  // F6: the public payload is never allowed to steer the authenticated SumUp GET. Shape check only
+  // (SumUp documents checkout_id as a plain string, so no UUID-only contract); malformed or
+  // path-confusing input is acked with zero side effects (no DB, no SumUp, no ledger).
+  if (!isSafeCheckoutId(rawId)) {
+    console.warn('[kitchen-sumup-webhook] rejected malformed checkout id');
     return res.status(200).json({ ok: true });
   }
 
@@ -34,9 +55,54 @@ export default async function handler(req, res) {
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
+  // F6 DB-FIRST BINDING: only a checkout already recorded by Walbox on a SumUp charge attempt
+  // (provider_ref set by create-checkout) may trigger a SumUp GET. Unknown id => ack, 0 fetch.
+  const { data: attempt, error: attemptError } = await supabaseAdmin
+    .from('kitchen_payments')
+    .select('id, order_id, amount, provider, status, provider_ref, direction')
+    .eq('provider', 'sumup')
+    .eq('direction', 'charge')
+    .eq('provider_ref', rawId)
+    .maybeSingle();
+
+  if (attemptError) {
+    // Technical lookup failure (not "unknown id"): non-2xx so SumUp retries the delivery.
+    console.error('[kitchen-sumup-webhook] attempt lookup failed', attemptError);
+    return res.status(500).json({ error: 'internal_server_error' });
+  }
+
+  if (!attempt) {
+    console.warn('[kitchen-sumup-webhook] no SumUp attempt bound to webhook checkout id, ignoring');
+    return res.status(200).json({ ok: true }); // ack: unknown id, avoid endless retries
+  }
+
+  if (
+    attempt.provider !== 'sumup'
+    || (attempt.direction !== undefined && attempt.direction !== 'charge')
+    || attempt.provider_ref !== rawId
+    || !isSafeCheckoutId(attempt.provider_ref)
+  ) {
+    console.error('[kitchen-sumup-webhook] attempt/provider binding invalid, ignoring', { attemptId: attempt.id });
+    return res.status(200).json({ ok: true });
+  }
+
+  if (attempt.status !== 'initiated' && attempt.status !== 'pending' && attempt.status !== 'failed') {
+    // Already resolved terminally ('succeeded'/'cancelled') — a retried webhook delivery for a
+    // status we already applied would otherwise hit invalid_attempt_status. No SumUp GET needed.
+    // 'failed' is deliberately let through (LONG SESSION F, same-checkout retry): a SumUp checkout
+    // that reported FAILED can still be retried by the customer with a different card and later
+    // report PAID for the same checkout id — applySumupCheckoutResult/kitchen_payment_confirm
+    // re-verify and gate the actual eligibility (provider='sumup' AND
+    // failure_reason='sumup_failed' only), this handler does not need to duplicate that check.
+    return res.status(200).json({ ok: true });
+  }
+
+  // Trusted id: the provider_ref stored in the DB, never the raw payload string.
+  const checkoutId = attempt.provider_ref;
+
   let checkout;
   try {
-    const sumupRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${checkoutId}`, {
+    const sumupRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${encodeURIComponent(checkoutId)}`, {
       headers: { Authorization: `Bearer ${sumupApiKey}` },
     });
     checkout = await sumupRes.json();
@@ -49,12 +115,22 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'internal_server_error' });
   }
 
-  const attemptId = checkout.checkout_reference;
+  // F6 POST-GET BINDING: the authoritative response must describe exactly the checkout/attempt we
+  // looked up. Mismatch => no ledger row, no confirm/fail, no provider_ref write.
+  if (!checkout || checkout.id !== checkoutId || checkout.checkout_reference !== attempt.id) {
+    console.error('[kitchen-sumup-webhook] checkout response does not match bound attempt, ignoring', {
+      attemptId: attempt.id,
+    });
+    return res.status(200).json({ ok: true });
+  }
+
+  const attemptId = attempt.id;
   const status = checkout.status; // PENDING | PAID | FAILED | EXPIRED (SumUp Checkouts API)
 
-  // Idempotent ledger insert. SumUp gives no per-delivery event id, so (checkout id + status) is
-  // the dedup key here: a retried delivery for the same already-logged status is a no-op via the
-  // ON CONFLICT in kitchen_payment_webhook_ingest, a genuine status change gets its own row.
+  // Idempotent ledger insert (only after input, DB and response binding all hold). SumUp gives no
+  // per-delivery event id, so (checkout id + status) is the dedup key here: a retried delivery for
+  // the same already-logged status is a no-op via the ON CONFLICT in kitchen_payment_webhook_ingest,
+  // a genuine status change gets its own row.
   const { error: ingestError } = await supabaseAdmin.rpc('kitchen_payment_webhook_ingest', {
     p_provider: 'sumup',
     p_provider_event_id: `${checkoutId}:${status}`,
@@ -67,40 +143,13 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'webhook_ingest_failed' });
   }
 
-  if (!attemptId) {
-    console.warn('[kitchen-sumup-webhook] checkout has no checkout_reference, cannot resolve attempt', checkoutId);
-    return res.status(200).json({ ok: true });
-  }
-
   if (status !== 'PAID' && status !== 'FAILED' && status !== 'EXPIRED') {
     // PENDING or any other transitional status: nothing to resolve yet.
     return res.status(200).json({ ok: true });
   }
 
-  const { data: attempt, error: attemptError } = await supabaseAdmin
-    .from('kitchen_payments')
-    .select('id, amount, provider, status')
-    .eq('id', attemptId)
-    .maybeSingle();
-
-  if (attemptError || !attempt) {
-    console.error('[kitchen-sumup-webhook] payment attempt not found for checkout_reference', attemptId, attemptError);
-    return res.status(200).json({ ok: true }); // ack: nothing more we can do, avoid endless retries
-  }
-
-  if (attempt.status !== 'initiated' && attempt.status !== 'pending' && attempt.status !== 'failed') {
-    // Already resolved terminally ('succeeded'/'cancelled') — a retried webhook delivery for a
-    // status we already applied would otherwise hit invalid_attempt_status.
-    // 'failed' is deliberately let through (LONG SESSION F, same-checkout retry): a SumUp checkout
-    // that reported FAILED can still be retried by the customer with a different card and later
-    // report PAID for the same checkout id — applySumupCheckoutResult/kitchen_payment_confirm
-    // re-verify and gate the actual eligibility (provider='sumup' AND
-    // failure_reason='sumup_failed' only), this handler does not need to duplicate that check.
-    return res.status(200).json({ ok: true });
-  }
-
   try {
-    const result = await applySumupCheckoutResult(supabaseAdmin, attempt, { ...checkout, id: checkoutId });
+    const result = await applySumupCheckoutResult(supabaseAdmin, attempt, checkout);
     if (result.outcome === 'failed' && result.reason === 'amount_mismatch') {
       console.error('[kitchen-sumup-webhook] amount/provider mismatch, failing attempt instead of confirming', {
         attemptId, attemptAmount: attempt.amount, checkoutAmount: checkout.amount, provider: attempt.provider,

@@ -873,7 +873,7 @@ test('reconcile: attempt gia FAILED (sumup_failed) + checkout ora PAID ma import
 });
 
 test('webhook: redelivery per un attempt gia FAILED (sumup_failed) con checkout ora PAID -> promuove a succeeded', async () => {
-  const attempt = { id: 'att-17', amount: 10, provider: 'sumup', status: 'failed', failure_reason: 'sumup_failed' };
+  const attempt = { id: 'att-17', amount: 10, provider: 'sumup', direction: 'charge', provider_ref: 'co-17', status: 'failed', failure_reason: 'sumup_failed' };
   const admin = makeSupabaseAdminMock({
     tables: { kitchen_payments: { data: attempt, error: null } },
     rpc: {
@@ -894,7 +894,7 @@ test('webhook: redelivery per un attempt gia FAILED (sumup_failed) con checkout 
 });
 
 test('webhook: PAID ridelivered su un attempt gia SUCCEEDED -> nessuna nuova confirm (duplicate idempotente)', async () => {
-  const attempt = { id: 'att-18', amount: 10, provider: 'sumup', status: 'succeeded' };
+  const attempt = { id: 'att-18', amount: 10, provider: 'sumup', direction: 'charge', provider_ref: 'co-18', status: 'succeeded' };
   const admin = makeSupabaseAdminMock({
     tables: { kitchen_payments: { data: attempt, error: null } },
     rpc: {
@@ -912,6 +912,7 @@ test('webhook: PAID ridelivered su un attempt gia SUCCEEDED -> nessuna nuova con
     });
   });
   assert.equal(admin.__rpcCalls.some((c) => c.name === 'kitchen_payment_confirm'), false, 'un attempt gia succeeded non deve mai ri-chiamare confirm');
+  assert.equal(admin.__rpcCalls.length, 0, 'duplicate callback: nessuna mutation ne ingest');
 });
 
 test('CustomerOrderStatus: se attempt_start ritorna un attempt failed, il client non chiama create-checkout (niente CTA unsafe)', async () => {
@@ -1000,7 +1001,7 @@ test('reconcile: nessuna sessione (browser return da solo non prova nulla) -> 40
 // ================================================================================================
 
 test('webhook: PAID valido -> confirm chiamato via applySumupCheckoutResult condivisa', async () => {
-  const attempt = { id: 'att-13', amount: 10, provider: 'sumup', status: 'initiated' };
+  const attempt = { id: 'att-13', amount: 10, provider: 'sumup', direction: 'charge', provider_ref: 'co-13', status: 'initiated' };
   const admin = makeSupabaseAdminMock({
     tables: { kitchen_payments: { data: attempt, error: null } },
     rpc: {
@@ -1018,6 +1019,179 @@ test('webhook: PAID valido -> confirm chiamato via applySumupCheckoutResult cond
     });
   });
   assert.ok(admin.__rpcCalls.some((c) => c.name === 'kitchen_payment_confirm'));
+});
+
+// ================================================================================================
+// S0.5 F6 — webhook: DB-first binding, input validation, post-GET binding, ingest dopo il binding
+// ================================================================================================
+
+const F6_ATTEMPT = { id: 'att-f6', order_id: 'ord-f6', amount: 10, provider: 'sumup', direction: 'charge', provider_ref: 'co-f6', status: 'initiated' };
+const F6_CHECKOUT = { id: 'co-f6', status: 'PAID', amount: 10, checkout_reference: 'att-f6' };
+
+async function runF6({ body, attempt = F6_ATTEMPT, checkout = F6_CHECKOUT, rpc, fetchStatus = 200 } = {}) {
+  const admin = makeSupabaseAdminMock({
+    tables: { kitchen_payments: { data: attempt, error: null } },
+    rpc: rpc ?? {
+      kitchen_payment_webhook_ingest: { data: {}, error: null },
+      kitchen_payment_confirm: { data: { ...F6_ATTEMPT, status: 'succeeded' }, error: null },
+      kitchen_payment_fail: { data: {}, error: null },
+    },
+  });
+  const urls = [];
+  const res = makeRes();
+  await withFetch(async (url) => { urls.push(String(url)); return jsonFetchResponse(fetchStatus, checkout); }, async () => {
+    await withAdmin(admin, async () => {
+      await webhookHandler(makeReq({ body }), res);
+    });
+  });
+  return { admin, urls, res };
+}
+
+const rpcNames = (admin) => admin.__rpcCalls.map((c) => c.name);
+
+test('F6 T1/T2: id non-string / vuoto / whitespace -> 0 GET SumUp, 0 mutation, 0 ingest', async () => {
+  for (const id of [{ a: 1 }, ['co-f6'], 123, true, '', '   ', ' co-f6', 'co-f6 ', null, undefined]) {
+    const { admin, urls, res } = await runF6({ body: { id } });
+    assert.equal(res.statusCode, 200, `id=${JSON.stringify(id)}`);
+    assert.equal(urls.length, 0, `0 GET per id=${JSON.stringify(id)}`);
+    assert.equal(admin.__rpcCalls.length, 0, `0 RPC per id=${JSON.stringify(id)}`);
+  }
+});
+
+test('F6 T3/T4: path traversal / slash / backslash / encoded / query / control chars / troppo lungo -> 0 GET, 0 RPC', async () => {
+  const bad = [
+    '../../v0.1/me', '..', '.', 'x/../co-f6', 'a/b', '..\\..\\v0.1\\me', '%2e%2e/%2e%2e/v0.1/me',
+    '..%2F..%2Fv0.1%2Fme', 'co-f6%2f', 'co-f6?x=1', 'co-f6#frag', 'co f6', 'co-f6\n', 'co\tf6', 'co\u0000f6',
+    'co-f6\u007f', 'a'.repeat(129),
+  ];
+  for (const id of bad) {
+    const { admin, urls, res } = await runF6({ body: { id } });
+    assert.equal(res.statusCode, 200, `id=${JSON.stringify(id)}`);
+    assert.equal(urls.length, 0, `0 GET per id=${JSON.stringify(id)}`);
+    assert.equal(admin.__rpcCalls.length, 0, `0 RPC per id=${JSON.stringify(id)}`);
+  }
+});
+
+test('F6 T5: id sintatticamente valido ma assente dal DB -> 0 GET, 0 mutation, 0 ingest', async () => {
+  const { admin, urls, res } = await runF6({ body: { id: 'co-unknown' }, attempt: null });
+  assert.equal(res.statusCode, 200);
+  assert.equal(urls.length, 0);
+  assert.equal(admin.__rpcCalls.length, 0);
+});
+
+test('F6: errore tecnico del lookup DB -> 500 (SumUp ritenta), 0 GET, 0 RPC/ingest', async () => {
+  const admin = makeSupabaseAdminMock({
+    tables: { kitchen_payments: { data: null, error: { message: 'db down' } } },
+    rpc: { kitchen_payment_webhook_ingest: { data: {}, error: null } },
+  });
+  const urls = [];
+  const res = makeRes();
+  await withFetch(async (url) => { urls.push(String(url)); return jsonFetchResponse(200, F6_CHECKOUT); }, async () => {
+    await withAdmin(admin, async () => { await webhookHandler(makeReq({ body: { id: 'co-f6' } }), res); });
+  });
+  assert.equal(res.statusCode, 500);
+  assert.equal(urls.length, 0);
+  assert.equal(admin.__rpcCalls.length, 0);
+});
+
+test('F6 T6: attempt non-SumUp / non-charge / provider_ref incompatibile -> denied, 0 GET', async () => {
+  for (const attempt of [
+    { ...F6_ATTEMPT, provider: 'cash' },
+    { ...F6_ATTEMPT, direction: 'refund' },
+    { ...F6_ATTEMPT, provider_ref: 'co-other' },
+    { ...F6_ATTEMPT, provider_ref: null },
+  ]) {
+    const { admin, urls, res } = await runF6({ body: { id: 'co-f6' }, attempt });
+    assert.equal(res.statusCode, 200);
+    assert.equal(urls.length, 0, JSON.stringify(attempt));
+    assert.equal(admin.__rpcCalls.length, 0, JSON.stringify(attempt));
+  }
+});
+
+test('F6 T7: attempt SumUp valido -> GET solo del checkout DB-bound (provider_ref dal DB, encoded)', async () => {
+  const { urls, res } = await runF6({ body: { id: 'co-f6' } });
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(urls, ['https://api.sumup.com/v0.1/checkouts/co-f6']);
+});
+
+test('F6 T8: risposta con checkout.id diverso -> 0 mutation, 0 ingest', async () => {
+  const { admin, urls, res } = await runF6({ body: { id: 'co-f6' }, checkout: { ...F6_CHECKOUT, id: 'co-evil' } });
+  assert.equal(res.statusCode, 200);
+  assert.equal(urls.length, 1);
+  assert.equal(admin.__rpcCalls.length, 0);
+});
+
+test('F6 T9: checkout_reference diverso dall\'attempt -> 0 mutation, 0 ingest', async () => {
+  for (const ref of ['att-other', undefined, null]) {
+    const { admin, res } = await runF6({ body: { id: 'co-f6' }, checkout: { ...F6_CHECKOUT, checkout_reference: ref } });
+    assert.equal(res.statusCode, 200);
+    assert.equal(admin.__rpcCalls.length, 0, `ref=${ref}`);
+  }
+});
+
+test('F6 T10: PAID valido -> ingest poi confirm con provider_ref = quello del DB', async () => {
+  const { admin, res } = await runF6({ body: { id: 'co-f6' } });
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(rpcNames(admin), ['kitchen_payment_webhook_ingest', 'kitchen_payment_confirm']);
+  const confirm = admin.__rpcCalls[1].params;
+  assert.equal(confirm.p_attempt_id, 'att-f6');
+  assert.equal(confirm.p_provider_ref, 'co-f6');
+  assert.equal(admin.__rpcCalls[0].params.p_provider_event_id, 'co-f6:PAID');
+});
+
+test('F6 T11: PENDING -> solo ingest; FAILED/EXPIRED -> ingest + fail', async () => {
+  const pending = await runF6({ body: { id: 'co-f6' }, checkout: { ...F6_CHECKOUT, status: 'PENDING' } });
+  assert.deepEqual(rpcNames(pending.admin), ['kitchen_payment_webhook_ingest']);
+  for (const st of ['FAILED', 'EXPIRED']) {
+    const r = await runF6({ body: { id: 'co-f6' }, checkout: { ...F6_CHECKOUT, status: st } });
+    assert.deepEqual(rpcNames(r.admin), ['kitchen_payment_webhook_ingest', 'kitchen_payment_fail']);
+    assert.equal(r.admin.__rpcCalls[1].params.p_reason, `sumup_${st.toLowerCase()}`);
+  }
+});
+
+test('F6 T12: duplicate callback su attempt gia succeeded/cancelled -> 0 GET, 0 RPC', async () => {
+  for (const status of ['succeeded', 'cancelled']) {
+    const { admin, urls, res } = await runF6({ body: { id: 'co-f6' }, attempt: { ...F6_ATTEMPT, status } });
+    assert.equal(res.statusCode, 200);
+    assert.equal(urls.length, 0);
+    assert.equal(admin.__rpcCalls.length, 0);
+  }
+});
+
+test('F6 T13: PAID con amount mismatch -> fail sumup_amount_mismatch, mai confirm; lost_race invariato; GET non-2xx -> 502', async () => {
+  const mm = await runF6({ body: { id: 'co-f6' }, checkout: { ...F6_CHECKOUT, amount: 999 } });
+  assert.equal(mm.res.statusCode, 200);
+  assert.equal(rpcNames(mm.admin).includes('kitchen_payment_confirm'), false);
+  assert.equal(mm.admin.__rpcCalls.find((c) => c.name === 'kitchen_payment_fail').params.p_reason, 'sumup_amount_mismatch');
+
+  const lr = await runF6({
+    body: { id: 'co-f6' },
+    rpc: {
+      kitchen_payment_webhook_ingest: { data: {}, error: null },
+      kitchen_payment_confirm: { data: { id: 'winner' }, error: null },
+    },
+  });
+  assert.equal(lr.res.statusCode, 200);
+
+  const bad = await runF6({ body: { id: 'co-f6' }, fetchStatus: 500, checkout: { error: 'x' } });
+  assert.equal(bad.res.statusCode, 502);
+  assert.equal(bad.admin.__rpcCalls.length, 0);
+});
+
+test('F6 T14 (static): nessun fetch SumUp prima del lookup DB; URL con encodeURIComponent; nessun override di checkout.id', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(path.join(ROOT, 'api/kitchen-sumup-webhook.js'), 'utf8');
+  const code = src.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+  const fetchIdx = code.indexOf('await fetch(');
+  const dbIdx = code.indexOf(".from('kitchen_payments')");
+  const ingestIdx = code.indexOf("rpc('kitchen_payment_webhook_ingest'");
+  const bindIdx = code.indexOf('checkout.checkout_reference !== attempt.id');
+  assert.ok(dbIdx > -1 && fetchIdx > dbIdx, 'il lookup DB deve precedere ogni fetch');
+  assert.equal(code.split('fetch(').length - 1, 1, 'un solo fetch nel webhook');
+  assert.ok(bindIdx > fetchIdx && ingestIdx > bindIdx, 'ingest solo dopo il binding post-GET');
+  assert.match(code, /checkouts\/\$\{encodeURIComponent\(checkoutId\)\}/);
+  assert.doesNotMatch(code, /\.\.\.checkout, id:/);
+  assert.match(code, /const checkoutId = attempt\.provider_ref;/);
 });
 
 // ================================================================================================
