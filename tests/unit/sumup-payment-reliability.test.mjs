@@ -63,6 +63,8 @@ beforeEach(() => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
   process.env.SUMUP_API_KEY = 'test-sumup-key';
   process.env.SUMUP_MERCHANT_CODE = 'test-merchant';
+  process.env.VERCEL_ENV = 'production';
+  process.env.VERCEL_PROJECT_PRODUCTION_URL = 'prod.example.com';
 });
 
 // ---- fake response/request helpers -----------------------------------------------------------
@@ -1033,6 +1035,116 @@ test('CustomerOrderStatus: il redirect ?sumup=return non conferma nulla da solo,
   assert.ok(verifyingEffectIdx > -1, "deve esistere un effect che reagisce allo stato 'verifying'");
   const afterVerifying = src.slice(verifyingEffectIdx, verifyingEffectIdx + 800);
   assert.match(afterVerifying, /\/api\/kitchen-sumup-reconcile/);
+});
+
+// ================================================================================================
+// S0.5 F5 — URL SumUp da VERCEL_PROJECT_PRODUCTION_URL, solo Production, mai Host/X-Forwarded-*
+// ================================================================================================
+
+const F5_RPC = {
+  kitchen_payment_attempt_claim_checkout: { data: { id: 'att-f4' }, error: null },
+  kitchen_payment_attempt_set_provider_ref: { data: {}, error: null },
+};
+
+async function runF5({ env = {}, headers = AUTH_HEADERS, ...rest } = {}) {
+  const saved = {};
+  for (const k of Object.keys(env)) {
+    saved[k] = process.env[k];
+    if (env[k] === undefined) delete process.env[k]; else process.env[k] = env[k];
+  }
+  const sent = [];
+  try {
+    const out = await runF4({
+      headers, rpc: F5_RPC, ...rest,
+      fetchImpl: async (url, opts) => {
+        if (opts?.body) sent.push(JSON.parse(opts.body));
+        return jsonFetchResponse(200, { id: 'co-f4', hosted_checkout_url: 'https://pay.sumup.com/f4' });
+      },
+    });
+    return { ...out, sent };
+  } finally {
+    for (const k of Object.keys(saved)) {
+      if (saved[k] === undefined) delete process.env[k]; else process.env[k] = saved[k];
+    }
+  }
+}
+
+function assertFailClosed({ res, fetchCalls, mutations }) {
+  assert.equal(res.statusCode, 503);
+  assert.equal(res.body.error, 'checkout_origin_unavailable');
+  assert.equal(fetchCalls.length, 0);
+  assert.equal(mutations.length, 0);
+}
+
+test('F5 T1/T2: Production + URL valido -> redirect_url e return_url usano esattamente l\'origin HTTPS production', async () => {
+  const { res, sent } = await runF5();
+  assert.equal(res.statusCode, 200);
+  assert.equal(sent[0].redirect_url, 'https://prod.example.com/kitchen/status?orderId=ord-f4&sumup=return');
+  assert.equal(sent[0].return_url, 'https://prod.example.com/api/kitchen-sumup-webhook');
+});
+
+test('F5 T3/T4/T5: Host, X-Forwarded-Host, X-Forwarded-Proto ostili/multipli/malformed non influenzano gli URL SumUp', async () => {
+  const hostile = {
+    ...AUTH_HEADERS,
+    host: 'evil.com',
+    'x-forwarded-host': 'evil.com, evil2.com:8080/x?y=1#z',
+    'x-forwarded-proto': 'javascript, http',
+  };
+  const { res, sent } = await runF5({ headers: hostile });
+  assert.equal(res.statusCode, 200);
+  assert.equal(sent[0].redirect_url, 'https://prod.example.com/kitchen/status?orderId=ord-f4&sumup=return');
+  assert.equal(sent[0].return_url, 'https://prod.example.com/api/kitchen-sumup-webhook');
+  assert.ok(!JSON.stringify(sent[0]).includes('evil'));
+});
+
+test('F5 T6: Production senza VERCEL_PROJECT_PRODUCTION_URL -> fail closed, 0 fetch, 0 mutation', async () => {
+  assertFailClosed(await runF5({ env: { VERCEL_PROJECT_PRODUCTION_URL: undefined } }));
+});
+
+test('F5 T7: Production con production URL invalido -> fail closed, 0 fetch, 0 mutation', async () => {
+  for (const bad of ['', 'https://prod.example.com', 'prod.example.com/path', 'prod.example.com?x=1', 'prod.example.com#f', 'a.com b.com', 'a.com,b.com', 'localhost', 'user@evil.com', 'prod.example.com:8080']) {
+    assertFailClosed(await runF5({ env: { VERCEL_PROJECT_PRODUCTION_URL: bad } }));
+  }
+});
+
+test('F5 T8: Preview con credenziali SumUp presenti -> fail closed, 0 fetch, 0 mutation', async () => {
+  assertFailClosed(await runF5({ env: { VERCEL_ENV: 'preview' } }));
+});
+
+test('F5 T9: Development / locale (VERCEL_ENV development o assente) -> fail closed', async () => {
+  assertFailClosed(await runF5({ env: { VERCEL_ENV: 'development' } }));
+  assertFailClosed(await runF5({ env: { VERCEL_ENV: undefined } }));
+});
+
+test('F5 T9b: percorso riuso (provider_ref) fuori Production -> fail closed prima della GET SumUp', async () => {
+  assertFailClosed(await runF5({ env: { VERCEL_ENV: 'preview' }, attempt: f4Attempt({ provider_ref: 'co-existing' }) }));
+});
+
+test('F5 T10/T11: auth e amount mismatch bloccano prima del controllo origin (anche in Preview)', async () => {
+  const noAuth = await runF5({ env: { VERCEL_ENV: 'preview' }, headers: {} });
+  assert.equal(noAuth.res.statusCode, 401);
+  const mismatch = await runF5({ env: { VERCEL_ENV: 'preview' }, order: f4Order({ total: 99 }) });
+  assert.equal(mismatch.res.statusCode, 409);
+  assert.equal(mismatch.res.body.error, 'amount_mismatch');
+  assert.equal(mismatch.fetchCalls.length, 0);
+});
+
+test('F5 T12: riuso provider_ref autorizzato in Production invariato', async () => {
+  const { res, fetchCalls, mutations } = await runF4({
+    attempt: f4Attempt({ provider_ref: 'co-existing' }),
+    fetchImpl: async () => jsonFetchResponse(200, { id: 'co-existing', status: 'PENDING', amount: 10, checkout_reference: 'att-f4', hosted_checkout_url: 'https://pay.sumup.com/reuse' }),
+  });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.hosted_checkout_url, 'https://pay.sumup.com/reuse');
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(mutations.length, 0);
+});
+
+test('F5: sorgente create-checkout non legge piu Host / X-Forwarded-* ne VERCEL_URL', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(path.join(ROOT, 'api/kitchen-sumup-create-checkout.js'), 'utf8')
+    .split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+  assert.doesNotMatch(src, /x-forwarded|headers\.host|VERCEL_URL/i);
 });
 
 console.log('sumup-payment-reliability.test.mjs: tutti i test superati.');

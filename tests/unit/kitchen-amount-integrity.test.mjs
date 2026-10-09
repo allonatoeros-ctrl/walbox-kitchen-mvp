@@ -44,6 +44,8 @@ beforeEach(() => {
   process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
   process.env.SUMUP_API_KEY = 'test-sumup-key';
   process.env.SUMUP_MERCHANT_CODE = 'test-merchant';
+  process.env.VERCEL_ENV = 'production';
+  process.env.VERCEL_PROJECT_PRODUCTION_URL = 'prod.example.com';
 });
 
 function makeRes() {

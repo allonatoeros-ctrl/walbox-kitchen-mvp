@@ -112,6 +112,15 @@ export default async function handler(req, res) {
     return res.status(409).json({ error: 'amount_mismatch' });
   }
 
+  // S0.5 F5: gli URL inviati a SumUp derivano SOLO da VERCEL_PROJECT_PRODUCTION_URL (mai da Host /
+  // X-Forwarded-*). Checkout reale solo in Production; altrove fail closed PRIMA di qualsiasi claim,
+  // mutation o fetch SumUp (incluso il percorso di riuso con provider_ref).
+  const productionOrigin = resolveProductionOrigin();
+  if (!productionOrigin) {
+    console.error('[kitchen-sumup-create-checkout] checkout not allowed: non-production env or invalid production url');
+    return res.status(503).json({ error: 'checkout_origin_unavailable' });
+  }
+
   // Duplicate live checkout guard (P0): an attempt that already has a provider_ref means a SumUp
   // checkout was already created for it — creating another one here would leave two live checkouts
   // sharing the same checkout_reference (=attempt.id), either of which could turn PAID and capture
@@ -146,10 +155,6 @@ export default async function handler(req, res) {
     return res.status(409).json({ error: 'checkout_creation_in_progress' });
   }
 
-  const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  const baseUrl = `${proto}://${host}`;
-
   try {
     const sumupRes = await fetch('https://api.sumup.com/v0.1/checkouts', {
       method: 'POST',
@@ -163,8 +168,8 @@ export default async function handler(req, res) {
         currency: 'EUR',
         merchant_code: sumupMerchantCode,
         description: `Walrus Pub — ordine ${order_id}`,
-        redirect_url: `${baseUrl}/kitchen/status?orderId=${encodeURIComponent(order_id)}&sumup=return`,
-        return_url: `${baseUrl}/api/kitchen-sumup-webhook`,
+        redirect_url: `${productionOrigin}/kitchen/status?orderId=${encodeURIComponent(order_id)}&sumup=return`,
+        return_url: `${productionOrigin}/api/kitchen-sumup-webhook`,
         hosted_checkout: { enabled: true },
       }),
     });
@@ -203,6 +208,17 @@ export default async function handler(req, res) {
     console.error('[kitchen-sumup-create-checkout] unexpected error', err);
     return res.status(500).json({ error: 'internal_server_error' });
   }
+}
+
+// S0.5 F5: unica authority per gli URL SumUp. Ritorna `https://<hostname>` oppure null (fail closed)
+// se l'ambiente non e Production o VERCEL_PROJECT_PRODUCTION_URL manca / non e un hostname singolo.
+function resolveProductionOrigin() {
+  if (process.env.VERCEL_ENV !== 'production') return null;
+  const host = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (typeof host !== 'string' || !/^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(host)) {
+    return null;
+  }
+  return `https://${host.toLowerCase()}`;
 }
 
 // Re-verifies an attempt that already has a live SumUp checkout (provider_ref set) instead of ever
