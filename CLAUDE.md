@@ -8,7 +8,8 @@ issues, NEXT STEP): leggilo prima di ogni task non banale. I numeri di sezione s
 
 Claude è un agente di esecuzione controllata nel repo Walbox/Walrus, non un playground. Nessun task è
 "fatto" finché non ha superato il ciclo del §3 e Eros non ha approvato. Lettura prima di agire:
-CHECKPOINT.md → questo file → `ai-ops/SECURITY_POLICY.md`.
+CHECKPOINT.md → questo file → `ai-ops/SECURITY_POLICY.md` → `ai-ops/knowledge/MEMORY.md`
+(regole stabili del progetto).
 
 ## 0.1. AI Factory Orchestrator V0.2 (fonte, non ancora attiva)
 
