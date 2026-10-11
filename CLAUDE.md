@@ -1,43 +1,43 @@
-# CLAUDE.md — Walrus / Walbox Operating Protocol (Core)
+# CLAUDE.md — Walbox Kitchen (regole del repo)
 
-Regole permanenti. **CHECKPOINT.md** = fonte di verità sullo stato corrente (fase, done, stable, open
-issues, NEXT STEP): leggilo prima di ogni task non banale. I numeri di sezione sono anchor stabili
-(referenziati da skill/template/policy).
+Regole permanenti e mappa del progetto. Qui niente stato né cronologia. I numeri di sezione sono anchor stabili
+(li citano skill e policy): non rinumerare.
+Ordine di lettura per un task non banale: `CHECKPOINT.md` (stato, NEXT STEP) → questo file →
+`ai-ops/knowledge/MEMORY.md` (regole stabili con fonte) → `ai-ops/SECURITY_POLICY.md`.
+Ciclo di lavoro, lingua, stile delle risposte, modello/effort e divieto di `rm`: valgono le regole globali di Eros,
+qui non si ripetono.
 
 ## 0. Purpose
 
-Claude è un agente di esecuzione controllata nel repo Walbox/Walrus, non un playground. Nessun task è
-"fatto" finché non ha superato il ciclo del §3 e Eros non ha approvato. Lettura prima di agire:
-CHECKPOINT.md → questo file → `ai-ops/SECURITY_POLICY.md` → `ai-ops/knowledge/MEMORY.md`
-(regole stabili del progetto).
-
-## 0.1. AI Factory Orchestrator V0.2 (fonte, non ancora attiva)
-
-Architettura futura in `ai-ops/sources/orchestrator-v0.2/AI_FACTORY_ORCHESTRATOR_V0_2_ARCHITECTURE.md`.
+Claude esegue in modo controllato in un'app **in produzione con pagamenti reali**. Un task è fatto solo dopo il
+ciclo del §3 e l'approvazione di Eros.
 
 ## 0.5. Default Output — Silent First
 
-Report completi **su file** (`ai-ops/runs/<run>/result.md` o `ai-ops/reports/<slug>.md`), mai in chat.
-Chat: max 8 righe (PASS/FAIL · file modificati · comandi/test · report path · approval needed sì/no).
-**Terminal Silent Mode**: niente output lunghi di `bash`/`git`/`rg`/`cat` in chat (>20 righe →
-redirigi/riassumi nel report). Meccanica completa: skill **`silent-report`**.
+Report completi **su file** (`ai-ops/reports/<slug>.md`, gitignored), mai in chat. Chat: max 8 righe
+(PASS/FAIL · file modificati · comandi/test · report path · approvazione sì/no). Niente output di shell >20 righe
+in chat. Meccanica: skill **`silent-report`**.
 
 ## 1. Project Identity
 
-Walrus / Walbox — layer social e operativo per The Walrus Pub (jukebox social, staff dashboard,
-Live/Poster TV). Direzione: finire Jukebox/Poster, poi Kitchen separato, poi bridge. Strategia in
-`docs/walbox-strategy/`, stato in CHECKPOINT.md.
+- Walbox Kitchen per The Walrus Pub: il cliente ordina e paga dal telefono (QR), lo staff gestisce ordini e
+  pagamenti, la TV mostra la cucina.
+- Questo branch è **solo Kitchen**. Jukebox, Poster TV e FantaWalrus vivono in altri branch/worktree.
+- Root operativa: questo worktree (`walbox-kitchen-release`). Il repo git è condiviso con i worktree fratelli
+  (`walbox-fanta-preview` e altri): non toccarli. `node_modules` è un symlink verso `walbox-fanta-preview`.
+- Stack: React 19 + Vite 8 (SPA, JS, niente TypeScript) · funzioni Vercel in `api/` · Supabase (Postgres, RLS,
+  Realtime, Auth, Edge Functions) · SumUp · Web Push.
+- Produzione: Vercel `walbox-from-zero-v2`, deploy automatico dal branch `main`. Supabase `pcrqfdzipotprqtuemso`.
+  MCP Supabase di progetto: solo lettura.
+- Architettura completa: `docs/ARCHITECTURE_KITCHEN.md`.
 
 ## 2. Roles & Subagenti
 
-Eros = product owner/approvatore finale. GPT Operator = strategia/workflow. Antigravity = task
-visivi/UI/browser. Claude Code = audit, grep, git, build/test, edit chirurgici. Route al subagente
-giusto quando combacia:
-
-```
-walbox-idea-lab → rd-shuffle-night → shuffle-night-locale   (pipeline nuova idea Shuffle Night)
-walbox-dev · walbox-hardening · walbox-qa-serata · walbox-pitch · walbox-product-owner
-```
+Eros = product owner e unico approvatore. Claude Code = esecutore (audit, piani, codice, test, git locale).
+Subagent di progetto utili al Kitchen: `walbox-dev` (implementazione), `walbox-hardening` (sicurezza, RLS,
+abuso), `walbox-qa-serata` (collaudo come una serata vera), `visual-reviewer` (QA visiva), `walbox-product-owner`
+(rotta e scope). `walbox-idea-lab`, `rd-shuffle-night`, `shuffle-night-locale`, `walbox-pitch` servono al track
+Jukebox/Shuffle Night, non a questo branch.
 
 ## 3. Mandatory Workflow
 
@@ -46,14 +46,14 @@ Understand → Read-only Audit → Plan → Gate 1: Eros approva → Act → Bui
 Quality Gates → Diff Risk Review → Gate 2: Eros approva
 ```
 
-Nessuna modifica file prima del Gate 1. Se salti uno step, il task non è fatto.
+Nessuna modifica file prima del Gate 1 (un piano approvato da Eros vale come Gate 1). Se salti uno step, il
+task non è fatto.
 
 ## 4. Scope Control
 
-Modifica solo i file approvati. Uno task = un obiettivo; preferisci un solo file. Vietato senza
-approvazione: nuovi file, refactor, cleanup, rinomine, cambi routing/data-structure/dipendenze/
-npm-script, stile fuori target, feature non richieste. Non nascondere errori rimuovendo funzionalità.
-Non committare né deployare in automatico.
+Modifica solo i file approvati. Un task = un obiettivo. Vietato senza approvazione: nuovi file, refactor, cleanup,
+rinomine, cambi di routing/strutture dati/dipendenze/npm script, feature non richieste. Non nascondere errori
+togliendo funzionalità. Mai commit o deploy in automatico.
 
 ## 5. Protected Areas
 
@@ -62,91 +62,102 @@ Non toccare senza approvazione esplicita e task dedicato:
 (include il cron) · .env\*/secrets · Supabase (schema, RLS, grant) · Auth · Routing (`src/App.jsx`: `/kitchen/*`) ·
 package.json/lock/deps/Vite · config deploy/Vercel · `src/data/kitchenMockData.js`**.
 Mai stampare/creare/sovrascrivere secrets. Mai applicare migration o deploy: `db push`, `functions deploy`,
-`vercel` sono sempre decisione di Eros. Regole operative complete: `ai-ops/SECURITY_POLICY.md`.
+`vercel` sono sempre decisione di Eros. Regole di dettaglio: `api/CLAUDE.md`, `supabase/CLAUDE.md`,
+`ai-ops/SECURITY_POLICY.md`.
 
 ## 6. Save-Token
 
-Lavora chirurgico: file target, grep mirati, diff piccoli, piani e report brevi. Evita di leggere
-l'intero repo, aprire file "a caso", spiegazioni lunghe, rewrite speculativi.
+Lavora chirurgico: file target, grep mirati, diff piccoli, piani e report brevi. Non leggere l'intero repo né
+`docs/checkpoints/` (storico) se non serve.
 
 ## 7. Priorità corrente
 
-**Non hardcoded qui:** leggi CHECKPOINT.md → `NEXT STEP`. Standing rule: non mescolare strutture dati
-Jukebox e Kitchen, non costruire il bridge Core/points/promo prima che i moduli siano stabili, non
-riaprire Kitchen se CHECKPOINT.md/Eros non lo richiedono.
+**Non hardcoded qui:** `CHECKPOINT.md` → `NEXT STEP`. Standing rule: non mescolare strutture dati Kitchen e
+Jukebox; nessun bridge Kitchen↔Jukebox senza decisione di Eros.
 
 ## 8. UI
 
-Tono Walrus: bold, pub, poster, ironico ma leggibile — non SaaS generico. **Customer** = mobile-first,
-CTA chiara, no login obbligatorio. **Staff** = semplice (pending/queue/stato/azioni), non un CRM.
-**Live/Poster TV** = desktop/TV-first, QR + now-playing + coda + ticker leggibili a distanza, dinamico
-resta dinamico. Niente asset con fondo bianco/scacchiera/trasparenza rotta.
+Tono Walrus: bold, pub, poster, ironico ma leggibile, non SaaS generico.
+**Cliente** = mobile-first (390/430), CTA chiara, nessun login. **Staff** = semplice (stato, coda, azioni), non un
+CRM. **TV** (`/kitchen/tv`) = leggibile a distanza. Niente asset con fondo bianco/scacchiera/trasparenza rotta.
 
 ## 9. File-Specific Guidance
 
-Verifica nel repo prima di assumere che un file esista. Aree note: `src/pages/` (pagine Kitchen: cliente,
-cassa, solo service, prep board, TV), `src/components/kitchen/`, `src/lib/` (regole di servizio),
-`src/App.jsx` (routing, protetto), `src/data/kitchenMockData.js` (protetto), `api/` (protetto),
-`supabase/` (protetto), `tests/e2e/`. Micro-task UI: modifica solo il file target di CHECKPOINT.md, non
-toccare routing/mock data/`api/`/`supabase/`.
+Mappa: `src/pages/` (pagine cliente e staff), `src/components/kitchen/`, `src/hooks/` (`useKitchen*`), `src/lib/`
+(regole pure, client Supabase), `api/` (SumUp, protetto), `supabase/` (protetto), `tests/`. Verifica nel repo
+prima di dare per scontato che un file esista. Legacy da non riattivare: `src/pages/KitchenPayments.jsx`,
+`src/pages/KitchenPromo.jsx`, file root `00_*`–`05_*`, `ai-ops/runner/` (router fermo da luglio).
+Logica di business pura → `src/lib/` con test accanto (`*.test.js`).
 
 ## 10-11. Comandi
 
-Allowlist read-only e comandi che richiedono approvazione: fonte unica **`ai-ops/SECURITY_POLICY.md §7`**.
-Mai senza approvazione: `git add/commit/push`, `git reset/restore`, `npm install/update`, `rm/mv`, `curl`,
-`sudo`, `vercel deploy`. Commit e deploy = decisione umana di Eros.
+| Comando | Rischio |
+|---|---|
+| `npm run lint` · `npm run preview` | sicuro |
+| `node --test tests/unit/*.test.mjs` · `node --test src/lib/*.test.js api/*.test.js` | sicuro (rete mockata) |
+| `node --test supabase/migrations/<ts>*.test.js` | sicuro (assert sul testo SQL) |
+| `VITE_SUPABASE_URL=http://127.0.0.1:54321 npm run build` / `npm run dev` | scrive `dist/`; senza override il guard blocca se `.env.local` punta alla produzione |
+| `npm run test:e2e` | dev server con bypass auth; alcune spec non mockano la rete |
+| `npx playwright test -c playwright.fsec2.config.js` | **account reali**: chiede conferma |
+| `scripts/e2e-real-supabase-local.sh` (skill `e2e-real-local`) | Docker/OrbStack, DB solo locale |
+| `npm run pilot:check` · `node scripts/kitchen-sumup-reconcile-sweep.mjs` | **live**: chiedere a Eros |
+| `npx supabase migration list --linked` | lettura remota |
+| `npx supabase db push --linked` · `functions deploy` · `vercel` · push su `main` | **gate di Eros** |
+| `npm install` | gate: scrive nel `node_modules` dell'altro worktree |
+
+`npm test` non esiste. Ricetta di verifica minima: lint + unit pertinenti + build con override. Allowlist completa:
+`ai-ops/SECURITY_POLICY.md §7`. Mai senza approvazione: `git add/commit/push`, `git reset/restore`,
+`npm install/update`, `rm/mv`, `curl`, `sudo`, `vercel deploy`.
 
 ## 12. Stop Conditions
 
-Fermati se: serve un'area protetta, il diff include file non richiesti, il build rompe fuori scope, un
-micro-fix diventa refactor, non puoi verificare il risultato, le istruzioni sono in conflitto, o manca il
-Gate 1. Formato: `STOP CONDITION / Reason / Files / Risk / Recommended next step / Approval needed`.
+Fermati se: serve un'area protetta, il diff include file non richiesti, il build rompe fuori scope, un micro-fix
+diventa refactor, non puoi verificare il risultato, le istruzioni sono in conflitto, o manca il Gate 1. Formato:
+`STOP CONDITION / Reason / Files / Risk / Recommended next step / Approval needed`.
 
 ## 13. Quality Gates
 
-Prima di dire "fatto", verifica scope, aree protette, minimalità, build/test, sicurezza, rischi residui.
-Checklist completa: skill **`quality-gate-verifier`**.
+Prima di dire "fatto": scope, aree protette, minimalità, build/test, sicurezza, rischi residui. Skill
+**`quality-gate-verifier`**.
 
 ## 14. Diff Risk Review
 
-Dopo ogni modifica, rivedi il diff file-per-file (perché, cosa, in scope sì/no, rischio, edit inattesi).
-Formato completo: skill **`diff-risk-reviewer`**.
+Dopo ogni modifica: diff file per file (perché, cosa, in scope, rischio, edit inattesi). Skill
+**`diff-risk-reviewer`**.
 
 ## 15. Final Report Format
 
-Report finale in italiano, formato REPORT FINALE (Obiettivo, File letti/modificati, Modifiche, Comandi,
-Quality Gates, Diff Risk Review, Rischi residui, Cosa approva Eros, CHECKPOINT.md sì/no). Template
-completo: skill **`silent-report`** / `ai-ops/runner/templates/result_template.md`. Mai solo "Done":
-sempre evidenze.
+Report finale in italiano: Obiettivo, File letti/modificati, Modifiche, Comandi, Quality Gates, Diff Risk Review,
+Rischi residui, Cosa approva Eros, CHECKPOINT aggiornato sì/no. Template: skill **`silent-report`**. Mai solo
+"Done": sempre evidenze.
 
 ## 16-17. Commit & Restore
 
-Mai committare senza approvazione di Eros; proponi sempre `git add [file] / git commit -m "..."` (messaggio
-corto, in inglese, una cosa per commit). Per correggere: `git restore <file singolo>`, mai `git restore .`
-senza che Eros capisca di perdere le modifiche non committate.
+Mai committare senza approvazione. Proponi `git add <file>` + `git commit -m "..."`: un gruppo logico per commit,
+prefisso `feat`/`fix`/`docs`/`test`/`chore` + descrizione in italiano. Mai `git add -A`. Esclusioni: vedi
+`ai-ops/knowledge/MEMORY.md §3`. Per annullare: `git restore <file singolo>`, mai `git restore .`.
 
 ## 18. Ambiguità
 
-Chiedi solo se la risposta è bloccante; altrimenti fai un'assunzione sicura e dichiarala.
+Chiedi solo se la risposta è bloccante; altrimenti assunzione sicura dichiarata. Le decisioni di prodotto sono di
+Eros: segnale `NEEDS_DECISION`.
 
 ## 19. Large Requests
 
-Per richieste ampie ("fixa tutta l'app", "build Kitchen", "make it beautiful"): **non iniziare a codare**.
-Rispondi "task grande, prima lo spezzo in micro-task sicuri", poi proponi fase 1 + file + aree protette +
-approvazione.
+Richieste ampie ("fixa tutto", "rifai Kitchen"): non iniziare a codare. Spezza in micro-task sicuri e proponi
+fase 1 + file + aree protette + approvazione.
 
-## 20. Poster TV
+## 20. Stato e documenti
 
-La priorità Poster/Kitchen/Bridge **non è hardcoded qui**: verifica in CHECKPOINT.md → `NEXT STEP`. Regole
-file per il target Poster: vedi §9. Check preview: `/tv-poster`, zoom 100%, QR, now-playing, coda.
+`CHECKPOINT.md` = solo stato corrente, un NEXT STEP; lo storico va in `docs/checkpoints/`. Lavoro multi-fase:
+file di stato in `ai-ops/current/`. Regole stabili: `ai-ops/knowledge/MEMORY.md`. Le §8-10 di
+`ai-ops/SECURITY_POLICY.md` erano per il router ai-ops: per aggiornare lo stato valgono le regole globali.
 
 ## 21. Final Principle
 
-Claude non fa "tutto": esegue passi controllati, approvati e verificabili. Il progetto vince restando
-stabile, demo-ready e sotto controllo. Mai scambiare il controllo per la velocità.
+Passi controllati, approvati e verificabili. Il progetto vince restando stabile e sotto controllo.
 
-## 22. Repeated Test-Failure Escalation (FantaWalrus / test-heavy)
+## 22. Repeated Test-Failure Escalation
 
-Se la **stessa classe di errore** persiste dopo **2 tentativi autonomi**: interrompi i tentativi,
-classifica il failure e **delega a Claude Code** (subagent) se la causa non è immediatamente
-deterministica. Non attendere un sollecito di Eros.
+Se la **stessa classe di errore** persiste dopo **2 tentativi autonomi**: fermati, classifica il failure e
+delega a un subagent se la causa non è deterministica. Non aspettare un sollecito di Eros.
