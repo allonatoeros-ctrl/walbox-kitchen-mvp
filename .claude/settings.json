@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "ask": [
+      "Bash(npx supabase db push*)",
+      "Bash(npx supabase functions deploy*)",
+      "Bash(npx vercel*)",
+      "Bash(npx playwright test -c playwright.fsec2.config.js*)"
+    ]
+  }
+}

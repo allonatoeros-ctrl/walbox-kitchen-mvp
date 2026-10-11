@@ -58,9 +58,11 @@ Non committare né deployare in automatico.
 ## 5. Protected Areas
 
 Non toccare senza approvazione esplicita e task dedicato:
-**Supabase · Spotify · Auth · Routing** (App.jsx, `/tv-poster` `/staff` `/request` `/entry`) **·
-.env/secrets · package.json/lock/deps/Vite · config deploy/Vercel · mockData.js**.
-Mai stampare/creare/sovrascrivere secrets. Regole operative complete: `ai-ops/SECURITY_POLICY.md`.
+**`api/` (pagamenti SumUp, soldi reali) · `supabase/migrations/` · `supabase/functions/` · `vercel.json`
+(include il cron) · .env\*/secrets · Supabase (schema, RLS, grant) · Auth · Routing (`src/App.jsx`: `/kitchen/*`) ·
+package.json/lock/deps/Vite · config deploy/Vercel · `src/data/kitchenMockData.js`**.
+Mai stampare/creare/sovrascrivere secrets. Mai applicare migration o deploy: `db push`, `functions deploy`,
+`vercel` sono sempre decisione di Eros. Regole operative complete: `ai-ops/SECURITY_POLICY.md`.
 
 ## 6. Save-Token
 
@@ -82,10 +84,11 @@ resta dinamico. Niente asset con fondo bianco/scacchiera/trasparenza rotta.
 
 ## 9. File-Specific Guidance
 
-Verifica nel repo prima di assumere che un file esista. Aree note: `src/pages/` (Live/Poster TV,
-Staff/Manager Dashboard, Customer Jukebox/Entry), `src/App.jsx` (routing, protetto), `src/data/mockData.js`
-(protetto), `public/assets/`. Micro-task Poster: modifica solo il file target di CHECKPOINT.md, non
-toccare routing/mockData/Staff/Supabase/Spotify.
+Verifica nel repo prima di assumere che un file esista. Aree note: `src/pages/` (pagine Kitchen: cliente,
+cassa, solo service, prep board, TV), `src/components/kitchen/`, `src/lib/` (regole di servizio),
+`src/App.jsx` (routing, protetto), `src/data/kitchenMockData.js` (protetto), `api/` (protetto),
+`supabase/` (protetto), `tests/e2e/`. Micro-task UI: modifica solo il file target di CHECKPOINT.md, non
+toccare routing/mock data/`api/`/`supabase/`.
 
 ## 10-11. Comandi
 
