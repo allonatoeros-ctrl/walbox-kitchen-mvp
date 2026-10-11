@@ -61,7 +61,7 @@ export default function BevandeSection({ items, onAdd }) {
         const soldOut = item.available === false;
         const noPrice = item.price == null;
 
-        let ctaLabel = 'LO VOGLIO';
+        let ctaLabel = 'AGGIUNGI AL SACCO';
         if (soldOut) ctaLabel = 'ESAURITO';
         else if (noPrice) ctaLabel = 'PREZZO IN ARRIVO';
 

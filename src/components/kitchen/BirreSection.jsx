@@ -52,7 +52,7 @@ export default function BirreSection({ items, onAdd }) {
         const eveningLocked = eveningOnly && !isEveningServiceActive();
         const disabled = soldOut || noPrice || eveningLocked;
 
-        let ctaLabel = 'LO VOGLIO';
+        let ctaLabel = 'AGGIUNGI AL SACCO';
         if (soldOut) ctaLabel = 'ESAURITO';
         else if (eveningLocked) ctaLabel = 'SOLO LA SERA';
         else if (noPrice) ctaLabel = 'PREZZO IN ARRIVO';

@@ -110,7 +110,7 @@ export default function InsalatoneSection({ items, onAdd }) {
                         image: item.image,
                       })}
                     >
-                      {soldOut ? 'ESAURITO' : 'LO VOGLIO'}
+                      {soldOut ? 'ESAURITO' : 'AGGIUNGI AL SACCO'}
                     </button>
                   </div>
                   <button

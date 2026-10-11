@@ -258,14 +258,17 @@
 }
 
 .is-btn-want {
-  width: 144px;
+  min-width: 144px;
+  width: auto;
+  padding: 0 14px;
+  white-space: nowrap;
   height: 38px;
   border: none;
   border-radius: 10px;
   background: var(--is-red);
   color: #fff;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 900;
   cursor: pointer;
 }
