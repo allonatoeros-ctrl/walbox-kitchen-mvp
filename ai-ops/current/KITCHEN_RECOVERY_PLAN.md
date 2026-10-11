@@ -107,11 +107,11 @@ Worktree `walbox-kitchen-release`, branch `kitchen-clean-baseline-v2-phase-a`.
 
 ## STATO
 
-- Fase corrente: **Fase A committata (`0f8d864`, 2026-10-12). Fase 0: classificazione e verifiche fatte, proposta commit pronta, in attesa del gate di Eros** (nessun commit ancora). Report: `ai-ops/reports/phase0-working-tree-triage-2026-10-12.md`.
-- Fatto: audit onboarding, audit linea, follow-up Vercel/F1; Fase A (CLAUDE.md §5/§9 + `.claude/settings.json`); Fase 0 triage: build PASS, 110/110 test locali PASS, unit `.mjs` solo con i fallimenti preesistenti (3 in sumup-payment-reliability, 1 in service-night-selector, data fissa).
-- Attenzione: `.env.local` punta alla produzione Supabase e il nuovo guard di `vite.config.js` blocca build/dev finche' e' cosi'.
-- Piano pagamenti originale salvato in `docs/KITCHEN_PAYMENT_PLAN_EROS.{rtf,md}` (2026-10-12), file nuovi da committare in Fase 0.
-- Decisioni aperte: solo la strada della Fase 0 (default 1). D1–D4 decise.
-- Prossimo passo: Eros approva i commit G1–G9 della Fase 0 (default strada 1).
+- Fase corrente: **Fase B FATTA in locale (2026-10-12), in attesa del Gate di Eros (diff + 4 commit). Nessun commit, nessun push.** Fase A e Fase 0 committate in locale (`0f8d864`, `f62f800`…`34516e3`), non pushate.
+- Fatto Fase B: CHECKPOINT compattato (117 KB → 56 righe, storico copiato esatto in `docs/checkpoints/archive-2026-10.md`); `CLAUDE.md` Kitchen (163 righe, anchor conservati); nuovi `api/CLAUDE.md`, `supabase/CLAUDE.md`, `docs/ARCHITECTURE_KITCHEN.md`; skill `session-start`, `phase-plan`, più `memory-update` e `context-health-reset` (fuori lista, motivo nel report). Report e commit proposti: `ai-ops/reports/kitchen-fase-b-onboarding-2026-10-12.md`.
+- Da sapere: `CLAUDE.md §20` dichiara che SECURITY_POLICY §8-10 (router ai-ops) non governano più l'aggiornamento dello stato. Se Eros non è d'accordo, si toglie la riga.
+- Attenzione (invariato): `.env.local` punta alla produzione Supabase; per buildare `VITE_SUPABASE_URL=http://127.0.0.1:54321`. Commento edge function "version 1" vs v3 da correggere.
+- Decisioni aperte: nessuna. D1–D4 decise.
+- Prossimo passo: Gate di Eros sui 4 commit di Fase B, poi Fase 1 (preflight → gate push).
 
 Modello/effort: Fase A e Fase 0 Sonnet medium · Fase B e Fase 2 Opus high · Fase 3 Sonnet medium (implementazione) + Opus high (audit e review).
