@@ -187,6 +187,8 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     // Apre la prima card (accordion): l'upsell FALLO PESANTE e' interattivo solo da aperta.
     await page.locator('.pm-card-closed').first().click();
     const card = page.locator('.pm-card--open').first();
+    // SCEGLI COME LO VUOI (2026-09-24): default SOLO PANINO, il combo si attiva col MENU.
+    await card.getByTestId('choose-menu').click();
     const heavy = card.locator('.pm-btn-heavy');
     await expect(heavy).toBeVisible();
 
@@ -200,7 +202,7 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
 
     await expect(heavy).toBeEnabled();
-    await expect(heavy).toHaveText('FALLO PESANTE');
+    await expect(heavy).toHaveText('AGGIUNGI IL MENU · €19');
     await heavy.scrollIntoViewIfNeeded();
     await heavy.click();
 

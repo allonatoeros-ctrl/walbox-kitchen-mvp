@@ -21,6 +21,8 @@ async function addFalloPesante(page) {
   await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
   await page.locator('.pm-card-closed').first().click();
   const card = page.locator('.pm-card--open').first();
+  // SCEGLI COME LO VUOI (2026-09-24): il selettore birra appare solo scegliendo MENU.
+  await card.getByTestId('choose-menu').click();
   await card.locator('.pm-beer-pill', { hasText: INCLUDED_BEER }).click();
   await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
   await expect(card.locator('.pm-btn-heavy')).toBeEnabled();
