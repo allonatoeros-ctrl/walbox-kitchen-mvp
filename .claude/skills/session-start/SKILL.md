@@ -1,6 +1,6 @@
 ---
 name: session-start
-description: Ripristina il contesto di lavoro in pochi secondi dopo un /clear o una nuova sessione. Fonte primaria: CHECKPOINT.md. Supporto: git log + memoria in contesto. Zero lettura codebase.
+description: Ripristina il contesto di lavoro in pochi secondi dopo un /clear o una nuova sessione. Fonte primaria: CHECKPOINT.md (solo FASE, OPEN ISSUES, NEXT STEP) e il file di stato in ai-ops/current/ a cui rimanda. Supporto: git status/log. Zero lettura codebase, zero memory.
 ---
 
 # Session Start
@@ -17,9 +17,11 @@ Nessun parametro richiesto.
 - **Non aprire file sorgente.** Zero `cat`, zero `Read` su `.jsx/.ts/.css`.
 - **Non scansionare il repo.** Non serve per orientarsi.
 - **Fonti consentite — in ordine di priorità:**
-  1. `CHECKPOINT.md` → fonte primaria: fase attuale, NEXT STEP, DONE, STABLE, OPEN ISSUES
-  2. `git log --oneline -15` → supporto: attività recente, file caldi
-  3. File di memoria in contesto (MEMORY.md + collegati) → solo se CHECKPOINT.md è assente o incompleto
+  1. `CHECKPOINT.md` → fonte primaria: solo `## FASE`, `## OPEN ISSUES`, `## NEXT STEP`
+  2. Se il NEXT STEP rimanda a un file di stato in `ai-ops/current/`: solo la sua sezione `## STATO`
+  3. `git status --short` + `git log --oneline -5` → supporto: branch, file sporchi, attività recente
+- **Mai** leggere `docs/checkpoints/` (archivio storico) né la memory di Claude per ricostruire lo stato:
+  lo stato vive solo nei file del repo.
 - Se manca qualcosa, dichiararlo invece di cercarlo nel codebase.
 
 ---
@@ -28,38 +30,35 @@ Nessun parametro richiesto.
 
 ### Step 1 — Leggi CHECKPOINT.md
 
-Esegui Read su `CHECKPOINT.md` (root del progetto).
+Leggi da `CHECKPOINT.md` (root del progetto) solo le sezioni `## FASE`, `## OPEN ISSUES`, `## NEXT STEP`
+(es. `sed -n '/^## FASE/,/^## DONE/p;/^## OPEN ISSUES/,$p' CHECKPOINT.md`).
 
 Estrai:
 - `## NEXT STEP` → prossimo step ufficiale (una riga esatta)
-- `## DONE` → lavoro completato recentemente
+- `## FASE` → branch, cosa è in produzione
 - `## OPEN ISSUES` → blocchi aperti
-- `## STABLE` → aree da non toccare
-- `## RESTART PROMPT` → prompt di ripristino pronto (se presente)
 
-Se CHECKPOINT.md non esiste o è vuoto, passa direttamente al Step 2 e dichiaralo nel briefing.
+Se il NEXT STEP cita un file in `ai-ops/current/`, leggi solo la sua sezione `## STATO`.
+Se CHECKPOINT.md non esiste, è vuoto o supera ~150 righe (non compattato), dichiaralo nel briefing e
+suggerisci la compattazione (skill `memory-update`) invece di leggerlo tutto.
 
-### Step 2 — Git log + memoria a supporto
+### Step 2 — Git a supporto
 
 Esegui:
 ```bash
-git log --oneline -15
+git status --short && git log --oneline -5
 ```
 
-Identifica i file caldi dai commit recenti (solo nomi, senza aprirli).
-
-Usa i file di memoria già in contesto solo per colmare gap non coperti da CHECKPOINT.md:
-- `MEMORY.md` → indice generale
-- `project_kitchen_current_state.md` → stato implementato
-- `project_kitchen_phase_plan.md` → fasi e roadmap
-- `project_kitchen_remaining_phases.md` → fasi rimanenti
+Identifica branch, file sporchi e file caldi dai commit recenti (solo nomi, senza aprirli).
+Se git contraddice CHECKPOINT.md (es. commit dichiarati "non fatti" che esistono), prevale il repo:
+segnalalo negli AVVISI.
 
 ### Step 3 — Costruisci il briefing
 
 Compila mentalmente queste 5 voci:
 
 1. **Ultimo lavoro** — cosa dicono gli ultimi 3-5 commit in parole semplici
-2. **Stato progetto** — fase attuale, modulo attivo (Jukebox / Kitchen / TV Poster)
+2. **Stato progetto** — fase attuale e branch (questo repo è Kitchen)
 3. **File caldi** — file toccati di recente dai commit (solo nomi, senza aprirli)
 4. **Prossimo step** — sezione `## NEXT STEP` di CHECKPOINT.md — una riga esatta. Non inferire dalla memoria se CHECKPOINT.md ha questo campo.
 5. **Avvisi** — aree protette coinvolte, rischi noti, blocchi aperti
@@ -75,16 +74,15 @@ ULTIMO LAVORO
 [bullet compatti dai commit recenti — linguaggio diretto]
 
 STATO PROGETTO
-Modulo attivo: [Jukebox / Kitchen / TV Poster / misto]
-Fase: [nome fase da memoria]
-Avanzamento: [▓▓▓▓░░░░░░ X%] — stima da fasi completate/totali
+Branch: [branch corrente]
+Fase: [da CHECKPOINT.md → FASE, o dal file di stato in ai-ops/current/]
 
 FILE CALDI
 - [file dai commit recenti]
 - [...]
 
-PROSSIMO STEP SUGGERITO
-[da memoria — una riga]
+PROSSIMO STEP
+[da CHECKPOINT.md → NEXT STEP — una riga]
 
 AVVISI
 [aree protette coinvolte, blocchi aperti, rischi noti]
@@ -101,9 +99,9 @@ Pronto. Dimmi cosa vuoi fare.
 - Non modificare nessun file
 - Non aprire il codebase (CHECKPOINT.md è un meta-file di controllo, non codebase)
 - Non fare proposte elaborate — solo orientamento
-- Se la memoria è parziale o stale, dichiararlo esplicitamente nel briefing
+- Se CHECKPOINT.md è parziale o stale rispetto a git, dichiararlo esplicitamente nel briefing
 - Il briefing deve stare in massimo 20 righe
-- **Il NEXT STEP deve venire solo da CHECKPOINT.md.** Non sovrascrivere con inferenze da memoria o git log.
+- **Il NEXT STEP deve venire solo da CHECKPOINT.md** (o dal file di stato a cui rimanda). Non sovrascrivere con inferenze da memoria o git log.
 
 ---
 

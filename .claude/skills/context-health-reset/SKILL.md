@@ -95,7 +95,7 @@ Non leggere codice applicativo, salvo il caso in cui CHECKPOINT.md o CLAUDE.md c
 3. Esegui /skills — elenca le skill disponibili, cerca duplicati/sovrapposizioni.
 4. Esegui /agents — elenca gli agenti custom disponibili.
 5. Esegui /mcp — elenca i server MCP connessi.
-6. Leggi CHECKPOINT.md — estrai Fase, DONE, STABLE, DO NOT TOUCH, OPEN ISSUES, NEXT STEP.
+6. Leggi CHECKPOINT.md — estrai FASE, DONE, STABLE, OPEN ISSUES, NEXT STEP (le aree protette stanno in CLAUDE.md §5).
 7. Leggi CLAUDE.md — verifica se rimanda a CHECKPOINT.md come fonte primaria (Sezione 0 o equivalente) e se ha una tabella di routing agenti.
 8. Leggi MEMORY.md — separa memoria attiva da memoria archiviata (cerca note tipo "archiviato", "fase completata", "archive/").
 9. git log --oneline -15 — verifica se l'ultimo commit rilevante per CLAUDE.md/CHECKPOINT.md è riflesso nei rispettivi DONE.
@@ -135,7 +135,7 @@ Da CHECKPOINT.md e MEMORY.md, identifica:
 Verifica che ogni track fuori scope sia:
 
 ```text
-- marcato esplicitamente come completato/fuori scope in CHECKPOINT.md (sezione DONE o DO NOT TOUCH);
+- marcato esplicitamente come completato/fuori scope in CHECKPOINT.md (sezione DONE o STABLE);
 - non presente come priorità attiva in CLAUDE.md.
 ```
 

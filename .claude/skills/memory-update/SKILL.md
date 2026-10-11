@@ -54,62 +54,52 @@ Se il contesto è già chiaro, salta questo step.
 
 ### Step 3 — Costruisci il checkpoint
 
-Compila le 6 sezioni obbligatorie:
+Compila le 5 sezioni obbligatorie (stesse di `CHECKPOINT.md`):
 
-**DONE** — cosa è stato completato e funziona
-**STABLE** — componenti/schermate che non vanno toccate
-**DO NOT TOUCH** — file o aree protette con motivo esplicito
-**OPEN ISSUES** — problemi noti, bug, comportamenti inattesi
-**NEXT STEP** — un solo step, azionabile al prossimo messaggio
-**RESTART PROMPT** — prompt breve pronto per riprendere da zero dopo /clear
+**FASE** — branch, cosa è in produzione, cosa è solo locale
+**DONE** — max 5 voci recenti, una riga ciascuna; le più vecchie si spostano in archivio
+**STABLE** — cosa è in produzione e verificato, da non toccare senza approvazione
+**OPEN ISSUES** — problemi noti, bug, verifiche mancanti
+**NEXT STEP** — un solo step, azionabile; se il lavoro è multi-fase, rimanda al file in `ai-ops/current/`
+
+Le aree protette stanno in `CLAUDE.md §5`, non nel checkpoint. Niente RESTART PROMPT: dopo `/clear` si usa
+la skill `session-start`.
 
 ### Step 4 — Scrivi CHECKPOINT.md
 
-Scrivi o sovrascrivi il file nella root del progetto:
-```
-CHECKPOINT.md
-```
+Aggiorna solo le righe cambiate di `CHECKPOINT.md` (root del progetto). Prima di scrivere:
+- le voci DONE oltre la quinta e i blocchi superati si **spostano**, copiati esatti, in fondo a
+  `docs/checkpoints/archive-YYYY-MM.md` (mese corrente; crealo con un'intestazione se manca);
+- niente cronologia, hash di ogni passaggio o regole stabili (quelle vanno in `ai-ops/knowledge/MEMORY.md`).
 
-**Formato obbligatorio — max 40 righe:**
+**Formato obbligatorio — max 60 righe:**
 
 ```markdown
-# CHECKPOINT — Walbox
-Aggiornato: [YYYY-MM-DD HH:MM]
-Fase: [nome fase attuale]
+# CHECKPOINT — Walbox Kitchen
+Aggiornato: [YYYY-MM-DD]. Storico: `docs/checkpoints/archive-YYYY-MM.md`.
 
----
+## FASE
+- [bullet compatto]
 
 ## DONE
-- [bullet compatto]
-- [bullet compatto]
+- [YYYY-MM-DD] — [una riga]
 
-## STABLE — non toccare senza approvazione
-- [componente / schermata / file]
-
-## DO NOT TOUCH
-- [file o area] — [motivo in 5 parole]
+## STABLE — in produzione e verificato (non toccare senza approvazione)
+- [componente / flusso]
 
 ## OPEN ISSUES
-- [problema noto o bug aperto]
+- [problema noto o verifica mancante]
 oppure: Nessuno.
 
 ## NEXT STEP
 [una riga sola — azionabile]
-
-## RESTART PROMPT
-[prompt breve pronto per copia-incolla dopo /clear — max 3 righe]
-Esempio:
-"Walbox — [modulo]. Ultima cosa fatta: [X]. Prossimo step: [Y]. File caldo: [Z]."
 ```
 
-### Step 5 — Aggiorna i file di memoria Claude
+### Step 5 — Niente memory di Claude
 
-Se il task ha cambiato lo stato di Kitchen o del progetto, aggiorna anche:
-- `project_kitchen_current_state.md` → se lo stato Kitchen è cambiato
-- `project_kitchen_remaining_phases.md` → se una fase è stata completata
-
-Aggiorna solo le righe che sono effettivamente cambiate. Non riscrivere tutto.
-Se nulla è cambiato nei file di memoria, salta questo step.
+Lo stato del progetto vive solo nei file del repo (`CHECKPOINT.md`, `ai-ops/current/`). Non scrivere stato in
+`~/.claude/projects/.../memory/`. Se dalla fase è emersa una regola stabile (non stato), proponila per
+`ai-ops/knowledge/MEMORY.md` con la fonte.
 
 ### Step 6 — Conferma
 
@@ -119,7 +109,7 @@ CHECKPOINT aggiornato: CHECKPOINT.md
 Fase: [nome]
 Stato: stabile / parziale / issues aperte
 Prossimo step: [una riga]
-Memoria Claude: aggiornata / invariata
+Archivio: [voci spostate in docs/checkpoints/ / nessuna]
 ```
 
 ---
