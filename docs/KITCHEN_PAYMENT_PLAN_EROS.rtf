@@ -1,0 +1,426 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2867
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 Times-Roman;\f1\froman\fcharset0 Times-Bold;\f2\fmodern\fcharset0 Courier;
+\f3\fnil\fcharset0 Menlo-Regular;\f4\froman\fcharset0 TimesNewRomanPS-BoldMT;\f5\fnil\fcharset0 AppleColorEmoji;
+\f6\froman\fcharset0 TimesNewRomanPSMT;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;}
+{\*\listtable{\list\listtemplateid1\listhybrid{\listlevel\levelnfc23\levelnfcn23\leveljc0\leveljcn0\levelfollow0\levelstartat0\levelspace360\levelindent0{\*\levelmarker \{disc\}}{\leveltext\leveltemplateid1\'01\uc0\u8226 ;}{\levelnumbers;}\fi-360\li720\lin720 }{\listname ;}\listid1}}
+{\*\listoverridetable{\listoverride\listid1\listoverridecount0\ls1}}
+\paperw11900\paperh16840\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 S\'ec. 
+\f1\b Il piano originale per la \'93cassa\'94 non era semplicemente aggiungere SumUp. Era costruire un vero lifecycle pagamenti a due corsie: banco oppure online, senza mai confondere soldi e stato dell\'92ordine.
+\f0\b0 \
+Il problema che volevamo risolvere era questo: oggi un ordine, un tentativo di pagamento e quello che vede lo staff possono divergere. Il piano stabilisce invece una regola netta: 
+\f1\b SumUp decide cosa \'e8 successo ai soldi; Walbox decide cosa pu\'f2 succedere all\'92ordine.
+\f0\b0  Redirect/webhook non bastano: il pagamento online deve essere verificato server-side. WALBOX_KITCHEN_PAYMENT_HANDOFF_\'85\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 Il flusso finale che avevamo pensato\
+\pard\pardeftab720\partightenfactor0
+
+\f2\b0\fs26 \cf0 CLIENTE CONFERMA ORDINE\
+        
+\f3 \uc0\u8595 
+\f2 \
+COME VUOI PAGARE?\
+        
+\f3 \uc0\u9474 
+\f2 \
+        
+\f3 \uc0\u9500 \u9472 \u9472 
+\f2  PAGA AL BANCO\
+        
+\f3 \uc0\u9474 
+\f2       
+\f3 \uc0\u8595 
+\f2 \
+        
+\f3 \uc0\u9474 
+\f2  pending_counter_payment\
+        
+\f3 \uc0\u9474 
+\f2       
+\f3 \uc0\u8595 
+\f2 \
+        
+\f3 \uc0\u9474 
+\f2  staff lo vede subito\
+        
+\f3 \uc0\u9474 
+\f2       
+\f3 \uc0\u8595 
+\f2 \
+        
+\f3 \uc0\u9474 
+\f2  incasso banco\
+        
+\f3 \uc0\u9474 
+\f2       
+\f3 \uc0\u8595 
+\f2 \
+        
+\f3 \uc0\u9474 
+\f2  received\
+        
+\f3 \uc0\u9474 
+\f2 \
+        
+\f3 \uc0\u9492 \u9472 \u9472 
+\f2  PAGA ONLINE\
+               
+\f3 \uc0\u8595 
+\f2 \
+          pending_online_payment\
+               
+\f3 \uc0\u8595 
+\f2 \
+          staff NON lo vede\
+               
+\f3 \uc0\u9474 
+\f2 \
+               
+\f3 \uc0\u9500 \u9472 \u9472 
+\f2  PAID verificato 
+\f3 \uc0\u8594 
+\f2  received 
+\f3 \uc0\u8594 
+\f2  staff lo vede\
+               
+\f3 \uc0\u9500 \u9472 \u9472 
+\f2  FAILED 
+\f3 \uc0\u8594 
+\f2  riprova online\
+               
+\f3 \uc0\u9500 \u9472 \u9472 
+\f2  PASSA AL BANCO 
+\f3 \uc0\u8594 
+\f2  pending_counter_payment\
+               
+\f3 \uc0\u9500 \u9472 \u9472 
+\f2  abbandonato 
+\f3 \uc0\u8594 
+\f2  payment_abandoned\
+               
+\f3 \uc0\u9492 \u9472 \u9472 
+\f2  stato incerto 
+\f3 \uc0\u8594 
+\f2  rimane nascosto\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 Questa \'e8 proprio la state machine target del piano. WALBOX_KITCHEN_PAYMENT_HANDOFF_\'85\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 Piano totale S0 
+\f4 \uc0\u8594 
+\f1  S7\
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrt\brdrnil \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\qc\partightenfactor0
+
+\fs24 \cf0 Fase\cell 
+\pard\intbl\itap1\pardeftab720\qc\partightenfactor0
+\cf0 Cosa fa\cell 
+\pard\intbl\itap1\pardeftab720\qc\partightenfactor0
+\cf0 Stato attuale\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 S0
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 Disegno delle regole e delle due corsie\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u9989 
+\f0  FATTO\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f1\b \cf0 S0.5
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 Hardening sicurezza/pagamenti F1\'96F7\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u9989 
+\f0  FATTO\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f1\b \cf0 S1
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 Impedire agli ordini online non pagati di apparire a staff/Solo/TV\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u9989 
+\f0  FATTO\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f1\b \cf0 S2
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 Nuovi stati DB + idempotenza + trigger di sicurezza\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u9989 
+\f0  FATTO LOCALMENTE, 54/54 PASS\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f1\b \cf0 S3
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 Nuove RPC e vera state machine DB\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u9197 \u65039 
+\f0  PROSSIMO BLOCCO\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f1\b \cf0 S4
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 API/server che orchestrano online 
+\f6 \uc0\u8596 
+\f0  banco\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u55357 \u57313 
+\f0  PARZIALE\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f1\b \cf0 S5
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 Nuova esperienza cliente \'93Come vuoi pagare?\'94\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u10060 
+\f0  DA FARE\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f1\b \cf0 S6
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 Chiusura automatica ordini online abbandonati + smoke SumUp\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u10060 
+\f0  DA FARE\cell \row
+
+\itap1\trowd \taflags0 \trgaph108\trleft-108 \trbrdrl\brdrnil \trbrdrt\brdrnil \trbrdrr\brdrnil 
+\clvertalc \clshdrawnil \clwWidth466\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx2880
+\clvertalc \clshdrawnil \clwWidth6280\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx5760
+\clvertalc \clshdrawnil \clwWidth4069\clftsWidth3 \clmart10 \clmarl10 \clmarb10 \clmarr10 \clbrdrt\brdrnil \clbrdrl\brdrnil \clbrdrb\brdrnil \clbrdrr\brdrnil \clpadt20 \clpadl20 \clpadb20 \clpadr20 \gaph\cellx8640
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f1\b \cf0 S7
+\f0\b0 \cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+\cf0 Eliminazione vecchi flussi legacy\cell 
+\pard\intbl\itap1\pardeftab720\partightenfactor0
+
+\f5 \cf0 \uc0\u10060 
+\f0  PER ULTIMO\cell \lastrow\row
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 Il piano principale \'e8 esplicitamente 
+\f2\fs26 S0 
+\f3 \uc0\u8594 
+\f2  S1 
+\f3 \uc0\u8594 
+\f2  S2 
+\f3 \uc0\u8594 
+\f2  S3 
+\f3 \uc0\u8594 
+\f2  S4 
+\f3 \uc0\u8594 
+\f2  S5 
+\f3 \uc0\u8594 
+\f2  S6 
+\f3 \uc0\u8594 
+\f2  S7
+\f0\fs24 ; F1\'96F7 erano solo un blocco intermedio S0.5, non sostituivano il piano. WALBOX_KITCHEN_PAYMENT_HANDOFF_\'85\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 Cosa abbiamo gi\'e0 costruito davvero\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\fs24 \cf0 S0 \'97 design:
+\f0\b0  deciso che chi sceglie banco resta nella corsia banco; gli online abbandonati diventano 
+\f2\fs26 payment_abandoned
+\f0\fs24 ; un pagamento tardivo non va perso; la compatibilit\'e0 legacy resta temporaneamente; i casi limite possono essere recuperati dal back-office. WALBOX_KITCHEN_PAYMENT_HANDOFF_\'85\
+
+\f1\b S1 \'97 staff hardening:
+\f0\b0  gli stati online pending sono esclusi dalle superfici operative tramite allow-list; realtime/Solo/Alert/TV sono stati preparati per non far comparire ordini che il locale non deve ancora preparare. WALBOX_KITCHEN_PAYMENT_HANDOFF_\'85\
+
+\f1\b S0.5 \'97 sicurezza pagamenti:
+\f0\b0  abbiamo gi\'e0 protetto importi, ownership, URL checkout, webhook, timeout, recovery dei checkout duplicati e permessi RPC. L\'92amount integrity e il grant hardening risultavano applicati anche a Supabase Production; vari hardening applicativi invece erano ancora locali e non deployati. WALBOX_KITCHEN_PAYMENT_HANDOFF_\'85 WALBOX_KITCHEN_PAYMENT_HANDOFF_\'85\
+E avevamo gi\'e0 un 
+\f1\b Payment Hub funzionante con SumUp
+\f0\b0 : Hosted Checkout, webhook, verifica server-side, ledger pagamenti, refund, idempotenza e un E2E sandbox riuscito. WWALBOX_PAYMENT_HUB_SUMUP_ONLIN\'85 WWALBOX_PAYMENT_HUB_SUMUP_ONLIN\'85\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 Dove siamo arrivati adesso con S2\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 Questa \'e8 la cosa appena completata.\
+S2 aggiunge:\
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls1\ilvl0
+\f2\fs26 \cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 pending_online_payment
+\f0\fs24 \
+\ls1\ilvl0
+\f2\fs26 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 payment_abandoned
+\f0\fs24 \
+\ls1\ilvl0
+\f2\fs26 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 client_request_id
+\f0\fs24 \
+\pard\tx220\tx720\pardeftab720\li720\fi-720\partightenfactor0
+\ls1\ilvl0\cf0 \kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 unique index per impedire doppi ordini dello stesso cliente/request\
+\ls1\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 indice sugli online pending\
+\ls1\ilvl0\kerning1\expnd0\expndtw0 \outl0\strokewidth0 {\listtext	\uc0\u8226 	}\expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 trigger che impedisce transizioni pericolose. kitchen-s2-migration-a-online-p\'85\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 E ora non \'e8 pi\'f9 solo \'93scritta\'94: l\'92abbiamo testata realmente su PostgreSQL 17.6 con 
+\f1\b 54/54 PASS
+\f0\b0 . Compatibilit\'e0 legacy, I1, I2, I3 e unique index sono tutti passati. Production non \'e8 stata toccata. kitchen-s2-migration-a-online-p\'85\
+Quindi oggi la fotografia corretta \'e8:\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf0 FOUNDATION PAYMENT HUB        
+\f5 \uc0\u9989 
+\f2 \
+SICUREZZA/HARDENING           
+\f5 \uc0\u9989 
+\f2 \
+S0 DESIGN                     
+\f5 \uc0\u9989 
+\f2 \
+S1 STAFF VISIBILITY           
+\f5 \uc0\u9989 
+\f2 \
+S2 DB STRUCTURE               
+\f5 \uc0\u9989 
+\f2  locale, pronta per Gate Production\
+S3 DB LIFECYCLE / RPC         
+\f5 \uc0\u9197 \u65039 
+\f2 \
+S4 API ORCHESTRATION          
+\f5 \uc0\u55357 \u57313 
+\f2 \
+S5 CUSTOMER CHECKOUT UX       
+\f5 \uc0\u10060 
+\f2 \
+S6 ABANDON / E2E              
+\f5 \uc0\u10060 
+\f2 \
+S7 LEGACY CLEANUP             
+\f5 \uc0\u10060 
+\f2 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 Cosa manca perch\'e9 \'93la cassa\'94 sia davvero quella che avevamo immaginato\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\fs24 \cf0 S3 \'e8 il pezzo decisivo adesso.
+\f0\b0 \
+Deve creare/completare la logica che fa davvero funzionare le due corsie:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f2\fs26 \cf0 kitchen_customer_create_order_v2(payment_lane, client_request_id)
+\f0\fs24 : se banco crea 
+\f2\fs26 pending_counter_payment
+\f0\fs24 ; se online crea 
+\f2\fs26 pending_online_payment
+\f0\fs24 ; doppio tap 
+\f6 \uc0\u8594 
+\f0  stesso ordine.\
+
+\f2\fs26 kitchen_payment_confirm
+\f0\fs24 : un online verificato PAID passa atomicamente 
+\f2\fs26 pending_online_payment 
+\f3 \uc0\u8594 
+\f2  received
+\f0\fs24 .\
+
+\f2\fs26 kitchen_order_switch_to_counter
+\f0\fs24 : passaggio sicuro online 
+\f6 \uc0\u8594 
+\f0  banco.\
+
+\f2\fs26 kitchen_order_mark_payment_abandoned
+\f0\fs24 : chiusura degli online abbandonati.\
+E bisogna allineare 
+\f2\fs26 attempt_start
+\f0\fs24 , 
+\f2\fs26 record_counter
+\f0\fs24  e reconciliation. WALBOX_KITCHEN_PAYMENT_HANDOFF_\'85\
+Poi 
+\f1\b S5 porta tutto davanti al cliente
+\f0\b0 :\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf0 MENU\
+
+\f3 \uc0\u8594 
+\f2  CONFERMA ORDINE\
+
+\f3 \uc0\u8594 
+\f2  NOME\
+
+\f3 \uc0\u8594 
+\f2  COME VUOI PAGARE?\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 L\'92ordine server-side nasce 
+\f1\b solo dopo
+\f0\b0  che il cliente sceglie banco oppure online.\
+}
