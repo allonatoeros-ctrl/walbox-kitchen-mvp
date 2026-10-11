@@ -1,6 +1,7 @@
 // supabase/functions/send-order-ready-push/index.ts — F6 Phase 2 (2026-09-24).
-// NON DEPLOYATA in questa sessione (implementazione locale, vedi PRODUCTION_GATES nel report
-// Final Architecture Gate + runbook ai-ops/runbooks/kitchen-f6-webpush-vault-secret-setup.md).
+// DEPLOYATA su project pcrqfdzipotprqtuemso (status ACTIVE, version 1, verify_jwt=false).
+// Vedi PRODUCTION_GATES nel report Final Architecture Gate + runbook
+// ai-ops/runbooks/kitchen-f6-webpush-vault-secret-setup.md per lo stato secrets/VAPID.
 //
 // Invariante: PUSH = side effect, MAI source of truth. Questa funzione non scrive MAI
 // kitchen_orders.status/payment_status — l'unico write su kitchen_orders è il claim su

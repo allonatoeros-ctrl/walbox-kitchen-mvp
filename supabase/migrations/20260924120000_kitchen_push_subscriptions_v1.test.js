@@ -1,7 +1,8 @@
 // 20260924120000_kitchen_push_subscriptions_v1.test.js — F6 Phase 1 Web Push foundations +
 // OWNERSHIP FIX (patch pre-Gate 2, 2026-09-24).
-// Stile repo: assert statiche sul sorgente SQL, nessuna connessione DB reale (migration NON
-// applicata — vedi header del file .sql). Lo scenario di riassegnazione ownership è inoltre
+// Stile repo: assert statiche sul sorgente SQL, nessuna connessione DB reale (applicata al remoto
+// il 2026-09-24, vedi header del file .sql — queste assert restano statiche per design). Lo
+// scenario di riassegnazione ownership è inoltre
 // verificato con una simulazione pura in JS dello stesso algoritmo (DELETE stale + INSERT ...
 // ON CONFLICT DO UPDATE) usato dalla RPC — non esegue SQL reale, dimostra solo che l'algoritmo
 // descritto nella RPC produce l'esito atteso.
@@ -15,8 +16,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(__dirname, '20260924120000_kitchen_push_subscriptions_v1.sql'), 'utf8');
 
-test('header dichiara DOCUMENTATION ONLY — NOT APPLIED TO REMOTE', () => {
-  assert.match(src, /DOCUMENTATION ONLY — NOT APPLIED TO REMOTE/);
+test('header dichiara APPLIED TO REMOTE (Gate 2 approvato)', () => {
+  assert.match(src, /APPLIED TO REMOTE \(Gate 2 approvato/);
 });
 
 test('crea kitchen_push_subscriptions con customer_id FK auth.users e colonne endpoint/keys', () => {

@@ -1,8 +1,9 @@
 // 20260924130000_kitchen_orders_ready_push_identity_v1.test.js — F6 Phase 2 (2026-09-24).
 // Stile repo (vedi 20260924120000_kitchen_push_subscriptions_v1.test.js): assert statiche sul
-// sorgente SQL, nessuna connessione DB reale (migration NON applicata). READY EVENT IDENTITY è
-// inoltre verificata con una simulazione pura in JS dello stesso algoritmo del trigger BEFORE
-// UPDATE — non esegue SQL reale, dimostra solo che l'algoritmo descritto produce l'esito atteso.
+// sorgente SQL, nessuna connessione DB reale (applicata al remoto il 2026-09-24, queste assert
+// restano statiche per design). READY EVENT IDENTITY è inoltre verificata con una simulazione
+// pura in JS dello stesso algoritmo del trigger BEFORE UPDATE — non esegue SQL reale, dimostra
+// solo che l'algoritmo descritto produce l'esito atteso.
 // Eseguire a mano: node --test supabase/migrations/20260924130000_kitchen_orders_ready_push_identity_v1.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -13,8 +14,8 @@ import { fileURLToPath } from 'node:url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const src = readFileSync(join(__dirname, '20260924130000_kitchen_orders_ready_push_identity_v1.sql'), 'utf8');
 
-test('header dichiara DOCUMENTATION ONLY — NOT APPLIED TO REMOTE', () => {
-  assert.match(src, /DOCUMENTATION ONLY — NOT APPLIED TO REMOTE/);
+test('header dichiara APPLIED TO REMOTE (Gate 2 approvato)', () => {
+  assert.match(src, /APPLIED TO REMOTE \(Gate 2 approvato/);
 });
 
 test('aggiunge ready_event_id (uuid) e ready_push_claimed_at (timestamptz), entrambe nullable', () => {

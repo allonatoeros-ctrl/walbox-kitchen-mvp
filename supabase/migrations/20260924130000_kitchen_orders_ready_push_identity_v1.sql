@@ -1,8 +1,9 @@
 -- kitchen_orders ready-push identity + async dispatch — F6 Phase 2 (2026-09-24).
 --
--- DOCUMENTATION ONLY — NOT APPLIED TO REMOTE. Supabase è area protetta (CLAUDE.md §5): questa
--- migration non va eseguita con `supabase db push`/apply finché Eros non approva esplicitamente
--- il Gate 2 di implementazione server-side (vedi ai-ops/SECURITY_POLICY.md §7). Coerente con
+-- APPLIED TO REMOTE (Gate 2 approvato da Eros, 2026-09-24, project pcrqfdzipotprqtuemso).
+-- Trigger + RPC live, confermato via mcp__supabase__list_migrations (ledger allineato). Il
+-- webhook secret condiviso resta gestito fuori da qualunque migration versionata (vedi runbook
+-- ai-ops/runbooks/kitchen-f6-webpush-vault-secret-setup.md). Coerente con
 -- ai-ops/reports/kitchen-f6-webpush-phase2-final-architecture-gate-20260924.md (DB_CHANGES).
 --
 -- INVARIANTE: PUSH = side effect, MAI source of truth. Ogni pezzo di questa migration è pensato

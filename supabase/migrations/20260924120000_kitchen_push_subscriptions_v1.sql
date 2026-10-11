@@ -1,10 +1,9 @@
 -- kitchen_push_subscriptions v1 — Web Push foundations (F6 Phase 1, 2026-09-24).
 --
--- DOCUMENTATION ONLY — NOT APPLIED TO REMOTE. Supabase è area protetta (CLAUDE.md §5): questa
--- migration non va eseguita con `supabase db push`/apply finché Eros non approva esplicitamente
--- il Gate 2 di questa fase. Nessun trigger, nessuna Edge Function, nessun invio push reale: solo
--- lo schema che regge la subscription, coerente con l'audit
--- ai-ops/reports/kitchen-f6-webpush-audit-20260924.md (RECOMMENDED_ARCHITECTURE).
+-- APPLIED TO REMOTE (Gate 2 approvato da Eros, 2026-09-24, project pcrqfdzipotprqtuemso).
+-- Confermato via mcp__supabase__list_migrations: ledger remoto allineato, nessun pending.
+-- Coerente con l'audit ai-ops/reports/kitchen-f6-webpush-audit-20260924.md
+-- (RECOMMENDED_ARCHITECTURE).
 --
 -- Modello: la subscription è per customer/device, NON per singolo ordine — un device riceverà
 -- notifiche per qualunque ordine futuro creato da quello stesso auth.uid() anonimo. order_id

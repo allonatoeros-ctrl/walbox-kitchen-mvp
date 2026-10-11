@@ -1,14 +1,20 @@
-# F6 Phase 2 — Vault secret & VAPID setup (runbook, NON eseguito)
+# F6 Phase 2 — Vault secret & VAPID setup (runbook)
 
-Questo file è documentazione operativa, non codice: nessun comando qui è stato eseguito da
-Claude Code in questa sessione. Da eseguire manualmente da Eros (o con approvazione esplicita
-dedicata) solo al momento del Gate 2 di deploy — mai come parte di una migration versionata.
+**AGGIORNATO 2026-09-24 (F6 closeout sprint).** Stato reale oggi: Edge Function `send-order-ready-push`
+ACTIVE su `pcrqfdzipotprqtuemso`, 3 migration F6 già applicate al remoto, trigger DB→Edge Function
+già live (URL già finalizzato in `20260924130000_kitchen_orders_ready_push_identity_v1.sql`, lo
+step "sostituisci placeholder" sotto è quindi già fatto, lasciato solo come riferimento storico).
+**Problema noto:** `KITCHEN_PUSH_WEBHOOK_SECRET` (Edge Function) risulta disallineato dal Vault
+secret `kitchen_push_webhook_secret` — log reali mostrano `401 auth_rejected` su invocazioni vere
+del trigger. Questo file resta documentazione operativa, non codice: nessun comando qui è stato
+eseguito da Claude Code in questa sessione (il worktree corrente non ha CLI Supabase/Vercel né
+tool per impostare secrets Edge Function/env Vercel — vedi
+`ai-ops/reports/kitchen-f6-webpush-closeout-sprint-audit-20260924.md`). Da eseguire manualmente da
+Eros. Il valore del secret non deve MAI comparire in un file committato.
 
-Contesto: `supabase/migrations/20260924130000_kitchen_orders_ready_push_identity_v1.sql` legge un
-secret Vault di nome `kitchen_push_webhook_secret` per autenticare la chiamata
-trigger → Edge Function. Il valore del secret non deve MAI comparire in un file committato.
+## A. Rotazione webhook secret (risolve il mismatch noto)
 
-## 1. Genera il secret condiviso (valore casuale, una tantum)
+### A.1 Genera un nuovo valore condiviso
 
 ```
 openssl rand -base64 32
@@ -16,48 +22,85 @@ openssl rand -base64 32
 
 Copia l'output solo in un password manager / variabile d'ambiente locale, mai in un file del repo.
 
-## 2. Crea il secret in Supabase Vault (SQL Editor o CLI, MAI in una migration)
+### A.2 Aggiorna il secret Edge Function
+
+```
+supabase secrets set KITCHEN_PUSH_WEBHOOK_SECRET=<valore appena generato> --project-ref pcrqfdzipotprqtuemso
+```
+
+### A.3 Aggiorna lo stesso valore in Supabase Vault (SQL Editor o CLI, MAI in una migration)
 
 ```sql
-select vault.create_secret('<valore generato al passo 1>', 'kitchen_push_webhook_secret');
+select vault.update_secret(
+  (select id from vault.secrets where name = 'kitchen_push_webhook_secret'),
+  '<stesso valore del passo A.1>'
+);
 ```
 
-## 3. Configura lo stesso valore come secret della Edge Function
+Se la entry Vault non esistesse ancora (non dovrebbe, ma in caso): usa
+`select vault.create_secret('<valore>', 'kitchen_push_webhook_secret');` invece.
+
+### A.4 Smoke test
 
 ```
-supabase secrets set KITCHEN_PUSH_WEBHOOK_SECRET=<stesso valore del passo 1> --project-ref <project-ref>
+curl -i -X POST https://pcrqfdzipotprqtuemso.supabase.co/functions/v1/send-order-ready-push
 ```
+→ atteso `401 unauthorized` (nessun header Authorization).
 
-La Edge Function (`supabase/functions/send-order-ready-push/index.ts`) confronta l'header
-`Authorization: Bearer <...>` in arrivo con questo valore — se non combaciano, `401`.
+```
+curl -i -X POST https://pcrqfdzipotprqtuemso.supabase.co/functions/v1/send-order-ready-push \
+  -H "Authorization: Bearer <valore appena generato>" \
+  -H "Content-Type: application/json" \
+  -d '{"bad":"payload"}'
+```
+→ atteso: supera l'auth (non più 401), fallisce sulla validazione del body (400, `order_id`/
+`ready_event_id` mancanti) — conferma che il secret combacia senza dover leggere nulla in chiaro
+lato Claude Code.
 
-## 4. Genera e configura le chiavi VAPID (oggi assenti in ogni ambiente)
+### A.5 Verifica log
+
+Supabase Studio → Edge Functions → `send-order-ready-push` → Logs, o
+`mcp__supabase__query_logs` (read-only), per confermare che le invocazioni reali successive non
+siano più `auth_rejected`.
+
+## B. VAPID keypair
+
+### B.1 Genera (se non già confermata esistente una coppia valida — verificare con Eros prima di
+rigenerare, rigenerare invalida eventuali subscription già registrate lato client)
 
 ```
 npx web-push generate-vapid-keys
 ```
 
-- Pubblica → `VITE_WEB_PUSH_VAPID_PUBLIC_KEY` (env Vercel, già letta da `src/lib/webPush.js`).
-- Privata → secret Edge Function:
-  ```
-  supabase secrets set VAPID_PRIVATE_KEY=<...> VAPID_PUBLIC_KEY=<...> VAPID_SUBJECT=mailto:<contatto reale> --project-ref <project-ref>
-  ```
+### B.2 Configura sulla Edge Function
 
-## 5. Sostituisci il placeholder URL nella migration
+```
+supabase secrets set VAPID_PUBLIC_KEY=<pubblica> VAPID_PRIVATE_KEY=<privata> VAPID_SUBJECT=mailto:allonatoeros@gmail.com --project-ref pcrqfdzipotprqtuemso
+```
 
-In `20260924130000_kitchen_orders_ready_push_identity_v1.sql`, la funzione
-`kitchen_orders_ready_push_dispatch` contiene `v_edge_function_url text := '<KITCHEN_PUSH_EDGE_FUNCTION_URL>'`
-— va sostituito con l'URL reale della Edge Function deployata
-(`https://<project-ref>.supabase.co/functions/v1/send-order-ready-push`) prima di applicare la
-migration. Non è un segreto, ma non ha senso fissarlo prima che la funzione sia effettivamente
-deployata.
+Mai stampare/loggare la chiave privata. Solo la pubblica esce da questo step (va al frontend, C).
 
-## Ordine di apply (nessuno step eseguito qui)
+## C. Frontend — Vercel env
 
-1. Deploy Edge Function (`supabase functions deploy send-order-ready-push`).
-2. Step 3 e 4 sopra (secrets Edge Function).
-3. Step 2 sopra (Vault secret DB-side).
-4. Sostituisci il placeholder URL (step 5), poi `supabase db push` sulla migration.
+```
+vercel env add VITE_WEB_PUSH_VAPID_PUBLIC_KEY production
+```
+(incolla solo la chiave **pubblica** generata al passo B.1, project `walbox-from-zero-v2`)
+
+Verifica:
+```
+vercel env ls production
+```
+→ deve comparire `VITE_WEB_PUSH_VAPID_PUBLIC_KEY` nella lista (nomi soli, nessun valore va
+stampato in chat/log).
+
+## Ordine consigliato
+
+1. Sezione A (rotazione + smoke) — risolve il mismatch noto, indipendente dal resto.
+2. Sezione B (VAPID) — solo dopo conferma con Eros se una coppia esiste già o va generata ex-novo.
+3. Sezione C (Vercel env) — richiede la chiave pubblica dello step B.
+4. Solo dopo A+B+C: GATE FINALE con Eros per push `main` + deploy frontend (vedi CHECKPOINT.md →
+   NEXT STEP → F6 Web Push).
 
 Ogni singolo step richiede approvazione esplicita di Eros (CLAUDE.md §5/§10-11, aree protette
-Supabase + secrets). Nessuno step è stato eseguito in questa sessione.
+Supabase + secrets + Vercel). Nessuno step è stato eseguito da Claude Code in questa sessione.
