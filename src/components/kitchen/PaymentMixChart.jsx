@@ -13,6 +13,8 @@
 //
 // METHOD_LABELS intenzionalmente duplicato da PaymentsView.jsx/CassaControlSection.jsx (stesso
 // dizionario statico a 7 voci) per evitare import circolari, stesso pattern gia' in uso.
+import { paymentGroupOf } from '../../lib/kitchenServiceRules';
+
 const METHOD_LABELS = {
   cash: 'Contanti',
   card_counter_manual: 'Carta/POS banco',
@@ -53,7 +55,10 @@ export default function PaymentMixChart({ paymentsByMethod }) {
           <div key={method} className="kpd-paymentmix-row" data-testid={`payment-mix-row-${method}`}>
             <span className="kpd-paymentmix-label">{METHOD_LABELS[method] ?? method}</span>
             <div className="kpd-paymentmix-track">
-              <div className="kpd-paymentmix-bar" style={{ width: `${(m.mixIncasso / maxIncasso) * 100}%` }} />
+              <div
+                className="kpd-paymentmix-bar"
+                style={{ width: `${(m.mixIncasso / maxIncasso) * 100}%`, ...(paymentGroupOf(method) ? { background: paymentGroupOf(method).color } : {}) }}
+              />
             </div>
             <span className="kpd-paymentmix-meta">
               {formatEuro(m.mixIncasso)} · {m.mixCount}× · {pct.toFixed(0)}%

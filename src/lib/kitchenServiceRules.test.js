@@ -112,6 +112,7 @@ test('regressione: gate serale invariato (Krombacher dalle 18:00)', () => {
 // quindi non puo' essere il filtro della serata. La serata del giorno X e' [06:00 X, 06:00 X+1).
 // ============================================================================
 import { existsSync } from 'node:fs';
+import { paymentGroupOf } from './kitchenServiceRules.js';
 import {
   SERVICE_NIGHT_CUTOFF_HOUR,
   serviceNightWindow,
@@ -746,4 +747,15 @@ test('computeTopProductsAndCategories: CATEGORY_BY_ITEM_ID ha precedenza su menu
     { category: 'bbq', quantity: 2 },
     { category: 'birre', quantity: 1 },
   ]);
+});
+
+test('paymentGroupOf: raggruppa i metodi in contanti / carta-POS / app, mai un metodo inventato', () => {
+  assert.equal(paymentGroupOf('cash').key, 'cash');
+  assert.equal(paymentGroupOf('card_counter_manual').key, 'card');
+  assert.equal(paymentGroupOf('sumup_pos').key, 'card');
+  assert.equal(paymentGroupOf('sumup_online').key, 'app');
+  assert.equal(paymentGroupOf('counter').key, 'counter');
+  assert.equal(paymentGroupOf(null), null);
+  assert.equal(paymentGroupOf(undefined), null);
+  assert.equal(paymentGroupOf('boh'), null);
 });

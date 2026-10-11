@@ -88,7 +88,7 @@
 /* ── KPI STRIP — Sintesi serata (Fase 9B: 4 tile fisse, Incasso/Ordini/Ticket medio/Netto) ── */
 .kpd-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
@@ -439,7 +439,7 @@
   .kpd-page { padding: 24px; gap: 26px; max-width: 1100px; margin: 0 auto; }
   .kpd-section-title { font-size: 13px; }
   .kpd-cash-grid { grid-template-columns: repeat(5, 1fr); gap: 12px; }
-  .kpd-kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .kpd-kpi-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; }
   .kpd-cash-value { font-size: 24px; }
   .kpd-attention-card { padding: 16px 20px; }
   .kpd-attention-reason { font-size: 15px; }

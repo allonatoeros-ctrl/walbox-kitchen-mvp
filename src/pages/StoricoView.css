@@ -10,7 +10,7 @@
 .sv-table-head,
 .sv-table .ksd-history-row {
   display: grid;
-  grid-template-columns: 84px 56px minmax(90px, 130px) 2fr 84px 92px;
+  grid-template-columns: 84px 56px minmax(90px, 130px) 2fr 84px 104px 92px;
   gap: 12px;
   align-items: center;
 }
@@ -41,6 +41,23 @@
 .sv-col-totale,
 .sv-col-stato {
   text-align: right;
+}
+.sv-col-pagamento { text-align: left; }
+.sv-pay-chip {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  border: 1px solid currentColor;
+  border-radius: 10px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+/* Annullato: non e' una vendita — importo attenuato e barrato, fuori da ogni totale. */
+.sv-row--cancelled .sv-col-totale,
+.sv-total--cancelled {
+  color: rgba(245, 240, 232, 0.35);
+  text-decoration: line-through;
 }
 
 .sv-load-more-row {
@@ -132,7 +149,8 @@
     gap: 4px;
   }
   .sv-col-totale,
-  .sv-col-stato {
+  .sv-col-stato,
+  .sv-col-pagamento {
     text-align: left;
   }
 }

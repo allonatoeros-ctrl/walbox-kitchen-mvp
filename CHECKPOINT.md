@@ -190,3 +190,5 @@ Track precedente, in pausa: **FantaWalrus**. Stato appena verificato (2026-08-25
 
 ## RESTART PROMPT
 "Walbox — Kitchen stabile e completa (V1-P6). Track attivo: Jukebox/Spotify reale per Shuffle Night (auto-advance, TV sync, ricerca), 39 commit dal 24/6 al 3/7. Prossimo step: walbox-dev fa piano da PILOT_NIGHT_CHECKLIST.md per chiudere fino a demo-stabile."
+
+- 2026-10-10 Storico UX (non committato): rimossa card/tag Rimborsi; ticket medio solo su pagamenti non rimborsati; chip pagamento per riga (CONTANTI verde / CARTA-POS arancio / APP blu) + filtro Pagamento + colori nel Mix. Annullati: restano in lista, importo barrato, fuori dai totali. File: StoricoView.jsx/.css, AnalyticsKpiStrip, PaymentMixChart, PaymentsViewDemo.css, kitchenServiceRules.js(+test). Lint/build/test unit OK; da vedere a video.

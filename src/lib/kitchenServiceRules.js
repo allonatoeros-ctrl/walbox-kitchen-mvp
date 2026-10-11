@@ -220,6 +220,36 @@ export function summarizeServiceNightPayments(rows) {
   };
 }
 
+/**
+ * Gruppo di pagamento "a colpo d'occhio" per Storico/Mix pagamento. Accetta sia i valori di
+ * kitchen_orders.payment_method (incluso il legacy 'counter', metodo banco non specificato) sia
+ * kitchen_payments.method. Un solo mapping: etichetta e colore restano identici in lista e grafico.
+ * Metodo mancante/ignoto -> null (nessun chip, mai un metodo inventato).
+ */
+export const PAYMENT_GROUPS = Object.freeze({
+  cash: { key: 'cash', label: 'CONTANTI', color: '#4ade80' },
+  card: { key: 'card', label: 'CARTA/POS', color: '#fb923c' },
+  app: { key: 'app', label: 'APP', color: '#60a5fa' },
+  counter: { key: 'counter', label: 'BANCO', color: '#a3a3a3' },
+  other: { key: 'other', label: 'ALTRO', color: '#a3a3a3' },
+});
+
+const PAYMENT_GROUP_BY_METHOD = {
+  cash: 'cash',
+  card_counter_manual: 'card',
+  sumup_pos: 'card',
+  sumup_online: 'app',
+  satispay_app: 'app',
+  counter: 'counter',
+  manual_comp: 'other',
+  manual_other: 'other',
+};
+
+export function paymentGroupOf(method) {
+  const key = PAYMENT_GROUP_BY_METHOD[method];
+  return key ? PAYMENT_GROUPS[key] : null;
+}
+
 const SUMUP_METHODS = new Set(['sumup_online', 'sumup_pos']);
 
 /**

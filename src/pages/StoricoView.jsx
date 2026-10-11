@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { serviceNightWindowFor, isInServiceNight, bucketOrdersByWalrusServiceHours, computeTopProductsAndCategories } from '../lib/kitchenServiceRules';
+import { serviceNightWindowFor, isInServiceNight, bucketOrdersByWalrusServiceHours, computeTopProductsAndCategories, paymentGroupOf } from '../lib/kitchenServiceRules';
 import { kitchenMenuItems } from '../data/kitchenMockData';
 import AnalyticsKpiStrip from '../components/kitchen/AnalyticsKpiStrip';
 import AttentionSection from '../components/kitchen/AttentionSection';
@@ -16,6 +16,15 @@ const STATUS_FILTERS = [
   { key: 'all', label: 'Tutti' },
   { key: 'delivered', label: 'Ritirati' },
   { key: 'cancelled', label: 'Annullati' },
+];
+
+// Filtro pagamento: i gruppi di PAYMENT_GROUPS visibili all'operatore (BANCO/ALTRO restano nella
+// lista col loro chip ma non hanno un filtro dedicato).
+const PAYMENT_FILTERS = [
+  { key: 'all', label: 'Tutti' },
+  { key: 'cash', label: 'Contanti' },
+  { key: 'card', label: 'Carta/POS' },
+  { key: 'app', label: 'App' },
 ];
 
 const SORT_OPTIONS = [
@@ -43,6 +52,7 @@ function formatEuro(n) {
 export default function StoricoView({ orders, paymentsSummary = null, serviceNight = null, anomalies = [], paymentsByMethod = null, onOpenCassa = null, historyStatus = 'ready' }) {
   const [historySearch, setHistorySearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentFilter, setPaymentFilter] = useState('all');
   const [sortMode, setSortMode] = useState('recent');
   const [pagination, setPagination] = useState({ key: '', count: HISTORY_PAGE_SIZE });
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -80,25 +90,21 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
     [orders, night]
   );
 
-  // Decisione prodotto (2026-09-23, ai-ops/reports/audit-storico-incasso-netto.md): INCASSO in UI
-  // mostra ora il valore gia' calcolato come "netto" (charge succeeded - refund succeeded) —
-  // la card "Netto" separata era ridondante e fuorviante (un ordine pagato+rimborsato+annullato
-  // mostrava INCASSO lordo ma NETTO 0). Nessun cambio alla formula sottostante in
-  // kitchenServiceRules.summarizeServiceNightPayments: si riusa solo il campo gia' calcolato.
-  const cassa = paymentsSummary
-    ? {
-        incasso: formatEuro(paymentsSummary.netto),
-        rimborsi: formatEuro(paymentsSummary.rimborsato),
-      }
-    : { incasso: '—', rimborsi: '—' };
+  // Decisione prodotto (2026-10-10): i rimborsi non compaiono piu' nello Storico. INCASSO resta il
+  // valore gia' netto (charge succeeded - refund succeeded, kitchenServiceRules); la card Rimborsi
+  // e i tag RIMBORSATO sono stati rimossi. Senza paymentsSummary (Preview/Demo) importi '—'.
+  const incassoDisplay = paymentsSummary ? formatEuro(paymentsSummary.netto) : '—';
 
-  // KPI strip (Kitchen Analytics V1 Fase 3) — ticket medio = netto / pagamenti succeeded
-  // (paymentsSummary.incassiRiusciti). Invariato: usa ancora paymentsSummary.netto internamente.
-  const kpiTicketMedioDisplay = paymentsSummary
-    ? formatEuro(
-        paymentsSummary.incassiRiusciti > 0 ? paymentsSummary.netto / paymentsSummary.incassiRiusciti : 0
-      )
-    : '—';
+  // Ticket medio = incasso / pagamenti riusciti NON rimborsati (mixIncasso/mixCount di
+  // summarizePaymentsByMethod, stessa base del Mix pagamento): un ordine rimborsato non e' una
+  // vendita e non deve abbassare la media. Senza paymentsByMethod: '—', mai inventato.
+  const kpiTicketMedioDisplay = (() => {
+    if (!paymentsByMethod?.byMethod) return '—';
+    const rows = Object.values(paymentsByMethod.byMethod);
+    const totale = rows.reduce((sum, m) => sum + (m.mixIncasso || 0), 0);
+    const count = rows.reduce((sum, m) => sum + (m.mixCount || 0), 0);
+    return formatEuro(count > 0 ? totale / count : 0);
+  })();
 
   // Storico V1 SaaS (2026-09-22): stesso filtro serata di KPI/Attenzione/fasce/top prodotti sopra
   // (CURRENT_LIMITS #3 dell'audit selettore, invariato) — completed = solo delivered/cancelled
@@ -114,6 +120,11 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
 
     if (statusFilter !== 'all') {
       list = list.filter((o) => o.status === statusFilter);
+    }
+
+    // Filtro pagamento: solo ordini ritirati col gruppo scelto (gli annullati non sono vendite).
+    if (paymentFilter !== 'all') {
+      list = list.filter((o) => o.status === 'delivered' && paymentGroupOf(o.paymentMethod)?.key === paymentFilter);
     }
 
     const term = historySearch.trim().toLowerCase();
@@ -134,14 +145,14 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
       sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
     return sorted;
-  }, [completedInNight, statusFilter, historySearch, sortMode]);
+  }, [completedInNight, statusFilter, paymentFilter, historySearch, sortMode]);
 
   // "Carica altri" invece dello slice fisso: quando cambia un filtro/ricerca/notte la paginazione
   // torna a HISTORY_PAGE_SIZE, altrimenti si resterebbe bloccati su "0 risultati mostrati" dopo
   // aver caricato piu' pagine su un filtro precedente. Reset durante il render (non in un effect)
   // per evitare un giro di render in piu' — pattern raccomandato da React per "adjusting state
   // when a prop changes" quando la chiave cambia rispetto all'ultimo render committato.
-  const paginationKey = `${statusFilter}::${historySearch.trim().toLowerCase()}::${sortMode}::${night.start}::${night.end}`;
+  const paginationKey = `${statusFilter}::${paymentFilter}::${historySearch.trim().toLowerCase()}::${sortMode}::${night.start}::${night.end}`;
   const visibleCount = pagination.key === paginationKey ? pagination.count : HISTORY_PAGE_SIZE;
   if (pagination.key !== paginationKey) {
     setPagination({ key: paginationKey, count: HISTORY_PAGE_SIZE });
@@ -169,8 +180,7 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
           )}
           <div style={{ marginBottom: '1rem' }}>
             <AnalyticsKpiStrip
-              incassoDisplay={cassa.incasso}
-              rimborsiDisplay={cassa.rimborsi}
+              incassoDisplay={incassoDisplay}
               ticketMedioDisplay={kpiTicketMedioDisplay}
               ordiniConsegnati={reportOggi.count}
             />
@@ -243,6 +253,21 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
             ))}
           </div>
 
+          <div className="kpd-filter-group" data-testid="storico-payment-filters">
+            <span className="kpd-filter-label">Pagamento</span>
+            {PAYMENT_FILTERS.map((f) => (
+              <button
+                key={f.key}
+                type="button"
+                className={`kpd-sumup-badge kpd-sumup-badge--neutral${paymentFilter === f.key ? ' kpd-sumup-badge--active' : ''}`}
+                data-testid={`storico-filter-payment-${f.key}`}
+                onClick={() => setPaymentFilter(f.key)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           <div className="kpd-filter-group" data-testid="storico-sort-options">
             <span className="kpd-filter-label">Ordina</span>
             {SORT_OPTIONS.map((s) => (
@@ -272,20 +297,20 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
                 <span className="sv-col-nome">Nome</span>
                 <span className="sv-col-articoli">Articoli</span>
                 <span className="sv-col-totale">Totale</span>
+                <span className="sv-col-pagamento">Pagamento</span>
                 <span className="sv-col-stato">Stato</span>
               </div>
               <div className="ksd-history-list">
                 {visibleOrders.map((order) => {
                   const itemsSummary = order.items.map((i) => `${i.quantity}× ${i.name}`).join('  ·  ');
                   const isDelivered = order.status === 'delivered';
-                  // paymentStatus 'refunded' è l'enum server-side (kitchen_payment_refund_lifecycle_v1
-                  // SET payment_status = 'refunded'): un ordine annullato con rimborso confermato non
-                  // deve sembrare ancora "incassato" solo perché il totale originario resta visibile.
-                  const isRefunded = order.status === 'cancelled' && order.paymentStatus === 'refunded';
+                  // Un annullato non e' una vendita: niente chip pagamento, importo attenuato.
+                  const payGroup = isDelivered ? paymentGroupOf(order.paymentMethod) : null;
                   return (
                     <div
                       key={order.id}
-                      className="ksd-history-row sv-table-row"
+                      className={`ksd-history-row sv-table-row${isDelivered ? '' : ' sv-row--cancelled'}`}
+                      style={payGroup ? { boxShadow: `inset 3px 0 0 ${payGroup.color}` } : undefined}
                       data-testid={`storico-row-${order.id}`}
                       role="button"
                       tabIndex={0}
@@ -307,7 +332,18 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
                       </span>
                       <span className="sv-col-totale" data-label="Totale">
                         {order.total != null ? formatEuro(order.total) : '—'}
-                        {isRefunded && <span className="ksd-history-refunded-tag">RIMBORSATO</span>}
+                      </span>
+                      <span className="sv-col-pagamento" data-label="Pagamento">
+                        {payGroup && (
+                          <span
+                            className="sv-pay-chip"
+                            data-testid={`storico-pay-${order.id}`}
+                            data-pay-group={payGroup.key}
+                            style={{ color: payGroup.color, borderColor: `${payGroup.color}66` }}
+                          >
+                            {payGroup.label}
+                          </span>
+                        )}
                       </span>
                       <span className="sv-col-stato" data-label="Stato">
                         <span className={`ksd-history-status ksd-history-status--${isDelivered ? 'delivered' : 'cancelled'}`}>
@@ -421,13 +457,25 @@ export default function StoricoView({ orders, paymentsSummary = null, serviceNig
               )}
             </div>
 
+            {selectedOrder.status === 'delivered' && paymentGroupOf(selectedOrder.paymentMethod) && (
+              <div className="sv-detail-section">
+                <div className="sv-detail-label">Pagamento</div>
+                <div className="sv-detail-text">
+                  <span
+                    className="sv-pay-chip"
+                    data-testid="storico-detail-pay"
+                    style={{ color: paymentGroupOf(selectedOrder.paymentMethod).color, borderColor: `${paymentGroupOf(selectedOrder.paymentMethod).color}66` }}
+                  >
+                    {paymentGroupOf(selectedOrder.paymentMethod).label}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="sv-detail-total">
               <span>Totale</span>
-              <span>
+              <span className={selectedOrder.status === 'cancelled' ? 'sv-total--cancelled' : undefined}>
                 {selectedOrder.total != null ? formatEuro(selectedOrder.total) : '—'}
-                {selectedOrder.status === 'cancelled' && selectedOrder.paymentStatus === 'refunded' && (
-                  <span className="ksd-history-refunded-tag">RIMBORSATO</span>
-                )}
               </span>
             </div>
           </div>

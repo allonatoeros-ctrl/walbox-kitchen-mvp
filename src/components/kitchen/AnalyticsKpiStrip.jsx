@@ -9,7 +9,9 @@
 // medio arrivano gia' come stringa ('—' quando paymentsSummary non e' disponibile, stessa policy
 // del resto di StoricoView: mai inventare importi).
 //
-// Fase 9B: 4 tile fisse (Incasso, Consegnati, Ticket medio, Rimborsi) — Annullati/In sospeso/Falliti
+// Decisione prodotto (2026-10-10): la card "Rimborsi" e' stata rimossa dallo Storico — i rimborsi non
+// compaiono piu' e non entrano in nessun totale. Restano 3 tile (Incasso, Consegnati, Ticket medio).
+// Fase 9B (storico): 4 tile fisse (Incasso, Consegnati, Ticket medio, Rimborsi) — Annullati/In sospeso/Falliti
 // spostati esclusivamente in AttentionSection, mai duplicati qui.
 // Decisione prodotto (2026-09-23, ai-ops/reports/audit-storico-incasso-netto.md): la card "Netto"
 // era ridondante con "Incasso" (che ora mostra il valore gia' netto di rimborsi, invariata la
@@ -18,7 +20,6 @@
 // "Consegnati" per non essere confuso col conteggio totale ordini (che include gli annullati).
 export default function AnalyticsKpiStrip({
   incassoDisplay,
-  rimborsiDisplay,
   ticketMedioDisplay,
   ordiniConsegnati,
 }) {
@@ -40,12 +41,6 @@ export default function AnalyticsKpiStrip({
         <span className="kpd-cash-label">Ticket medio</span>
         <span className="kpd-cash-value" style={{ color: '#60a5fa' }} data-testid="kpi-ticket-medio">
           {ticketMedioDisplay}
-        </span>
-      </div>
-      <div className="kpd-cash-tile">
-        <span className="kpd-cash-label">Rimborsi</span>
-        <span className="kpd-cash-value" style={{ color: '#facc15' }} data-testid="kpi-rimborsi">
-          {rimborsiDisplay}
         </span>
       </div>
     </div>
