@@ -36,3 +36,9 @@ ai-ops/runs/
 # Never commit real staff credentials or session state — see
 # docs/sprint3b-f-sec-2-storage-state-contract.md for how to generate it locally.
 tests/e2e/.auth/
+
+# Artefatti locali di audit/QA (non sorgente)
+.playwright-mcp/
+walbox-audit-v11/
+ai-brains/
+playwright.local.tmp.config.js
