@@ -83,6 +83,11 @@ const anonKey = envVars['VITE_SUPABASE_ANON_KEY'] || process.env['VITE_SUPABASE_
 // ─── 4. Supabase connectivity (read-only, anon) ─────────────────────
 section('Supabase connectivity');
 
+if (supabaseUrl.includes('pcrqfdzipotprqtuemso') && process.env.ALLOW_PRODUCTION_READONLY_PREFLIGHT !== '1') {
+  console.error('DEV_PRODUCTION_SUPABASE_BLOCKED: VITE_SUPABASE_URL punta a production. Imposta ALLOW_PRODUCTION_READONLY_PREFLIGHT=1 solo per un check GET consapevole.');
+  process.exit(1);
+}
+
 if (!supabaseUrl || !anonKey) {
   fail('Supabase reachable', 'skipped — env vars missing');
 } else {
