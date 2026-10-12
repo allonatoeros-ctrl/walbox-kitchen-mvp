@@ -127,7 +127,7 @@ export default async function handler(req, res) {
 
   const { data: attempt, error: attemptError } = await supabaseAdmin
     .from('kitchen_payments')
-    .select('id, amount, provider, status, failure_reason, provider_ref')
+    .select('id, amount, provider, status, failure_reason, provider_ref, checkout_claim_at')
     .eq('order_id', order_id)
     .eq('direction', 'charge')
     .in('status', ['initiated', 'pending', 'failed'])
@@ -157,6 +157,15 @@ export default async function handler(req, res) {
   if (!providerRef) {
     const recovery = await recoverSumupProviderRef({ sumupApiKey, attemptId: attempt.id });
     if (!recovery.checkout) {
+      // I-3: the attempt never reached SumUp. create-checkout POSTs only after winning the claim,
+      // which writes checkout_claim_at and nothing ever resets it: claim NULL + SumUp List
+      // not_found are two independent proofs that no checkout exists. Strict === null: a row
+      // read without the column (undefined) stays fail-closed. Residual sub-second race (customer
+      // claims between this read and the RPC lock) documented in
+      // ai-ops/reports/sumup-401-incident-2026-10-12.md §3, to be closed DB-side with S2.
+      if (recovery.reason === 'not_found' && attempt.checkout_claim_at === null) {
+        return runAtomicCancel({ res, supabaseAsStaff, order_id, reason });
+      }
       // Never guess: can't verify this attempt against SumUp at all, never cancel blind.
       return res.status(200).json({
         outcome: 'unknown',

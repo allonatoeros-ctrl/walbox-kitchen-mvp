@@ -15,6 +15,7 @@ import handler from './kitchen-cancel-with-payment-check.js';
 const SB = 'http://supabase.test';
 const SUMUP_CHECKOUT = 'https://api.sumup.com/v0.1/checkouts/co-1';
 const ATTEMPT_ID = 'att-1';
+const SUMUP_LIST = `https://api.sumup.com/v0.1/checkouts?checkout_reference=${ATTEMPT_ID}`;
 
 const origFetch = globalThis.fetch;
 const origConsoleError = console.error;
@@ -40,7 +41,8 @@ function json(status, body) {
 }
 
 // sumup.get: array di risposte consumate in ordine (l'ultima si ripete). Ogni voce: { status, body }
-// o { throw: true }. sumup.del: { status } oppure { throw: true }.
+// o { throw: true }. sumup.del: { status } oppure { throw: true }. sumup.list (opzionale): risposta
+// della List per checkout_reference, { status, body } o { throw: true }.
 function installFakeFetch({ attempt, sumup }) {
   const calls = [];
   const getQueue = [...sumup.get];
@@ -59,6 +61,10 @@ function installFakeFetch({ attempt, sumup }) {
       if (url === SUMUP_CHECKOUT && method === 'DELETE') {
         if (sumup.del.throw) throw new Error('network down');
         return json(sumup.del.status, {});
+      }
+      if (url === SUMUP_LIST && method === 'GET' && sumup.list) {
+        if (sumup.list.throw) throw new Error('network down');
+        return json(sumup.list.status ?? 200, sumup.list.body);
       }
       throw new Error(`unexpected SumUp call ${method} ${url}`);
     }
@@ -264,4 +270,101 @@ test('i) GET iniziale=PAID -> resolve paid e STOP, nessun DELETE, nessun annullo
   assert.equal(res.statusCode, 409);
   assert.equal(sumupCalls(calls, 'DELETE').length, 0);
   assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+});
+
+// I-3 (incidente SumUp 401, 2026-10-12): sblocco dell'attempt "unknown" mai arrivato a SumUp.
+// Procede solo con tre prove: provider_ref NULL + checkout_claim_at NULL (nessuna POST mai partita:
+// create-checkout fa la POST solo dopo aver vinto la claim) + List SumUp not_found. Tutto il resto
+// resta fail-closed.
+const neverSentAttempt = {
+  ...baseAttempt, status: 'initiated', failure_reason: null, provider_ref: null, checkout_claim_at: null,
+};
+const listCalls = (calls) => calls.filter((c) => c.url === SUMUP_LIST);
+
+test('I-3 a) ref NULL + claim NULL + List not_found -> procede alla RPC, nessun GET/DELETE/bind', async () => {
+  const { res, calls } = await run({
+    attempt: neverSentAttempt,
+    sumup: { get: [co('PENDING')], del: { status: 204 }, list: { status: 200, body: [] } },
+  });
+  assert.equal(listCalls(calls).length, 1);
+  assert.equal(sumupCalls(calls, 'GET').length, 0);
+  assert.equal(sumupCalls(calls, 'DELETE').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_set_provider_ref').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.outcome, 'cancelled');
+});
+
+test('I-3 a2) la lookup dell attempt legge checkout_claim_at', async () => {
+  const { calls } = await run({
+    attempt: neverSentAttempt,
+    sumup: { get: [co('PENDING')], del: { status: 204 }, list: { status: 200, body: [] } },
+  });
+  const lookup = calls.find((c) => c.url.startsWith(`${SB}/rest/v1/kitchen_payments`));
+  assert.match(decodeURIComponent(lookup.url), /select=[^&]*checkout_claim_at/);
+});
+
+test('I-3 b) ref NULL + claim presente + List not_found -> unknown, nessuna RPC', async () => {
+  const { res, calls } = await run({
+    attempt: { ...neverSentAttempt, checkout_claim_at: '2026-10-11T23:28:38Z' },
+    sumup: { get: [co('PENDING')], del: { status: 204 }, list: { status: 200, body: [] } },
+  });
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.outcome, 'unknown');
+  assert.equal(res.body.needs_manual_reconciliation, false);
+  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+});
+
+test('I-3 c) ref NULL + claim assente dalla riga (undefined) + List not_found -> unknown (fail-closed)', async () => {
+  const withoutClaim = { ...neverSentAttempt };
+  delete withoutClaim.checkout_claim_at;
+  const { res, calls } = await run({
+    attempt: withoutClaim,
+    sumup: { get: [co('PENDING')], del: { status: 204 }, list: { status: 200, body: [] } },
+  });
+  assert.equal(res.body.outcome, 'unknown');
+  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+});
+
+for (const [label, list] of [
+  ['List 5xx', { status: 503, body: { error: 'boom' } }],
+  ['List 401 SumUp', { status: 401, body: { error: 'unauthorized' } }],
+  ['List errore di rete', { throw: true }],
+]) {
+  test(`I-3 d) ref NULL + claim NULL + ${label} -> unknown, nessuna RPC`, async () => {
+    const { res, calls } = await run({
+      attempt: neverSentAttempt,
+      sumup: { get: [co('PENDING')], del: { status: 204 }, list },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.outcome, 'unknown');
+    assert.equal(res.body.needs_manual_reconciliation, false);
+    assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  });
+}
+
+test('I-3 e) ref NULL + claim NULL + List ambigua -> unknown + needs_manual_reconciliation, nessuna RPC', async () => {
+  const dup = { id: 'co-x', checkout_reference: ATTEMPT_ID, status: 'PENDING' };
+  const { res, calls } = await run({
+    attempt: neverSentAttempt,
+    sumup: { get: [co('PENDING')], del: { status: 204 }, list: { status: 200, body: [dup, { ...dup, id: 'co-y' }] } },
+  });
+  assert.equal(res.body.outcome, 'unknown');
+  assert.equal(res.body.needs_manual_reconciliation, true);
+  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+});
+
+test('I-3 f) ref NULL + claim NULL + List trova 1 checkout -> ramo esistente: bind, GET, DELETE+verifica', async () => {
+  const { res, calls } = await run({
+    attempt: neverSentAttempt,
+    sumup: {
+      get: [co('PENDING'), co('CANCELLED')], del: { status: 204 },
+      list: { status: 200, body: [{ id: 'co-1', checkout_reference: ATTEMPT_ID, status: 'PENDING' }] },
+    },
+  });
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_set_provider_ref').length, 1);
+  assert.equal(sumupCalls(calls, 'GET').length, 2);
+  assert.equal(sumupCalls(calls, 'DELETE').length, 1);
+  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
+  assert.equal(res.body.outcome, 'cancelled');
 });

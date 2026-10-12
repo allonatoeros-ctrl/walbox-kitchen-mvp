@@ -129,7 +129,7 @@ export default async function handler(req, res) {
   // resta comunque il GET SumUp sotto + il lock della RPC.
   const { data: attempt, error: attemptError } = await supabaseAdmin
     .from('kitchen_payments')
-    .select('id, venue_id, amount, provider, status, failure_reason, provider_ref')
+    .select('id, venue_id, amount, provider, status, failure_reason, provider_ref, checkout_claim_at')
     .eq('order_id', order_id)
     .eq('direction', 'charge')
     .in('status', ['initiated', 'pending', 'failed'])
@@ -159,6 +159,15 @@ export default async function handler(req, res) {
   if (!providerRef) {
     const recovery = await recoverSumupProviderRef({ sumupApiKey, attemptId: attempt.id });
     if (!recovery.checkout) {
+      // I-3: l'attempt non e' mai arrivato a SumUp. create-checkout fa la POST solo dopo aver vinto
+      // la claim, che scrive checkout_claim_at e nessuno la azzera: claim NULL + List SumUp
+      // not_found sono due prove indipendenti che nessun checkout esiste. === null stretto: una riga
+      // letta senza la colonna (undefined) resta fail-closed. Race residua sub-secondo (claim del
+      // cliente tra questa lettura e il lock della RPC): ai-ops/reports/sumup-401-incident-2026-10-12.md
+      // §3, da chiudere lato DB con S2.
+      if (recovery.reason === 'not_found' && attempt.checkout_claim_at === null) {
+        return closeAttempt({ res, supabaseAsStaff, attemptId: attempt.id, note });
+      }
       // Mai indovinare: non possiamo verificare questo attempt contro SumUp, mai chiuderlo alla cieca.
       return res.status(200).json({
         outcome: 'unknown',
