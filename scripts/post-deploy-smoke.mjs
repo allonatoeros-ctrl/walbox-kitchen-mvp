@@ -19,6 +19,9 @@ const AUTH_ENDPOINTS = [
   '/api/kitchen-customer-switch-to-counter',
 ];
 const NO_TOKEN_ONLY_ENDPOINTS = ['/api/kitchen-sumup-refund'];
+// S6: sweep chiamato solo dal pg_cron con un secret dedicato. 401 unauthorized senza secret o con uno finto;
+// 500 server_configuration_error = KITCHEN_ABANDON_SWEEP_SECRET non impostata su Vercel (FAIL voluto).
+const SECRET_ENDPOINTS = ['/api/kitchen-online-abandon-sweep'];
 
 const FAKE_ID = '00000000-0000-4000-8000-000000000000';
 const BODY = JSON.stringify({ order_id: FAKE_ID, payment_attempt_id: FAKE_ID });
@@ -77,6 +80,18 @@ export async function runSmoke(baseUrl, fetchImpl = globalThis.fetch) {
       record(`POST ${path} token finto -> 401 invalid_session`, r.status === 401 && r.error === 'invalid_session', `${r.status} ${r.error}`);
     } catch (err) {
       record(`POST ${path} token finto`, false, String(err?.message || err));
+    }
+  }
+
+  for (const path of SECRET_ENDPOINTS) {
+    for (const token of [null, 'smoke.fake.secret']) {
+      const label = `POST ${path} ${token ? 'secret finto' : 'senza secret'} -> 401 unauthorized`;
+      try {
+        const r = await post(path, token);
+        record(label, r.status === 401 && r.error === 'unauthorized', `${r.status} ${r.error}`);
+      } catch (err) {
+        record(label, false, String(err?.message || err));
+      }
     }
   }
 

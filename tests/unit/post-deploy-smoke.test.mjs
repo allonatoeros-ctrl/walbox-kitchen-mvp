@@ -5,6 +5,7 @@ import { runSmoke } from '../../scripts/post-deploy-smoke.mjs';
 
 const HTML = '<script type="module" src="/assets/index-AAA111.js"></script>';
 const GOOD_JS = 'fetch(`/api/kitchen-sumup-create-checkout`,{headers:{Authorization:`Bearer ${t}`}})';
+const SWEEP = '/api/kitchen-online-abandon-sweep';
 const OLD_JS = 'fetch(`/api/kitchen-sumup-create-checkout`,{headers:{"Content-Type":"json"}})';
 
 function makeFetch({ js = GOOD_JS, apiOverride = {}, pageStatus = 200 } = {}) {
@@ -13,7 +14,8 @@ function makeFetch({ js = GOOD_JS, apiOverride = {}, pageStatus = 200 } = {}) {
     if (path.startsWith('/api/')) {
       const hasToken = !!opts.headers?.Authorization;
       const o = apiOverride[`${path}|${hasToken ? 'tok' : 'no'}`];
-      const [status, error] = o ?? (hasToken ? [401, 'invalid_session'] : [401, 'missing_session']);
+      const fallback = path === SWEEP ? [401, 'unauthorized'] : (hasToken ? [401, 'invalid_session'] : [401, 'missing_session']);
+      const [status, error] = o ?? fallback;
       return { status, ok: status < 400, json: async () => ({ error }) };
     }
     if (path === '/assets/index-AAA111.js') return { status: 200, ok: true, text: async () => js };
@@ -62,5 +64,16 @@ test('S4: il nuovo endpoint paga-al-banco del cliente e\' provato senza token e 
   assert.ok(seen.some(([p, tok]) => p === path && !tok));
   assert.ok(seen.some(([p, tok]) => p === path && tok));
   const bad = await runSmoke('https://x.test', makeFetch({ apiOverride: { [`${path}|tok`]: [500, 'server_configuration_error'] } }));
+  assert.equal(bad.ok, false);
+});
+
+test('S6: lo sweep dei 5 minuti e\' provato senza secret e con secret finto, 500 (env mancante) -> FAIL', async () => {
+  const seen = [];
+  const f = makeFetch();
+  const r = await runSmoke('https://x.test', async (u, o) => { seen.push([new URL(u).pathname, !!o?.headers?.Authorization]); return f(u, o); });
+  assert.equal(r.ok, true);
+  assert.ok(seen.some(([p, tok]) => p === SWEEP && !tok));
+  assert.ok(seen.some(([p, tok]) => p === SWEEP && tok));
+  const bad = await runSmoke('https://x.test', makeFetch({ apiOverride: { [`${SWEEP}|no`]: [500, 'server_configuration_error'] } }));
   assert.equal(bad.ok, false);
 });
