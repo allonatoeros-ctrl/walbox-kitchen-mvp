@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
+import { reloadIfStale } from '../lib/appVersion';
 
 // Reused across retries for the same order so a re-click before checkout completes doesn't spawn
 // a fresh idempotency key every time (server-side RPC idempotency keys off this same value).
@@ -99,6 +100,8 @@ export function useOrderPaymentFlow(order, isReturnTarget) {
     if (!order || order.onlinePaymentDisabled) return;
     setSumup({ state: 'loading', error: null });
     try {
+      // I-6: se la scheda esegue una versione vecchia, ricarica prima di pagare (max 1 volta per versione).
+      if (await reloadIfStale()) return;
       let { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         const { data, error } = await supabase.auth.signInAnonymously();
@@ -145,6 +148,16 @@ export function useOrderPaymentFlow(order, isReturnTarget) {
     choosePayment('online');
     handlePaySumup();
   };
+
+  // I-6: al ritorno in primo piano controlla se esiste una versione nuova (la carta e la scelta di
+  // pagamento sono in localStorage: il reload non perde nulla).
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') reloadIfStale();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   const reconcileInFlightRef = useRef(false);
   const autoReconcileDoneRef = useRef(false);
