@@ -149,6 +149,7 @@ Modello/effort: I-1 e I-3 Opus high (soldi reali) · I-2 e I-5 Sonnet medium.
 - PUSH FATTO (2026-10-12, approvato da Eros): branch e `main` `0ae5c14..885324d` fast-forward (Passi 1, 2, 3). Deploy Vercel automatico partito.
 - SMOKE POST-DEPLOY PASS (2026-10-12, approvato da Eros): deploy Vercel `dpl_BuE1Hg84…` (`885324d`) READY; `node scripts/post-deploy-smoke.mjs https://walbox-from-zero-v2.vercel.app` → 17/17 PASS (5 pagine 200, bundle `index-BlaCV9xB.js` con Authorization, 6 endpoint 401 `missing_session`, 5 endpoint 401 `invalid_session`, nessun 500).
 - Prossimo passo: eventuale prova di pagamento dal telefono (🔒 Eros, soldi reali, facoltativa). Poi: Fase 2.
+- **Fase 2 FATTA (2026-10-12), non committata:** `docs/KITCHEN_PAYMENT_LIFECYCLE_V2.md` (piano eseguibile S3→S7, audit DB/API/frontend con file:riga, ordine di rilascio). Scoperta chiave: `kitchen_payment_confirm` oggi andrebbe in errore su un ordine POP (trigger S2): S3 va applicata insieme a S2, prima di qualunque client che crei ordini online. Meccanismo 5 min raccomandato: `pg_cron` (disponibile, non installato, 0 €) → endpoint Vercel. **Piano APPROVATO da Eros (2026-10-12)**, T1–T6 e opzione A incluse; aggiunti hardening cron (EXISTS indicizzato prima di ogni HTTP, retention `cron.job_run_details` 7 giorni, verifica consumo post-attivazione) e testo PA senza "Nessun addebito". 🔒 Resta: commit `docs:`. Poi Fase 3 = S3.
 
 ### Piano post-incidente (approvato da Eros 2026-10-12, ordine deciso)
 

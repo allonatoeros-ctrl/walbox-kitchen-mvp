@@ -52,5 +52,6 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-**Fase 1 del piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`: HEAD in produzione** — preflight (build, unit, lint,
-stato remoto della grant migration, `migration list` remoto = locale), poi gate di Eros per push e merge/deploy.
+**Fase 2 del piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`:** Eros approva `docs/KITCHEN_PAYMENT_LIFECYCLE_V2.md`
+(piano eseguibile S3→S7), poi Fase 3 = S3 (RPC e state machine DB). Fase 1 e incidente SumUp 401: chiusi (stato nel
+file del piano).
