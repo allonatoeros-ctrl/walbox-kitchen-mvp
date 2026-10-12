@@ -232,6 +232,32 @@ test('create-checkout: provider_ref assente, claim RPC perde la race -> 409 chec
   assert.equal(sumupCalled, false, 'perdere la claim non deve mai creare un secondo checkout');
 });
 
+// S4: guardie S3 della claim sull'ordine (PA, POP oltre 4:30) -> 409 leggibile, mai 500, SumUp mai chiamato.
+for (const code of ['order_payment_abandoned', 'online_payment_expired']) {
+  test(`create-checkout: claim RPC rifiuta ${code} -> 409 ${code}, SumUp mai chiamato`, async () => {
+    const admin = makeSupabaseAdminMock({
+      authUser: CALLER_AUTH,
+      tables: {
+        kitchen_payments: { data: { id: 'att-s4', order_id: 'ord-s4', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: null }, error: null },
+        kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-s4', total: 10, payment_status: null }, error: null },
+      },
+      rpc: { kitchen_payment_attempt_claim_checkout: { data: null, error: { code: 'P0001', message: code } } },
+    });
+
+    let sumupCalled = false;
+    await withFetch(async () => { sumupCalled = true; return jsonFetchResponse(200, {}); }, async () => {
+      await withAdmin(admin, async () => {
+        const req = makeReq({ body: { order_id: 'ord-s4', payment_attempt_id: 'att-s4' }, headers: AUTH_HEADERS });
+        const res = makeRes();
+        await createCheckoutHandler(req, res);
+        assert.equal(res.statusCode, 409);
+        assert.equal(res.body.error, code);
+      });
+    });
+    assert.equal(sumupCalled, false);
+  });
+}
+
 test('create-checkout: claim RPC perde la race con la reale forma PostgREST (riga composita NULL, non data:null) -> 409, SumUp mai chiamato', async () => {
   // Regressione bug reale trovato in E2E su Preview (2026-08-30): PostgREST serializza una riga
   // composita NULL (0 righe dalla UPDATE atomica della claim) come un oggetto con ogni campo a

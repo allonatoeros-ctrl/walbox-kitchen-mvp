@@ -52,3 +52,15 @@ test('il refund non riceve mai un token finto', async () => {
   await runSmoke('https://x.test', async (u, o) => { seen.push([new URL(u).pathname, !!o?.headers?.Authorization]); return f(u, o); });
   assert.equal(seen.some(([p, tok]) => p === '/api/kitchen-sumup-refund' && tok), false);
 });
+
+test('S4: il nuovo endpoint paga-al-banco del cliente e\' provato senza token e con token finto', async () => {
+  const seen = [];
+  const f = makeFetch();
+  const r = await runSmoke('https://x.test', async (u, o) => { seen.push([new URL(u).pathname, !!o?.headers?.Authorization]); return f(u, o); });
+  assert.equal(r.ok, true);
+  const path = '/api/kitchen-customer-switch-to-counter';
+  assert.ok(seen.some(([p, tok]) => p === path && !tok));
+  assert.ok(seen.some(([p, tok]) => p === path && tok));
+  const bad = await runSmoke('https://x.test', makeFetch({ apiOverride: { [`${path}|tok`]: [500, 'server_configuration_error'] } }));
+  assert.equal(bad.ok, false);
+});

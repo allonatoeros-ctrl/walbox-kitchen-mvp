@@ -148,6 +148,11 @@ export default async function handler(req, res) {
     p_attempt_id: attempt.id,
   });
   if (claimError) {
+    // S4: guardie S3 sull'ordine (abbandonato, o online oltre created_at + 4:30). Codici stabili, nessun checkout.
+    const claimCode = claimError.message || '';
+    for (const code of ['order_payment_abandoned', 'online_payment_expired']) {
+      if (claimCode.includes(code)) return res.status(409).json({ error: code });
+    }
     console.error('[kitchen-sumup-create-checkout] claim RPC failed', claimError);
     return res.status(500).json({ error: 'internal_server_error' });
   }

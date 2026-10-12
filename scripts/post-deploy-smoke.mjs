@@ -16,6 +16,7 @@ const AUTH_ENDPOINTS = [
   '/api/kitchen-staff-sumup-reconcile',
   '/api/kitchen-cancel-with-payment-check',
   '/api/kitchen-staff-sumup-close-for-counter',
+  '/api/kitchen-customer-switch-to-counter',
 ];
 const NO_TOKEN_ONLY_ENDPOINTS = ['/api/kitchen-sumup-refund'];
 
