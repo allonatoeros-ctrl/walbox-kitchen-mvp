@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { applySumupCheckoutResult } from './_lib/sumupPaymentResolution.js';
 import { recoverSumupProviderRef } from './_lib/sumupProviderRefRecovery.js';
+import { deactivateAndVerify, getCheckoutVerified, sumupGetFetchWithTimeout } from './_lib/sumupCheckout.js';
+
+const LOG_TAG = 'kitchen-cancel-with-payment-check';
 
 // Kitchen Payment Hub V1 — Payment Cancel Hardening.
 //
@@ -155,7 +158,7 @@ export default async function handler(req, res) {
 
   let providerRef = attempt.provider_ref;
   if (!providerRef) {
-    const recovery = await recoverSumupProviderRef({ sumupApiKey, attemptId: attempt.id });
+    const recovery = await recoverSumupProviderRef({ sumupApiKey, attemptId: attempt.id, fetchImpl: sumupGetFetchWithTimeout });
     if (!recovery.checkout) {
       // I-3: the attempt never reached SumUp. create-checkout POSTs only after winning the claim,
       // which writes checkout_claim_at and nothing ever resets it: claim NULL + SumUp List
@@ -179,7 +182,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const checkout = await getSumupCheckout({ sumupApiKey, providerRef, attempt });
+  const checkout = await getCheckoutVerified({ sumupApiKey, providerRef, attemptId: attempt.id, logTag: LOG_TAG });
   if (checkout.outcome === 'unknown') {
     return res.status(200).json({ outcome: 'unknown' });
   }
@@ -193,7 +196,7 @@ export default async function handler(req, res) {
     // (FAILED included: the customer can retry with another card on the same hosted page). A
     // customer could otherwise complete payment after the order shows 'cancelled'. DELETE + verify
     // GET, fail-closed: cancel only proceeds if SumUp confirms EXPIRED/CANCELLED afterwards.
-    const deactivation = await deactivateAndVerify({ sumupApiKey, providerRef, attempt });
+    const deactivation = await deactivateAndVerify({ sumupApiKey, providerRef, attemptId: attempt.id, logTag: LOG_TAG });
     if (deactivation.kind === 'indeterminate') {
       return res.status(502).json({ error: 'sumup_delete_indeterminate', retryable: true });
     }
@@ -211,72 +214,6 @@ export default async function handler(req, res) {
   }
 
   return runAtomicCancel({ res, supabaseAsStaff, order_id, reason });
-}
-
-// DELETE the SumUp checkout and verify the outcome authoritatively. A DELETE response (even 2xx/404)
-// does not by itself prove the checkout is closed: the only proof is a follow-up GET reporting
-// EXPIRED/CANCELLED. Returns: 'indeterminate' (5xx/network on the DELETE), 'unknown' (verify GET
-// unreliable), 'paid' (+ data), 'closed' (EXPIRED/CANCELLED), 'unverified' (any other status).
-async function deactivateAndVerify({ sumupApiKey, providerRef, attempt }) {
-  try {
-    const delRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${providerRef}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${sumupApiKey}` },
-    });
-    if (delRes.status >= 500) {
-      // 5xx: SumUp's own infra hiccup — we don't know if the delete landed or not. Indeterminate,
-      // fail-closed (never "best-effort proceed" — that was the P0 bug: a live, still-payable
-      // checkout could be left behind while the order/attempt show cancelled).
-      console.error('[kitchen-cancel-with-payment-check] SumUp DELETE checkout returned 5xx — fail-closed', delRes.status);
-      return { kind: 'indeterminate' };
-    }
-  } catch (err) {
-    // Network error: same indeterminate/fail-closed outcome as 5xx above — we cannot tell whether
-    // the checkout was deactivated, so we never assume it's safe to cancel.
-    console.error('[kitchen-cancel-with-payment-check] SumUp DELETE checkout errored — fail-closed', err);
-    return { kind: 'indeterminate' };
-  }
-
-  const verify = await getSumupCheckout({ sumupApiKey, providerRef, attempt });
-  if (verify.outcome === 'unknown') {
-    return { kind: 'unknown' };
-  }
-  if (verify.data.status === 'PAID') {
-    return { kind: 'paid', data: verify.data };
-  }
-  if (verify.data.status === 'EXPIRED' || verify.data.status === 'CANCELLED') {
-    return { kind: 'closed' };
-  }
-  console.error('[kitchen-cancel-with-payment-check] checkout still not closed after DELETE — fail-closed', verify.data.status);
-  return { kind: 'unverified' };
-}
-
-// Authoritative GET, same defensive checkout_reference check as api/kitchen-sumup-reconcile.js —
-// never resolve/act on an unverified reference.
-async function getSumupCheckout({ sumupApiKey, providerRef, attempt }) {
-  let checkout;
-  try {
-    const sumupRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${providerRef}`, {
-      headers: { Authorization: `Bearer ${sumupApiKey}` },
-    });
-    checkout = await sumupRes.json();
-    if (!sumupRes.ok) {
-      console.error('[kitchen-cancel-with-payment-check] SumUp GET checkout failed', sumupRes.status, checkout);
-      return { outcome: 'unknown' };
-    }
-  } catch (err) {
-    console.error('[kitchen-cancel-with-payment-check] unexpected error fetching checkout', err);
-    return { outcome: 'unknown' };
-  }
-
-  if (checkout.checkout_reference !== attempt.id) {
-    console.error('[kitchen-cancel-with-payment-check] checkout_reference mismatch', {
-      attemptId: attempt.id, expected: attempt.id, got: checkout.checkout_reference,
-    });
-    return { outcome: 'unknown' };
-  }
-
-  return { outcome: 'ok', data: checkout };
 }
 
 // Design step 3: PAID -> resolve via the shared resolver (same confirm/fail decision the

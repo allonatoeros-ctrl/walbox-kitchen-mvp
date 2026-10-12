@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { applySumupCheckoutResult } from './_lib/sumupPaymentResolution.js';
 import { recoverSumupProviderRef } from './_lib/sumupProviderRefRecovery.js';
+import { deactivateAndVerify, getCheckoutVerified, sumupGetFetchWithTimeout } from './_lib/sumupCheckout.js';
+
+const LOG_TAG = 'kitchen-staff-sumup-close-for-counter';
 
 // Kitchen Payment Hub V1 — "Passa al pagamento al banco" per un checkout SumUp non concluso.
 //
@@ -157,7 +160,7 @@ export default async function handler(req, res) {
 
   let providerRef = attempt.provider_ref;
   if (!providerRef) {
-    const recovery = await recoverSumupProviderRef({ sumupApiKey, attemptId: attempt.id });
+    const recovery = await recoverSumupProviderRef({ sumupApiKey, attemptId: attempt.id, fetchImpl: sumupGetFetchWithTimeout });
     if (!recovery.checkout) {
       // I-3: l'attempt non e' mai arrivato a SumUp. create-checkout fa la POST solo dopo aver vinto
       // la claim, che scrive checkout_claim_at e nessuno la azzera: claim NULL + List SumUp
@@ -181,7 +184,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const checkout = await getSumupCheckout({ sumupApiKey, providerRef, attempt });
+  const checkout = await getCheckoutVerified({ sumupApiKey, providerRef, attemptId: attempt.id, logTag: LOG_TAG });
   if (checkout.outcome === 'unknown') {
     return res.status(200).json({ outcome: 'unknown' });
   }
@@ -195,7 +198,7 @@ export default async function handler(req, res) {
     // ancora pagabile (FAILED incluso: retry con un'altra carta sulla stessa pagina hosted). DELETE
     // + verifica GET, fail-closed — la chiusura locale avviene solo se SumUp conferma
     // EXPIRED/CANCELLED dopo il DELETE.
-    const deactivation = await deactivateAndVerify({ sumupApiKey, providerRef, attempt });
+    const deactivation = await deactivateAndVerify({ sumupApiKey, providerRef, attemptId: attempt.id, logTag: LOG_TAG });
     if (deactivation.kind === 'indeterminate') {
       return res.status(502).json({ error: 'sumup_delete_indeterminate', retryable: true });
     }
@@ -213,66 +216,6 @@ export default async function handler(req, res) {
   }
 
   return closeAttempt({ res, supabaseAsStaff, attemptId: attempt.id, note });
-}
-
-// DELETE del checkout SumUp + verifica autoritativa dell'esito. Un esito del DELETE (anche 2xx/404)
-// non prova da solo che il checkout sia chiuso: l'unica prova e' un GET successivo che riporta
-// EXPIRED/CANCELLED. Ritorna: 'indeterminate' (5xx/rete sul DELETE), 'unknown' (GET di verifica non
-// affidabile), 'paid' (+ data), 'closed' (EXPIRED/CANCELLED), 'unverified' (qualunque altro stato).
-async function deactivateAndVerify({ sumupApiKey, providerRef, attempt }) {
-  try {
-    const delRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${providerRef}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${sumupApiKey}` },
-    });
-    if (delRes.status >= 500) {
-      console.error('[kitchen-staff-sumup-close-for-counter] SumUp DELETE checkout returned 5xx — fail-closed', delRes.status);
-      return { kind: 'indeterminate' };
-    }
-  } catch (err) {
-    console.error('[kitchen-staff-sumup-close-for-counter] SumUp DELETE checkout errored — fail-closed', err);
-    return { kind: 'indeterminate' };
-  }
-
-  const verify = await getSumupCheckout({ sumupApiKey, providerRef, attempt });
-  if (verify.outcome === 'unknown') {
-    return { kind: 'unknown' };
-  }
-  if (verify.data.status === 'PAID') {
-    return { kind: 'paid', data: verify.data };
-  }
-  if (verify.data.status === 'EXPIRED' || verify.data.status === 'CANCELLED') {
-    return { kind: 'closed' };
-  }
-  console.error('[kitchen-staff-sumup-close-for-counter] checkout still not closed after DELETE — fail-closed', verify.data.status);
-  return { kind: 'unverified' };
-}
-
-// Stessa logica difensiva di kitchen-cancel-with-payment-check.js / kitchen-staff-sumup-reconcile.js.
-async function getSumupCheckout({ sumupApiKey, providerRef, attempt }) {
-  let checkout;
-  try {
-    const sumupRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${providerRef}`, {
-      headers: { Authorization: `Bearer ${sumupApiKey}` },
-    });
-    checkout = await sumupRes.json();
-    if (!sumupRes.ok) {
-      console.error('[kitchen-staff-sumup-close-for-counter] SumUp GET checkout failed', sumupRes.status, checkout);
-      return { outcome: 'unknown' };
-    }
-  } catch (err) {
-    console.error('[kitchen-staff-sumup-close-for-counter] unexpected error fetching checkout', err);
-    return { outcome: 'unknown' };
-  }
-
-  if (checkout.checkout_reference !== attempt.id) {
-    console.error('[kitchen-staff-sumup-close-for-counter] checkout_reference mismatch', {
-      attemptId: attempt.id, expected: attempt.id, got: checkout.checkout_reference,
-    });
-    return { outcome: 'unknown' };
-  }
-
-  return { outcome: 'ok', data: checkout };
 }
 
 // PAID -> risolto via lo stesso resolver condiviso di webhook/reconcile/cancel-check e STOP: mai
