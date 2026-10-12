@@ -1,8 +1,7 @@
 import process from 'node:process';
 import { createClient } from '@supabase/supabase-js';
 import { applySumupCheckoutResult } from './_lib/sumupPaymentResolution.js';
-import { recoverSumupProviderRef } from './_lib/sumupProviderRefRecovery.js';
-import { deactivateAndVerify, getCheckoutVerified, sumupGetFetchWithTimeout } from './_lib/sumupCheckout.js';
+import { closeSumupAttempt } from './_lib/sumupCloseAttempt.js';
 
 const LOG_TAG = 'kitchen-customer-switch-to-counter';
 
@@ -108,7 +107,7 @@ export default async function handler(req, res) {
     // Canali non SumUp: nessuna verifica remota possibile, la RPC e' l'autorita' finale.
     if (attempt.provider !== 'sumup') continue;
 
-    const closed = await closeSumupAttempt({ supabaseAdmin, sumupApiKey, attempt });
+    const closed = await closeSumupAttempt({ supabaseAdmin, sumupApiKey, attempt, logTag: LOG_TAG });
     if (closed.kind === 'paid') {
       return resolveAsPaidAndStop({ res, supabaseAdmin, attempt, checkout: closed.data });
     }
@@ -118,53 +117,6 @@ export default async function handler(req, res) {
   }
 
   return runSwitch({ res, supabaseAdmin, order_id, callerId });
-}
-
-// Porta un attempt sumup a "checkout sicuramente non pagabile". Ritorna { kind: 'closed' }, { kind: 'paid', data }
-// oppure { kind: 'uncertain', reason, needs_manual_reconciliation? }.
-async function closeSumupAttempt({ supabaseAdmin, sumupApiKey, attempt }) {
-  let providerRef = attempt.provider_ref;
-  if (!providerRef) {
-    const recovery = await recoverSumupProviderRef({
-      sumupApiKey, attemptId: attempt.id, fetchImpl: sumupGetFetchWithTimeout,
-    });
-    if (!recovery.checkout) {
-      // I-3: claim NULL (nessuna POST mai partita) + List not_found = due prove indipendenti che nessun checkout
-      // esiste. === null stretto: una riga letta senza la colonna resta fail-closed. Claim presente + not_found
-      // resta incerto (NEEDS_DECISION aperta, ai-ops/reports/sumup-401-incident-2026-10-12.md §3).
-      if (recovery.reason === 'not_found' && attempt.checkout_claim_at === null) {
-        return { kind: 'closed' };
-      }
-      return {
-        kind: 'uncertain',
-        reason: `provider_ref_${recovery.reason}`,
-        needs_manual_reconciliation: recovery.reason === 'ambiguous',
-      };
-    }
-    providerRef = recovery.checkout.id;
-    await supabaseAdmin.rpc('kitchen_payment_attempt_set_provider_ref', {
-      p_attempt_id: attempt.id,
-      p_provider_ref: providerRef,
-    });
-  }
-
-  const checkout = await getCheckoutVerified({ sumupApiKey, providerRef, attemptId: attempt.id, logTag: LOG_TAG });
-  if (checkout.outcome === 'unknown') {
-    return { kind: 'uncertain', reason: 'checkout_unverifiable' };
-  }
-  if (checkout.data.status === 'PAID') {
-    return { kind: 'paid', data: checkout.data };
-  }
-  if (checkout.data.status === 'EXPIRED' || checkout.data.status === 'CANCELLED') {
-    return { kind: 'closed' };
-  }
-
-  // PENDING, FAILED (non terminale su SumUp) o altro: DELETE + verifica, fail-closed.
-  const deactivation = await deactivateAndVerify({ sumupApiKey, providerRef, attemptId: attempt.id, logTag: LOG_TAG });
-  if (deactivation.kind === 'paid') return { kind: 'paid', data: deactivation.data };
-  if (deactivation.kind === 'closed') return { kind: 'closed' };
-  const reasons = { indeterminate: 'sumup_delete_indeterminate', unknown: 'checkout_unverifiable', unverified: 'checkout_close_unverified' };
-  return { kind: 'uncertain', reason: reasons[deactivation.kind] };
 }
 
 function uncertain(res, { reason, needs_manual_reconciliation }) {
