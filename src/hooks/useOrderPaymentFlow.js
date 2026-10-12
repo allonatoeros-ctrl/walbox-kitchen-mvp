@@ -25,6 +25,9 @@ const SUMUP_ERROR_MESSAGES = {
   amount_mismatch: 'Importo non allineato all’ordine. Riprova o paga alla cassa.',
   invalid_attempt_status: 'Pagamento già in corso. Attendi qualche secondo e riprova.',
   online_payment_disabled: 'Pagamento al banco — comunica il codice ordine alla cassa.',
+  // Client vecchio (scheda aperta prima di un deploy) contro API nuova: basta ricaricare.
+  missing_session: 'App aggiornata: ricarica la pagina e riprova.',
+  invalid_session: 'App aggiornata: ricarica la pagina e riprova.',
 };
 
 function friendlySumupError(err) {
