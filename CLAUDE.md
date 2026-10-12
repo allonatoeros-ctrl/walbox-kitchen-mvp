@@ -94,7 +94,7 @@ Logica di business pura → `src/lib/` con test accanto (`*.test.js`).
 | Comando | Rischio |
 |---|---|
 | `npm run lint` · `npm run preview` | sicuro |
-| `node --test tests/unit/*.test.mjs` · `node --test src/lib/*.test.js api/*.test.js` | sicuro (rete mockata) |
+| `node --test tests/unit/*.test.mjs` · `node --test src/lib/*.test.js api/_lib/*.test.js` | sicuro (rete mockata) |
 | `node --test supabase/migrations/<ts>*.test.js` | sicuro (assert sul testo SQL) |
 | `VITE_SUPABASE_URL=http://127.0.0.1:54321 npm run build` / `npm run dev` | scrive `dist/`; senza override il guard blocca se `.env.local` punta alla produzione |
 | `npm run test:e2e` | dev server con bypass auth; alcune spec non mockano la rete |

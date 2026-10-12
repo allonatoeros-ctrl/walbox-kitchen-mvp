@@ -1,16 +1,15 @@
-// Test mirati S0.5 F3 — api/kitchen-cancel-with-payment-check.js.
+// Test mirati S0.5 F2 — api/kitchen-staff-sumup-close-for-counter.js.
 // Un checkout SumUp FAILED NON e' terminale: il cliente puo' riprovare con un'altra carta sulla
-// stessa pagina hosted. Quindi l'annullo deve: GET -> DELETE -> GET di verifica, e annullare
-// l'ordine SOLO se SumUp conferma EXPIRED/CANCELLED. Ogni incertezza blocca (nessuna RPC di annullo).
-// L'attempt 'failed'/sumup_failed deve inoltre essere trovato dal lookup (prima veniva ignorato).
+// stessa pagina hosted. Quindi "Passa al banco" deve: GET -> DELETE -> GET di verifica, e chiudere
+// l'attempt SOLO se SumUp conferma EXPIRED/CANCELLED. Ogni incertezza blocca (nessuna RPC di chiusura).
 //
 // Zero rete reale: globalThis.fetch e' sostituito da un router fake (Supabase REST/auth + SumUp) che
 // LANCIA su qualunque URL non previsto. Eseguire a mano con:
-//   node --test api/kitchen-cancel-with-payment-check.test.js
+//   node --test api/kitchen-staff-sumup-close-for-counter.test.js
 import test, { beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import process from 'node:process';
-import handler from './kitchen-cancel-with-payment-check.js';
+import handler from '../../api/kitchen-staff-sumup-close-for-counter.js';
 
 const SB = 'http://supabase.test';
 const SUMUP_CHECKOUT = 'https://api.sumup.com/v0.1/checkouts/co-1';
@@ -83,8 +82,8 @@ function installFakeFetch({ attempt, sumup }) {
       }
       if (path === '/rest/v1/rpc/is_staff_for_venue') return json(200, true);
       if (path === '/rest/v1/rpc/kitchen_payment_attempt_set_provider_ref') return json(200, null);
-      if (path === '/rest/v1/rpc/kitchen_order_cancel_with_payment_attempt') {
-        return json(200, { id: 'ord-1', status: 'cancelled', cancel_reason: null, cancelled_at: '2026-10-09T00:00:00Z' });
+      if (path === '/rest/v1/rpc/kitchen_payment_attempt_close_unpaid') {
+        return json(200, { id: ATTEMPT_ID, status: 'failed', failure_reason: 'staff_closed_for_counter' });
       }
       if (path === '/rest/v1/rpc/kitchen_payment_confirm') return json(200, { id: ATTEMPT_ID });
       if (path === '/rest/v1/rpc/kitchen_payment_fail') return json(200, null);
@@ -122,29 +121,29 @@ const co = (status) => ({ status: 200, body: { id: 'co-1', checkout_reference: A
 const sumupCalls = (calls, method) => calls.filter((c) => c.url === SUMUP_CHECKOUT && c.method === method);
 const rpcCalls = (calls, name) => calls.filter((c) => c.url === `${SB}/rest/v1/rpc/${name}`);
 
-test('a) GET=FAILED -> DELETE, verify GET=EXPIRED -> annullo RPC chiamata', async () => {
+test('a) GET=FAILED -> DELETE, verify GET=EXPIRED -> chiusura RPC chiamata', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
     sumup: { get: [co('FAILED'), co('EXPIRED')], del: { status: 204 } },
   });
   assert.equal(sumupCalls(calls, 'DELETE').length, 1);
   assert.equal(sumupCalls(calls, 'GET').length, 2);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 1);
   assert.equal(res.statusCode, 200);
-  assert.equal(res.body.outcome, 'cancelled');
+  assert.equal(res.body.outcome, 'closed_for_counter');
 });
 
-test('a2) GET=PENDING -> DELETE, verify GET=CANCELLED -> annullo RPC chiamata', async () => {
+test('a2) GET=PENDING -> DELETE, verify GET=CANCELLED -> chiusura RPC chiamata', async () => {
   const { res, calls } = await run({
     attempt: { ...baseAttempt, status: 'pending', failure_reason: null },
     sumup: { get: [co('PENDING'), co('CANCELLED')], del: { status: 200 } },
   });
   assert.equal(sumupCalls(calls, 'DELETE').length, 1);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
-  assert.equal(res.body.outcome, 'cancelled');
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 1);
+  assert.equal(res.body.outcome, 'closed_for_counter');
 });
 
-test('b) GET=FAILED -> DELETE 5xx -> 502 sumup_delete_indeterminate, nessuna RPC di annullo', async () => {
+test('b) GET=FAILED -> DELETE 5xx -> 502 sumup_delete_indeterminate, nessuna RPC di chiusura', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
     sumup: { get: [co('FAILED')], del: { status: 503 } },
@@ -152,21 +151,21 @@ test('b) GET=FAILED -> DELETE 5xx -> 502 sumup_delete_indeterminate, nessuna RPC
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.error, 'sumup_delete_indeterminate');
   assert.equal(sumupCalls(calls, 'GET').length, 1, 'nessun GET di verifica dopo un 5xx');
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
-test('b2) GET=FAILED -> DELETE errore di rete -> 502, nessuna RPC di annullo', async () => {
+test('b2) GET=FAILED -> DELETE errore di rete -> 502, nessuna RPC di chiusura', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
     sumup: { get: [co('FAILED')], del: { throw: true } },
   });
   assert.equal(res.statusCode, 502);
   assert.equal(res.body.error, 'sumup_delete_indeterminate');
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
 for (const stillOpen of ['PENDING', 'FAILED']) {
-  test(`c) DELETE 2xx ma verify GET ancora ${stillOpen} -> bloccato (unknown), nessuna RPC di annullo`, async () => {
+  test(`c) DELETE 2xx ma verify GET ancora ${stillOpen} -> bloccato (unknown), nessuna RPC di chiusura`, async () => {
     const { res, calls } = await run({
       attempt: baseAttempt,
       sumup: { get: [co('FAILED'), co(stillOpen)], del: { status: 204 } },
@@ -174,7 +173,7 @@ for (const stillOpen of ['PENDING', 'FAILED']) {
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.outcome, 'unknown');
     assert.equal(res.body.reason, 'checkout_close_unverified');
-    assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+    assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
   });
 }
 
@@ -184,7 +183,7 @@ test('c2) DELETE 404 ma verify GET ancora FAILED -> bloccato (404 non e\' prova 
     sumup: { get: [co('FAILED'), co('FAILED')], del: { status: 404 } },
   });
   assert.equal(res.body.outcome, 'unknown');
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
 test('c3) DELETE 4xx rifiutato + verify GET ancora PENDING -> bloccato (non procede piu\')', async () => {
@@ -193,48 +192,48 @@ test('c3) DELETE 4xx rifiutato + verify GET ancora PENDING -> bloccato (non proc
     sumup: { get: [co('PENDING'), co('PENDING')], del: { status: 400 } },
   });
   assert.equal(res.body.outcome, 'unknown');
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
-test('d) DELETE 4xx + verify GET=PAID -> resolve paid (409), nessun annullo', async () => {
+test('d) DELETE 4xx + verify GET=PAID -> resolve paid (409), nessuna chiusura', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
     sumup: { get: [co('FAILED'), co('PAID')], del: { status: 400 } },
   });
   assert.equal(res.statusCode, 409);
-  assert.equal(res.body.error, 'cannot_cancel_already_paid');
+  assert.equal(res.body.error, 'cannot_close_already_paid');
   assert.equal(rpcCalls(calls, 'kitchen_payment_confirm').length, 1, 'resolver condiviso invocato');
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
-test('e) GET=EXPIRED -> nessun DELETE, procede all annullo', async () => {
+test('e) GET=EXPIRED -> nessun DELETE, procede alla chiusura', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
     sumup: { get: [co('EXPIRED')], del: { status: 204 } },
   });
   assert.equal(sumupCalls(calls, 'DELETE').length, 0);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
-  assert.equal(res.body.outcome, 'cancelled');
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 1);
+  assert.equal(res.body.outcome, 'closed_for_counter');
 });
 
-test('e2) GET=CANCELLED -> nessun DELETE, procede all annullo', async () => {
+test('e2) GET=CANCELLED -> nessun DELETE, procede alla chiusura', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
     sumup: { get: [co('CANCELLED')], del: { status: 204 } },
   });
   assert.equal(sumupCalls(calls, 'DELETE').length, 0);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
-  assert.equal(res.body.outcome, 'cancelled');
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 1);
+  assert.equal(res.body.outcome, 'closed_for_counter');
 });
 
-test('f) verify GET non affidabile (SumUp 500) dopo DELETE -> bloccato, nessuna RPC di annullo', async () => {
+test('f) verify GET non affidabile (SumUp 500) dopo DELETE -> bloccato, nessuna RPC di chiusura', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
     sumup: { get: [co('FAILED'), { status: 500, body: { error: 'boom' } }], del: { status: 204 } },
   });
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.outcome, 'unknown');
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
 test('f2) GET iniziale non affidabile (SumUp 500) -> bloccato, nessun DELETE, nessuna RPC', async () => {
@@ -244,32 +243,17 @@ test('f2) GET iniziale non affidabile (SumUp 500) -> bloccato, nessun DELETE, ne
   });
   assert.equal(res.body.outcome, 'unknown');
   assert.equal(sumupCalls(calls, 'DELETE').length, 0);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
-test('g) lookup attempt: filtro include failed/sumup_failed e l\'attempt trovato porta a GET+DELETE', async () => {
-  const { res, calls } = await run({
-    attempt: baseAttempt,
-    sumup: { get: [co('FAILED'), co('CANCELLED')], del: { status: 204 } },
-  });
-  const lookup = calls.find((c) => c.url.startsWith(`${SB}/rest/v1/kitchen_payments`));
-  const q = decodeURIComponent(lookup.url);
-  assert.match(q, /status=in\.\(initiated,pending,failed\)/);
-  assert.ok(q.includes('or=(status.neq.failed,and(provider.eq.sumup,failure_reason.eq.sumup_failed))'), q);
-  assert.equal(sumupCalls(calls, 'GET').length, 2);
-  assert.equal(sumupCalls(calls, 'DELETE').length, 1);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
-  assert.equal(res.body.outcome, 'cancelled');
-});
-
-test('i) GET iniziale=PAID -> resolve paid e STOP, nessun DELETE, nessun annullo', async () => {
+test('g) GET iniziale=PAID -> resolve paid e STOP, nessun DELETE, nessuna chiusura', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
     sumup: { get: [co('PAID')], del: { status: 204 } },
   });
   assert.equal(res.statusCode, 409);
   assert.equal(sumupCalls(calls, 'DELETE').length, 0);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
 // I-3 (incidente SumUp 401, 2026-10-12): sblocco dell'attempt "unknown" mai arrivato a SumUp.
@@ -290,9 +274,9 @@ test('I-3 a) ref NULL + claim NULL + List not_found -> procede alla RPC, nessun 
   assert.equal(sumupCalls(calls, 'GET').length, 0);
   assert.equal(sumupCalls(calls, 'DELETE').length, 0);
   assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_set_provider_ref').length, 0);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 1);
   assert.equal(res.statusCode, 200);
-  assert.equal(res.body.outcome, 'cancelled');
+  assert.equal(res.body.outcome, 'closed_for_counter');
 });
 
 test('I-3 a2) la lookup dell attempt legge checkout_claim_at', async () => {
@@ -312,7 +296,7 @@ test('I-3 b) ref NULL + claim presente + List not_found -> unknown, nessuna RPC'
   assert.equal(res.statusCode, 200);
   assert.equal(res.body.outcome, 'unknown');
   assert.equal(res.body.needs_manual_reconciliation, false);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
 test('I-3 c) ref NULL + claim assente dalla riga (undefined) + List not_found -> unknown (fail-closed)', async () => {
@@ -323,7 +307,7 @@ test('I-3 c) ref NULL + claim assente dalla riga (undefined) + List not_found ->
     sumup: { get: [co('PENDING')], del: { status: 204 }, list: { status: 200, body: [] } },
   });
   assert.equal(res.body.outcome, 'unknown');
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
 for (const [label, list] of [
@@ -339,7 +323,7 @@ for (const [label, list] of [
     assert.equal(res.statusCode, 200);
     assert.equal(res.body.outcome, 'unknown');
     assert.equal(res.body.needs_manual_reconciliation, false);
-    assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+    assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
   });
 }
 
@@ -351,7 +335,7 @@ test('I-3 e) ref NULL + claim NULL + List ambigua -> unknown + needs_manual_reco
   });
   assert.equal(res.body.outcome, 'unknown');
   assert.equal(res.body.needs_manual_reconciliation, true);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 0);
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
 test('I-3 f) ref NULL + claim NULL + List trova 1 checkout -> ramo esistente: bind, GET, DELETE+verifica', async () => {
@@ -365,6 +349,6 @@ test('I-3 f) ref NULL + claim NULL + List trova 1 checkout -> ramo esistente: bi
   assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_set_provider_ref').length, 1);
   assert.equal(sumupCalls(calls, 'GET').length, 2);
   assert.equal(sumupCalls(calls, 'DELETE').length, 1);
-  assert.equal(rpcCalls(calls, 'kitchen_order_cancel_with_payment_attempt').length, 1);
-  assert.equal(res.body.outcome, 'cancelled');
+  assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 1);
+  assert.equal(res.body.outcome, 'closed_for_counter');
 });

@@ -33,9 +33,12 @@ girano su Vercel Production e muovono denaro vero.
 
 ## Test
 
-- Unit con `fetch` e Supabase mockati: `api/*.test.js` e `tests/unit/*sumup*.test.mjs`,
+- Unit con `fetch` e Supabase mockati: `api/_lib/*.test.js`, `tests/unit/*sumup*.test.mjs`,
+  `tests/unit/kitchen-cancel-with-payment-check.test.mjs`,
+  `tests/unit/kitchen-staff-sumup-close-for-counter.test.mjs`,
   `tests/unit/cancel-with-payment-check.test.mjs`, `tests/unit/refund-order-flow.test.mjs`.
-  Comando: `node --test api/*.test.js tests/unit/<file>.test.mjs`.
+  Niente test nella radice di `api/`: ogni `.js` lì è una Vercel Function.
+  Comando: `node --test api/_lib/*.test.js tests/unit/<file>.test.mjs`.
 - Ogni modifica a un handler aggiunge o aggiorna il test del caso limite (retry, timeout, 409, importo, stato
   terminale) prima del codice.
 - Mai test contro SumUp reale o Supabase di produzione senza gate di Eros. Il pagamento reale di prova lo fa
