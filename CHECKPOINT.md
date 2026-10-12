@@ -9,11 +9,11 @@ indicato nel NEXT STEP (oggi `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`).
 - Kitchen Recovery (piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`): riordino linea, onboarding, poi
   "Pagamento app separato" (S2…S7).
 - Branch `kitchen-clean-baseline-v2-phase-a` (worktree `walbox-kitchen-release`): linea Kitchen più completa.
-  Commit locali di Fase A, Fase 0 e Fase B **non pushati**.
-- Produzione (Vercel, branch `main` = `origin/main` `74e7f88`): frontend/API **senza** S0.5 F1–F7, F6 Web Push
-  frontend, Storico UX del 10/10. `origin/main` non ha nulla che HEAD non abbia (audit 2026-10-12).
+  Pushato su `main` fino a `d8429e0` (2026-10-12): HEAD = `origin/main`.
+- Produzione (Vercel, branch `main` = `d8429e0`, push 2026-10-12): include fix incidente SumUp 401, S3 (file) e S4
+  (endpoint paga al banco cliente, inerte finché S5 non crea ordini POP). Smoke post-deploy PASS 19/19.
 - DB produzione `pcrqfdzipotprqtuemso`: migration F1 applicata (2026-10-09). Grant `20261009130000`: stato remoto
-  da verificare. S2 `20261009140000`: **non applicata**.
+  da verificare. S2 `20261009140000` + S3 `20261012100000`: **applicate** (db push 2026-10-12).
 
 ## DONE
 Lo storico è in `docs/checkpoints/archive-2026-10.md`. Qui al massimo 5 voci recenti, una riga ciascuna;
@@ -52,6 +52,7 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-**Fase 2 del piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`:** Eros approva `docs/KITCHEN_PAYMENT_LIFECYCLE_V2.md`
-(piano eseguibile S3→S7), poi Fase 3 = S3 (RPC e state machine DB). Fase 1 e incidente SumUp 401: chiusi (stato nel
-file del piano).
+**S6 fatta in locale (non committata)** → gate di Eros in ordine: commit (4 proposti nel report
+`ai-ops/reports/kitchen-s6-abandon-sweep-2026-10-12.md`) → secret `KITCHEN_ABANDON_SWEEP_SECRET` su Vercel + Vault
+(`docs/KITCHEN_ONLINE_ABANDON_BACKOFFICE.md`) → deploy + smoke → db push cron. Poi S5.
+Stato dettagliato: `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`.
