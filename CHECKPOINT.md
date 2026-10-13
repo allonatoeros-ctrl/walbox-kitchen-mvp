@@ -56,6 +56,8 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-**S5** (creazione ordini POP / pagamento app separato; Opus high): `docs/KITCHEN_PAYMENT_LIFECYCLE_V2.md` §S5.
-Prima verificare a video che un ordine online scaduto passi davvero dallo sweep (mai visto in produzione).
-Stato dettagliato: `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`.
+**Anniversario 15 anni** (serata fra ~3 giorni, data da confermare): collaudo del checkout V2
+(`claude/customer-experience-v2`, 1 commit sopra `main`) e merge su `main` deciso da Eros, poi GARPEZ,
+modalità evento e animazione. S5 è su `main` (`b2b3446`); resta da verificare a video che un ordine online
+scaduto passi davvero dallo sweep (mai visto in produzione).
+Stato dettagliato: `ai-ops/current/ANNIVERSARIO_15_ANNI.md`.
