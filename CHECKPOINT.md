@@ -1,5 +1,5 @@
 # CHECKPOINT — Walbox Kitchen
-Aggiornato: 2026-10-12 (compattazione Fase B). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
+Aggiornato: 2026-10-13 (S6 in produzione). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
 
 Regole di questo file: solo stato corrente. Niente cronologia (va nell'archivio), niente regole stabili
 (vanno in `ai-ops/knowledge/MEMORY.md`), un solo NEXT STEP. Lavoro in corso multi-fase: il file di stato
@@ -9,15 +9,19 @@ indicato nel NEXT STEP (oggi `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`).
 - Kitchen Recovery (piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`): riordino linea, onboarding, poi
   "Pagamento app separato" (S2…S7).
 - Branch `kitchen-clean-baseline-v2-phase-a` (worktree `walbox-kitchen-release`): linea Kitchen più completa.
-  Pushato su `main` fino a `d8429e0` (2026-10-12): HEAD = `origin/main`.
-- Produzione (Vercel, branch `main` = `d8429e0`, push 2026-10-12): include fix incidente SumUp 401, S3 (file) e S4
-  (endpoint paga al banco cliente, inerte finché S5 non crea ordini POP). Smoke post-deploy PASS 19/19.
+  Pushato su `main` fino a `9417066` (verificato `ls-remote` 2026-10-13): HEAD = `origin/main`.
+- Produzione (Vercel, branch `main` = `9417066`): include fix incidente SumUp 401, S3, S4 (endpoint paga al banco,
+  inerte finché S5 non crea ordini POP) e S6 (API sweep `kitchen-online-abandon-sweep`, 10 Vercel Functions).
+  Smoke post-deploy PASS 21/21.
 - DB produzione `pcrqfdzipotprqtuemso`: migration F1 applicata (2026-10-09). Grant `20261009130000`: stato remoto
   da verificare. S2 `20261009140000` + S3 `20261012100000`: **applicate** (db push 2026-10-12).
+  S6 cron `20261012120000`: **applicata** (db push 2026-10-12); job `kitchen-online-abandon-sweep` (ogni minuto) e
+  `kitchen-cron-history-retention` attivi; 5 tick `succeeded`, 0 HTTP (nessun ordine scaduto).
 
 ## DONE
 Lo storico è in `docs/checkpoints/archive-2026-10.md`. Qui al massimo 5 voci recenti, una riga ciascuna;
 oltre, si spostano in archivio.
+- 2026-10-12 — S6 chiusura automatica a 5 min: 5 commit (`f0737ce`…`9417066`), secret Vercel+Vault, deploy, db push cron.
 - 2026-10-12 — Fase A (protezioni) + Fase 0 (9 commit atomici) + Fase B (onboarding: CLAUDE.md, architettura,
   CHECKPOINT compattato, skill). Dettaglio nel file di stato del piano.
 
@@ -52,7 +56,6 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-**S6 fatta in locale (non committata)** → gate di Eros in ordine: commit (4 proposti nel report
-`ai-ops/reports/kitchen-s6-abandon-sweep-2026-10-12.md`) → secret `KITCHEN_ABANDON_SWEEP_SECRET` su Vercel + Vault
-(`docs/KITCHEN_ONLINE_ABANDON_BACKOFFICE.md`) → deploy + smoke → db push cron. Poi S5.
+**S5** (creazione ordini POP / pagamento app separato; Opus high): `docs/KITCHEN_PAYMENT_LIFECYCLE_V2.md` §S5.
+Prima verificare a video che un ordine online scaduto passi davvero dallo sweep (mai visto in produzione).
 Stato dettagliato: `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`.
