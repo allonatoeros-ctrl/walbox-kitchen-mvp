@@ -34,9 +34,8 @@ test('REAL local order: create via UI, scrive kitchen_orders + kitchen_order_ite
   await page.getByRole('button', { name: /AGGIUNGI SOLO PANINO/i }).first().click();
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await page.getByTestId('fulfillment-takeaway').click();
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
+  // Checkout V2: nome + corsia sullo stesso schermo, l'ordine parte al tap sulla corsia.
   await page.getByTestId('customer-name-input').fill(nick);
-  await page.getByTestId('customer-name-continue').click();
   await page.getByTestId('pay-lane-counter').click();
   await expect(page).toHaveURL(/\/kitchen\/status/, { timeout: 15000 });
 

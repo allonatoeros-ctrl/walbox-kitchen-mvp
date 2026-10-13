@@ -61,8 +61,8 @@ test('refresh: nota e scelta di ritiro restano, e la nota e subito visibile', as
 
   // niente accordion da riaprire: se la nota c'e', il pannello parte aperto
   await expect(page.locator('.kitch-drawer textarea')).toHaveValue('senza cipolla, grazie');
-  await expect(page.getByTestId('fulfillment-takeaway')).toHaveClass(/--selected/);
-  await expect(page.getByTestId('submit-order-btn')).toBeEnabled();
+  await expect(page.getByTestId('fulfillment-takeaway')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByTestId('pay-lane-counter')).toBeEnabled();
 });
 
 test('back/forward fuori e dentro /kitchen: il sacco resta', async ({ page }) => {
@@ -88,7 +88,7 @@ test('quantita: il + persiste e il totale e ricalcolato', async ({ page }) => {
   await gotoMenu(page);
   await addFalloPesante(page);
   await openCart(page);
-  await page.locator('.kitch-drawer').getByRole('button', { name: '+' }).first().click();
+  await page.locator('.kitch-drawer').getByRole('button', { name: /Aggiungi uno/i }).first().click();
   await expect(page.locator('.kitch-drawer')).toContainText('€38,00');
 
   await page.reload();
@@ -99,7 +99,7 @@ test('svuotamento esplicito col cestino: sacco vuoto, e resta vuoto dopo il refr
   await gotoMenu(page);
   await addFalloPesante(page);
   await openCart(page);
-  await page.locator('.kitch-drawer').getByRole('button', { name: '🗑️' }).first().click();
+  await page.locator('.kitch-drawer').getByRole('button', { name: /Rimuovi dal sacco/i }).first().click();
 
   await expect(page.locator('.kitch-bottom-bar')).toHaveCount(0);
   await page.reload();
@@ -117,10 +117,8 @@ test('il sacco NON viene svuotato quando l invio fallisce', async ({ page }) => 
   await addFalloPesante(page);
   await openCart(page);
   await page.getByTestId('fulfillment-eat_here').click();
-  await page.getByTestId('submit-order-btn').click();
-  // Step nome cliente (2026-09-19): l'ordine parte solo dopo CONTINUA.
+  // Checkout V2: nome + corsia sullo stesso schermo, l'ordine parte al tap sulla corsia.
   await page.getByTestId('customer-name-input').fill('Marco');
-  await page.getByTestId('customer-name-continue').click();
   await page.getByTestId('pay-lane-counter').click();
 
   // senza Supabase configurato la creazione ordine fallisce: il carrello deve restare intatto

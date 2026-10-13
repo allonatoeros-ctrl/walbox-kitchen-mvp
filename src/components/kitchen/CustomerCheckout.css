@@ -1,0 +1,520 @@
+/* CustomerCheckout.css — checkout cliente in un solo schermo (Customer Experience V2).
+   Vive dentro `.kitch-drawer-body` (sfondo crema). Mobile-first 390/430, colonna max 480px.
+   Input a 16px: sotto, iOS Safari zooma al focus. Target di tocco ≥ 44px. */
+
+/* Arancio un filo più scuro del brand: crema su #f05a24 fa ~2.8:1, qui ~4.5:1 (testo piccolo). */
+.cx {
+  --cx-cta: #d4481a;
+  --cx-cta-edge: #a8350f;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cx-block {
+  padding: 4px 20px 18px;
+}
+
+.cx-title {
+  display: block;
+  font-family: var(--k-font-display);
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  color: var(--k-surface);
+}
+
+.cx-help {
+  margin: 2px 0 10px;
+  font-size: 12px;
+  color: #6b5741;
+}
+
+.cx-error {
+  display: block;
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #b8261d;
+}
+
+.cx-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── 1. Nome ─────────────────────────────────────── */
+.cx-name {
+  padding-top: 12px;
+  padding-bottom: 10px;
+}
+
+.cx-name .cx-title {
+  font-size: 20px;
+}
+
+.cx-name-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.cx-name-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 56px;
+  box-sizing: border-box;
+  background: #fff8ea;
+  border: 2px solid #e0c89e;
+  border-radius: var(--k-radius);
+  color: var(--k-surface);
+  font-family: var(--k-font-display);
+  font-size: 22px;
+  padding: 8px 14px;
+  outline: none;
+  transition: var(--k-transition);
+}
+
+.cx-name-input::placeholder {
+  font-family: var(--k-font-body);
+  font-size: 16px;
+  font-weight: 600;
+  color: #a8927d;
+}
+
+.cx-name-input:focus-visible {
+  border-color: var(--k-orange);
+  box-shadow: 0 0 0 3px rgba(240, 90, 36, 0.28);
+}
+
+.cx-name-input--ok {
+  border-color: var(--k-green);
+}
+
+.cx-name-input[aria-invalid='true'] {
+  border-color: #b8261d;
+}
+
+.cx-dice {
+  flex: 0 0 56px;
+  min-height: 56px;
+  border: 2px solid #c0421a;
+  border-radius: var(--k-radius);
+  background: var(--k-orange);
+  box-shadow: 0 2px 0 #c0421a;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cx-dice:active {
+  transform: translateY(2px);
+  box-shadow: none;
+}
+
+.cx-dice--rolling span {
+  display: inline-block;
+  animation: cx-roll 0.45s ease-out;
+}
+
+.cx-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cx-chip {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid #d8bd93;
+  border-radius: 22px;
+  background: #fff8ea;
+  color: #4a3a28;
+  font-family: var(--k-font-body);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.cx-chip:active {
+  background: #eaddc2;
+}
+
+.cx-chip--warn {
+  border-color: #c8960a;
+  background: #fff1c9;
+}
+
+.cx-name-status {
+  min-height: 22px;
+  margin-top: 8px;
+}
+
+.cx-hello {
+  display: inline-block;
+  font-family: var(--k-font-display);
+  font-size: 14px;
+  color: var(--k-green);
+  animation: cx-pop 0.3s ease-out;
+}
+
+/* ── 2. Dove lo mangi ────────────────────────────── */
+.cx-where {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cx-where-btn {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 2px solid #e0c89e;
+  border-radius: var(--k-radius);
+  background: #fff8ea;
+  text-align: left;
+  cursor: pointer;
+  transition: var(--k-transition);
+}
+
+.cx-where-btn:focus-visible,
+.cx-pay:focus-visible,
+.cx-chip:focus-visible,
+.cx-dice:focus-visible,
+.cx-notes-toggle:focus-visible,
+.cx-note-input:focus-visible {
+  outline: 3px solid var(--k-surface);
+  outline-offset: 2px;
+}
+
+.cx-where-emoji {
+  font-size: 22px;
+}
+
+.cx-where-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cx-where-title {
+  font-family: var(--k-font-display);
+  font-size: 14px;
+  color: var(--k-surface);
+  line-height: 1.1;
+}
+
+.cx-where-sub {
+  font-family: var(--k-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #5a4630;
+}
+
+.cx-where-btn--on {
+  background: var(--cx-cta);
+  border-color: var(--cx-cta-edge);
+  box-shadow: 0 2px 0 var(--cx-cta-edge);
+}
+
+.cx-where-btn--on .cx-where-title {
+  color: var(--k-cream);
+}
+
+.cx-where-btn--on .cx-where-sub {
+  color: #fff6e4;
+}
+
+/* ── 3. Note cucina ──────────────────────────────── */
+.cx-notes {
+  padding-bottom: 16px;
+}
+
+.cx-notes-toggle {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1.5px dashed #b99d72;
+  border-radius: var(--k-radius-sm);
+  background: transparent;
+  color: #4a3a28;
+  font-family: var(--k-font-body);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cx-notes-toggle--open {
+  border-style: solid;
+  background: #fff8ea;
+}
+
+.cx-notes-icon {
+  font-size: 18px;
+  line-height: 1;
+  width: 14px;
+  text-align: center;
+}
+
+.cx-notes-name {
+  flex: 0 0 auto;
+}
+
+.cx-notes-hint {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: #6b5741;
+  text-align: right;
+}
+
+.cx-notes-panel {
+  margin-top: 4px;
+}
+
+.cx-note-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 10px;
+  background: #fff8ea;
+  border: 2px solid #e0c89e;
+  border-radius: var(--k-radius-sm);
+  color: var(--k-surface);
+  font-family: var(--k-font-body);
+  font-size: 16px;
+  line-height: 1.4;
+  padding: 10px 12px;
+  resize: none;
+}
+
+.cx-note-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b5741;
+}
+
+/* ── 4. Totale + come paghi (agganciato in basso) ── */
+.cx-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  padding: 10px 20px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: var(--k-cream);
+  border-top: 1px solid #e0c89e;
+  box-shadow: 0 -6px 12px -8px rgba(32, 18, 11, 0.35);
+}
+
+.cx-pay-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.cx-total {
+  font-family: var(--k-font-display);
+  font-size: 20px;
+  color: var(--k-surface);
+  white-space: nowrap;
+}
+
+.cx-total small {
+  font-size: 12px;
+  margin-right: 6px;
+  letter-spacing: 0.5px;
+}
+
+.cx-status {
+  margin: 2px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5a4630;
+}
+
+.cx-status--ready {
+  color: #2f6a24;
+  animation: cx-pop 0.35s ease-out;
+}
+
+.cx-pay-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cx-pay {
+  width: 100%;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: var(--k-radius);
+  background: var(--cx-cta);
+  color: var(--k-cream);
+  box-shadow: 0 3px 0 var(--cx-cta-edge);
+  text-align: left;
+  cursor: pointer;
+  transition: var(--k-transition);
+}
+
+.cx-pay:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--cx-cta-edge);
+}
+
+.cx-pay:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* "Non ancora": resta cliccabile (il tap spiega cosa manca), ma si vede che non è pronto.
+   Solo desaturato, luminosità invariata: il contrasto del testo non cala. */
+.cx-pay--idle {
+  filter: saturate(0.7);
+}
+
+.cx-pay--closed {
+  justify-content: center;
+  font-family: var(--k-font-display);
+  font-size: 18px;
+  background: #8a7358;
+  box-shadow: none;
+}
+
+.cx-pay-emoji {
+  font-size: 24px;
+}
+
+.cx-pay-text {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cx-pay-title {
+  font-family: var(--k-font-display);
+  font-size: 16px;
+  line-height: 1.1;
+}
+
+.cx-pay-sub {
+  margin-top: 2px;
+  font-family: var(--k-font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.25;
+  color: #fff6e4;
+}
+
+.cx-pay-arrow {
+  font-family: var(--k-font-display);
+  font-size: 22px;
+}
+
+.cx-foot-hint,
+.cx-sending {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: #5a4630;
+}
+
+.cx-sending {
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.cx-order-error {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 2px solid #b8261d;
+  border-radius: var(--k-radius);
+  background: rgba(224, 60, 44, 0.12);
+  text-align: center;
+  font-weight: 800;
+  font-size: 13px;
+  color: #8f1a12;
+}
+
+/* ── Microinterazioni (disattivate con prefers-reduced-motion) ── */
+@keyframes cx-roll {
+  0%   { transform: rotate(0) scale(1); }
+  50%  { transform: rotate(200deg) scale(1.25); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+@keyframes cx-pop {
+  0%   { transform: scale(0.92); opacity: 0.4; }
+  60%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes cx-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.cx-shake {
+  animation: cx-shake 0.4s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cx-dice--rolling span,
+  .cx-hello,
+  .cx-status--ready,
+  .cx-shake {
+    animation: none;
+  }
+  .cx-name-input,
+  .cx-where-btn,
+  .cx-pay {
+    transition: none;
+  }
+}
+
+/* Schermi stretti (≤ 380px): i due "dove" vanno in colonna, il testo non va a capo male. */
+@media (max-width: 380px) {
+  .cx-where {
+    grid-template-columns: 1fr;
+  }
+  .cx-notes-hint {
+    display: none;
+  }
+}
+
+/* Il footer è agganciato in basso: quando un campo prende il focus (tastiera aperta) il browser
+   lo porta in vista lasciando sotto spazio per il footer, così non resta mai coperto. */
+.cx-name-input,
+.cx-note-input {
+  scroll-margin-bottom: 230px;
+}
