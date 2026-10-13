@@ -113,12 +113,25 @@ che ha il tag 'anniversario' (nessun id hardcoded). Screenshot 390 e 430 a Eros.
 
 ## STATO
 
-- Fase corrente: nessuna iniziata — **in attesa di Gate 1 di Eros**
-- Fatto: audit read-only (menu, categorie, service state, asset, tooling immagini)
+- Fase corrente: **Fase 0 ESEGUITA (collaudo)** — in attesa della decisione di Eros sul merge
+- Fatto:
+  - audit read-only (menu, categorie, service state, asset, tooling immagini)
+  - **Fase 0 collaudo V2 — PASS, nessuna regressione.** Report completo:
+    `ai-ops/reports/anniversario-fase0-collaudo-v2.md`, screenshot in `ai-ops/reports/anniversario-fase0-shots/`.
+    Sintesi: lint 121 err su V2 contro 124 su main (migliora di 3) · unit 0 fail nuovi, i 4 rossi sono i
+    preesistenti noti · build PASS · E2E 158/166 con **gli stessi identici 7 rossi di `main`**, tutti in
+    file che V2 non tocca. Nessun file del repo modificato, nessun merge, nessun push.
+  - Due ENV_BLOCKER del container cloud risolti fuori dal repo (chromium build 1194 invece di 1228;
+    manca `VITE_SUPABASE_ANON_KEY` perche' qui non esiste `.env.local`). Su questa macchina
+    `npm run test:e2e` nudo non gira: serve il config override.
 - Decisioni aperte:
+  - **GATE: merge di `claude/customer-experience-v2` su `main`** (= deploy in produzione, pagamenti reali)
   - **NEEDS_DECISION allergeni GARPEZ** — serve conferma di Eros prima della serata (celiaci)
   - **NEEDS_DECISION data e orari esatti** della finestra evento
   - Assunzione dichiarata: interruttore a finestra di date + override URL, niente migration (Fase 3)
-- Prossimo passo: Fase 0 (collaudo V2), poi Eros decide il merge su `main`
+  - Due P2 non bloccanti trovati in V2 (footer appiccicato che copre ~30px di contenuto; `'Ospite Walrus'`
+    duplicato a mano in `CustomerOrderPanel.jsx` invece di importare `GUEST_NICKNAME`): da sistemare prima
+    del merge o dopo la festa — decide Eros
+- Prossimo passo: Eros decide il merge. Poi Fase 1 (GARPEZ), che resta bloccata dagli allergeni.
 
 Modello/effort: Fase 0 e 3 → Opus high · Fasi 1, 2, 4 → Sonnet medium
