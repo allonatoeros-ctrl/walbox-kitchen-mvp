@@ -104,10 +104,13 @@ export function useKitchenPayments({ night: nightParam = null, includeRecent = t
         // serata. Nessun filtro sul created_at del pagamento e nessun filtro su service_day.
         supabase
           .from('kitchen_payments')
-          .select('id, order_id, direction, status, method, amount, kitchen_orders!inner(created_at)')
+          .select('id, order_id, direction, status, method, amount, kitchen_orders!inner(created_at, status)')
           .eq('venue_id', VENUE_ID)
           .gte('kitchen_orders.created_at', night.startIso)
-          .lt('kitchen_orders.created_at', night.endIso),
+          .lt('kitchen_orders.created_at', night.endIso)
+          // S5: i tentativi di ordini in corsia online non conclusa (POP/PA) non sono incasso né
+          // anomalia per lo staff: l'ordine non è mai arrivato alla cassa.
+          .not('kitchen_orders.status', 'in', '(pending_online_payment,payment_abandoned)'),
         supabase
           .from('kitchen_payments_provider_drift_candidates')
           .select('*')
@@ -115,8 +118,9 @@ export function useKitchenPayments({ night: nightParam = null, includeRecent = t
         includeRecent
           ? supabase
             .from('kitchen_payments')
-            .select('id, order_id, provider, method, direction, status, amount, failure_reason, created_at')
+            .select('id, order_id, provider, method, direction, status, amount, failure_reason, created_at, kitchen_orders!inner(status)')
             .eq('venue_id', VENUE_ID)
+            .not('kitchen_orders.status', 'in', '(pending_online_payment,payment_abandoned)')
             .order('created_at', { ascending: false })
             .limit(RECENT_LIMIT)
           : Promise.resolve({ data: [], error: null }),
