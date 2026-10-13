@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { reloadIfStale } from '../lib/appVersion';
+import {
+  STATUS_POP,
+  STATUS_PA,
+  PAYMENT_ABANDONED_MESSAGE,
+  getOnlineWindow,
+  switchErrorMessage,
+} from '../lib/kitchenOnlineLane';
 
 // Reused across retries for the same order so a re-click before checkout completes doesn't spawn
 // a fresh idempotency key every time (server-side RPC idempotency keys off this same value).
@@ -28,12 +35,61 @@ const SUMUP_ERROR_MESSAGES = {
   // Client vecchio (scheda aperta prima di un deploy) contro API nuova: basta ricaricare.
   missing_session: 'App aggiornata: ricarica la pagina e riprova.',
   invalid_session: 'App aggiornata: ricarica la pagina e riprova.',
+  // S5: finestra online chiusa (attempt_start / create-checkout rispondono con questi codici).
+  online_payment_expired: 'Il tempo per pagare online è finito. Puoi pagare al banco.',
+  order_payment_abandoned: PAYMENT_ABANDONED_MESSAGE,
 };
 
 function friendlySumupError(err) {
   const raw = err?.message || err?.error || String(err ?? '');
   const code = Object.keys(SUMUP_ERROR_MESSAGES).find((c) => raw.includes(c));
   return code ? SUMUP_ERROR_MESSAGES[code] : 'Pagamento con SumUp non disponibile ora. Riprova o paga alla cassa.';
+}
+
+/**
+ * Avvio pagamento SumUp per un ordine (usata da `handlePaySumup` e dal menu cliente, S5 — una sola
+ * implementazione): I-6 reloadIfStale, sessione anonima, `kitchen_payment_attempt_start` con
+ * l'importo passato, create-checkout. Non fa il redirect: ritorna
+ *  - { kind: 'reloading' } la scheda è vecchia e si sta ricaricando
+ *  - { kind: 'pending' } l'attempt è già `failed` lato server
+ *  - { kind: 'redirect', url } hosted checkout da aprire
+ * e lancia in caso di errore (da mappare con `friendlySumupError`).
+ * `amount` deve essere il totale ATTUALE dell'ordine (dopo l'eventuale promo).
+ */
+export async function startSumupCheckout(orderId, amount) {
+  // I-6: se la scheda esegue una versione vecchia, ricarica prima di pagare (max 1 volta per versione).
+  if (await reloadIfStale()) return { kind: 'reloading' };
+  let { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    const { data, error } = await supabase.auth.signInAnonymously();
+    if (error) throw error;
+    session = data.session;
+  }
+  if (!session) throw new Error('no_session');
+
+  const { data: attempt, error: attemptError } = await supabase.rpc('kitchen_payment_attempt_start', {
+    p_order_id: orderId,
+    p_channel: 'app',
+    p_provider: 'sumup',
+    p_method: 'sumup_online',
+    p_amount: amount,
+    p_idempotency_key: getSumupIdempotencyKey(orderId),
+  });
+  if (attemptError) throw attemptError;
+
+  if (attempt.status === 'failed') return { kind: 'pending' };
+
+  const res = await fetch('/api/kitchen-sumup-create-checkout', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ order_id: orderId, payment_attempt_id: attempt.id }),
+  });
+  const body = await res.json();
+  if (!res.ok || !body.hosted_checkout_url) throw new Error(body.error || 'checkout_creation_failed');
+  return { kind: 'redirect', url: body.hosted_checkout_url };
 }
 
 // AC1 (bivio pagamento): la scelta cassa/online deve sopravvivere al refresh della sessione ed è
@@ -56,6 +112,14 @@ function storePaymentChoice(orderId, choice) {
   } catch {
     // best-effort: niente storage disponibile, il bivio ricomparirà al prossimo render
   }
+}
+
+// S5: chi sceglie AL BANCO nel menu ha già risposto a "come vuoi pagare?": si registra la stessa
+// scelta che farebbe il bivio, così /kitchen/status mostra subito il codice per la cassa e non
+// ripropone il bivio. (La v2 crea il PCP con online_payment_disabled=false, quindi questa scelta
+// locale è l'unico segnale per il bivio.)
+export function rememberCounterPaymentChoice(orderId) {
+  storePaymentChoice(orderId, 'counter');
 }
 
 /**
@@ -100,50 +164,72 @@ export function useOrderPaymentFlow(order, isReturnTarget) {
     || (effectiveChoice === 'online' && ['error', 'pending', 'unknown'].includes(sumup.state));
 
   const handlePaySumup = async () => {
-    if (!order || order.onlinePaymentDisabled) return;
+    if (!order || order.onlinePaymentDisabled || order.status === STATUS_PA) return;
     setSumup({ state: 'loading', error: null });
     try {
-      // I-6: se la scheda esegue una versione vecchia, ricarica prima di pagare (max 1 volta per versione).
-      if (await reloadIfStale()) return;
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        const { data, error } = await supabase.auth.signInAnonymously();
-        if (error) throw error;
-        session = data.session;
-      }
-      if (!session) throw new Error('no_session');
-
-      const { data: attempt, error: attemptError } = await supabase.rpc('kitchen_payment_attempt_start', {
-        p_order_id: order.id,
-        p_channel: 'app',
-        p_provider: 'sumup',
-        p_method: 'sumup_online',
-        p_amount: order.total,
-        p_idempotency_key: getSumupIdempotencyKey(order.id),
-      });
-      if (attemptError) throw attemptError;
-
-      if (attempt.status === 'failed') {
+      const result = await startSumupCheckout(order.id, order.total);
+      if (result.kind === 'reloading') return;
+      if (result.kind === 'pending') {
         setSumup({ state: 'pending', error: null });
         return;
       }
+      setSumup({ state: 'redirecting', error: null });
+      window.location.href = result.url;
+    } catch (err) {
+      console.warn('[Walbox] SumUp checkout failed', err);
+      setSumup({ state: 'error', error: friendlySumupError(err) });
+    }
+  };
 
-      const res = await fetch('/api/kitchen-sumup-create-checkout', {
+  // S5 — corsia online. Un ordine POP non ha bivio: pagamento in corso, tempo rimasto, RIPROVA
+  // (solo in finestra `active`) e PAGA AL BANCO (endpoint S4, vale finché il server vede POP).
+  const isPendingOnline = !!order && order.status === STATUS_POP;
+  const isAbandoned = !!order && order.status === STATUS_PA;
+  const hasOnlineTimer = isPendingOnline && getOnlineWindow(order.createdAt, 0).secondsLeft !== null;
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  const onlineWindow = isPendingOnline ? getOnlineWindow(order.createdAt, nowMs) : null;
+  const onlinePhase = onlineWindow?.phase ?? null;
+  // Tick a 1s solo finché il timer serve: mai per ordini non POP, fermo quando la finestra è chiusa.
+  const needsTick = hasOnlineTimer && onlinePhase !== 'closing';
+  useEffect(() => {
+    if (!needsTick) return undefined;
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [needsTick]);
+
+  const [switchState, setSwitchState] = useState({ state: 'idle', error: null });
+  const switchInFlightRef = useRef(false);
+  const handleSwitchToCounter = async () => {
+    if (!order || switchInFlightRef.current) return;
+    switchInFlightRef.current = true;
+    setSwitchState({ state: 'loading', error: null });
+    try {
+      // Solo la sessione già esistente: crearne una anonima nuova non sarebbe la proprietaria
+      // dell'ordine (403 not_order_owner).
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setSwitchState({ state: 'error', error: switchErrorMessage({ error: 'missing_session' }) });
+        return;
+      }
+      const res = await fetch('/api/kitchen-customer-switch-to-counter', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ order_id: order.id, payment_attempt_id: attempt.id }),
+        body: JSON.stringify({ order_id: order.id }),
       });
-      const body = await res.json();
-      if (!res.ok || !body.hosted_checkout_url) throw new Error(body.error || 'checkout_creation_failed');
-
-      setSumup({ state: 'redirecting', error: null });
-      window.location.href = body.hosted_checkout_url;
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.outcome === 'switched_to_counter') {
+        setSwitchState({ state: 'done', error: null });
+      } else {
+        setSwitchState({ state: 'error', error: switchErrorMessage(body) });
+      }
     } catch (err) {
-      console.warn('[Walbox] SumUp checkout failed', err);
-      setSumup({ state: 'error', error: friendlySumupError(err) });
+      console.warn('[Walbox] switch to counter failed', err);
+      setSwitchState({ state: 'error', error: switchErrorMessage(err) });
+    } finally {
+      switchInFlightRef.current = false;
     }
   };
 
@@ -224,6 +310,12 @@ export function useOrderPaymentFlow(order, isReturnTarget) {
     onlinePaymentDisabled,
     isClosedStatus,
     isPendingPayment,
+    isPendingOnline,
+    isAbandoned,
+    onlineWindow,
+    onlinePhase,
+    switchState,
+    handleSwitchToCounter,
     displayStatus,
     choosePayment,
     handlePaySumup,

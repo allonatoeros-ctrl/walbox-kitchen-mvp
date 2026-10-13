@@ -3,6 +3,7 @@ import { kitchenOrderStatuses } from '../data/kitchenMockData';
 import { useKitchenOrders, getOwnedOrderIds, rememberOwnedOrderId } from '../hooks/useKitchenOrders';
 import CustomerOrderPanel from '../components/kitchen/CustomerOrderPanel';
 import NotificationOptIn from '../components/kitchen/NotificationOptIn';
+import { getOrderStatusLabel, readHiddenOrderIds, hideOrderId, STATUS_PA } from '../lib/kitchenOnlineLane';
 import './CustomerOrderStatus.css';
 
 function navigate(path) {
@@ -44,6 +45,13 @@ export default function CustomerOrderStatus() {
   const { orders } = useKitchenOrders({ scope: 'customer' });
   const [ownedIds, setOwnedIds] = useState(readOwnedOrderIds);
   const [devOpen, setDevOpen] = useState(false);
+  // S5: ordini annullati dal sistema (payment_abandoned) che il cliente ha chiuso su QUESTO
+  // dispositivo. Solo nascondimento locale: il registro proprietà non viene toccato.
+  const [hiddenIds, setHiddenIds] = useState(() => readHiddenOrderIds());
+  const dismissAbandoned = (id) => {
+    hideOrderId(id);
+    setHiddenIds(readHiddenOrderIds());
+  };
 
   useEffect(() => {
     const handleNav = () => setOwnedIds(readOwnedOrderIds());
@@ -62,6 +70,7 @@ export default function CustomerOrderStatus() {
   // un "ordine corrente" da cui allontanarsi.
   const activeOrders = myOrders
     .filter((o) => o.status !== 'cancelled' && o.status !== 'delivered')
+    .filter((o) => !(o.status === STATUS_PA && hiddenIds.includes(o.id)))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   // AC7 req 6: la reconciliation al ritorno da SumUp riguarda solo l'ordine il cui id combacia
@@ -94,13 +103,17 @@ export default function CustomerOrderStatus() {
         </div>
       ) : (
         <>
-          <NotificationOptIn orderId={activeOrders[0].id} orderCode={activeOrders[0].orderCode} />
+          {(() => {
+            // Un ordine annullato dal sistema (PA) non ha niente da notificare.
+            const notifyOrder = activeOrders.find((o) => o.status !== STATUS_PA);
+            return notifyOrder ? <NotificationOptIn orderId={notifyOrder.id} orderCode={notifyOrder.orderCode} /> : null;
+          })()}
           {/* Striscia codici — il codice ordine resta visibile anche fuori dal riquardo (follow-up UX 2026-09-18) */}
           <div className="ost-codes-strip" data-testid="ost-codes-strip">
             {activeOrders.map((o) => (
               <div key={o.id} className="ost-codes-chip">
                 <span className="ost-codes-chip-code">{o.orderCode || '-'}</span>
-                <span className="ost-codes-chip-status">{kitchenOrderStatuses[o.status]?.label ?? o.status}</span>
+                <span className="ost-codes-chip-status">{getOrderStatusLabel(o.status, kitchenOrderStatuses)}</span>
               </div>
             ))}
           </div>
@@ -110,6 +123,7 @@ export default function CustomerOrderStatus() {
               key={o.id}
               order={o}
               isReturnTarget={o.id === sumupReturnTargetId}
+              onDismissAbandoned={dismissAbandoned}
             />
           ))}
           </div>

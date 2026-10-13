@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { kitchenOrderStatuses } from '../../data/kitchenMockData';
 import { useOrderPaymentFlow } from '../../hooks/useOrderPaymentFlow';
 import OrderPaymentActions from './OrderPaymentActions';
+import { loadCart, saveCart } from '../../lib/kitchenCart';
+import { getOrderStatusLabel, buildRebuildCart, PAYMENT_ABANDONED_MESSAGE } from '../../lib/kitchenOnlineLane';
 
 const TIMELINE_STEPS = ['pending_counter_payment', 'received', 'preparing', 'ready', 'delivered'];
 
@@ -19,6 +21,11 @@ function getStepState(step, currentStatus) {
   if (stepIndex < currentIndex)  return 'done';
   if (stepIndex === currentIndex) return 'active';
   return 'pending';
+}
+
+function navigate(path) {
+  window.history.pushState({}, '', path);
+  window.dispatchEvent(new PopStateEvent('popstate'));
 }
 
 function formatTime(isoString) {
@@ -42,15 +49,16 @@ function elapsedMinutes(isoString) {
  * che questo ordine è quello a cui appartiene un eventuale `?sumup=return`: solo quando è true
  * questo blocco lancia la reconciliation automatica al mount (dentro il hook).
  */
-export default function CustomerOrderPanel({ order, isReturnTarget }) {
+export default function CustomerOrderPanel({ order, isReturnTarget, onDismissAbandoned }) {
   const [readyFlash, setReadyFlash] = useState(false);
   // Riquadro compatto (follow-up UX 2026-09-18): il dettaglio pesante (hero, timeline, articoli,
   // note) resta chiuso di default — il blocco sempre visibile è codice + stato + CTA.
   const [expanded, setExpanded] = useState(false);
 
   const flow = useOrderPaymentFlow(order, isReturnTarget);
-  const { isPendingPayment, displayStatus } = flow;
-  const statusInfo = kitchenOrderStatuses[displayStatus];
+  const { isPendingPayment, isPendingOnline, isAbandoned, displayStatus } = flow;
+  // POP/PA (S5) non esistono in kitchenOrderStatuses: l'etichetta passa dall'helper con fallback.
+  const isOnlineLane = isPendingOnline || isAbandoned;
   const isReady = order.status === 'ready';
 
   const prevIsReadyRef = useRef(isReady);
@@ -73,8 +81,8 @@ export default function CustomerOrderPanel({ order, isReturnTarget }) {
 
       {/* CurrentStatusBanner — sempre visibile: codice ordine grande, stato, info essenziali */}
       <div
-        className={`ost-status-banner ost-status-banner--${displayStatus}`}
-        style={displayStatus === 'pending_counter_payment' ? {
+        className={`ost-status-banner ${isAbandoned ? 'ost-status-banner--cancelled' : `ost-status-banner--${displayStatus}`}`}
+        style={(displayStatus === 'pending_counter_payment' || isPendingOnline) ? {
           background: '#c8960a',
           boxShadow: '0 4px 16px rgba(200,150,10,0.33)'
         } : undefined}
@@ -83,10 +91,14 @@ export default function CustomerOrderPanel({ order, isReturnTarget }) {
         <div className="ost-status-banner-content">
           <div className="ost-order-code-big" data-testid="ost-order-code-big">{order.orderCode || '-'}</div>
           <div className="ost-status-banner-label">
-            {displayStatus === 'pending_counter_payment' ? 'IN ATTESA DI PAGAMENTO' : (STEP_LABELS[displayStatus] ?? statusInfo?.label ?? displayStatus.toUpperCase())}
+            {displayStatus === 'pending_counter_payment'
+              ? 'IN ATTESA DI PAGAMENTO'
+              : (STEP_LABELS[displayStatus] ?? getOrderStatusLabel(displayStatus, kitchenOrderStatuses).toUpperCase())}
           </div>
           <div className="ost-status-banner-sub">
             {displayStatus === 'pending_counter_payment' && 'Mostra il codice in cassa per completare il pagamento e avviare la preparazione.'}
+            {isPendingOnline && 'Completa il pagamento qui sotto, oppure scegli di pagare al banco con il codice.'}
+            {isAbandoned && PAYMENT_ABANDONED_MESSAGE}
             {displayStatus === 'received'  && `Abbiamo ricevuto il tuo ordine. La cucina lo prenderà in carico a breve.${elapsedText}`}
             {displayStatus === 'preparing' && `Lo staff sta preparando il tuo ordine.${elapsedText}`}
             {displayStatus === 'ready'     && 'Il tuo ordine è pronto! Presentati al banco con il codice per il ritiro.'}
@@ -94,16 +106,47 @@ export default function CustomerOrderPanel({ order, isReturnTarget }) {
         </div>
       </div>
 
+      {isAbandoned && (
+        <div style={{ margin: '0 20px 20px' }} data-testid="ost-pa-card">
+          <button
+            type="button"
+            onClick={() => {
+              // Stessi piatti nel sacco (persistenza esistente del menu), poi si torna al menu.
+              saveCart(buildRebuildCart(order, loadCart()));
+              navigate('/kitchen');
+            }}
+            data-testid="ost-pa-rebuild"
+            style={{ width: '100%', padding: '16px', marginBottom: '10px', borderRadius: '12px', border: 'none', background: '#c8960a', color: '#1a1206', fontFamily: "'Anton', sans-serif", fontSize: '16px', letterSpacing: '1px', cursor: 'pointer' }}
+          >
+            RIFAI L'ORDINE
+          </button>
+          <button
+            type="button"
+            onClick={() => onDismissAbandoned?.(order.id)}
+            data-testid="ost-pa-dismiss"
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', border: '2px solid rgba(245,234,216,0.35)', background: 'transparent', color: 'rgba(245,234,216,0.8)', fontFamily: "'Anton', sans-serif", fontSize: '14px', letterSpacing: '1px', cursor: 'pointer' }}
+          >
+            CHIUDI
+          </button>
+        </div>
+      )}
+
       <OrderPaymentActions order={order} flow={flow} />
 
       {/* Inline CTA — info essenziali sempre visibili, compatte (AC7 req 7 preservato). */}
+      {!isAbandoned && (
       <div className={`ost-inline-cta${readyFlash ? ' ost-ready-flash' : ''}`} style={isReady ? { background: '#0a2a1a', borderColor: '#10b981' } : undefined}>
-        <span className="ost-bottom-bar-bell">{isReady ? '🟢' : (isPendingPayment ? '💳' : '🔔')}</span>
+        <span className="ost-bottom-bar-bell">{isReady ? '🟢' : ((isPendingPayment || isPendingOnline) ? '💳' : '🔔')}</span>
         <div className="ost-bottom-bar-text">
           {isReady ? (
             <>
               <div>IL TUO ORDINE È PRONTO</div>
               <div className="ost-bottom-bar-accent">RITIRALO ORA AL BANCO</div>
+            </>
+          ) : isPendingOnline ? (
+            <>
+              <div>PAGAMENTO ONLINE IN CORSO</div>
+              <div className="ost-bottom-bar-accent">COMPLETA IL PAGAMENTO PER AVVIARE LA PREPARAZIONE</div>
             </>
           ) : isPendingPayment ? (
             <>
@@ -118,6 +161,7 @@ export default function CustomerOrderPanel({ order, isReturnTarget }) {
           )}
         </div>
       </div>
+      )}
 
       {/* Toggle dettaglio — riquadro compatto di default, dettaglio pesante solo su richiesta */}
       <button
@@ -133,7 +177,7 @@ export default function CustomerOrderPanel({ order, isReturnTarget }) {
       {expanded && (
         <div className="ost-order-detail" data-testid={`ost-order-detail-${order.id}`}>
           {/* WalrusChefHero */}
-          <div className={`ost-hero ${isPendingPayment ? 'ost-hero--pending-payment' : ''}`}>
+          <div className={`ost-hero ${(isPendingPayment || isPendingOnline) ? 'ost-hero--pending-payment' : ''}`}>
             <div className="ost-hero-glow" />
             <img src="/assets/kitchen/walrus-chef.png" alt="Walrus Chef" className="ost-hero-mascot" />
             <div className="ost-hero-headline">
@@ -144,6 +188,20 @@ export default function CustomerOrderPanel({ order, isReturnTarget }) {
                       <>
                         <div className="ost-hero-line1">IN ATTESA DI PAGAMENTO</div>
                         <div className="ost-hero-line2" style={{ color: '#c8960a' }}>DA PAGARE AL BANCO</div>
+                      </>
+                    );
+                  case 'pending_online_payment':
+                    return (
+                      <>
+                        <div className="ost-hero-line1">PAGAMENTO ONLINE IN CORSO</div>
+                        <div className="ost-hero-line2" style={{ color: '#c8960a' }}>COMPLETALO O PAGA AL BANCO</div>
+                      </>
+                    );
+                  case 'payment_abandoned':
+                    return (
+                      <>
+                        <div className="ost-hero-line1">ORDINE ANNULLATO</div>
+                        <div className="ost-hero-line2" style={{ color: '#ef4444' }}>PAGAMENTO NON COMPLETATO</div>
                       </>
                     );
                   case 'received':
@@ -202,7 +260,9 @@ export default function CustomerOrderPanel({ order, isReturnTarget }) {
             </div>
           </div>
 
-          {/* StatusTimeline */}
+          {/* StatusTimeline — per POP/PA (corsia online, S5) la progressione non ha ancora senso:
+              il passo pagamento è già mostrato sopra, la timeline compare da `received`. */}
+          {!isOnlineLane && (
           <div className={`ost-timeline ost-timeline--${displayStatus}`}>
             <div className="ost-timeline-header">PROGRESSIONE</div>
             {TIMELINE_STEPS.map((step, i) => {
@@ -234,6 +294,7 @@ export default function CustomerOrderPanel({ order, isReturnTarget }) {
               );
             })}
           </div>
+          )}
 
           {/* OrderedItemsPanel */}
           <div className="ost-items-panel">
