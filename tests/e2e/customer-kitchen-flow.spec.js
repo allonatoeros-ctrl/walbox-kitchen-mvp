@@ -95,6 +95,17 @@ async function submitOrder(page, name = 'Marco') {
   await page.getByTestId('customer-name-continue').click();
 }
 
+// S5 (Payment Lifecycle V2): dopo il nome compare lo step "COME VUOI PAGARE?" e l'ordine nasce
+// solo al tap su AL BANCO / ONLINE ('counter' | 'online').
+async function choosePayLane(page, lane) {
+  await page.getByTestId(`pay-lane-${lane}`).click();
+}
+
+async function submitAndPay(page, lane, name = 'Marco') {
+  await submitOrder(page, name);
+  await choosePayLane(page, lane);
+}
+
 // kitchen_customer_create_order a 5 argomenti (20260913130000_kitchen_checkout_fulfillment_v1.sql)
 // è "LOCAL BUILD ONLY — NOT APPLIED TO REMOTE" per decisione esplicita di questo task (NON: apply
 // remoto). Questo ambiente E2E punta al progetto Supabase reale via .env.local, dove PostgREST non
@@ -142,40 +153,83 @@ async function mockAnonymousSession(page) {
   );
 }
 
-async function mockCreateOrderRpc(page, { fulfillmentType, orderId = 'order-e2e-checkout-mock', orderCode = 'A01' } = {}) {
+async function mockCreateOrderRpc(page, { fulfillmentType, orderId = 'order-e2e-checkout-mock', orderCode = 'A01', forceStatus = null, total = 13.9 } = {}) {
   await mockAnonymousSession(page);
-  const sent = { body: null };
-  await page.route('**/rest/v1/rpc/kitchen_customer_create_order', async (route) => {
+  const sent = { body: null, calls: [] };
+  // S5: il cliente crea sempre con la v2. Il mock replica il server: online -> POP con
+  // payment_status NULL; banco -> PCP (online_payment_disabled resta false alla creazione).
+  // `forceStatus` simula l'idempotenza "vince il primo" (status diverso dalla corsia cliccata).
+  await page.route('**/rest/v1/rpc/kitchen_customer_create_order_v2', async (route) => {
     sent.body = route.request().postDataJSON();
+    sent.calls.push(sent.body);
+    const lane = sent.body?.p_payment_lane;
+    const status = forceStatus ?? (lane === 'online' ? 'pending_online_payment' : 'pending_counter_payment');
+    // "Vince il primo": una seconda chiamata restituisce la riga già creata.
+    sent.createdRow = sent.createdRow ?? {
+      id: orderId,
+      order_code: orderCode,
+      venue_id: 'walrus-main',
+      table_id: null,
+      nickname: sent.body?.p_nickname ?? 'Eros',
+      status,
+      total,
+      payment_status: status === 'pending_counter_payment' ? 'pending_counter_payment' : null,
+      payment_method: null,
+      online_payment_disabled: false,
+      fulfillment_type: fulfillmentType,
+      customer_note: sent.body?.p_customer_note ?? null,
+      service_day: new Date().toISOString().slice(0, 10),
+      service_sequence: 1,
+      created_at: new Date().toISOString(),
+      kitchen_order_items: (sent.body?.p_items ?? []).map((i) => ({ item_id: i.item_id, name: i.name, quantity: i.quantity, price: i.price })),
+    };
+    const rpcRow = { ...sent.createdRow };
+    delete rpcRow.kitchen_order_items; // la RPC restituisce la riga kitchen_orders senza embed
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        id: orderId,
-        order_code: orderCode,
-        venue_id: 'walrus-main',
-        table_id: null,
-        nickname: sent.body?.p_nickname ?? 'Eros',
-        status: 'pending_counter_payment',
-        total: 13.9,
-        payment_status: 'pending_counter_payment',
-        payment_method: null,
-        fulfillment_type: fulfillmentType,
-        service_day: new Date().toISOString().slice(0, 10),
-        service_sequence: 1,
-        created_at: new Date().toISOString(),
-      }),
+      body: JSON.stringify(rpcRow),
     });
   });
-  // Il Sacco Pulito (2026-09-13) reindirizza sempre a /kitchen/status subito dopo la creazione,
-  // il cui mount rilancia fetchSupabaseOrders() (useKitchenOrders.js:203-235) verso il progetto
-  // Supabase reale: senza questo mock la select reale (dati di produzione, non legati a questo
-  // test) sovrascriverebbe l'intero stato locale (`if (!data?.length) return` — un risultato
-  // vuoto lascia invece invariato l'ordine appena creato via mock RPC, vedi riga 217-227).
+  // Dopo la creazione si va su /kitchen/status, il cui mount rilancia fetchSupabaseOrders(): la
+  // risposta del server SOSTITUISCE la lista locale (mergeFetchedOrders), quindi il mock deve
+  // restituire l'ordine appena "creato" come farebbe il DB (RLS customer_select_own_orders), non
+  // una lista vuota che lo cancellerebbe dallo stato.
   await page.route('**/rest/v1/kitchen_orders*', (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(sent.createdRow ? [sent.createdRow] : []),
+    })
   );
   return sent;
+}
+
+// S5: mock della catena di pagamento online (attempt_start + create-checkout + reconcile).
+// `checkout` può essere cambiato a runtime (es. prima fallisce, poi riesce).
+async function mockOnlinePayment(page, { orderId, reconcileOutcome = 'confirmed', checkoutOk = true } = {}) {
+  const baseURL = test.info().project.use.baseURL;
+  const state = { checkoutOk, attempts: [], checkouts: [], reconciles: [] };
+  await page.route('**/rest/v1/rpc/kitchen_payment_attempt_start', (route) => {
+    state.attempts.push(route.request().postDataJSON());
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'attempt-e2e-1', status: 'created' }) });
+  });
+  await page.route('**/api/kitchen-sumup-create-checkout', (route) => {
+    state.checkouts.push({ body: route.request().postDataJSON(), auth: route.request().headers().authorization });
+    if (!state.checkoutOk) {
+      return route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: 'checkout_creation_failed' }) });
+    }
+    return route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ hosted_checkout_url: `${baseURL}/kitchen/status?orderId=${orderId}&sumup=return` }),
+    });
+  });
+  await page.route('**/api/kitchen-sumup-reconcile', (route) => {
+    state.reconciles.push(route.request().postDataJSON());
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ outcome: reconcileOutcome }) });
+  });
+  return state;
 }
 
 test.beforeEach(async ({ page }) => {
@@ -231,18 +285,11 @@ test('3. Full Kitchen order uses customer identity from the native name step', a
   await chooseFulfillment(page, 'eat_here');
 
   // Submit the order — nickname fornito qui, allo step nome nativo (non più precompilato via /entry).
-  await submitOrder(page, 'Eros');
+  await submitAndPay(page, 'counter', 'Eros');
 
-  // handleSubmit ora attende addOrder() (sessione anonima + tentativo RPC) prima di redirigere:
-  // aspettare /kitchen/payment è il segnale reale che l'ordine è stato scritto (fallback locale
-  // incluso), invece di leggere localStorage a tempo fisso subito dopo il click. Follow-up UX
-  // (2026-09-18): la destinazione post-ordine è ora la pagina pagamento dedicata, non più
-  // /kitchen/status direttamente — CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS.
-  await expect(page).toHaveURL(/\/kitchen\/payment/);
-  await expect(page.getByTestId('ost-payment-fork')).toBeVisible();
-  await page.getByTestId('ost-pay-counter').click();
-  await page.getByTestId('opay-go-status').click();
-
+  // S5: dopo il nome si sceglie COME PAGARE (AL BANCO) e l'ordine nasce con la v2; la destinazione
+  // è direttamente /kitchen/status (niente più /kitchen/payment). Aspettare l'URL è il segnale
+  // reale che l'ordine è stato scritto.
   await expect(page).toHaveURL(/\/kitchen\/status/);
   // 'IN ATTESA DI PAGAMENTO' compare in banner + bottom bar: si ancora al banner di stato,
   // l'unico che rappresenta lo stato dell'ordine mostrato.
@@ -274,6 +321,9 @@ test('3. Full Kitchen order uses customer identity from the native name step', a
   expect(sent.body.p_fulfillment_type).toBe('eat_here');
   expect(sent.body.p_venue_id).toBe('walrus-main');
   expect('p_table_id' in sent.body).toBe(false);
+  // S5: corsia e client_request_id viaggiano nella v2.
+  expect(sent.body.p_payment_lane).toBe('counter');
+  expect(sent.body.p_client_request_id).toMatch(/^[0-9a-f-]{36}$/);
 });
 
 test('3h. Invio ordine disabilitato finché "dove lo mangi" non è scelto', async ({ page }) => {
@@ -289,7 +339,7 @@ test('3h. Invio ordine disabilitato finché "dove lo mangi" non è scelto', asyn
   await expect(submitBtn).toBeEnabled();
 });
 
-test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redirect a /kitchen/payment, resta pending_counter_payment', async ({ page }) => {
+test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redirect a /kitchen/status, resta pending_counter_payment', async ({ page }) => {
   const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'takeaway', orderCode: 'A03' });
 
   await page.goto('/kitchen?table=12&nickname=Eros');
@@ -297,12 +347,10 @@ test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redire
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'takeaway');
-  await submitOrder(page);
+  await submitAndPay(page, 'counter');
 
-  // Follow-up UX (2026-09-18): destinazione post-ordine unica, sempre la pagina pagamento
-  // dedicata — nessuna schermata statica di conferma in-page, il pagamento (online o al banco)
-  // si sceglie lì.
-  await expect(page).toHaveURL(/\/kitchen\/payment/);
+  // S5: destinazione post-ordine = /kitchen/status — nessuna schermata statica di conferma in-page.
+  await expect(page).toHaveURL(/\/kitchen\/status/);
   await expect(page.locator('.kitch-confirm')).toHaveCount(0);
 
   expect(sent.body.p_fulfillment_type).toBe('takeaway');
@@ -313,8 +361,8 @@ test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redire
   );
   const latest = [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0];
   expect(latest.fulfillmentType).toBe('takeaway');
-  // Il pagamento (online o al banco) si sceglie solo su /kitchen/status: l'ordine resta
-  // pending_counter_payment finché una conferma reale non lo avanza — nessun phantom success.
+  // L'ordine resta pending_counter_payment finché una conferma reale non lo avanza — nessun
+  // phantom success.
   expect(latest.status).toBe('pending_counter_payment');
   expect(latest.paymentStatus).toBe('pending_counter_payment');
 });
@@ -353,7 +401,7 @@ test('3j. Cucina chiusa: banner visibile, menu navigabile, invio ordine bloccato
 // messaggio specifico invece del generico "riprova".
 test('3m. RPC kitchen_closed (client stale): nessun ordine creato, messaggio specifico', async ({ page }) => {
   await mockAnonymousSession(page);
-  await page.route('**/rest/v1/rpc/kitchen_customer_create_order', (route) =>
+  await page.route('**/rest/v1/rpc/kitchen_customer_create_order_v2', (route) =>
     route.fulfill({
       status: 400,
       contentType: 'application/json',
@@ -366,17 +414,20 @@ test('3m. RPC kitchen_closed (client stale): nessun ordine creato, messaggio spe
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'eat_here');
-  await submitOrder(page);
+  await submitAndPay(page, 'counter');
 
   await expect(page).not.toHaveURL(/\/kitchen\/payment/);
   await expect(page).not.toHaveURL(/\/kitchen\/status/);
   await expect(page.getByTestId('order-submit-error')).toContainText(/CUCINA È CHIUSA/i);
+  // Cucina chiusa tra NOME e scelta: lo step resta aperto, nessun ordine, carrello intatto.
+  await expect(page.getByTestId('pay-lane-step')).toBeVisible();
+  await expect(page.getByTestId('pay-lane-counter')).toBeEnabled();
 });
 
 // F02 (Phantom Order) invariato: se la RPC di creazione ordine fallisce, il cliente non deve mai
 // essere redirezionato alla pagina pagamento per un ordine che non esiste.
 test('3k. RPC di creazione ordine fallita: nessun ordine fantasma, carrello resta intatto per il retry', async ({ page }) => {
-  await page.route('**/rest/v1/rpc/kitchen_customer_create_order', (route) =>
+  await page.route('**/rest/v1/rpc/kitchen_customer_create_order_v2', (route) =>
     route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'internal_error' }) })
   );
 
@@ -385,13 +436,14 @@ test('3k. RPC di creazione ordine fallita: nessun ordine fantasma, carrello rest
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'eat_here');
-  await submitOrder(page);
+  await submitAndPay(page, 'online');
 
   await expect(page).not.toHaveURL(/\/kitchen\/payment/);
   await expect(page).not.toHaveURL(/\/kitchen\/status/);
   await expect(page.getByTestId('order-submit-error')).toBeVisible();
-  // Il carrello resta intatto per il retry: il pulsante di invio è di nuovo cliccabile.
-  await expect(page.getByRole('button', { name: /Invia ordine/i })).toBeEnabled();
+  // Il carrello resta intatto per il retry: i bottoni dello step sono di nuovo cliccabili.
+  await expect(page.getByTestId('pay-lane-online')).toBeEnabled();
+  await expect(page.getByTestId('pay-lane-counter')).toBeEnabled();
 });
 
 test('3b. Sold-out item shows ESAURITO overlay and disabled ESAURITO CTA', async ({ page }) => {
@@ -941,9 +993,9 @@ test('18. Cliente inserisce un codice promo valido: il redeem parte con il codic
 
   await page.getByRole('button', { name: /HO UN CODICE/i }).click();
   await page.getByTestId('promo-code-input').fill('walrus-ab12c');
-  await submitOrder(page);
+  await submitAndPay(page, 'counter');
 
-  await expect(page).toHaveURL(/\/kitchen\/payment/);
+  await expect(page).toHaveURL(/\/kitchen\/status/);
   expect(promoSent.body?.p_code).toBe('walrus-ab12c');
 });
 
@@ -964,10 +1016,10 @@ test('19. Cliente inserisce un codice promo non valido: ordine confermato comunq
 
   await page.getByRole('button', { name: /HO UN CODICE/i }).click();
   await page.getByTestId('promo-code-input').fill('WALRUS-USED1');
-  await submitOrder(page);
+  await submitAndPay(page, 'counter');
 
   // Un codice sbagliato non deve mai bloccare il cliente: l'ordine si conferma comunque.
-  await expect(page).toHaveURL(/\/kitchen\/payment/);
+  await expect(page).toHaveURL(/\/kitchen\/status/);
   expect(promoSent.body?.p_code).toBe('WALRUS-USED1');
 });
 
@@ -1299,11 +1351,8 @@ test('26. P0 privacy: il dispositivo di un altro cliente non vede il mio ordine,
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'eat_here');
-  await submitOrder(page);
-  // Follow-up UX (2026-09-18): CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS.
-  await expect(page).toHaveURL(/\/kitchen\/payment/);
-  await page.getByTestId('ost-pay-counter').click();
-  await page.getByTestId('opay-go-status').click();
+  // S5: dopo il nome si sceglie AL BANCO e si atterra direttamente sullo status.
+  await submitAndPay(page, 'counter');
   await expect(page).toHaveURL(/\/kitchen\/status/);
   await expect(page.locator('.ost-status-banner-label')).toHaveText('IN ATTESA DI PAGAMENTO');
   await expect(page.locator('.ost-order-code-big')).toHaveText('A07');
@@ -1343,11 +1392,8 @@ test('27. P0 privacy: dopo il reload il cliente ritrova il PROPRIO ordine, non l
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'takeaway');
-  await submitOrder(page);
-  // Follow-up UX (2026-09-18): CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS.
-  await expect(page).toHaveURL(/\/kitchen\/payment/);
-  await page.getByTestId('ost-pay-counter').click();
-  await page.getByTestId('opay-go-status').click();
+  // S5: dopo il nome si sceglie AL BANCO e si atterra direttamente sullo status.
+  await submitAndPay(page, 'counter');
   await expect(page).toHaveURL(/\/kitchen\/status/);
   await expect(page.locator('.ost-order-code-big')).toHaveText('A08');
 
@@ -1525,12 +1571,44 @@ async function seedSupabaseSession(page) {
       created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     },
   };
-  // Stessa storage key che @supabase/supabase-js v2 usa per un client creato con
-  // VITE_SUPABASE_URL=https://pcrqfdzipotprqtuemso.supabase.co (.env.local): seedarla qui evita
-  // di dover davvero autenticare il browser per esercitare `supabase.auth.getSession()`.
-  await page.evaluate((s) => {
-    localStorage.setItem('sb-pcrqfdzipotprqtuemso-auth-token', JSON.stringify(s));
-  }, session);
+  // Stessa storage key che @supabase/supabase-js v2 usa per il client dell'app:
+  // `sb-<primo segmento dell'host di VITE_SUPABASE_URL>-auth-token` (es. `sb-127-auth-token` con
+  // l'URL locale degli E2E). Seedarla qui evita di dover davvero autenticare il browser per
+  // esercitare `supabase.auth.getSession()`.
+  // `/` fa redirect a /kitchen: si aspetta la pagina finale, altrimenti l'evaluate può cadere a
+  // metà navigazione ("Execution context was destroyed").
+  await page.waitForURL(/\/kitchen/);
+  await page.evaluate(({ s, key }) => {
+    localStorage.setItem(key, JSON.stringify(s));
+  }, { s: session, key: SUPABASE_AUTH_STORAGE_KEY });
+}
+
+const SUPABASE_AUTH_STORAGE_KEY = `sb-${new URL(globalThis.process?.env?.VITE_SUPABASE_URL || 'https://pcrqfdzipotprqtuemso.supabase.co').hostname.split('.')[0]}-auth-token`;
+
+// Con una sessione presente, /kitchen/status rilegge kitchen_orders e la risposta del server
+// SOSTITUISCE la lista locale (mergeFetchedOrders): un mock vuoto cancellerebbe gli ordini
+// seedati. Qui la select restituisce gli stessi ordini come righe Supabase.
+function toOrderRow(o) {
+  return {
+    id: o.id,
+    order_code: o.orderCode,
+    venue_id: 'walrus-main',
+    nickname: o.nickname,
+    status: o.status,
+    total: o.total,
+    payment_status: o.paymentStatus ?? null,
+    online_payment_disabled: o.onlinePaymentDisabled ?? false,
+    fulfillment_type: o.fulfillmentType ?? null,
+    created_at: o.createdAt ?? null,
+    customer_note: o.note ?? null,
+    kitchen_order_items: (o.items ?? []).map((i) => ({ item_id: i.itemId, name: i.name, quantity: i.quantity, price: i.price })),
+  };
+}
+
+async function mockOwnOrdersSelect(page, orders) {
+  await page.route('**/rest/v1/kitchen_orders*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(orders.map(toOrderRow)) })
+  );
 }
 
 async function mockReconcile(page, outcome = 'pending') {
@@ -1628,14 +1706,15 @@ test('35. AC7: due ordini in attesa di pagamento hanno bivio e CTA indipendenti,
 });
 
 test('36. AC7: al ritorno da SumUp solo l\'ordine corrispondente a ?orderId= esegue reconciliation', async ({ page }) => {
-  await mockVenueOrdersSelect(page);
   await page.goto('/');
   await seedSupabaseSession(page);
   const reconcileCalls = await mockReconcile(page, 'pending');
-  await seedMyOrders(page, [
+  const seeded = [
     makeOtherCustomerOrder({ id: 'order-target', orderCode: 'T01', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment', createdAt: minutesAgoIso(2) }),
     makeOtherCustomerOrder({ id: 'order-other', orderCode: 'T02', nickname: 'Eros', status: 'preparing', paymentStatus: 'paid', createdAt: minutesAgoIso(1) }),
-  ]);
+  ];
+  await seedMyOrders(page, seeded);
+  await mockOwnOrdersSelect(page, seeded);
   await seedOwnedOrderIds(page, ['order-target', 'order-other']);
 
   await page.goto('/kitchen/status?sumup=return&orderId=order-target');
@@ -1653,8 +1732,8 @@ test('36. AC7: al ritorno da SumUp solo l\'ordine corrispondente a ?orderId= ese
 // cablato lato server su /kitchen/status?sumup=return (AC3/AC7 invariati, vedi test 36).
 // ═══════════════════════════════════════════════════════════════════
 
-test('37. Submit ordine → atterra sulla pagina pagamento dedicata con codice e bivio, non su status', async ({ page }) => {
-  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'P01' });
+test('37. S5: dopo il nome compare COME VUOI PAGARE? e l\'ordine NON esiste ancora; INDIETRO torna al nome', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'P01' });
 
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
@@ -1663,11 +1742,17 @@ test('37. Submit ordine → atterra sulla pagina pagamento dedicata con codice e
   await chooseFulfillment(page, 'eat_here');
   await submitOrder(page);
 
-  await expect(page).toHaveURL(/\/kitchen\/payment\?orderId=/);
-  await expect(page).not.toHaveURL(/\/kitchen\/status/);
-  await expect(page.getByTestId('opay-order-code-big')).toHaveText('P01');
-  await expect(page.getByTestId('ost-payment-fork')).toBeVisible();
+  await expect(page.getByTestId('pay-lane-step')).toBeVisible();
   await expect(page.getByText('COME VUOI PAGARE?')).toBeVisible();
+  await expect(page.getByTestId('pay-lane-counter')).toBeVisible();
+  await expect(page.getByTestId('pay-lane-online')).toBeVisible();
+  await expect(page).not.toHaveURL(/\/kitchen\/(payment|status)/);
+  // Nessun ordine creato finché non si sceglie la corsia.
+  expect(sent.calls.length).toBe(0);
+
+  await page.getByTestId('pay-lane-back').click();
+  await expect(page.getByTestId('customer-name-step')).toBeVisible();
+  await expect(page.getByTestId('pay-lane-step')).toHaveCount(0);
 });
 
 test('38. Pagina pagamento non mostra jukebox, timeline di stato o lista ordini', async ({ page }) => {
@@ -1714,11 +1799,14 @@ test('39. CASSA: mostra codice + istruzione, poi accesso allo status', async ({ 
 
 test('40. ONLINE: SumUp → reconcile → atterra sullo status con esito confermato', async ({ page }) => {
   await mockAnonymousSession(page);
-  await mockVenueOrdersSelect(page);
   await page.goto('/');
-  await seedMyOrders(page, [
+  const seeded = [
     makeOtherCustomerOrder({ id: 'order-pay-online', orderCode: 'ON1', nickname: 'Eros', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment' }),
-  ]);
+  ];
+  await seedMyOrders(page, seeded);
+  // Con la sessione anonima creata al pagamento, lo status rilegge kitchen_orders: la select
+  // deve restituire l'ordine (un [] lo cancellerebbe dallo stato, flaky con URL locale).
+  await mockOwnOrdersSelect(page, seeded);
   await seedOwnedOrderIds(page, ['order-pay-online']);
 
   await page.route('**/rest/v1/rpc/kitchen_payment_attempt_start', (route) =>
@@ -1855,4 +1943,352 @@ test('44. Regressione: ordine normale (online_payment_disabled assente/false) �
   await expect(page.getByTestId('ost-payment-fork')).toBeVisible();
   await expect(page.getByTestId('ost-pay-counter')).toBeVisible();
   await expect(page.getByTestId('ost-pay-online')).toBeVisible();
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// S5 — Payment Lifecycle V2: "COME VUOI PAGARE?" nel menu + corsia online (POP/PA) sullo status.
+// Rete sempre mockata (RPC Supabase e /api/*): nessuna chiamata reale.
+// ═══════════════════════════════════════════════════════════════════
+
+async function fillCartToPayStep(page, { fulfillment = 'eat_here', promo = null } = {}) {
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, fulfillment);
+  if (promo) {
+    await page.getByRole('button', { name: /HO UN CODICE/i }).click();
+    await page.getByTestId('promo-code-input').fill(promo);
+  }
+  await submitOrder(page);
+  await expect(page.getByTestId('pay-lane-step')).toBeVisible();
+}
+
+test('45. S5 BANCO: v2 con corsia counter, nessun tentativo SumUp, status mostra il codice per la cassa senza bivio', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'B01' });
+  const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock' });
+  await fillCartToPayStep(page);
+  await choosePayLane(page, 'counter');
+
+  await expect(page).toHaveURL(/\/kitchen\/status\?orderId=order-e2e-checkout-mock/);
+  expect(sent.calls.length).toBe(1);
+  expect(sent.body.p_payment_lane).toBe('counter');
+  expect(pay.attempts.length).toBe(0);
+  await expect(page.locator('.ost-status-banner-label')).toHaveText('IN ATTESA DI PAGAMENTO');
+  await expect(page.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toBeVisible();
+  await expect(page.getByTestId('ost-payment-fork')).toHaveCount(0);
+});
+
+test('46. S5 ONLINE pagato: POP -> attempt_start (importo) -> create-checkout -> ritorno SumUp -> reconcile confirmed', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'O01', total: 13.9 });
+  const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock', reconcileOutcome: 'confirmed' });
+  await fillCartToPayStep(page);
+  await choosePayLane(page, 'online');
+
+  await expect(page).toHaveURL(/\/kitchen\/status\?.*sumup=return/);
+  expect(sent.body.p_payment_lane).toBe('online');
+  expect(pay.attempts.length).toBe(1);
+  expect(pay.attempts[0].p_order_id).toBe('order-e2e-checkout-mock');
+  expect(pay.attempts[0].p_amount).toBe(13.9);
+  expect(pay.checkouts.length).toBe(1);
+  expect(pay.checkouts[0].auth).toMatch(/^Bearer /);
+  await expect.poll(() => pay.reconciles.length).toBeGreaterThan(0);
+  await expect(page.getByText(/Pagamento confermato/i)).toBeVisible();
+});
+
+test('47. S5 ONLINE fallito: avvio SumUp KO -> status con POP, RIPROVA riavvia il pagamento', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'O02' });
+  const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock', checkoutOk: false });
+  await fillCartToPayStep(page);
+  await choosePayLane(page, 'online');
+
+  // L'ordine esiste già: l'avvio fallito porta allo status, non a un errore nel menu.
+  await expect(page).toHaveURL(/\/kitchen\/status\?orderId=order-e2e-checkout-mock/);
+  await expect(page).not.toHaveURL(/sumup=return/);
+  await expect(page.getByTestId('ost-pop-block')).toBeVisible();
+  await expect(page.getByTestId('ost-pop-timer')).toContainText('Tempo rimasto');
+  await expect(page.getByTestId('ost-pop-retry')).toBeVisible();
+  await expect(page.getByTestId('ost-payment-fork')).toHaveCount(0);
+
+  pay.checkoutOk = true;
+  await page.getByTestId('ost-pop-retry').click();
+  await expect(page).toHaveURL(/\/kitchen\/status\?.*sumup=return/);
+  expect(pay.attempts.length).toBe(2);
+});
+
+test('48. S5 ONLINE -> PAGA AL BANCO: POST con Bearer e order_id, poi "Fatto" + codice cassa', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'O03' });
+  await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock', checkoutOk: false });
+  const switchCalls = [];
+  await page.route('**/api/kitchen-customer-switch-to-counter', async (route) => {
+    switchCalls.push({ body: route.request().postDataJSON(), auth: route.request().headers().authorization });
+    await new Promise((r) => setTimeout(r, 300)); // finestra in cui i bottoni devono essere spenti
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ outcome: 'switched_to_counter' }) });
+  });
+  await fillCartToPayStep(page);
+  await choosePayLane(page, 'online');
+  await expect(page.getByTestId('ost-pop-block')).toBeVisible();
+
+  await page.getByTestId('ost-pop-switch-counter').click();
+  await expect(page.getByTestId('ost-pop-switch-counter')).toBeDisabled();
+  await expect(page.getByTestId('ost-pop-switch-done')).toBeVisible();
+  await expect(page.getByText('Fatto: paga al banco con il codice.')).toBeVisible();
+  await expect(page.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toBeVisible();
+  expect(switchCalls.length).toBe(1);
+  expect(switchCalls[0].body).toEqual({ order_id: 'order-e2e-checkout-mock' });
+  expect(switchCalls[0].auth).toMatch(/^Bearer /);
+});
+
+test('49. S5 PAGA AL BANCO: ogni 409 mostra il suo messaggio e il bottone si riabilita', async ({ page }) => {
+  await page.goto('/');
+  await seedSupabaseSession(page);
+  const seeded = [
+    makeOtherCustomerOrder({ id: 'order-pop-409', orderCode: 'K01', nickname: 'Eros', status: 'pending_online_payment', paymentStatus: null, createdAt: minutesAgoIso(1) }),
+  ];
+  await seedMyOrders(page, seeded);
+  await mockOwnOrdersSelect(page, seeded);
+  await seedOwnedOrderIds(page, ['order-pop-409']);
+  const responses = [
+    { status: 409, body: { error: 'switch_to_counter_uncertain', retryable: true, reason: 'x' }, expect: /Riprova tra qualche secondo/i },
+    { status: 409, body: { error: 'order_already_paid' }, expect: /già pagato/i },
+    { status: 409, body: { error: 'order_payment_abandoned' }, expect: /Ordine annullato: il pagamento non è stato completato entro 5 minuti\./ },
+    { status: 409, body: { error: 'order_cancelled' }, expect: /annullato/i },
+    { status: 403, body: { error: 'not_order_owner' }, expect: /Sessione ordine non riconosciuta/i },
+    { status: 500, body: { error: 'internal' }, expect: /Riprova tra qualche secondo/i },
+  ];
+  let n = 0;
+  await page.route('**/api/kitchen-customer-switch-to-counter', (route) => {
+    const r = responses[n++];
+    return route.fulfill({ status: r.status, contentType: 'application/json', body: JSON.stringify(r.body) });
+  });
+  await page.goto('/kitchen/status');
+  for (const r of responses) {
+    await page.getByTestId('ost-pop-switch-counter').click();
+    await expect(page.getByTestId('ost-pop-switch-error')).toHaveText(r.expect);
+    await expect(page.getByTestId('ost-pop-switch-counter')).toBeEnabled();
+  }
+  expect(n).toBe(responses.length);
+});
+
+test('50. S5 scadenza -> PA: testo esatto, RIFAI L\'ORDINE rimette i piatti nel sacco, CHIUDI nasconde solo su questo device', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({
+      id: 'order-pa-1', orderCode: 'X01', nickname: 'Eros', status: 'payment_abandoned', paymentStatus: null,
+      items: [{ itemId: 'item-058', name: 'Patate al Forno', quantity: 2, price: 5.0 }],
+      total: 10, fulfillmentType: 'takeaway', createdAt: minutesAgoIso(6),
+    }),
+  ]);
+  await seedOwnedOrderIds(page, ['order-pa-1']);
+
+  await page.goto('/kitchen/status');
+  const card = page.getByTestId('ost-pa-card');
+  await expect(card).toBeVisible();
+  await expect(page.locator('.ost-status-banner-sub')).toHaveText('Ordine annullato: il pagamento non è stato completato entro 5 minuti.');
+  await expect(page.locator('.ost-status-banner-label')).toHaveText('ORDINE ANNULLATO');
+  await expect(page.locator('.ost-codes-chip-status')).toHaveText('ORDINE ANNULLATO');
+  // Nessuna promessa di "nessun addebito" e nessuna azione di pagamento su un PA.
+  await expect(page.getByText(/addebit/i)).toHaveCount(0);
+  await expect(page.getByTestId('ost-pop-block')).toHaveCount(0);
+  await expect(page.getByTestId('ost-payment-fork')).toHaveCount(0);
+
+  // RIFAI L'ORDINE: sacco ripopolato dalla persistenza esistente, poi /kitchen
+  await page.getByTestId('ost-pa-rebuild').click();
+  await expect(page).toHaveURL(/\/kitchen$/);
+  const cart = await page.evaluate(() => JSON.parse(localStorage.getItem('walbox_kitchen_cart_v1') || 'null'));
+  expect(cart.items).toEqual([{ id: 'item-058', baseId: 'item-058', qty: 2 }]);
+  expect(cart.fulfillmentType).toBe('takeaway');
+  // Un PA non è un "ordine attivo": nessun banner "SEGUI IL TUO ORDINE" nel menu.
+  await expect(page.getByText(/HAI UN ORDINE ATTIVO/i)).toHaveCount(0);
+
+  // CHIUDI: nasconde l'ordine PA su questo device, il registro proprietà resta intatto.
+  await page.goto('/kitchen/status');
+  await page.getByTestId('ost-pa-dismiss').click();
+  await expect(page.getByTestId('ost-pa-card')).toHaveCount(0);
+  await expect(page.getByTestId('order-status-empty')).toBeVisible();
+  const owned = await page.evaluate(() => JSON.parse(localStorage.getItem('walbox_kitchen_my_order_ids') || '[]'));
+  expect(owned).toContain('order-pa-1');
+  await page.reload();
+  await expect(page.getByTestId('ost-pa-card')).toHaveCount(0);
+});
+
+test('51. S5 finestre POP: active con timer + RIPROVA, retry_closed solo PAGA AL BANCO, closing "stiamo chiudendo" + PAGA AL BANCO', async ({ page }) => {
+  await mockVenueOrdersSelect(page);
+  await page.goto('/');
+  await seedMyOrders(page, [
+    makeOtherCustomerOrder({ id: 'pop-active', orderCode: 'W01', nickname: 'Eros', status: 'pending_online_payment', paymentStatus: null, createdAt: minutesAgoIso(1) }),
+    makeOtherCustomerOrder({ id: 'pop-retry-closed', orderCode: 'W02', nickname: 'Eros', status: 'pending_online_payment', paymentStatus: null, createdAt: new Date(Date.now() - 285000).toISOString() }),
+    makeOtherCustomerOrder({ id: 'pop-closing', orderCode: 'W03', nickname: 'Eros', status: 'pending_online_payment', paymentStatus: null, createdAt: minutesAgoIso(5.5) }),
+    makeOtherCustomerOrder({ id: 'pop-no-date', orderCode: 'W04', nickname: 'Eros', status: 'pending_online_payment', paymentStatus: null, createdAt: undefined }),
+  ]);
+  await seedOwnedOrderIds(page, ['pop-active', 'pop-retry-closed', 'pop-closing', 'pop-no-date']);
+  await page.goto('/kitchen/status');
+
+  const active = page.getByTestId('ost-order-block-pop-active');
+  await expect(active.getByTestId('ost-pop-timer')).toContainText(/Tempo rimasto per pagare online: [0-3]:\d\d/);
+  await expect(active.getByTestId('ost-pop-retry')).toBeVisible();
+  await expect(active.getByTestId('ost-pop-switch-counter')).toBeVisible();
+
+  const rc = page.getByTestId('ost-order-block-pop-retry-closed');
+  await expect(rc.getByTestId('ost-pop-retry-closed')).toHaveText('Il tempo per pagare online è finito. Puoi pagare al banco.');
+  await expect(rc.getByTestId('ost-pop-retry')).toHaveCount(0);
+  await expect(rc.getByTestId('ost-pop-switch-counter')).toBeVisible();
+
+  const closing = page.getByTestId('ost-order-block-pop-closing');
+  await expect(closing.getByTestId('ost-pop-closing')).toHaveText('Stiamo chiudendo il pagamento online…');
+  await expect(closing.getByTestId('ost-pop-retry')).toHaveCount(0);
+  await expect(closing.getByTestId('ost-pop-switch-counter')).toBeVisible();
+  await expect(closing.locator('.ost-status-banner-label')).toHaveText('PAGAMENTO ONLINE IN CORSO');
+
+  // createdAt mancante: nessun crash, nessun timer, RIPROVA disponibile
+  const nodate = page.getByTestId('ost-order-block-pop-no-date');
+  await expect(nodate.getByTestId('ost-pop-block')).toBeVisible();
+  await expect(nodate.getByTestId('ost-pop-timer')).toHaveCount(0);
+  await expect(nodate.getByTestId('ost-pop-retry')).toBeVisible();
+});
+
+test('52. S5 ritorno da SumUp dopo la scadenza: reconcile failed -> testo corretto, niente RIPROVA se retry_closed', async ({ page }) => {
+  await page.goto('/');
+  await seedSupabaseSession(page);
+  await mockReconcile(page, 'failed');
+  const seeded = [
+    makeOtherCustomerOrder({ id: 'pop-late', orderCode: 'L01', nickname: 'Eros', status: 'pending_online_payment', paymentStatus: null, createdAt: new Date(Date.now() - 285000).toISOString() }),
+  ];
+  await seedMyOrders(page, seeded);
+  await mockOwnOrdersSelect(page, seeded);
+  await seedOwnedOrderIds(page, ['pop-late']);
+  await page.goto('/kitchen/status?sumup=return&orderId=pop-late');
+
+  const block = page.getByTestId('ost-order-block-pop-late');
+  await expect(block.getByTestId('ost-pop-sumup-error')).toHaveText('Il pagamento online non è andato a buon fine.');
+  await expect(block.getByTestId('ost-pop-retry')).toHaveCount(0);
+  await expect(block.getByTestId('ost-pop-retry-closed')).toBeVisible();
+  await expect(block.getByTestId('ost-pop-switch-counter')).toBeVisible();
+});
+
+test('53. S5 rete giù alla creazione: carrello intatto e stesso client_request_id al retry; carrello cambiato -> id nuovo', async ({ page }) => {
+  await mockAnonymousSession(page);
+  const ids = [];
+  let attempt = 0;
+  await page.route('**/rest/v1/rpc/kitchen_customer_create_order_v2', (route) => {
+    attempt += 1;
+    ids.push(route.request().postDataJSON().p_client_request_id);
+    if (attempt <= 2) return route.abort('failed');
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      id: 'order-net-1', order_code: 'N01', status: 'pending_counter_payment', payment_status: 'pending_counter_payment',
+      total: 13.9, fulfillment_type: 'eat_here', created_at: new Date().toISOString(), service_day: '2026-10-13', service_sequence: 1,
+    }) });
+  });
+  await page.route('**/rest/v1/kitchen_orders*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await fillCartToPayStep(page);
+
+  await choosePayLane(page, 'counter');
+  await expect(page.getByTestId('order-submit-error')).toBeVisible();
+  await expect(page.getByTestId('pay-lane-counter')).toBeEnabled();
+  // retry con lo stesso carrello: stesso client_request_id
+  await choosePayLane(page, 'counter');
+  await expect(page.getByTestId('order-submit-error')).toBeVisible();
+  expect(ids.length).toBe(2);
+  expect(ids[0]).toBe(ids[1]);
+  const cart = await page.evaluate(() => JSON.parse(localStorage.getItem('walbox_kitchen_cart_v1') || 'null'));
+  expect(cart.items.length).toBe(1);
+
+  // carrello cambiato dopo l'errore (ritiro diverso): id nuovo, poi la creazione riesce
+  await page.reload();
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'takeaway');
+  await submitOrder(page);
+  await choosePayLane(page, 'counter');
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  expect(ids.length).toBe(3);
+  expect(ids[2]).not.toBe(ids[0]);
+  // ordine creato: il client_request_id viene cancellato
+  const stored = await page.evaluate(() => localStorage.getItem('walbox_kitchen_client_request_id_v1'));
+  expect(stored).toBeNull();
+});
+
+test('54. S5 doppio tap su ONLINE: una sola creazione ordine', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'D01' });
+  await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock' });
+  await fillCartToPayStep(page);
+  await page.getByTestId('pay-lane-online').dblclick();
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  expect(sent.calls.length).toBe(1);
+});
+
+test('55. S5 idempotenza "vince il primo": scelta BANCO ma il server restituisce POP -> status con pannello POP, nessun SumUp', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'I01', forceStatus: 'pending_online_payment' });
+  const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock' });
+  await fillCartToPayStep(page);
+  await choosePayLane(page, 'counter');
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page.getByTestId('ost-pop-block')).toBeVisible();
+  await expect(page.getByTestId('ost-pop-switch-counter')).toBeVisible();
+  expect(pay.attempts.length).toBe(0);
+});
+
+test('56. S5 idempotenza inversa: scelta ONLINE ma il server restituisce PCP -> status al banco, nessun SumUp', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'I02', forceStatus: 'pending_counter_payment' });
+  const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock' });
+  await fillCartToPayStep(page);
+  await choosePayLane(page, 'online');
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  await expect(page.getByText('MOSTRA QUESTO CODICE ALLA CASSA')).toBeVisible();
+  await expect(page.getByTestId('ost-pop-block')).toHaveCount(0);
+  expect(pay.attempts.length).toBe(0);
+});
+
+test('57. S5 promo + online: il redeem precede attempt_start e l\'importo del tentativo è il totale dopo la promo', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'R01', total: 13.9 });
+  const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock' });
+  const order = [];
+  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', async (route) => {
+    order.push('redeem');
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ promo_code: 'WALRUS-AB12C', discount_amount: 1.9, total: 12 }) });
+  });
+  await page.route('**/rest/v1/rpc/kitchen_payment_attempt_start', async (route) => {
+    order.push('attempt');
+    pay.attempts.push(route.request().postDataJSON());
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'attempt-e2e-1', status: 'created' }) });
+  });
+  await fillCartToPayStep(page, { promo: 'walrus-ab12c' });
+  await choosePayLane(page, 'online');
+  await expect(page).toHaveURL(/\/kitchen\/status\?.*sumup=return/);
+  expect(order).toEqual(['redeem', 'attempt']);
+  expect(pay.attempts[0].p_amount).toBe(12);
+});
+
+test('58. S5 promo non valido + online: si paga il totale pieno, mai blocco', async ({ page }) => {
+  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'R02', total: 13.9 });
+  const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock' });
+  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
+    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) })
+  );
+  await fillCartToPayStep(page, { promo: 'WALRUS-USED1' });
+  await choosePayLane(page, 'online');
+  await expect(page).toHaveURL(/\/kitchen\/status\?.*sumup=return/);
+  expect(pay.attempts[0].p_amount).toBe(13.9);
+});
+
+test('59. S5 attempt_start rifiuta (online_payment_expired / order_payment_abandoned): messaggio corretto, ordine invariato', async ({ page }) => {
+  await mockAnonymousSession(page);
+  await page.goto('/');
+  await seedSupabaseSession(page);
+  const seeded = [
+    makeOtherCustomerOrder({ id: 'pop-rej', orderCode: 'J01', nickname: 'Eros', status: 'pending_online_payment', paymentStatus: null, createdAt: minutesAgoIso(1) }),
+  ];
+  await seedMyOrders(page, seeded);
+  await mockOwnOrdersSelect(page, seeded);
+  await seedOwnedOrderIds(page, ['pop-rej']);
+  const errors = ['online_payment_expired', 'order_payment_abandoned'];
+  let n = 0;
+  await page.route('**/rest/v1/rpc/kitchen_payment_attempt_start', (route) =>
+    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ code: 'P0001', message: errors[n++], details: null, hint: null }) })
+  );
+  await page.goto('/kitchen/status');
+  await page.getByTestId('ost-pop-retry').click();
+  await expect(page.getByTestId('ost-pop-sumup-error')).toHaveText('Il tempo per pagare online è finito. Puoi pagare al banco.');
+  await page.getByTestId('ost-pop-retry').click();
+  await expect(page.getByTestId('ost-pop-sumup-error')).toHaveText('Ordine annullato: il pagamento non è stato completato entro 5 minuti.');
 });

@@ -121,6 +121,7 @@ test('il sacco NON viene svuotato quando l invio fallisce', async ({ page }) => 
   // Step nome cliente (2026-09-19): l'ordine parte solo dopo CONTINUA.
   await page.getByTestId('customer-name-input').fill('Marco');
   await page.getByTestId('customer-name-continue').click();
+  await page.getByTestId('pay-lane-counter').click();
 
   // senza Supabase configurato la creazione ordine fallisce: il carrello deve restare intatto
   await expect(page.getByTestId('order-submit-error')).toBeVisible();

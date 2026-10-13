@@ -37,7 +37,8 @@ test('REAL local order: create via UI, scrive kitchen_orders + kitchen_order_ite
   await page.getByRole('button', { name: /Invia ordine/i }).click();
   await page.getByTestId('customer-name-input').fill(nick);
   await page.getByTestId('customer-name-continue').click();
-  await expect(page).toHaveURL(/\/kitchen\/payment/, { timeout: 15000 });
+  await page.getByTestId('pay-lane-counter').click();
+  await expect(page).toHaveURL(/\/kitchen\/status/, { timeout: 15000 });
 
   expect(rpcCalled, 'la RPC reale deve essere stata chiamata (nessun mock)').toBe(true);
 
