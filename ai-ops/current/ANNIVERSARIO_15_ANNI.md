@@ -115,6 +115,30 @@ rispetta prefers-reduced-motion. In PesiMassimiSection.jsx aggiungi il badge a t
 che ha il tag 'anniversario' (nessun id hardcoded). Screenshot 390 e 430 a Eros.
 ```
 
+## PROSSIMA CHAT — ripartenza (scritto 2026-10-13)
+
+Eros arriva con **la foto GARPEZ su green screen in allegato** e vuole iniziare la parte visiva
+("fase restyling"). Letto questo file, l'ordine di lavoro è:
+
+1. **Fase 2 — foto** (prima della 1: l'item ha bisogno del path dell'asset per il campo `image`).
+   Scontorno green screen con PIL + numpy, fondo scuro coerente con `photo-pulled-pork-special.webp`,
+   output `.webp` in `public/assets/kitchen/menu/bbq/`. **Anteprima a Eros prima di collegarla.**
+2. **Fase 1 — item GARPEZ** in `src/data/kitchenMockData.js` (**area protetta §5**, solo questo file,
+   una sola aggiunta): `id 'item-059'`, `category 'bbq'`, `name 'Garpez'`, `price 15.0`,
+   `tags ['special','v2','anniversario']`, `available: true`, `image` = asset della Fase 2,
+   `ingredients` come scritto nella Fase 1, `allergens: ['glutine','latte','senape']`,
+   `allergensVerified: false`. Nessuna entry in `kitchenPesiMassimiCombos`.
+3. **Fase 4 — animazione 15 anni**, poi **Fase 3 — modalità evento** (ultima: spegne mezzo menu,
+   meglio accenderla quando il resto è pronto e verificato).
+
+Ambiguità da sciogliere al primo messaggio: **"restyling" = le Fasi 1-4 di questo piano**, oppure un
+redesign vero della UI Kitchen? Se è il secondo, è §19 (richiesta ampia): niente codice, prima audit e
+Gate 1. Chiedere, non assumere.
+
+Contesto già chiuso, non rifarlo: Fase 0 fatta, checkout V2 in produzione (`origin/main` = `11cf144`),
+allergeni e interruttore evento decisi. **Aperto e non mio:** smoke a video del checkout V2 in
+produzione con un pagamento SumUp vero — lo deve fare Eros prima della festa.
+
 ## STATO
 
 - Fase corrente: **Fase 0 ESEGUITA (collaudo)** — in attesa della decisione di Eros sul merge
