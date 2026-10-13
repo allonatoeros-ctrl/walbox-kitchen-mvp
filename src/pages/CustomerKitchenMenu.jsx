@@ -4,6 +4,15 @@ import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders, rememberOwnedOrderId, getOwnedOrderIds } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { useKitchenServiceState } from '../hooks/useKitchenServiceState';
+import { startSumupCheckout, rememberCounterPaymentChoice } from '../hooks/useOrderPaymentFlow';
+import {
+  STATUS_PA,
+  cartFingerprint,
+  getOrCreateClientRequestId,
+  clearClientRequestId,
+  resolveCreateOutcome,
+  onlineErrorMessage,
+} from '../lib/kitchenOnlineLane';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
 import PaniniSection from '../components/kitchen/PaniniSection';
@@ -236,11 +245,11 @@ function customerPromoErrorText(err) {
 }
 
 // Stesso pattern SPA-navigate di CustomerOrderStatus.jsx (pushState + popstate sintetico, letto
-// dal router in App.jsx). Follow-up UX (2026-09-18): la destinazione post-ordine è ora la pagina
-// pagamento dedicata (CONFERMA ORDINE → PAGINA PAGAMENTO → STATUS), non più /kitchen/status
-// direttamente — il bivio cassa/online si sceglie lì, /kitchen/status resta il "dopo".
-function navigateToOrderPayment(orderId) {
-  const path = `/kitchen/payment?orderId=${orderId}`;
+// dal router in App.jsx). S5 (Payment Lifecycle V2): la scelta BANCO/ONLINE avviene qui, prima
+// della creazione dell'ordine, quindi la destinazione post-ordine è sempre /kitchen/status (al
+// banco: codice da mostrare; online: pannello pagamento con RIPROVA / PAGA AL BANCO).
+function navigateToOrderStatus(orderId) {
+  const path = `/kitchen/status?orderId=${orderId}`;
   window.history.pushState({}, '', path);
   window.dispatchEvent(new PopStateEvent('popstate'));
 }
@@ -315,6 +324,10 @@ export default function CustomerKitchenMenu() {
   const [submitting, setSubmitting] = useState(false);
   // Step nome: si apre al tap su CONFERMA ORDINE, prima di qualsiasi chiamata ad addOrder().
   const [nameStepOpen, setNameStepOpen] = useState(false);
+  // Step "COME VUOI PAGARE?" (S5): si apre dopo il nome, l'ordine nasce solo al tap su BANCO/ONLINE.
+  const [payStepOpen, setPayStepOpen] = useState(false);
+  // Lock sincrono anti doppio tap (lo stato `submitting` si aggiorna solo al render successivo).
+  const submitLockRef = useRef(false);
   const [customerName, setCustomerName] = useState(
     () => (isValidCustomerName(session.nickname) ? normalizeCustomerName(session.nickname) : '')
   );
@@ -335,7 +348,8 @@ export default function CustomerKitchenMenu() {
     const owned = ownedOrderIdsWithLegacy();
     if (!owned.length) { setBannerOrderId(null); return; }
     const mine = orders.filter((o) => owned.includes(o.id));
-    const active = mine.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled');
+    // payment_abandoned (S5) è terminale: non è un "ordine attivo" da seguire.
+    const active = mine.filter((o) => o.status !== 'delivered' && o.status !== 'cancelled' && o.status !== STATUS_PA);
     if (!active.length) { setBannerOrderId(null); return; }
     const mostRecent = active.reduce((best, o) => (new Date(o.createdAt) > new Date(best.createdAt) ? o : best));
     setBannerOrderId(mostRecent.id);
@@ -565,15 +579,17 @@ export default function CustomerKitchenMenu() {
     saveSession(session.table, name);
     setNameError(null);
     setNameStepOpen(false);
-    handleSubmit(name);
+    // L'ordine non nasce qui: prima si sceglie come pagare (S5).
+    setOrderError(null);
+    setPayStepOpen(true);
   };
 
-  const handleSubmit = async (confirmedName) => {
+  const handleSubmit = async (lane) => {
     // Invio bloccato finché il cliente non sceglie esplicitamente dove mangia — nessun default
-    // silenzioso. Il pagamento non è più un gate qui: si sceglie su /kitchen/payment.
-    if (orderItems.length === 0 || submitting || !fulfillmentType) return;
+    // silenzioso. La corsia di pagamento (banco/online) è la scelta dello step precedente.
+    if (orderItems.length === 0 || submitting || submitLockRef.current || !fulfillmentType) return;
     // KITCHEN_OPEN_CLOSE_V1: difesa in profondità — il bottone è già disabilitato quando la
-    // cucina è chiusa, ma un client stale (tab aperta da prima della chiusura) potrebbe arrivare
+    // cucina è chiusa, ma un client stale (tab aperta prima della chiusura) potrebbe arrivare
     // comunque qui. La RPC rifiuta comunque con 'kitchen_closed'; questo blocco evita solo la
     // chiamata inutile e mostra subito il messaggio corretto.
     if (!kitchenOpen) {
@@ -581,11 +597,13 @@ export default function CustomerKitchenMenu() {
       return;
     }
     // Il nome è obbligatorio: senza, si torna allo step nome e nessun ordine viene creato.
-    const nickname = normalizeCustomerName(confirmedName ?? customerName);
+    const nickname = normalizeCustomerName(customerName);
     if (!isValidCustomerName(nickname)) {
+      setPayStepOpen(false);
       setNameStepOpen(true);
       return;
     }
+    submitLockRef.current = true;
     setSubmitting(true);
     setOrderError(null);
     // P0-2: la birra inclusa va PRIMA della nota del cliente — e' la prima cosa che la cucina
@@ -596,11 +614,14 @@ export default function CustomerKitchenMenu() {
       items: orderItems.map((o) => ({ itemId: o.baseId || o.id, name: o.name, quantity: o.qty, price: o.price })),
       total,
       note: noteParts.length > 0 ? noteParts.join(' \u00B7 ') : null,
-      status: 'pending_counter_payment',
-      paymentStatus: 'pending_counter_payment',
       paidAt: null,
       fulfillmentType,
+      // S5: la creazione passa dalla v2. Lo status (banco/online) lo decide e lo restituisce il
+      // server; `clientRequestId` resta lo stesso per lo stesso carrello, così un retry dopo un
+      // errore di rete non crea un secondo ordine.
+      paymentLane: lane,
     };
+    newOrder.clientRequestId = getOrCreateClientRequestId(cartFingerprint(newOrder));
     // "ORDINE PRESO" è mostrato solo se addOrder() conferma una persistenza server reale
     // (id/order_code arrivano dalla RPC): se fallisce, il carrello resta intatto per il retry
     // e non viene mai mostrato un ordine fantasma (F02 — Phantom Order).
@@ -608,42 +629,65 @@ export default function CustomerKitchenMenu() {
     if (!result.ok) {
       // La cucina puo' essere stata chiusa nel frattempo (race tra apertura pagina e submit): la
       // RPC alza 'kitchen_closed', il messaggio resta specifico invece del generico "riprova".
-      const closedByServer = result.error?.message?.includes('kitchen_closed');
-      setOrderError(closedByServer ? 'LA CUCINA È CHIUSA — NON PUOI INVIARE ORDINI ORA' : 'Ordine non inviato — riprova');
+      // Carrello e client_request_id restano com'erano per il retry.
+      setOrderError(onlineErrorMessage(result.error, 'Ordine non inviato — riprova'));
       setSubmitting(false);
+      submitLockRef.current = false;
       return;
     }
     const createdOrder = result.order;
     // Unico punto in cui il sacco viene svuotato in automatico: ordine confermato dal server.
     // Su fallimento (sopra) il carrello resta intatto, com'e' sempre stato.
     clearCart();
+    // Ordine creato: il client_request_id di questo carrello ha finito il suo lavoro.
+    clearClientRequestId();
     try { localStorage.setItem('walbox_kitchen_last_order_id', createdOrder.id); } catch { }
     // P0 privacy (2026-09-16): registra l'ordine come proprio di QUESTO dispositivo. È l'unica
     // prova di proprietà che /kitchen/status accetta — senza, la pagina mostra l'empty state,
     // mai l'ordine di un altro cliente.
     rememberOwnedOrderId(createdOrder.id);
+    // Ordine al banco (scelto, o già tale per idempotenza): lo status mostra subito il codice.
+    if (createdOrder.status === 'pending_counter_payment') rememberCounterPaymentChoice(createdOrder.id);
 
     // Il codice promo si redime solo dopo che l'ordine esiste davvero (mai prima): così il
     // pass non viene mai consumato per un ordine che poi risulta non creato. Se il redeem
     // fallisce l'ordine resta comunque valido a prezzo pieno — non blocca mai il cliente.
-    // L'esito non è mostrato in questo task (Promo Redemption UI su /kitchen/status fuori scope,
-    // vedi ai-ops/reports/kitchen-customer-journey-ux-deep-dive.md P0-1).
+    // Per la corsia online il redeem va fatto PRIMA di avviare il pagamento e l'importo del
+    // tentativo è il totale DOPO la promo (redeemPromo ne restituisce il totale).
+    let payableTotal = createdOrder.total;
     const code = promoCode.trim();
     if (code && redeemPromo && createdOrder.id) {
-      await redeemPromo(createdOrder.id, code);
+      const promo = await redeemPromo(createdOrder.id, code);
+      if (promo?.ok && Number.isFinite(promo.total)) payableTotal = promo.total;
     }
 
-    // Destinazione post-ordine (follow-up UX 2026-09-18): CONFERMA ORDINE → PAGINA PAGAMENTO
-    // DEDICATA → STATUS. Il pagamento — online o al banco — si sceglie sulla pagina pagamento,
-    // mai in una schermata di conferma in-page.
+    // L'esito vero è lo status restituito dal server (idempotenza: "vince il primo"), non la
+    // corsia cliccata. Solo un POP scelto come online avvia SumUp; ogni altro caso va allo status.
+    if (resolveCreateOutcome(createdOrder.status, lane) === 'start_online') {
+      try {
+        const started = await startSumupCheckout(createdOrder.id, payableTotal);
+        if (started.kind === 'redirect') {
+          // Si lascia `submitting` attivo: la pagina sta per cambiare, i bottoni restano spenti.
+          window.location.assign(started.url);
+          return;
+        }
+        if (started.kind === 'reloading') return; // scheda vecchia (I-6): si sta ricaricando
+      } catch (err) {
+        // L'ordine esiste già: lo status offre RIPROVA / PAGA AL BANCO.
+        console.warn('[Walbox] avvio pagamento online fallito, si passa allo status', err);
+      }
+    }
+
     setSubmitting(false);
-    navigateToOrderPayment(createdOrder.id);
+    submitLockRef.current = false;
+    navigateToOrderStatus(createdOrder.id);
   };
 
   useEffect(() => {
     if (cartOpen && orderItems.length === 0) setCartOpen(false);
     if (!cartOpen && nameStepOpen) setNameStepOpen(false);
-  }, [orderItems.length, cartOpen, nameStepOpen]);
+    if (!cartOpen && payStepOpen && !submitLockRef.current) setPayStepOpen(false);
+  }, [orderItems.length, cartOpen, nameStepOpen, payStepOpen]);
 
   // Sacco svuotato (cestino, o ultima riga rimossa): cadono anche nota e scelta di ritiro.
   // Sono contestuali a QUEL sacco — una nota "senza cipolla" sopravvissuta a un carrello
@@ -1196,6 +1240,41 @@ export default function CustomerKitchenMenu() {
                     {submitting ? 'INVIO IN CORSO…' : 'CONTINUA'}
                   </button>
                   <div className="kitch-secure-hint">Serve alla cucina per chiamarti: A42 · {normalizeCustomerName(customerName) || 'il tuo nome'}</div>
+                </div>
+              ) : payStepOpen ? (
+                /* Step "COME VUOI PAGARE?" (S5): ultimo passo, l'ordine nasce al tap. */
+                <div data-testid="pay-lane-step">
+                  <div className="kitch-fulfillment-label">COME VUOI PAGARE?</div>
+                  <div className="kitch-fulfillment-grid">
+                    {[
+                      { value: 'counter', label: 'AL BANCO', sub: 'paghi in cassa col codice', emoji: '🧾' },
+                      { value: 'online', label: 'ONLINE', sub: 'paghi ora dal telefono', emoji: '💳' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        data-testid={`pay-lane-${opt.value}`}
+                        onClick={() => handleSubmit(opt.value)}
+                        disabled={submitting}
+                        className="kitch-fulfillment-card"
+                        style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
+                      >
+                        <span className="kitch-fulfillment-card-emoji" aria-hidden="true">{opt.emoji}</span>
+                        <span className="kitch-fulfillment-card-title">{opt.label}</span>
+                        <span className="kitch-fulfillment-card-sub">{opt.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {submitting && <div className="kitch-secure-hint" data-testid="pay-lane-sending">INVIO IN CORSO…</div>}
+                  <button
+                    type="button"
+                    className="kitch-extra-chip"
+                    data-testid="pay-lane-back"
+                    onClick={() => { setPayStepOpen(false); setNameStepOpen(true); }}
+                    disabled={submitting}
+                  >
+                    <span aria-hidden="true">←</span> INDIETRO
+                  </button>
                 </div>
               ) : (
                 <>
