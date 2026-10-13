@@ -592,16 +592,59 @@ export async function createOrderOnServer(order) {
     // Calls the 5-argument overload (20260913130000_kitchen_checkout_fulfillment_v1.sql), which
     // requires p_fulfillment_type explicitly (no DEFAULT — see design doc AMBIGUITY_RISK): every
     // current-build client always passes 'eat_here' or 'takeaway' here, never omits the argument.
+    const rpcItems = order.items.map((item) => ({
+      item_id: item.itemId,
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+    }));
+
+    // S5 (Payment Lifecycle V2): con `paymentLane` ('counter' | 'online') l'ordine nasce dalla v2,
+    // che decide lo status (PCP o POP) e rende idempotente il retry via `clientRequestId`. Senza
+    // `paymentLane` resta la chiamata v1 di sempre (cassa assistita, T3: comportamento invariato).
+    if (order.paymentLane) {
+      const { paymentLane, clientRequestId, ...baseOrder } = order;
+      const { data, error } = await supabase.rpc('kitchen_customer_create_order_v2', {
+        p_venue_id: 'walrus-main',
+        p_nickname: order.nickname,
+        p_customer_note: order.note ?? null,
+        p_items: rpcItems,
+        p_fulfillment_type: order.fulfillmentType,
+        p_payment_lane: paymentLane,
+        p_client_request_id: clientRequestId ?? crypto.randomUUID(),
+      });
+      if (error) throw error;
+      if (!data?.id || !data?.order_code || !data?.status) throw new Error('order_creation_invalid_response');
+
+      // Idempotenza "vince il primo": il server può restituire un ordine già creato con un'altra
+      // corsia. Status e campi di pagamento vengono quindi SEMPRE dalla riga restituita, mai dal
+      // client.
+      return {
+        ok: true,
+        order: {
+          actionLog: [],
+          ...baseOrder,
+          id: data.id,
+          orderCode: data.order_code,
+          serviceDay: data.service_day,
+          serviceSequence: data.service_sequence,
+          total: Number(data.total),
+          createdAt: data.created_at,
+          fulfillmentType: data.fulfillment_type ?? order.fulfillmentType ?? null,
+          status: data.status,
+          paymentStatus: data.payment_status ?? null,
+          paymentMethod: data.payment_method ?? null,
+          paidAt: data.paid_at ?? null,
+          onlinePaymentDisabled: data.online_payment_disabled ?? false,
+        },
+      };
+    }
+
     const { data, error } = await supabase.rpc('kitchen_customer_create_order', {
       p_venue_id: 'walrus-main',
       p_nickname: order.nickname,
       p_customer_note: order.note ?? null,
-      p_items: order.items.map((item) => ({
-        item_id: item.itemId,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.price,
-      })),
+      p_items: rpcItems,
       p_fulfillment_type: order.fulfillmentType,
     });
     if (error) throw error;
