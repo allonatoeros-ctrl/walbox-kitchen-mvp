@@ -130,7 +130,8 @@ che ha il tag 'anniversario' (nessun id hardcoded). Screenshot 390 e 430 a Eros.
     `npm run test:e2e` nudo non gira: serve il config override.
   - **Merge V2 su `main` FATTO in locale 2026-10-13** (Eros ha approvato): commit di merge `d1fe37e`,
     10 file, +1118/-370, nessuna area protetta toccata. Ricollaudo sul risultato del merge: lint 121 err
-    (come il branch), unit lib 161/0 fail, api 6/0, mjs 348 con i soliti 4 rossi noti, build PASS.
+    (come il branch), unit lib 161/0 fail, api 6/0, mjs 348 con i soliti 4 rossi noti, build PASS, **E2E 158/166 con gli stessi identici 7 rossi**.
+    Il merge non introduce nulla: ogni numero coincide con quello del branch.
     **NON pushato**: il push su `main` fa partire il deploy Vercel in produzione, gate di Eros.
 - Decisioni aperte:
   - **GATE: `git push -u origin main`** = pubblicazione del checkout V2 ai clienti, pagamenti reali
