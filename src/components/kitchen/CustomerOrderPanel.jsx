@@ -89,6 +89,10 @@ export default function CustomerOrderPanel({ order, isReturnTarget, onDismissAba
       >
         <div className="ost-status-banner-dot" />
         <div className="ost-status-banner-content">
+          {/* Customer Experience V2: il nome scelto nel checkout è il primo saluto dell'ordine. */}
+          {order.nickname && order.nickname !== 'Ospite Walrus' && (
+            <div className="ost-greeting" data-testid="ost-greeting">Ciao {order.nickname}! 🦭</div>
+          )}
           <div className="ost-order-code-big" data-testid="ost-order-code-big">{order.orderCode || '-'}</div>
           <div className="ost-status-banner-label">
             {displayStatus === 'pending_counter_payment'

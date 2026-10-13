@@ -23,6 +23,8 @@ import BirreSection from '../components/kitchen/BirreSection';
 import TagliereSection from '../components/kitchen/TagliereSection';
 import BevandeSection from '../components/kitchen/BevandeSection';
 import AllergenBadges from '../components/kitchen/AllergenBadges';
+import CustomerCheckout from '../components/kitchen/CustomerCheckout';
+import { checkoutMissing, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
@@ -224,26 +226,6 @@ function getCategorySubtitle(cat) {
   return null;
 }
 
-// Stesso stile dei messaggi d'errore staff (KitchenSoloService.jsx), riformulati in tono
-// cliente: l'RPC è condivisa, i codici errore sono gli stessi.
-const CUSTOMER_PROMO_ERROR_MESSAGES = {
-  invalid_promo_code:       'Codice non valido',
-  order_not_found:          'Ordine non trovato',
-  not_authorized_for_order: 'Codice non applicabile a questo ordine',
-  order_already_has_promo:  'Promo già applicata a questo ordine',
-  order_already_paid:       'Ordine già pagato — sconto non applicabile',
-  promo_code_not_found:     'Codice non trovato',
-  promo_already_redeemed:   'Codice già usato',
-  promo_venue_mismatch:     'Codice non valido per questo locale',
-  promo_no_eligible_item:   'Codice valido solo sui Pesi Massimi',
-};
-
-function customerPromoErrorText(err) {
-  const message = err?.message ?? '';
-  const match = Object.keys(CUSTOMER_PROMO_ERROR_MESSAGES).find((key) => message.includes(key));
-  return match ? CUSTOMER_PROMO_ERROR_MESSAGES[match] : 'Codice promo non applicato — riprova';
-}
-
 // Stesso pattern SPA-navigate di CustomerOrderStatus.jsx (pushState + popstate sintetico, letto
 // dal router in App.jsx). S5 (Payment Lifecycle V2): la scelta BANCO/ONLINE avviene qui, prima
 // della creazione dell'ordine, quindi la destinazione post-ordine è sempre /kitchen/status (al
@@ -268,26 +250,10 @@ function ownedOrderIdsWithLegacy() {
   return ids;
 }
 
-// Step nome cliente (2026-09-19): il codice ordine non viene mai generato prima che il cliente
-// abbia detto come si chiama. Riusa il campo `nickname` gia' esistente (sessione localStorage +
-// colonna gia' presente lato ordine): nessuna tabella, nessuna migration.
-const GUEST_NICKNAME = 'Ospite Walrus';
-const CUSTOMER_NAME_MAX = 24;
-const CUSTOMER_NAME_MIN = 2;
-
-export function normalizeCustomerName(value) {
-  return String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, CUSTOMER_NAME_MAX);
-}
-
-export function isValidCustomerName(value) {
-  const name = normalizeCustomerName(value);
-  return name.length >= CUSTOMER_NAME_MIN && name !== GUEST_NICKNAME;
-}
-
 export default function CustomerKitchenMenu() {
   const { session, saveSession } = useCustomerSession();
   // scope cliente: vedi CustomerOrderStatus — persistenza locale limitata agli ordini propri.
-  const { addOrder, redeemPromo, orders } = useKitchenOrders({ scope: 'customer' });
+  const { addOrder, orders } = useKitchenOrders({ scope: 'customer' });
   const { menuItems } = useKitchenMenu();
   // KITCHEN_OPEN_CLOSE_V1: menu resta sempre navigabile, solo l'invio ordine e' bloccato quando
   // lo staff chiude. Enforcement reale lato server (kitchen_customer_create_order); questo e'
@@ -320,20 +286,17 @@ export default function CustomerKitchenMenu() {
   // Se il sacco ripristinato porta con se' una nota, il pannello parte aperto: una nota salvata
   // ma nascosta dietro un accordion chiuso, per il cliente, e' una nota persa.
   const [notesOpen, setNotesOpen] = useState(Boolean(restoredCart.note));
-  const [promoOpen, setPromoOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // Step nome: si apre al tap su CONFERMA ORDINE, prima di qualsiasi chiamata ad addOrder().
-  const [nameStepOpen, setNameStepOpen] = useState(false);
-  // Step "COME VUOI PAGARE?" (S5): si apre dopo il nome, l'ordine nasce solo al tap su BANCO/ONLINE.
-  const [payStepOpen, setPayStepOpen] = useState(false);
+  // Checkout V2: nome, dove mangi, note e corsia di pagamento stanno in un solo schermo (vedi
+  // CustomerCheckout). L'ordine nasce al tap su PAGO ORA / PAGO AL BANCO; se manca il nome o il
+  // "dove", `checkoutIssue` porta il cliente sul campo giusto invece di bloccare un bottone.
+  const [checkoutIssue, setCheckoutIssue] = useState(null);
   // Lock sincrono anti doppio tap (lo stato `submitting` si aggiorna solo al render successivo).
   const submitLockRef = useRef(false);
   const [customerName, setCustomerName] = useState(
     () => (isValidCustomerName(session.nickname) ? normalizeCustomerName(session.nickname) : '')
   );
-  const [nameError, setNameError] = useState(null);
   const [bannerOrderId, setBannerOrderId] = useState(null);
-  const [promoCode, setPromoCode] = useState('');
   const [orderError, setOrderError] = useState(null);
   // Customer Checkout V1 (2026-09-13): unica scelta obbligatoria nel drawer, nessun default —
   // l'invio resta disabilitato finché il cliente non la sceglie esplicitamente. Il pagamento non
@@ -561,33 +524,8 @@ export default function CustomerKitchenMenu() {
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
   const recommendedBeer = findRecommendedBeer(orderItems, menuItems);
 
-  // CONFERMA ORDINE non invia piu' direttamente: apre lo step nome. Il codice ordine nasce
-  // solo dopo il submit dello step (vedi confirmCustomerName).
-  const openNameStep = () => {
-    if (orderItems.length === 0 || submitting || !fulfillmentType || !kitchenOpen) return;
-    setNameError(null);
-    setNameStepOpen(true);
-  };
-
-  const confirmCustomerName = () => {
-    const name = normalizeCustomerName(customerName);
-    if (!isValidCustomerName(name)) {
-      setNameError('Scrivi il tuo nome (almeno 2 caratteri)');
-      return;
-    }
-    setCustomerName(name);
-    saveSession(session.table, name);
-    setNameError(null);
-    setNameStepOpen(false);
-    // L'ordine non nasce qui: prima si sceglie come pagare (S5).
-    setOrderError(null);
-    setPayStepOpen(true);
-  };
-
   const handleSubmit = async (lane) => {
-    // Invio bloccato finché il cliente non sceglie esplicitamente dove mangia — nessun default
-    // silenzioso. La corsia di pagamento (banco/online) è la scelta dello step precedente.
-    if (orderItems.length === 0 || submitting || submitLockRef.current || !fulfillmentType) return;
+    if (orderItems.length === 0 || submitting || submitLockRef.current) return;
     // KITCHEN_OPEN_CLOSE_V1: difesa in profondità — il bottone è già disabilitato quando la
     // cucina è chiusa, ma un client stale (tab aperta prima della chiusura) potrebbe arrivare
     // comunque qui. La RPC rifiuta comunque con 'kitchen_closed'; questo blocco evita solo la
@@ -596,13 +534,18 @@ export default function CustomerKitchenMenu() {
       setOrderError('LA CUCINA È CHIUSA — NON PUOI INVIARE ORDINI ORA');
       return;
     }
-    // Il nome è obbligatorio: senza, si torna allo step nome e nessun ordine viene creato.
-    const nickname = normalizeCustomerName(customerName);
-    if (!isValidCustomerName(nickname)) {
-      setPayStepOpen(false);
-      setNameStepOpen(true);
+    // Nome e "dove lo mangi" restano obbligatori, senza default silenziosi: se manca qualcosa
+    // nessun ordine viene creato e il cliente viene portato sul primo campo mancante.
+    const missing = checkoutMissing({ name: customerName, fulfillmentType });
+    if (missing.length > 0) {
+      setOrderError(null);
+      setCheckoutIssue((prev) => ({ field: missing[0], seq: (prev?.seq ?? 0) + 1 }));
       return;
     }
+    const nickname = normalizeCustomerName(customerName);
+    setCustomerName(nickname);
+    saveSession(session.table, nickname);
+    setCheckoutIssue(null);
     submitLockRef.current = true;
     setSubmitting(true);
     setOrderError(null);
@@ -649,17 +592,7 @@ export default function CustomerKitchenMenu() {
     // Ordine al banco (scelto, o già tale per idempotenza): lo status mostra subito il codice.
     if (createdOrder.status === 'pending_counter_payment') rememberCounterPaymentChoice(createdOrder.id);
 
-    // Il codice promo si redime solo dopo che l'ordine esiste davvero (mai prima): così il
-    // pass non viene mai consumato per un ordine che poi risulta non creato. Se il redeem
-    // fallisce l'ordine resta comunque valido a prezzo pieno — non blocca mai il cliente.
-    // Per la corsia online il redeem va fatto PRIMA di avviare il pagamento e l'importo del
-    // tentativo è il totale DOPO la promo (redeemPromo ne restituisce il totale).
-    let payableTotal = createdOrder.total;
-    const code = promoCode.trim();
-    if (code && redeemPromo && createdOrder.id) {
-      const promo = await redeemPromo(createdOrder.id, code);
-      if (promo?.ok && Number.isFinite(promo.total)) payableTotal = promo.total;
-    }
+    const payableTotal = createdOrder.total;
 
     // L'esito vero è lo status restituito dal server (idempotenza: "vince il primo"), non la
     // corsia cliccata. Solo un POP scelto come online avvia SumUp; ogni altro caso va allo status.
@@ -685,9 +618,7 @@ export default function CustomerKitchenMenu() {
 
   useEffect(() => {
     if (cartOpen && orderItems.length === 0) setCartOpen(false);
-    if (!cartOpen && nameStepOpen) setNameStepOpen(false);
-    if (!cartOpen && payStepOpen && !submitLockRef.current) setPayStepOpen(false);
-  }, [orderItems.length, cartOpen, nameStepOpen, payStepOpen]);
+  }, [orderItems.length, cartOpen]);
 
   // Sacco svuotato (cestino, o ultima riga rimossa): cadono anche nota e scelta di ritiro.
   // Sono contestuali a QUEL sacco — una nota "senza cipolla" sopravvissuta a un carrello
@@ -1054,11 +985,11 @@ export default function CustomerKitchenMenu() {
 
       {/* Cart drawer */}
       {cartOpen && (
-        <div className="kitch-drawer">
+        <div className="kitch-drawer" role="dialog" aria-modal="true" aria-label="Il tuo sacco">
           <div className="kitch-drawer-handle" />
           <div className="kitch-drawer-header">
             <div className="kitch-drawer-title">IL TUO SACCO</div>
-            <button className="kitch-drawer-close" onClick={() => setCartOpen(false)}>×</button>
+            <button className="kitch-drawer-close" onClick={() => setCartOpen(false)} aria-label="Chiudi il sacco">×</button>
           </div>
           <div className="kitch-drawer-body">
             <div className="kitch-drawer-items-list">
@@ -1080,10 +1011,10 @@ export default function CustomerKitchenMenu() {
                     <div className="kitch-drawer-row-price">€{o.price.toFixed(2).replace('.', ',')}</div>
                   </div>
                   <div className="kitch-drawer-row-controls">
-                    <button className="kitch-qty-btn" onClick={() => removeItem(o.id)}>−</button>
+                    <button className="kitch-qty-btn" onClick={() => removeItem(o.id)} aria-label={`Togli uno: ${o.name}`}>−</button>
                     <span className="kitch-qty-num">{o.qty}</span>
-                    <button className="kitch-qty-btn" onClick={() => addItem(o)}>+</button>
-                    <button className="kitch-trash-btn" onClick={() => removeAllOfItem(o.id)}>🗑️</button>
+                    <button className="kitch-qty-btn" onClick={() => addItem(o)} aria-label={`Aggiungi uno: ${o.name}`}>+</button>
+                    <button className="kitch-trash-btn" onClick={() => removeAllOfItem(o.id)} aria-label={`Rimuovi dal sacco: ${o.name}`}>🗑️</button>
                   </div>
                 </div>
               ))}
@@ -1112,188 +1043,24 @@ export default function CustomerKitchenMenu() {
               </div>
             )}
 
-            {/* DOVE LO MANGI? — unica domanda del drawer (Il Sacco Pulito, 2026-09-13).
-                Il pagamento non si sceglie più qui: vive su /kitchen/payment. */}
-            <div className="kitch-fulfillment-wrap" data-testid="checkout-fulfillment">
-              <div className="kitch-fulfillment-label">DOVE LO MANGI?</div>
-              <div className="kitch-fulfillment-grid">
-                {[
-                  { value: 'eat_here', label: 'MANGIO QUI', sub: 'ti chiamiamo', emoji: '🍽️' },
-                  { value: 'takeaway', label: 'PORTO VIA', sub: 'impacchettiamo', emoji: '🥡' },
-                ].map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    data-testid={`fulfillment-${opt.value}`}
-                    onClick={() => setFulfillmentType(opt.value)}
-                    disabled={submitting}
-                    className={`kitch-fulfillment-card ${fulfillmentType === opt.value ? 'kitch-fulfillment-card--selected' : ''}`}
-                  >
-                    <span className="kitch-fulfillment-card-emoji" aria-hidden="true">{opt.emoji}</span>
-                    <span className="kitch-fulfillment-card-title">{opt.label}</span>
-                    <span className="kitch-fulfillment-card-sub">{opt.sub}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* EXTRA — note e codice promo, secondarie e collassate di default. */}
-            <div className="kitch-extra-wrap">
-              <button
-                type="button"
-                className={`kitch-extra-chip ${notesOpen ? 'kitch-extra-chip--open' : ''}`}
-                onClick={() => setNotesOpen((v) => !v)}
-              >
-                <span aria-hidden="true">{notesOpen ? '⊖' : '⊕'}</span> NOTE PER LA CUCINA
-              </button>
-              {notesOpen && (
-                <div>
-                  <textarea
-                    className="kitch-extra-field"
-                    value={customerNote}
-                    onChange={(e) => setCustomerNote(e.target.value)}
-                    placeholder="Allergie, variazioni…"
-                    maxLength={200}
-                    rows={3}
-                    style={{ resize: 'none' }}
-                  />
-                  <div className="kitch-extra-counter">{customerNote.length}/200</div>
-                </div>
-              )}
-
-              <button
-                type="button"
-                className={`kitch-extra-chip ${promoOpen ? 'kitch-extra-chip--open' : ''}`}
-                onClick={() => setPromoOpen((v) => !v)}
-              >
-                <span aria-hidden="true">{promoOpen ? '⊖' : '⊕'}</span> HO UN CODICE
-              </button>
-              {promoOpen && (
-                <input
-                  type="text"
-                  className="kitch-extra-field kitch-extra-field--promo"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value)}
-                  placeholder="Il tuo codice"
-                  maxLength={20}
-                  disabled={submitting}
-                  data-testid="promo-code-input"
-                />
-              )}
-            </div>
-
-            <div className="kitch-drawer-footer">
-              {orderError && (
-                <div
-                  data-testid="order-submit-error"
-                  style={{
-                    margin: '0 0 12px',
-                    padding: '12px 16px',
-                    background: 'rgba(224,60,44,0.15)',
-                    border: '2px solid #e03c2c',
-                    borderRadius: '12px',
-                    textAlign: 'center',
-                    color: '#ff9a8c',
-                    fontFamily: "'Montserrat', sans-serif",
-                    fontWeight: 700,
-                    fontSize: '14px',
-                  }}
-                >
-                  {orderError.toUpperCase()}
-                </div>
-              )}
-              <div className="kitch-drawer-total-row">
-                <div className="kitch-drawer-total-label">TOTALE</div>
-                <div className="kitch-drawer-total-value">€{total.toFixed(2).replace('.', ',')}</div>
-              </div>
-              {nameStepOpen ? (
-                /* Step nome: ultimo passo prima della creazione dell'ordine (e quindi del codice). */
-                <div data-testid="customer-name-step">
-                  <label className="kitch-fulfillment-label" htmlFor="customer-name-input">
-                    COME TI CHIAMI?
-                  </label>
-                  <input
-                    id="customer-name-input"
-                    type="text"
-                    className="kitch-extra-field"
-                    value={customerName}
-                    onChange={(e) => { setCustomerName(e.target.value); if (nameError) setNameError(null); }}
-                    onKeyDown={(e) => { if (e.key === 'Enter') confirmCustomerName(); }}
-                    placeholder="Il tuo nome"
-                    maxLength={CUSTOMER_NAME_MAX}
-                    autoComplete="given-name"
-                    autoFocus
-                    disabled={submitting}
-                    data-testid="customer-name-input"
-                  />
-                  {nameError && (
-                    <div className="kitch-secure-hint" data-testid="customer-name-error">{nameError}</div>
-                  )}
-                  <button
-                    className="kitch-btn-submit"
-                    onClick={confirmCustomerName}
-                    aria-label="Continua"
-                    disabled={submitting || !isValidCustomerName(customerName)}
-                    data-testid="customer-name-continue"
-                    style={(submitting || !isValidCustomerName(customerName)) ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
-                  >
-                    {submitting ? 'INVIO IN CORSO…' : 'CONTINUA'}
-                  </button>
-                  <div className="kitch-secure-hint">Serve alla cucina per chiamarti: A42 · {normalizeCustomerName(customerName) || 'il tuo nome'}</div>
-                </div>
-              ) : payStepOpen ? (
-                /* Step "COME VUOI PAGARE?" (S5): ultimo passo, l'ordine nasce al tap. */
-                <div data-testid="pay-lane-step">
-                  <div className="kitch-fulfillment-label">COME VUOI PAGARE?</div>
-                  <div className="kitch-fulfillment-grid">
-                    {[
-                      { value: 'counter', label: 'AL BANCO', sub: 'paghi in cassa col codice', emoji: '🧾' },
-                      { value: 'online', label: 'ONLINE', sub: 'paghi ora dal telefono', emoji: '💳' },
-                    ].map((opt) => (
-                      <button
-                        key={opt.value}
-                        type="button"
-                        data-testid={`pay-lane-${opt.value}`}
-                        onClick={() => handleSubmit(opt.value)}
-                        disabled={submitting}
-                        className="kitch-fulfillment-card"
-                        style={submitting ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
-                      >
-                        <span className="kitch-fulfillment-card-emoji" aria-hidden="true">{opt.emoji}</span>
-                        <span className="kitch-fulfillment-card-title">{opt.label}</span>
-                        <span className="kitch-fulfillment-card-sub">{opt.sub}</span>
-                      </button>
-                    ))}
-                  </div>
-                  {submitting && <div className="kitch-secure-hint" data-testid="pay-lane-sending">INVIO IN CORSO…</div>}
-                  <button
-                    type="button"
-                    className="kitch-extra-chip"
-                    data-testid="pay-lane-back"
-                    onClick={() => { setPayStepOpen(false); setNameStepOpen(true); }}
-                    disabled={submitting}
-                  >
-                    <span aria-hidden="true">←</span> INDIETRO
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    className="kitch-btn-submit"
-                    onClick={openNameStep}
-                    aria-label="Invia ordine"
-                    disabled={submitting || !fulfillmentType || !kitchenOpen}
-                    data-testid="submit-order-btn"
-                    style={(submitting || !fulfillmentType || !kitchenOpen) ? { opacity: 0.6, cursor: 'not-allowed' } : undefined}
-                  >
-                    {submitting ? 'INVIO IN CORSO…' : !kitchenOpen ? 'CUCINA CHIUSA' : 'CONFERMA ORDINE'}
-                  </button>
-                  <div className="kitch-secure-hint">
-                    {!kitchenOpen ? 'Riprova più tardi — lo staff ha chiuso la cucina.' : fulfillmentType ? 'Paghi dopo: al banco o dal telefono.' : 'Prima dicci: qui o via?'}
-                  </div>
-                </>
-              )}
-            </div>
+            {/* Checkout V2 — un solo schermo: nome (protagonista), dove lo mangi, note cucina e
+                corsia di pagamento. Il tap su PAGO ORA / PAGO AL BANCO crea l'ordine (handleSubmit). */}
+            <CustomerCheckout
+              customerName={customerName}
+              onNameChange={setCustomerName}
+              fulfillmentType={fulfillmentType}
+              onFulfillmentChange={setFulfillmentType}
+              note={customerNote}
+              onNoteChange={setCustomerNote}
+              notesOpen={notesOpen}
+              onNotesOpenChange={setNotesOpen}
+              submitting={submitting}
+              kitchenOpen={kitchenOpen}
+              total={total}
+              orderError={orderError}
+              issue={checkoutIssue}
+              onPay={handleSubmit}
+            />
           </div>
         </div>
       )}

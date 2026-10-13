@@ -276,6 +276,17 @@
   animation: none;
 }
 .ost-status-banner-content { flex: 1; }
+/* Saluto col nome scelto nel checkout (Customer Experience V2) */
+.ost-greeting {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: #fff;
+  opacity: 0.95;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
 /* Codice ordine grande e dominante per ogni blocco (AC6/AC7) */
 .ost-order-code-big {
   font-family: 'Anton', sans-serif;

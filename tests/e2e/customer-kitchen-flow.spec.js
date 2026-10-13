@@ -87,16 +87,13 @@ async function chooseFulfillment(page, fulfillment) {
   await page.getByTestId(`fulfillment-${fulfillment}`).click();
 }
 
-// Step nome cliente (2026-09-19): "Invia ordine" non crea piu' l'ordine — apre lo step
-// "COME TI CHIAMI?". Il codice ordine nasce solo dopo CONTINUA.
+// Customer Experience V2: nome, "dove lo mangi", note e corsia di pagamento stanno in un solo
+// schermo del drawer. `submitOrder` scrive il nome (obbligatorio); l'ordine nasce al tap su
+// PAGO ORA / PAGO AL BANCO ('online' | 'counter'), mai prima.
 async function submitOrder(page, name = 'Marco') {
-  await page.getByRole('button', { name: /Invia ordine/i }).click();
   await page.getByTestId('customer-name-input').fill(name);
-  await page.getByTestId('customer-name-continue').click();
 }
 
-// S5 (Payment Lifecycle V2): dopo il nome compare lo step "COME VUOI PAGARE?" e l'ordine nasce
-// solo al tap su AL BANCO / ONLINE ('counter' | 'online').
 async function choosePayLane(page, lane) {
   await page.getByTestId(`pay-lane-${lane}`).click();
 }
@@ -326,17 +323,23 @@ test('3. Full Kitchen order uses customer identity from the native name step', a
   expect(sent.body.p_client_request_id).toMatch(/^[0-9a-f-]{36}$/);
 });
 
-test('3h. Invio ordine disabilitato finché "dove lo mangi" non è scelto', async ({ page }) => {
+test('3h. Corsia di pagamento senza "dove lo mangi": nessun ordine, campo segnalato, poi si procede', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'takeaway', orderCode: 'A09' });
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
 
-  const submitBtn = page.getByTestId('submit-order-btn');
-  await expect(submitBtn).toBeDisabled();
+  await submitOrder(page);
+  await choosePayLane(page, 'counter');
+  await expect(page.getByTestId('fulfillment-error')).toBeVisible();
+  expect(sent.calls.length).toBe(0);
 
   await page.getByTestId('fulfillment-takeaway').click();
-  await expect(submitBtn).toBeEnabled();
+  await expect(page.getByTestId('fulfillment-takeaway')).toHaveAttribute('aria-pressed', 'true');
+  await choosePayLane(page, 'counter');
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  expect(sent.calls.length).toBe(1);
 });
 
 test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redirect a /kitchen/status, resta pending_counter_payment', async ({ page }) => {
@@ -484,7 +487,7 @@ test('3c. Empty cart hides the bottom bar entirely; appears on first item, disap
   // Remove the last product from the drawer
   await bar.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
   await expect(page.locator('.kitch-drawer')).toBeVisible();
-  await page.getByRole('button', { name: '🗑️' }).first().click();
+  await page.getByRole('button', { name: /Rimuovi dal sacco/i }).first().click();
 
   // Back to zero items: bar hidden again, drawer closed
   await expect(page.locator('.kitch-drawer')).toHaveCount(0);
@@ -961,66 +964,58 @@ test('17. Alert critico dopo 15 minuti', async ({ page }) => {
   await expect(page.getByText(/🔴 CRITICO/)).toBeVisible();
 });
 
-// Personalità Discutibile Pass — Redemption V2, Opzione 2 (2026-09-10): il cliente inserisce il
-// codice nel drawer carrello, non lo staff. `redeemPromo` chiama la stessa RPC già coperta da
-// supabase/migrations/20260910130000_kitchen_promo_pass_redeem_customer_v1.test.js — qui si
-// verifica solo il wiring client (input → addOrder → redeemPromo → esito visibile), mockata via
-// route come già fatto per i test staff-side rimossi da kitchen-solo-service.spec.js.
-// Il Sacco Pulito (2026-09-13): il codice promo resta un campo collassato ("HO UN CODICE") nel
-// drawer, invariato lato redeem (RPC chiamata dopo addOrder, mai prima). L'esito non è più
-// mostrato da nessuna parte in questo task — la Promo Redemption UI su /kitchen/status è
-// esplicitamente fuori scope (vedi ai-ops/reports/kitchen-customer-journey-ux-deep-dive.md P0-1) —
-// quindi qui si verifica solo che il redeem parta con il codice giusto e che l'ordine si confermi
-// comunque, non più un banner di successo/errore.
-test('18. Cliente inserisce un codice promo valido: il redeem parte con il codice giusto, ordine confermato', async ({ page }) => {
+// Customer Experience V2 (2026-10-13): decisione prodotto — il controllo "HO UN CODICE" non esiste
+// più nel carrello cliente. Nessun campo, nessun redeem lato cliente: l'ordine si crea a prezzo
+// pieno e la RPC promo non viene mai chiamata dal checkout. (La RPC e l'hook `redeemPromo` restano
+// intatti: qui si verifica solo che il cliente non possa più inserire codici.)
+test('18. Nessun controllo codice promo nel carrello e nessun redeem durante l\'ordine', async ({ page }) => {
   await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'A05' });
-  const promoSent = { body: null };
+  const promoCalls = [];
   await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', async (route) => {
-    promoSent.body = route.request().postDataJSON();
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({ promo_code: 'WALRUS-AB12C', discount_amount: 1.5, total: 13.5 }),
-    });
+    promoCalls.push(route.request().postDataJSON());
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ total: 1 }) });
   });
 
   await page.goto('/kitchen');
-
   await openFullMenu(page);
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+
+  await expect(page.getByTestId('customer-checkout')).toBeVisible();
+  await expect(page.getByRole('button', { name: /HO UN CODICE/i })).toHaveCount(0);
+  await expect(page.getByTestId('promo-code-input')).toHaveCount(0);
+  await expect(page.getByPlaceholder(/il tuo codice/i)).toHaveCount(0);
+  await expect(page.locator('.kitch-drawer')).not.toContainText(/codice promo|HO UN CODICE|hai un codice/i);
+
   await chooseFulfillment(page, 'eat_here');
-
-  await page.getByRole('button', { name: /HO UN CODICE/i }).click();
-  await page.getByTestId('promo-code-input').fill('walrus-ab12c');
   await submitAndPay(page, 'counter');
-
   await expect(page).toHaveURL(/\/kitchen\/status/);
-  expect(promoSent.body?.p_code).toBe('walrus-ab12c');
+  expect(promoCalls).toHaveLength(0);
 });
 
-test('19. Cliente inserisce un codice promo non valido: ordine confermato comunque a prezzo pieno', async ({ page }) => {
-  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'A06' });
-  const promoSent = { body: null };
-  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', async (route) => {
-    promoSent.body = route.request().postDataJSON();
-    await route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) });
-  });
+// Note cucina (Customer Experience V2): la scorciatoia ALLERGIA e il testo libero arrivano
+// sulla comanda (p_customer_note) senza perdere il testo già scritto; la nota resta opzionale.
+test('19. Note cucina: scorciatoia ALLERGIA + testo libero arrivano nella comanda; senza note l\'ordine parte uguale', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'A06' });
 
   await page.goto('/kitchen');
-
   await openFullMenu(page);
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, 'eat_here');
 
-  await page.getByRole('button', { name: /HO UN CODICE/i }).click();
-  await page.getByTestId('promo-code-input').fill('WALRUS-USED1');
-  await submitAndPay(page, 'counter');
+  const toggle = page.getByTestId('kitchen-note-toggle');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await page.getByTestId('kitchen-note-input').fill('senza cipolla');
+  await page.getByTestId('note-chip-allergy').click();
+  await page.keyboard.type('glutine');
+  await expect(page.getByTestId('kitchen-note-input')).toHaveValue('senza cipolla · ALLERGIA: glutine');
 
-  // Un codice sbagliato non deve mai bloccare il cliente: l'ordine si conferma comunque.
+  await submitAndPay(page, 'counter');
   await expect(page).toHaveURL(/\/kitchen\/status/);
-  expect(promoSent.body?.p_code).toBe('WALRUS-USED1');
+  expect(sent.body.p_customer_note).toContain('senza cipolla · ALLERGIA: glutine');
 });
 
 test('20. Birre ripristinate (2026-09-22): le 6 bottiglie visibili, nessun Krombacher, ordinabili tutto il giorno', async ({ page }) => {
@@ -1732,27 +1727,78 @@ test('36. AC7: al ritorno da SumUp solo l\'ordine corrispondente a ?orderId= ese
 // cablato lato server su /kitchen/status?sumup=return (AC3/AC7 invariati, vedi test 36).
 // ═══════════════════════════════════════════════════════════════════
 
-test('37. S5: dopo il nome compare COME VUOI PAGARE? e l\'ordine NON esiste ancora; INDIETRO torna al nome', async ({ page }) => {
+test('37. Checkout V2: nome, dove, note e corsie sono sullo stesso schermo; nessun ordine finché non si tocca una corsia', async ({ page }) => {
   const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'P01' });
 
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
-  await chooseFulfillment(page, 'eat_here');
-  await submitOrder(page);
 
+  // Tutto insieme, senza passaggi intermedi (niente CONFERMA → CONTINUA).
+  await expect(page.getByTestId('customer-name-input')).toBeVisible();
+  await expect(page.getByTestId('fulfillment-eat_here')).toBeVisible();
+  await expect(page.getByTestId('kitchen-note-toggle')).toBeVisible();
   await expect(page.getByTestId('pay-lane-step')).toBeVisible();
-  await expect(page.getByText('COME VUOI PAGARE?')).toBeVisible();
   await expect(page.getByTestId('pay-lane-counter')).toBeVisible();
   await expect(page.getByTestId('pay-lane-online')).toBeVisible();
+  await expect(page.getByText('COME PAGHI?')).toBeVisible();
   await expect(page).not.toHaveURL(/\/kitchen\/(payment|status)/);
-  // Nessun ordine creato finché non si sceglie la corsia.
-  expect(sent.calls.length).toBe(0);
 
-  await page.getByTestId('pay-lane-back').click();
-  await expect(page.getByTestId('customer-name-step')).toBeVisible();
-  await expect(page.getByTestId('pay-lane-step')).toHaveCount(0);
+  await chooseFulfillment(page, 'eat_here');
+  await submitOrder(page);
+  // Compilato tutto, ma nessun ordine esiste finché non si sceglie la corsia.
+  expect(sent.calls.length).toBe(0);
+});
+
+// Nome obbligatorio senza default silenzioso: il tap su una corsia con nome vuoto non invia,
+// spiega cosa manca e porta il focus sul campo nome.
+test('37b. Tap su una corsia senza nome: nessun ordine, messaggio e focus sul nome', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'P02' });
+  await page.goto('/kitchen');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await chooseFulfillment(page, 'eat_here');
+
+  await choosePayLane(page, 'counter');
+  await expect(page.getByTestId('customer-name-error')).toBeVisible();
+  await expect(page.getByTestId('customer-name-input')).toBeFocused();
+  expect(sent.calls.length).toBe(0);
+  await expect(page).not.toHaveURL(/\/kitchen\/status/);
+
+  // Un solo carattere non basta (minimo 2), come prima.
+  await page.getByTestId('customer-name-input').fill('M');
+  await choosePayLane(page, 'online');
+  await expect(page.getByTestId('customer-name-error')).toBeVisible();
+  expect(sent.calls.length).toBe(0);
+});
+
+// Il nome è il protagonista ma resta veloce: chip e dado riempiono il campo con un nome valido,
+// e quel nome è quello che arriva sulla comanda (p_nickname).
+test('37c. Nome veloce: chip e dado compilano il campo; il nome scelto parte nell\'ordine', async ({ page }) => {
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'takeaway', orderCode: 'P03' });
+  await page.goto('/kitchen');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+
+  const input = page.getByTestId('customer-name-input');
+  await expect(input).toHaveValue('');
+  await page.getByTestId('customer-name-chip').first().click();
+  await expect(input).toHaveValue('Baffo');
+  await expect(page.getByTestId('customer-name-hello')).toContainText('Baffo');
+
+  await page.getByTestId('customer-name-dice').click();
+  const rolled = await input.inputValue();
+  expect(rolled.length).toBeGreaterThanOrEqual(2);
+  expect(rolled).not.toBe('Baffo');
+
+  await chooseFulfillment(page, 'takeaway');
+  await expect(page.getByTestId('checkout-status')).toContainText(/Tricheco approva/i);
+  await choosePayLane(page, 'counter');
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+  expect(sent.body.p_nickname).toBe(rolled);
 });
 
 test('38. Pagina pagamento non mostra jukebox, timeline di stato o lista ordini', async ({ page }) => {
@@ -1950,16 +1996,12 @@ test('44. Regressione: ordine normale (online_payment_disabled assente/false) �
 // Rete sempre mockata (RPC Supabase e /api/*): nessuna chiamata reale.
 // ═══════════════════════════════════════════════════════════════════
 
-async function fillCartToPayStep(page, { fulfillment = 'eat_here', promo = null } = {}) {
+async function fillCartToPayStep(page, { fulfillment = 'eat_here' } = {}) {
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
   await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
   await chooseFulfillment(page, fulfillment);
-  if (promo) {
-    await page.getByRole('button', { name: /HO UN CODICE/i }).click();
-    await page.getByTestId('promo-code-input').fill(promo);
-  }
   await submitOrder(page);
   await expect(page.getByTestId('pay-lane-step')).toBeVisible();
 }
@@ -2239,35 +2281,20 @@ test('56. S5 idempotenza inversa: scelta ONLINE ma il server restituisce PCP -> 
   expect(pay.attempts.length).toBe(0);
 });
 
-test('57. S5 promo + online: il redeem precede attempt_start e l\'importo del tentativo è il totale dopo la promo', async ({ page }) => {
+// Customer Experience V2: senza il controllo codice promo l'importo del tentativo è sempre il
+// totale pieno dell'ordine e il checkout non chiama mai il redeem (nessun passaggio in più).
+test('57. S5 online senza promo: attempt_start con il totale pieno, nessun redeem prima del pagamento', async ({ page }) => {
   await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'R01', total: 13.9 });
   const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock' });
-  const order = [];
+  const redeems = [];
   await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', async (route) => {
-    order.push('redeem');
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ promo_code: 'WALRUS-AB12C', discount_amount: 1.9, total: 12 }) });
+    redeems.push(route.request().postDataJSON());
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ total: 1 }) });
   });
-  await page.route('**/rest/v1/rpc/kitchen_payment_attempt_start', async (route) => {
-    order.push('attempt');
-    pay.attempts.push(route.request().postDataJSON());
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'attempt-e2e-1', status: 'created' }) });
-  });
-  await fillCartToPayStep(page, { promo: 'walrus-ab12c' });
+  await fillCartToPayStep(page);
   await choosePayLane(page, 'online');
   await expect(page).toHaveURL(/\/kitchen\/status\?.*sumup=return/);
-  expect(order).toEqual(['redeem', 'attempt']);
-  expect(pay.attempts[0].p_amount).toBe(12);
-});
-
-test('58. S5 promo non valido + online: si paga il totale pieno, mai blocco', async ({ page }) => {
-  await mockCreateOrderRpc(page, { fulfillmentType: 'eat_here', orderCode: 'R02', total: 13.9 });
-  const pay = await mockOnlinePayment(page, { orderId: 'order-e2e-checkout-mock' });
-  await page.route('**/rest/v1/rpc/kitchen_promo_pass_redeem_for_order', (route) =>
-    route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'promo_already_redeemed' }) })
-  );
-  await fillCartToPayStep(page, { promo: 'WALRUS-USED1' });
-  await choosePayLane(page, 'online');
-  await expect(page).toHaveURL(/\/kitchen\/status\?.*sumup=return/);
+  expect(redeems).toHaveLength(0);
   expect(pay.attempts[0].p_amount).toBe(13.9);
 });
 
