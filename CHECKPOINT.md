@@ -1,5 +1,5 @@
 # CHECKPOINT — Walbox Kitchen
-Aggiornato: 2026-10-13 (S6 in produzione). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
+Aggiornato: 2026-10-13 (checkout V2 in produzione). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
 
 Regole di questo file: solo stato corrente. Niente cronologia (va nell'archivio), niente regole stabili
 (vanno in `ai-ops/knowledge/MEMORY.md`), un solo NEXT STEP. Lavoro in corso multi-fase: il file di stato
@@ -9,7 +9,11 @@ indicato nel NEXT STEP (oggi `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`).
 - Kitchen Recovery (piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`): riordino linea, onboarding, poi
   "Pagamento app separato" (S2…S7).
 - Branch `kitchen-clean-baseline-v2-phase-a` (worktree `walbox-kitchen-release`): linea Kitchen più completa.
-  Pushato su `main` fino a `9417066` (verificato `ls-remote` 2026-10-13): HEAD = `origin/main`.
+  `main` pushato fino a `661df75` (2026-10-13): HEAD = `origin/main`.
+- **Checkout V2 in produzione dal 2026-10-13** (merge `d1fe37e` di `claude/customer-experience-v2`):
+  nome, dove lo mangi, note cucina e corsia di pagamento su una schermata sola, al posto del flusso a tre
+  passaggi; rimosso il codice promo dal carrello. Collaudo con baseline in
+  `ai-ops/reports/anniversario-fase0-collaudo-v2.md`. **Smoke post-deploy a video: da fare.**
 - Produzione (Vercel, branch `main` = `9417066`): include fix incidente SumUp 401, S3, S4 (endpoint paga al banco,
   inerte finché S5 non crea ordini POP) e S6 (API sweep `kitchen-online-abandon-sweep`, 10 Vercel Functions).
   Smoke post-deploy PASS 21/21.
@@ -56,8 +60,8 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-**Anniversario 15 anni** (serata fra ~3 giorni, data da confermare): collaudo del checkout V2
-(`claude/customer-experience-v2`, 1 commit sopra `main`) e merge su `main` deciso da Eros, poi GARPEZ,
-modalità evento e animazione. S5 è su `main` (`b2b3446`); resta da verificare a video che un ordine online
-scaduto passi davvero dallo sweep (mai visto in produzione).
+**Anniversario 15 anni** — Fase 0 chiusa (checkout V2 collaudato, merge e push fatti). Prossima: **Fase 1,
+item GARPEZ** in `src/data/kitchenMockData.js` (area protetta §5): ingredienti e allergeni sono decisi
+(`['glutine','latte','senape']`, `allergensVerified: false`), manca la foto della Fase 2 per il campo
+`image` — serve lo scatto su green screen da Eros. Poi modalità evento (Fase 3) e animazione (Fase 4).
 Stato dettagliato: `ai-ops/current/ANNIVERSARIO_15_ANNI.md`.
