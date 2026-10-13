@@ -36,9 +36,12 @@ Nessuna migration: l'interruttore evento è client-side (vedi Fase 3).
 - Nuovo item `id: 'item-059'`, `category: 'bbq'` (= sezione PESI MASSIMI), `price: 15.0`,
   `name: 'Garpez'`, `tags: ['special', 'v2', 'anniversario']`, `available: true`.
 - `ingredients`: "Stinco cotto nella birra Petrus Red Aged · cetriolini sott'aceto · cipolla caramellata · cheddar · senape".
-- `allergens`: **NEEDS_DECISION** — proposta `['glutine', 'latte', 'senape']` (birra e pane = glutine/orzo,
-  cheddar = latte, senape = senape). Finché Eros non conferma: `allergensVerified: false`, come il Box
-  Pulled Pork (`item-018`). Non si inventano allergeni: ci sono celiaci.
+- `allergens`: **DECISO 2026-10-13** (Eros: "prendili dagli ingredienti") → `['glutine', 'latte', 'senape']`.
+  Derivazione: pane + birra Petrus Red Aged (orzo/malto) = glutine · cheddar = latte · senape = senape ·
+  cetriolini e cipolla caramellata non aggiungono nulla. **`allergensVerified: false`** resta, come il Box
+  Pulled Pork (`item-018`): è una derivazione da lista ingredienti, non da etichette fornitore. Due incerti
+  non verificabili da qui: solfiti nei cetriolini, burro nella cipolla caramellata. Chi ha un'allergia vera
+  deve poter chiedere al banco.
 - **Nessuna combo Fallo Pesante** (decisione Eros): nessuna entry in `kitchenPesiMassimiCombos`.
 
 ### Fase 2 — Foto GARPEZ scontornata
@@ -51,12 +54,13 @@ Nessuna migration: l'interruttore evento è client-side (vedi Fase 3).
 - Nuovo `src/lib/kitchenEventMode.js` + `kitchenEventMode.test.js` (logica pura, §9).
 - `CustomerKitchenMenu.jsx`: a modalità accesa, `CATEGORIES` filtrate a `bbq`, `activeCategory`
   iniziale `'bbq'` invece di `'panini'`. Nient'altro cambia: carrello, checkout e pagamenti invariati.
-- **Interruttore — assunzione dichiarata:** finestra di date nel codice (es. 16/10 ore 17:00 → 17/10 ore 03:00),
-  più override `?evento=1` / `?evento=0` per provare prima e per spegnere al volo.
-  Motivo: un vero interruttore condiviso da staff richiede una colonna nuova su `kitchen_service_state`,
-  cioè migration + `db push` in produzione a 3 giorni dall'evento. Troppo rischio per il guadagno.
-  Si accende e si spegne da sola; se Eros preferisce il bottone staff, è un task a parte dopo la festa.
-- Dopo la serata la modalità si spegne da sola e il menu torna intero: nessun intervento richiesto.
+- **Interruttore — DECISO 2026-10-13** (Eros: data e ora non rilevanti): **niente finestra di date**.
+  Modalità **spenta di default**, si accende in due modi: costante `EVENT_MODE_ON` in cima al file (a `true`
+  il giorno della festa, a `false` dopo) e override URL `?evento=1` / `?evento=0` per provare e per
+  spegnere al volo. Niente si attiva da solo nel momento sbagliato.
+  Niente colonna su `kitchen_service_state`: eviterebbe migration + `db push` in produzione, troppo rischio.
+- **Attenzione: dopo la serata la modalità NON si spegne da sola** — va rimessa `EVENT_MODE_ON = false`,
+  altrimenti il menu resta ai soli PESI MASSIMI.
 
 ### Fase 4 — Animazione 15 anni
 - Nuovi `src/components/kitchen/AnniversaryBanner.jsx` + `.css`, montati sulla home `/kitchen`
@@ -124,14 +128,20 @@ che ha il tag 'anniversario' (nessun id hardcoded). Screenshot 390 e 430 a Eros.
   - Due ENV_BLOCKER del container cloud risolti fuori dal repo (chromium build 1194 invece di 1228;
     manca `VITE_SUPABASE_ANON_KEY` perche' qui non esiste `.env.local`). Su questa macchina
     `npm run test:e2e` nudo non gira: serve il config override.
+  - **Merge V2 su `main` FATTO in locale 2026-10-13** (Eros ha approvato): commit di merge `d1fe37e`,
+    10 file, +1118/-370, nessuna area protetta toccata. Ricollaudo sul risultato del merge: lint 121 err
+    (come il branch), unit lib 161/0 fail, api 6/0, mjs 348 con i soliti 4 rossi noti, build PASS.
+    **NON pushato**: il push su `main` fa partire il deploy Vercel in produzione, gate di Eros.
 - Decisioni aperte:
-  - **GATE: merge di `claude/customer-experience-v2` su `main`** (= deploy in produzione, pagamenti reali)
-  - **NEEDS_DECISION allergeni GARPEZ** — serve conferma di Eros prima della serata (celiaci)
-  - **NEEDS_DECISION data e orari esatti** della finestra evento
-  - Assunzione dichiarata: interruttore a finestra di date + override URL, niente migration (Fase 3)
+  - **GATE: `git push -u origin main`** = pubblicazione del checkout V2 ai clienti, pagamenti reali
+  - ~~allergeni GARPEZ~~ **CHIUSA 2026-10-13**: `['glutine','latte','senape']` derivati dagli ingredienti,
+    `allergensVerified: false` (vedi Fase 1)
+  - ~~data e orari evento~~ **CHIUSA 2026-10-13**: non rilevanti, niente finestra di date (vedi Fase 3)
+  - Promemoria operativo: la modalità evento va **spenta a mano** dopo la festa (`EVENT_MODE_ON = false`)
   - Due P2 non bloccanti trovati in V2 (footer appiccicato che copre ~30px di contenuto; `'Ospite Walrus'`
     duplicato a mano in `CustomerOrderPanel.jsx` invece di importare `GUEST_NICKNAME`): da sistemare prima
     del merge o dopo la festa — decide Eros
-- Prossimo passo: Eros decide il merge. Poi Fase 1 (GARPEZ), che resta bloccata dagli allergeni.
+- Prossimo passo: Eros decide il push (= deploy). Poi Fase 1 (GARPEZ): allergeni e ingredienti sono
+  decisi, manca solo la foto della Fase 2 per il campo `image`.
 
 Modello/effort: Fase 0 e 3 → Opus high · Fasi 1, 2, 4 → Sonnet medium
