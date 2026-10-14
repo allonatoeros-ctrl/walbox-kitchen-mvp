@@ -9,13 +9,18 @@ indicato nel NEXT STEP (oggi `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`).
 - Kitchen Recovery (piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`): riordino linea, onboarding, poi
   "Pagamento app separato" (S2…S7).
 - **Working copy (2026-10-14):** `walbox-kitchen-release` è l'unica cartella operativa, repo git normale e
-  locale (nessun worktree, `node_modules` vero). Branch `feat/anniversario-15-anni`, HEAD `7ac6878` =
+  locale (nessun worktree, `node_modules` vero). Branch `feat/anniversario-15-anni`, HEAD `3de9afe` =
   `origin/feat/anniversario-15-anni`, status pulito. Le vecchie cartelle (`walbox-fanta-preview`,
   `walbox-kitchen-deploy-cb27d56`, `walbox-p1-sync`, `walbox-p2-base`) e i backup stanno solo in
   `~/_ARCHIVIO_WALBOX/2026-10-14_phase1/` e `…_phase2/`; il backup con i pagamenti reali e il dataset locale
   ignorato da Git non vanno ripristinati nella working copia attiva. Nulla è stato cancellato definitivamente.
   Verifica: `src/lib` + `api/_lib` = 173 PASS, 1 SKIP atteso (test opzionale che dipende dal dataset locale
   ignorato da Git), 0 FAIL; build PASS.
+- **Phase 3 pulizia branch = PASS (2026-10-14).** Remoti rimasti: `main` → `3d740b9`,
+  `feat/anniversario-15-anni` → `3de9afe`, `feat/kitchen-watchdog-v1` → `30e3501`. 10 branch remoti obsoleti
+  eliminati. I due branch Fanta con lavoro unico (`demo/fantawalrus-vercel` `1849fb8`, `guest-mode-transfer`
+  `9976828`) sono archiviati e verificati in `~/_ARCHIVIO_WALBOX/2026-10-14_phase3/fantawalrus-branches.bundle`
+  (con `MANIFEST.md` e comando di restore). Nessuna modifica a codice, Vercel o Supabase durante la Phase 3.
 - `main` pushato fino a `661df75` (2026-10-13), dichiarato allora HEAD = `origin/main`.
 - **Checkout V2 in produzione dal 2026-10-13** (merge `d1fe37e` di `claude/customer-experience-v2`):
   nome, dove lo mangi, note cucina e corsia di pagamento su una schermata sola, al posto del flusso a tre
@@ -68,4 +73,4 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-Completare la pulizia Git dei branch locali/remoti obsoleti, senza toccare main o produzione.
+Pulire codice morto, asset non referenziati e documentazione legacy nel repository, senza toccare main o produzione.
