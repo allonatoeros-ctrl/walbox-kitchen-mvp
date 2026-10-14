@@ -1,5 +1,5 @@
 # CHECKPOINT — Walbox Kitchen
-Aggiornato: 2026-10-13 (checkout V2 in produzione). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
+Aggiornato: 2026-10-14 (working copy unica, vecchie cartelle in archivio; prima: checkout V2 in produzione 2026-10-13). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
 
 Regole di questo file: solo stato corrente. Niente cronologia (va nell'archivio), niente regole stabili
 (vanno in `ai-ops/knowledge/MEMORY.md`), un solo NEXT STEP. Lavoro in corso multi-fase: il file di stato
@@ -8,8 +8,15 @@ indicato nel NEXT STEP (oggi `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`).
 ## FASE
 - Kitchen Recovery (piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`): riordino linea, onboarding, poi
   "Pagamento app separato" (S2…S7).
-- Branch `kitchen-clean-baseline-v2-phase-a` (worktree `walbox-kitchen-release`): linea Kitchen più completa.
-  `main` pushato fino a `661df75` (2026-10-13): HEAD = `origin/main`.
+- **Working copy (2026-10-14):** `walbox-kitchen-release` è l'unica cartella operativa, repo git normale e
+  locale (nessun worktree, `node_modules` vero). Branch `feat/anniversario-15-anni`, HEAD `7ac6878` =
+  `origin/feat/anniversario-15-anni`, status pulito. Le vecchie cartelle (`walbox-fanta-preview`,
+  `walbox-kitchen-deploy-cb27d56`, `walbox-p1-sync`, `walbox-p2-base`) e i backup stanno solo in
+  `~/_ARCHIVIO_WALBOX/2026-10-14_phase1/` e `…_phase2/`; il backup con i pagamenti reali e il dataset locale
+  ignorato da Git non vanno ripristinati nella working copia attiva. Nulla è stato cancellato definitivamente.
+  Verifica: `src/lib` + `api/_lib` = 173 PASS, 1 SKIP atteso (test opzionale che dipende dal dataset locale
+  ignorato da Git), 0 FAIL; build PASS.
+- `main` pushato fino a `661df75` (2026-10-13), dichiarato allora HEAD = `origin/main`.
 - **Checkout V2 in produzione dal 2026-10-13** (merge `d1fe37e` di `claude/customer-experience-v2`):
   nome, dove lo mangi, note cucina e corsia di pagamento su una schermata sola, al posto del flusso a tre
   passaggi; rimosso il codice promo dal carrello. Collaudo con baseline in
@@ -49,7 +56,8 @@ oltre, si spostano in archivio.
 - **Ambiente locale:** `.env.local` punta alla produzione Supabase; il guard di `vite.config.js` blocca dev/build.
   Per buildare: `VITE_SUPABASE_URL=http://127.0.0.1:54321 npm run build`.
 - **Test rossi preesistenti:** `tests/unit/sumup-payment-reliability.test.mjs` (3) e
-  `tests/unit/kitchen-analytics-service-night-selector.test.mjs` (1, data fissa). E2E non rieseguiti dopo Fase 0
+  `tests/unit/kitchen-analytics-service-night-selector.test.mjs` (1, data fissa). Riconfermati il 2026-10-14
+  sulla working copy finale: `tests/unit` = 344 pass, 4 fail (non dovuti allo spostamento delle cartelle). E2E non rieseguiti dopo Fase 0
   (al 2026-09-22 c'erano 16 fail preesistenti non correlati).
 - **Da vedere a video:** Storico UX del 2026-10-10 (chip pagamento, filtro, annullati barrati).
 - Cassa `recentPayments` usa i 30 pagamenti più recenti globali: può perdere attempt ancora rilevanti (follow-up).
@@ -60,8 +68,4 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-**Anniversario 15 anni** — Fase 0 chiusa (checkout V2 collaudato, merge e push fatti). Prossima: **Fase 1,
-item GARPEZ** in `src/data/kitchenMockData.js` (area protetta §5): ingredienti e allergeni sono decisi
-(`['glutine','latte','senape']`, `allergensVerified: false`), manca la foto della Fase 2 per il campo
-`image` — serve lo scatto su green screen da Eros. Poi modalità evento (Fase 3) e animazione (Fase 4).
-Stato dettagliato: `ai-ops/current/ANNIVERSARIO_15_ANNI.md`.
+Completare la pulizia Git dei branch locali/remoti obsoleti, senza toccare main o produzione.

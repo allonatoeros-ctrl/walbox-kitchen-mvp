@@ -22,9 +22,13 @@ in chat. Meccanica: skill **`silent-report`**.
 
 - Walbox Kitchen per The Walrus Pub: il cliente ordina e paga dal telefono (QR), lo staff gestisce ordini e
   pagamenti, la TV mostra la cucina.
-- Questo branch è **solo Kitchen**. Jukebox, Poster TV e FantaWalrus vivono in altri branch/worktree.
-- Root operativa: questo worktree (`walbox-kitchen-release`). Il repo git è condiviso con i worktree fratelli
-  (`walbox-fanta-preview` e altri): non toccarli. `node_modules` è un symlink verso `walbox-fanta-preview`.
+- Questo branch è **solo Kitchen**. Jukebox, Poster TV e FantaWalrus vivono in altri branch.
+- Root operativa: `walbox-kitchen-release`, l'unica cartella operativa. È un repo git normale e locale
+  (`.git` è una cartella, nessun worktree) e `node_modules` è una cartella vera, non un symlink. Le vecchie
+  cartelle (`walbox-fanta-preview`, `walbox-kitchen-deploy-cb27d56`, `walbox-p1-sync`, `walbox-p2-base`) e i
+  backup stanno solo in `~/_ARCHIVIO_WALBOX/` (fase 1 e fase 2 del 2026-10-14): non lavorarci e non
+  ripristinare backup, stash o branch nella working copy attiva. Il backup con i pagamenti reali e il dataset
+  locale ignorato da Git restano esclusivamente nell'archivio.
 - Stack: React 19 + Vite 8 (SPA, JS, niente TypeScript) · funzioni Vercel in `api/` · Supabase (Postgres, RLS,
   Realtime, Auth, Edge Functions) · SumUp · Web Push.
 - Produzione: Vercel `walbox-from-zero-v2`, deploy automatico dal branch `main`. Supabase `pcrqfdzipotprqtuemso`.
@@ -103,7 +107,7 @@ Logica di business pura → `src/lib/` con test accanto (`*.test.js`).
 | `npm run pilot:check` · `node scripts/kitchen-sumup-reconcile-sweep.mjs` | **live**: chiedere a Eros |
 | `npx supabase migration list --linked` | lettura remota |
 | `npx supabase db push --linked` · `functions deploy` · `vercel` · push su `main` | **gate di Eros** |
-| `npm install` | gate: scrive nel `node_modules` dell'altro worktree |
+| `npm install` | gate: modifica `node_modules` locale (e lock/deps, area protetta §5) |
 
 `npm test` non esiste. Ricetta di verifica minima: lint + unit pertinenti + build con override. Allowlist completa:
 `ai-ops/SECURITY_POLICY.md §7`. Mai senza approvazione: `git add/commit/push`, `git reset/restore`,
