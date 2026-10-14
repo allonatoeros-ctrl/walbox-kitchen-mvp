@@ -162,7 +162,7 @@ test('il carrello viene svuotato SOLO dopo un ordine confermato dal server', () 
 
 test('CustomerKitchenMenu e cablato su load/save/reconcile', () => {
   assert.match(menuSrc, /import \{ loadCart, saveCart, clearCart, reconcileCartItems \} from '\.\.\/lib\/kitchenCart'/);
-  assert.match(menuSrc, /useRef\(loadCart\(\)\)\.current/);
+  assert.match(menuSrc, /\[restoredCart\] = useState\(\(\) => loadCart\(\)\)/);
   assert.match(menuSrc, /reconcileCartItems\(restoredCart\.items, menuItems, kitchenPesiMassimiCombos\)/);
   assert.match(menuSrc, /saveCart\(\{ items: orderItems, note: customerNote, fulfillmentType \}/);
   // il salvataggio non deve partire prima del ripristino, o sovrascriverebbe lo snapshot

@@ -276,7 +276,7 @@ export default function CustomerKitchenMenu() {
   // IL SACCO sopravvive a refresh, back/forward e riapertura pagina (2026-09-16). Si parte dallo
   // snapshot salvato: righe, quantita', birra scelta del FALLO PESANTE, nota e scelta di ritiro.
   // Nome/prezzo NON vengono dallo snapshot, li rimette il catalogo (vedi l'effect di riconciliazione).
-  const restoredCart = useRef(loadCart()).current;
+  const [restoredCart] = useState(() => loadCart());
   const [orderItems, setOrderItems] = useState([]);
   const [cartRestored, setCartRestored] = useState(false);
   const [cartOpen, setCartOpen] = useState(false);
@@ -614,7 +614,7 @@ export default function CustomerKitchenMenu() {
     clearCart();
     // Ordine creato: il client_request_id di questo carrello ha finito il suo lavoro.
     clearClientRequestId();
-    try { localStorage.setItem('walbox_kitchen_last_order_id', createdOrder.id); } catch { }
+    try { localStorage.setItem('walbox_kitchen_last_order_id', createdOrder.id); } catch { /* storage non disponibile: la prova primaria resta rememberOwnedOrderId */ }
     // P0 privacy (2026-09-16): registra l'ordine come proprio di QUESTO dispositivo. È l'unica
     // prova di proprietà che /kitchen/status accetta — senza, la pagina mostra l'empty state,
     // mai l'ordine di un altro cliente.
