@@ -64,6 +64,13 @@ Nessuna migration: l'interruttore evento è client-side (vedi Fase 3).
   Niente colonna su `kitchen_service_state`: eviterebbe migration + `db push` in produzione, troppo rischio.
 - **Attenzione: dopo la serata la modalità NON si spegne da sola** — va rimessa `EVENT_MODE_ON = false`,
   altrimenti il menu resta ai soli PESI MASSIMI.
+- **DECISIONI Eros 2026-10-14 (confermate, vincolanti per la Fase 3):**
+  - Interruttore **acceso a mano da Eros la sera** della festa (nessun automatismo).
+  - Il resto del menu **nascosto del tutto** (non "visibile ma non ordinabile").
+  - **Menu della serata = solo 4 panini**: Pastrami, Pulled Pork, Brisket, GARPEZ. **I Box NON ci sono**:
+    a modalità accesa vanno esclusi anche i box dentro la categoria `bbq`, non solo le altre categorie.
+    (Da definire in implementazione: come riconoscere i box — id/tag — senza toccare `kitchenMockData.js`
+    oltre il necessario; è area protetta, serve approvazione dedicata se va modificata.)
 
 ### Fase 4 — Animazione 15 anni
 - Nuovi `src/components/kitchen/AnniversaryBanner.jsx` + `.css`, montati sulla home `/kitchen`
@@ -144,7 +151,19 @@ produzione con un pagamento SumUp vero — lo deve fare Eros prima della festa.
 
 ## STATO
 
-- Fase corrente: **Fasi 2 e 1 ESEGUITE** (foto + item GARPEZ nel menu). Prossima: Fase 4, poi Fase 3.
+- **[SUPERATO 2026-10-14] Scenetta GARPEZ RIMOSSA per decisione di Eros** (codice e asset dei due volti fuori dal repo). Le righe su scenetta, volti invertiti e V-07 qui sotto sono storico, non più valide.
+- Fase corrente: **Fasi 2 e 1 ESEGUITE** (foto + item GARPEZ nel menu) + **scenetta GARPEZ FATTA, non committata**
+  (2026-10-14). Prossima: Fase 4, poi Fase 3.
+- **Scenetta GARPEZ (2026-10-14, Eros ha fornito i due volti e approvato l'implementazione):**
+  `src/components/kitchen/GarpezScene.jsx/.css` (nuovi) + 6 righe in `PesiMassimiSection.jsx` (mount nella
+  `.pm-card-media` della card aperta col tag `anniversario`, non esaurita). Asset derivati SOLO dai due ritagli
+  forniti da Eros: `public/assets/kitchen/garpez/garpez-volto-{indignato,interdetto}.webp` (~20 KB l'uno).
+  3 battute + finale, ~8,5 s, tap = avanti, SALTA, RIVEDI per la sessione (niente localStorage), chiudere la card
+  = reset, `prefers-reduced-motion` gestito. Verificato a video 375px: scena completa, SALTA, tap, reset,
+  AGGIUNGI AL SACCO attivo durante la scena. Lint 121 err (baseline), unit lib 161/0, build PASS, E2E 4 spec
+  pertinenti 98/105: 6 rossi in test che non aprono la card GARPEZ (scena non montata), da confrontare
+  con i 7 rossi noti di `main`. Uso pubblico dei volti: decisione e rischio di Eros.
+  `.claude/launch.json` creato solo per l'anteprima locale: non committare.
 - Fatto:
   - audit read-only (menu, categorie, service state, asset, tooling immagini)
   - **Fase 0 collaudo V2 — PASS, nessuna regressione.** Report completo:
@@ -181,9 +200,143 @@ produzione con un pagamento SumUp vero — lo deve fare Eros prima della festa.
     specificava e tutti gli altri item `bbq` ne hanno una. Cambiabile con una riga.
   - **Posizione nel menu**: GARPEZ e' ultimo dei panini PESI MASSIMI (dopo Brisket) per non spostare
     l'ordine degli item esistenti. Se Eros lo vuole primo, si sposta il blocco.
-- Prossimo passo: **Fase 4** (animazione 15 anni + badge sulla card col tag `anniversario`), poi
-  **Fase 3** (modalita' evento, ultima perche' spegne mezzo menu).
+- **2026-10-14 (non committato):** scenetta GARPEZ: battute scambiate tra i due personaggi (scambio `FACE_A`/`FACE_B`
+  in `GarpezScene.jsx`, in attesa di OK a video). **Fase 3 FATTA**: `src/lib/kitchenEventMode.js` + test (5/5) e
+  `CustomerKitchenMenu.jsx` (menu = bbq con tag `special`, i Box sono esclusi senza toccare `kitchenMockData.js`;
+  home senza sezione panini; combo FALLO PESANTE nascosto; modalita' letta una volta al mount).
+  `EVENT_MODE_ON = false` di default; `?evento=1` per provare. Verificato a 390px: 1 categoria, 4 voci. Lint menu
+  13 err = baseline, unit lib 166/0, build PASS. Resta: Fase 4 (banner 15 anni + badge).
+  Nota: un carrello salvato prima della festa puo' contenere articoli fuori menu evento (non li rimuovo).
+- **Fase 4 FATTA 2026-10-14 (non committata):** `src/components/kitchen/AnniversaryBanner.jsx/.css` (nuovi),
+  montato nella home di `CustomerKitchenMenu.jsx` solo con `eventMode` (+2 righe). Logo: **la W gialla fornita da Eros
+  in chat** (Eros: niente logo TV, niente tricheco), convertita in `public/assets/kitchen/walrus-logo-w.webp`
+  (512px, 19 KB), angoli neri tolti con ritaglio a cerchio in CSS. Testi: "STASERA SI FESTEGGIA" · "15 ANNI" ·
+  "Grazie per averci sopportato." (scelta mia, cambiabile). Ingresso ~0,9 s, `prefers-reduced-motion` = statico.
+  Badge giallo "15 ANNI" (classe `pm-hero-badge` + `pm-anniv-badge`) sulla foto della card chiusa col tag
+  `anniversario`, in `PesiMassimiSection.jsx` (+3) e `.css` (+17, file non nel piano ma necessario).
+  Verifica: eslint file nuovi/Pesi 0 err, menu 13 = baseline, unit lib 166/0, build PASS (logo in `dist/`),
+  anteprima 390 e 430 ok, niente scroll orizzontale, `?evento=0` = banner assente. Reduced-motion verificato solo
+  come regola CSS presente, non emulato. Header storico col tricheco **non toccato** (fuori scope).
+- ~~Decisione aperta (2026-10-14):~~ nella scenetta GARPEZ i due personaggi erano **invertiti**
+  (visto da Eros in anteprima): vanno scambiati. Serve da Eros una riga su cosa è scambiato (posizione /
+  battute / volto) oppure lo leggo da `GarpezScene.jsx`. Modifica piccola, solo `GarpezScene.jsx/.css`.
+- Prossimo passo: **OK a video di Eros su banner + badge**, poi commit atomici (scenetta · Fase 3 · Fase 4) su sua approvazione.
 - Ancora aperto e non mio: smoke a video del checkout V2 in produzione con un pagamento SumUp vero.
 - Non committato: il commit e il push restano gate di Eros (siamo su `main`).
 
+## Restyling PESI MASSIMI + home (2026-10-14, non committato)
+Piano: `~/.claude/plans/keen-chasing-alpaca.md` (brief + 12 regole da ricerca, vendor blog = direzionali; WCAG 2.5.8, HIG 44pt).
+Decisioni Eros: ambito sezione + home · Garpez protagonista in cima · pronto per la festa.
+FATTO (solo con modalita' evento, `?evento=0` verificato invariato):
+- Home: `GarpezHero.jsx/.css` (nuovi) = foto grande, nome, prezzo, ingredienti, CTA gialla "VOGLIO IL GARPEZ" + riga "ANCHE STASERA" con i 3 classici. `AnniversaryBanner` con prop `compact` (+CSS). Eroe sopra la piega a 375.
+- Menu: `PesiMassimiSection` prop `featuredTag` (Garpez primo, gia' aperto, cornice gialla `pm-card--featured`, hero 4 foto nascosta); gli altri 3 miniature.
+- `CustomerKitchenMenu.jsx`: `garpezFeatured` + mount GarpezHero (solo blocco home evento + prop menu).
+Verifica: lint file toccati senza nuovi errori (menu 13 = baseline), unit lib 166/0, build PASS, anteprima 375 home+menu, niente scroll orizzontale.
+NON fatto: QA visiva indipendente (visual-reviewer), 390/430/desktop, reduced-motion emulato, e2e PESI MASSIMI, Garpez esaurito a video.
+Decisioni aperte: restyling solo in evento (ora cosi') o anche dopo la festa? claim "EDIZIONE 15 ANNI" ok?
+
 Modello/effort: Fase 0 e 3 → Opus high · Fasi 1, 2, 4 → Sonnet medium
+
+## Conversione + banner (piano approvato da Eros 2026-10-14: "accetto tutto", opzione 3)
+Decisione Eros: in modalità evento **restano tutte le bevande già in menu, BIRRE e BEVANDE** (supera "resto nascosto").
+Passi: (1) `kitchenEventMode.js` + test: categorie evento = bbq special + birre + bevande · (2) home: banner fuso
+nel poster GARPEZ (logo W + 15 ANNI timbrato + coriandoli CSS, reduced-motion statico) · (3) CTA "VOGLIO IL GARPEZ"
+e chip dei classici = aggiunta diretta al sacco · (4) riga "E DA BERE?" con birre e bevande aggiungibili · (5) dopo
+il primo panino aggiunto, se nel sacco non c'è da bere: pannello "CI METTI DA BERE?" una volta per sessione.
+File: kitchenEventMode.js/.test.js, GarpezHero.jsx/.css, CustomerKitchenMenu.jsx, nuovo EventDrinkPrompt.jsx/.css.
+Niente api/, checkout, pagamenti, kitchenMockData. Test: unit lib, lint file toccati, build, anteprima 390/430.
+Modello/effort: Opus medium
+**ESEGUITO 2026-10-14 (non committato):** banner fuso nel poster GARPEZ (timbro W + 15 ANNI + coriandoli), CTA e chip
+classici = aggiunta diretta al sacco ("NEL SACCO ✓"), riga "E DA BERE?" (6 birre + 6 bevande), pannello "CI METTI DA BERE?"
+dopo il primo panino se nel sacco non c'è da bere (1 volta per sessione, `EventDrinkPrompt.jsx/.css` nuovi). Menu evento =
+PESI MASSIMI 4 · BIRRE 6 · BEVANDE 6. `AnniversaryBanner` in home solo se manca il GARPEZ (fallback).
+Verifica: unit lib 167/0 (test nuovo prima rosso poi verde), lint file nuovi 0, menu 13 = baseline, build PASS,
+a video 390 e 430: flusso GARPEZ → pannello → birra → classico ok, niente scroll orizzontale, `?evento=0` invariato.
+NON fatto: reduced-motion emulato, e2e, QA indipendente. Variante `compact` di AnniversaryBanner ora inutilizzata.
+Prossimo passo: OK a video di Eros, poi commit atomici su sua approvazione.
+
+## Fix 2026-10-14 (richiesta Eros, non committato)
+- Fascia "STASERA SI FESTEGGIA · 15 ANNI" **staccata dalla foto**: ora e' una fascia propria sopra il panino dentro la card
+  (`GarpezHero.jsx/.css`, niente piu' timbro sovrapposto ne' rotazione).
+- Pannello "CI METTI DA BERE?": tolto il limite "una volta per sessione" (`CustomerKitchenMenu.jsx`, `maybeOfferDrink`).
+  Ora compare a ogni panino PESI MASSIMI aggiunto (GARPEZ e i 3 classici) se nel sacco non c'e' gia' una bevanda.
+  Verificato a 390: GARPEZ -> pannello -> NO GRAZIE -> Pulled Pork -> pannello di nuovo.
+
+## Banner centrale (2026-10-14, piano approvato da Eros, non committato)
+Ricerca: NN/g banner blindness, WCAG 2.2.2, web.dev animazioni (piano: `~/.claude/plans/sprightly-wobbling-micali.md`).
+FATTO: `AnniversaryBanner.jsx/.css` riscritto = fascia centrale a tutta larghezza tra header e card GARPEZ (kicker, logo W + "15 ANNI",
+"Grazie per averci sopportato.", raggi, coriandoli dentro il banner; ingresso una volta ~1,2 s, solo transform/opacity).
+Montato sempre in evento (`CustomerKitchenMenu.jsx`). Fascia e coriandoli tolti da `GarpezHero.jsx/.css` (la card torna foto → nome → CTA).
+Verifica: unit lib 167/0, lint file nuovi 0 (menu 13 = baseline), build PASS, a video 390 e 430: ordine header → banner (146px) → GARPEZ,
+CTA sopra la piega, niente scroll orizzontale, `?evento=0` senza banner. NON fatto: reduced-motion emulato (solo regola CSS), QA `visual-reviewer`.
+Aperto (scelta di Eros): pannello bevande mostra 12 voci, le fonti dicono 6-8 → proposta 3 birre + 3 bevande; testo "Grazie per averci sopportato." ok?
+
+## STATO DI RIPARTENZA — chiusura chat 2026-10-14 (leggere questo per primo)
+Nulla e' committato (siamo su `feat/anniversario-15-anni`). Il commit e il push restano gate di Eros.
+**Fatto in questa chat (tutto non committato, verificato a 390/430):**
+- Banner centrale 15 ANNI tra header e card GARPEZ (`AnniversaryBanner.jsx/.css`), fascia tolta dalla card (`GarpezHero.jsx/.css`).
+- Pannello "CI METTI DA BERE?" a ogni panino se nel sacco non c'e' una bevanda (`CustomerKitchenMenu.jsx`, `maybeOfferDrink`).
+**Decisione Eros (2026-10-14) sul pannello bevande: "3 birre, le bevande lasciale tutte".** NON ancora implementata.
+  - Birre in menu (6): Keiler Helles, Land-Pils, Kellerbier, Weisse, Dunkel Weisse, Lupulus. **Quali 3 tenere: NON detto da Eros → chiedergli.**
+  - Bevande (6): Acqua, Pepsi, Pepsi Zero, Seven Up, Schweppes Lemon, Schweppes Tonica → restano tutte.
+  - Dove: `eventDrinks` in `CustomerKitchenMenu.jsx:368` alimenta sia il pannello sia la riga "E DA BERE?" della home. Da chiarire con Eros se il taglio vale
+    solo per il pannello (fonti: 6-8 voci) o anche per la riga home e il menu. Modifica minima: filtro per id/nome in `kitchenEventMode.js` (+ test), non toccare `kitchenMockData.js`.
+**Prossimi passi, in ordine:**
+1. Chiedere a Eros quali 3 birre (e se il taglio e' solo pannello o anche home) → implementare + test.
+2. Lanciare il `visual-reviewer` (390/430/desktop, `?evento=1`, reduced-motion emulato davvero) sul banner, sulla home e sul pannello bevande.
+3. Commit atomici su approvazione di Eros: (a) scenetta GARPEZ · (b) modalita' evento · (c) home evento + banner + pannello. Mai `git add -A`; `.claude/launch.json` NON va committato.
+Ancora aperto e non mio: smoke a video del checkout V2 in produzione con un pagamento SumUp vero. Promemoria: dopo la festa `EVENT_MODE_ON = false`.
+Modello/effort prossima fase: Sonnet medium.
+
+## Bevande e birre: TUTTE presenti (Eros 2026-10-14, supera "3 birre")
+Decisione: in modalita' evento restano **tutte le 6 birre e tutte le 6 bevande**, nessun taglio, ne' nel pannello ne' nella home ne' nel menu.
+Verificato a video (`?evento=1`): home "E DA BERE?" = 12 voci · menu schede PESI MASSIMI / BIRRE (6) / BEVANDE (6) · pannello "CI METTI DA BERE?" legge
+`eventDrinks` (nessun `slice`, filtra solo `available`). Nessuna modifica al codice necessaria: il taglio proposto non era mai stato implementato.
+Prossimo passo: QA `visual-reviewer` (390/430/desktop, reduced-motion emulato), poi commit atomici su approvazione di Eros.
+
+## RIPARTENZA FINALE — decisioni Eros 2026-10-14 dopo la QA visiva (leggere questo per primo, supera le sezioni sopra)
+QA visiva fatta: `ai-ops/reports/anniversario-visual-review.md` (P0 0 · P1 1 · P2 7 · screenshot in `ai-ops/reports/anniversario-visual-shots/`).
+Eros: "questo che hai creato è perfetto". **Nulla è committato** (branch `feat/anniversario-15-anni`). Commit e push = gate di Eros.
+
+**DECISIONI (vincolanti):**
+1. **ELIMINARE la scenetta GARPEZ** e tenere il codice super pulito. Da togliere: `src/components/kitchen/GarpezScene.jsx/.css`,
+   asset `public/assets/kitchen/garpez/` (i due volti, usati solo dalla scenetta), import + mount (`<GarpezScene>`) in
+   `PesiMassimiSection.jsx:5,205`, e ogni CSS/riga rimasta orfana. Nessun `rm`: sono file non tracciati, spostarli in una cartella
+   temporanea fuori dal repo (es. scratchpad) e verificare che non resti nessun riferimento (grep). Eros ha chiesto di eliminarli: vale come ok per quello spostamento.
+   Per effetto cadono V-07 (tap target scenetta) e la decisione sui volti invertiti.
+2. **Questo menu è SOLO per la festa dell'anniversario.** Badge "15 ANNI" e ogni elemento a tema compaiono **solo a modalità evento accesa**:
+   con `?evento=0` / `EVENT_MODE_ON = false` il menu deve essere identico a prima della festa. (Chiude la decisione D1 del reviewer.)
+3. **Accetto tutte le correzioni proposte dal reviewer** (tranne V-07, caduta con la scenetta; V-08 e V-09 sono preesistenti e fuori scope festa → non toccare):
+   - **V-01 (P1)**: pannello "CI METTI DA BERE?" aperto + back del telefono → il back chiude solo il pannello. Stesso ramo di `cartOpenRef`
+     in `handlePopState` (`CustomerKitchenMenu.jsx:~446`) per `drinkPromptOpen`.
+   - V-02: `scroll-padding-inline: 12px` su `.gzh-drinks-row` (`GarpezHero.css`).
+   - V-03: a desktop deve vedersi che ci sono altre bevande (card che lascia sempre un pezzo della successiva, o sfumatura/frecce solo desktop).
+   - V-04: conferma "nel sacco" visibile con il pannello aperto (dentro il pannello, es. "GARPEZ nel sacco ✓", oppure toast sopra il pannello).
+   - V-05: prezzi allineati nel pannello (`margin-top:auto` su `.edp-price`).
+   - V-06: focus dentro il pannello all'apertura, Esc chiude, focus torna all'origine alla chiusura.
+4. **Pulizia codice** (richiesta Eros "super pulito"): rimuovere la variante `compact` di `AnniversaryBanner` (inutilizzata), CSS/props/import orfani,
+   niente codice morto lasciato dalle iterazioni. Solo nei file del lavoro anniversario; non toccare `kitchenMockData.js` oltre l'item-059 già fatto.
+
+**DECISIONI ANCORA APERTE (piccole, non bloccanti):**
+- D2 reviewer: con GARPEZ esaurito resta lui l'eroe della home. Proposta: se non ordinabile, la home mostra banner + i 3 classici come protagonisti. Eros non ha risposto: usare la proposta salvo contrordine.
+- Pannello bevande: 12 voci (decisione 2026-10-14: tutte presenti, nessun taglio).
+
+**Rischio da ricordare a Eros:** un refresh con solo `?evento=1` torna al menu normale → la sera della festa serve `EVENT_MODE_ON = true`
+in `src/lib/kitchenEventMode.js`, e dopo la festa rimetterlo a `false`.
+**Non verificato (ENV_BLOCKER):** Supabase locale spento → disponibilità reale e checkout non provati. Smoke del checkout V2 in produzione con pagamento SumUp vero: lo fa Eros.
+
+**PROSSIMI PASSI, in ordine:**
+1. Togliere la scenetta + pulizia codice (punti 1 e 4).
+2. Fix V-01…V-06 (punto 3) + badge solo in modalità evento (punto 2).
+3. Verifica: `node --test src/lib/*.test.js`, lint dei file toccati (menu 13 = baseline), build con `VITE_SUPABASE_URL=http://127.0.0.1:54321`, anteprima 390/430/desktop con `?evento=1` e `?evento=0` (identico al normale), reduced-motion.
+4. `diff-risk-reviewer` sul diff finale, poi commit atomici su approvazione di Eros: (a) modalità evento + test · (b) home evento: banner + GarpezHero + EventDrinkPrompt + badge · (c) docs. Mai `git add -A`; `.claude/launch.json` NON va committato.
+Modello/effort: Sonnet medium.
+
+## ESEGUITO 2026-10-14 (ripartenza finale) — non committato
+- Scenetta GARPEZ tolta (file e asset spostati in scratchpad `garpez-scene/`, nessun riferimento residuo). Variante `compact` del banner: non esisteva più.
+- Badge "15 ANNI" e card in evidenza solo con `featuredTag` (= modalità evento). `?evento=0`: nessun banner/hero/badge, home identica.
+- V-01 back chiude solo il pannello · V-02 scroll-padding · V-03 sfumatura desktop · V-04 "X NEL SACCO ✓" nel pannello · V-05 prezzi allineati · V-06 focus/Esc/ritorno focus.
+- D2: GARPEZ esaurito → sparisce la card, restano i classici ("I CLASSICI DI STASERA").
+- Verifiche: `node --test src/lib/*.test.js` 167/167 · lint menu 13 (= baseline), altri file puliti · build ok · prova a video (evento=1: pannello, Esc, back; evento=0).
+- DECISO da Eros (opzione 1): GARPEZ visibile e ordinabile solo a modalità evento accesa. Filtro `excludeEventOnlyItems` (tag `anniversario`) in `kitchenEventMode.js`, applicato al catalogo del menu: fuori evento sparisce anche da un sacco salvato. Provato ON/OFF a video, 168 test ok.
+- Prossimo: `diff-risk-reviewer`, poi commit atomici su approvazione di Eros.
