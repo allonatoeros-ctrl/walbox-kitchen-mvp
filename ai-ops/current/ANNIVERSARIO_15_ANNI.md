@@ -44,11 +44,14 @@ Nessuna migration: l'interruttore evento è client-side (vedi Fase 3).
   deve poter chiedere al banco.
 - **Nessuna combo Fallo Pesante** (decisione Eros): nessuna entry in `kitchenPesiMassimiCombos`.
 
-### Fase 2 — Foto GARPEZ scontornata
-- Sorgente: foto su green screen fornita da Eros. Strumenti disponibili: PIL 12.3 + numpy 2.5.
-- Chroma key sul verde, panino su fondo scuro coerente con `photo-pulled-pork-special.webp` ecc.
-- Output `.webp` in `public/assets/kitchen/menu/bbq/`, referenziato da `item-059`.
-- Prima di usarla: screenshot a Eros per OK visivo (§8 — niente fondi bianchi o trasparenze rotte).
+### Fase 2 — Foto GARPEZ — **FATTA 2026-10-13, in attesa di OK visivo**
+- La foto consegnata da Eros **non era su green screen**: gia' su fondo scuro, stessa luce degli altri
+  scatti. Niente chroma key: solo riformattazione 1254x1254 -> 1536x1024 WEBP (3-slice su fondo e piano,
+  panino non riscalato ne' ritoccato). Dettaglio: `ai-ops/reports/anniversario-fase2-foto-garpez.md`.
+- **Path reale: `public/assets/kitchen/photo-garpez-special.webp`**, non `menu/bbq/` come scritto nel
+  piano: quella cartella non esiste e nessun item `bbq` la usa — tutti gli scatti PESI MASSIMI stanno
+  in `public/assets/kitchen/photo-<nome>-special.webp`. Da confermare con Eros.
+- Confronto a video per l'OK: `ai-ops/reports/garpez-confronto.webp`.
 
 ### Fase 3 — Modalità evento (solo PESI MASSIMI)
 - Nuovo `src/lib/kitchenEventMode.js` + `kitchenEventMode.test.js` (logica pura, §9).
@@ -141,7 +144,7 @@ produzione con un pagamento SumUp vero — lo deve fare Eros prima della festa.
 
 ## STATO
 
-- Fase corrente: **Fase 0 ESEGUITA (collaudo)** — in attesa della decisione di Eros sul merge
+- Fase corrente: **Fasi 2 e 1 ESEGUITE** (foto + item GARPEZ nel menu). Prossima: Fase 4, poi Fase 3.
 - Fatto:
   - audit read-only (menu, categorie, service state, asset, tooling immagini)
   - **Fase 0 collaudo V2 — PASS, nessuna regressione.** Report completo:
@@ -157,6 +160,9 @@ produzione con un pagamento SumUp vero — lo deve fare Eros prima della festa.
     (come il branch), unit lib 161/0 fail, api 6/0, mjs 348 con i soliti 4 rossi noti, build PASS, **E2E 158/166 con gli stessi identici 7 rossi**.
     Il merge non introduce nulla: ogni numero coincide con quello del branch.
     **NON pushato**: il push su `main` fa partire il deploy Vercel in produzione, gate di Eros.
+  - **Fase 2 FATTA 2026-10-13**: `public/assets/kitchen/photo-garpez-special.webp` creato
+    (1536x1024 WEBP, 183 KB). Nessun file di codice toccato. Report:
+    `ai-ops/reports/anniversario-fase2-foto-garpez.md`.
 - Decisioni aperte:
   - **GATE: `git push -u origin main`** = pubblicazione del checkout V2 ai clienti, pagamenti reali
   - ~~allergeni GARPEZ~~ **CHIUSA 2026-10-13**: `['glutine','latte','senape']` derivati dagli ingredienti,
@@ -166,7 +172,18 @@ produzione con un pagamento SumUp vero — lo deve fare Eros prima della festa.
   - Due P2 non bloccanti trovati in V2 (footer appiccicato che copre ~30px di contenuto; `'Ospite Walrus'`
     duplicato a mano in `CustomerOrderPanel.jsx` invece di importare `GUEST_NICKNAME`): da sistemare prima
     del merge o dopo la festa — decide Eros
-- Prossimo passo: Eros decide il push (= deploy). Poi Fase 1 (GARPEZ): allergeni e ingredienti sono
-  decisi, manca solo la foto della Fase 2 per il campo `image`.
+- **Fase 1 FATTA 2026-10-13** (Eros: "la foto va bene, aggiungi il panino al menu"). Aggiunto il solo
+  `item-059` in `src/data/kitchenMockData.js` dopo Brisket, prima del Box: 22 righe, nessun'altra riga
+  toccata, nessuna entry in `kitchenPesiMassimiCombos`. Verifiche: eslint sul file pulito, unit lib
+  160/0 fail, unit mjs 344/4 (**gli stessi 4 rossi preesistenti**), build PASS, asset presente in `dist/`.
+- Due scelte mie da confermare, nessuna bloccante:
+  - `description: 'Quindici anni di Walrus in mezzo al pane. Non si ripete.'` — il piano non la
+    specificava e tutti gli altri item `bbq` ne hanno una. Cambiabile con una riga.
+  - **Posizione nel menu**: GARPEZ e' ultimo dei panini PESI MASSIMI (dopo Brisket) per non spostare
+    l'ordine degli item esistenti. Se Eros lo vuole primo, si sposta il blocco.
+- Prossimo passo: **Fase 4** (animazione 15 anni + badge sulla card col tag `anniversario`), poi
+  **Fase 3** (modalita' evento, ultima perche' spegne mezzo menu).
+- Ancora aperto e non mio: smoke a video del checkout V2 in produzione con un pagamento SumUp vero.
+- Non committato: il commit e il push restano gate di Eros (siamo su `main`).
 
 Modello/effort: Fase 0 e 3 → Opus high · Fasi 1, 2, 4 → Sonnet medium
