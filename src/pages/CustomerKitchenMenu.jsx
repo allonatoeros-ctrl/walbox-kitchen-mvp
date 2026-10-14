@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { kitchenCategoryPromos, kitchenBeerPairing, FALLO_PESANTE_INCLUDED_SIDE_ID } from '../data/kitchenMockData';
 import { useCustomerSession } from '../hooks/useCustomerSession';
 import { useKitchenOrders, rememberOwnedOrderId, getOwnedOrderIds } from '../hooks/useKitchenOrders';
@@ -26,6 +26,7 @@ import AllergenBadges from '../components/kitchen/AllergenBadges';
 import CustomerCheckout from '../components/kitchen/CustomerCheckout';
 import { checkoutMissing, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
+import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, EVENT_CATEGORY, EVENT_CATEGORIES } from '../lib/kitchenEventMode';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
 import './CustomerKitchenMenu.css';
@@ -254,16 +255,21 @@ export default function CustomerKitchenMenu() {
   const { session, saveSession } = useCustomerSession();
   // scope cliente: vedi CustomerOrderStatus — persistenza locale limitata agli ordini propri.
   const { addOrder, orders } = useKitchenOrders({ scope: 'customer' });
-  const { menuItems } = useKitchenMenu();
+  const { menuItems: catalogItems } = useKitchenMenu();
   // KITCHEN_OPEN_CLOSE_V1: menu resta sempre navigabile, solo l'invio ordine e' bloccato quando
   // lo staff chiude. Enforcement reale lato server (kitchen_customer_create_order); questo e'
   // solo il segnale UI, cosi' il cliente non arriva mai fino al submit per scoprirlo.
   const { isOpen: kitchenOpen } = useKitchenServiceState();
 
-  const CATEGORIES = MENU_CATEGORIES;
+  // Modalità evento (15 anni): letta una volta al mount, perché la navigazione interna
+  // riscrive l'URL senza query. Vedi src/lib/kitchenEventMode.js.
+  const [eventMode] = useState(() => isEventModeActive(window.location.search));
+  // A modalità spenta gli item della festa non esistono: il menu è quello di prima dell'anniversario.
+  const menuItems = useMemo(() => (eventMode ? catalogItems : excludeEventOnlyItems(catalogItems)), [eventMode, catalogItems]);
+  const CATEGORIES = eventMode ? MENU_CATEGORIES.filter((c) => EVENT_CATEGORIES.includes(c.key)) : MENU_CATEGORIES;
 
   const [view, setView] = useState('home');
-  const [activeCategory, setActiveCategory] = useState('panini');
+  const [activeCategory, setActiveCategory] = useState(eventMode ? EVENT_CATEGORY : 'panini');
   // IL SACCO sopravvive a refresh, back/forward e riapertura pagina (2026-09-16). Si parte dallo
   // snapshot salvato: righe, quantita', birra scelta del FALLO PESANTE, nota e scelta di ritiro.
   // Nome/prezzo NON vengono dallo snapshot, li rimette il catalogo (vedi l'effect di riconciliazione).
@@ -350,7 +356,8 @@ export default function CustomerKitchenMenu() {
 
   // I piatti senza prezzo restano visibili con `PREZZO IN ARRIVO` (CTA disabilitata):
   // nessun prezzo inventato, nessuna categoria vuota nel menu approvato.
-  const customerItems = menuItems.filter((i) => !CUSTOMER_HIDDEN_ITEM_IDS.includes(i.id));
+  const visibleMenuItems = menuItems.filter((i) => !CUSTOMER_HIDDEN_ITEM_IDS.includes(i.id));
+  const customerItems = eventMode ? filterEventMenuItems(visibleMenuItems) : visibleMenuItems;
   const visibleItems = customerItems.filter((i) => i.category === activeCategory);
 
   const pesiMassimiItems = customerItems.filter((i) => i.category === 'bbq');
