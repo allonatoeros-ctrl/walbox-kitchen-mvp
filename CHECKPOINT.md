@@ -21,6 +21,13 @@ indicato nel NEXT STEP (oggi `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`).
   eliminati. I due branch Fanta con lavoro unico (`demo/fantawalrus-vercel` `1849fb8`, `guest-mode-transfer`
   `9976828`) sono archiviati e verificati in `~/_ARCHIVIO_WALBOX/2026-10-14_phase3/fantawalrus-branches.bundle`
   (con `MANIFEST.md` e comando di restore). Nessuna modifica a codice, Vercel o Supabase durante la Phase 3.
+- **Phase 4 pulizia repo = PASS (2026-10-14), locale, non pushata.** Commit: `b084970` codice morto (7 file),
+  `56245b1` asset non usati (29 file, 27,3 MB), `2af89fb` docs legacy e report Fanta in `docs/archive/`,
+  `2810688` README nuovo, `3c034a6` ESLint (errori 114 → 7, 16 warning; restano 7 problemi reali in
+  `api/kitchen-sumup-webhook.js`, `AllergenBadges.jsx`, `useKitchenOrders.js:486`, `KitchenTvScreen.jsx`, un test
+  migration, un'e2e: non corretti). Verifica: 173 PASS, 1 SKIP, 0 FAIL; build PASS. **Fuori scope, lasciati:**
+  `WALRUS_SHUFFLE_NIGHT_ENGAGEMENT_RESEARCH_1/2.md`, `ai-ops/runs/`, `ai-ops/runner/`, `public/icons.svg`,
+  commenti residui in `CounterAssistedOrder.jsx` e `CustomerOrderStatus.css`.
 - `main` pushato fino a `661df75` (2026-10-13), dichiarato allora HEAD = `origin/main`.
 - **Checkout V2 in produzione dal 2026-10-13** (merge `d1fe37e` di `claude/customer-experience-v2`):
   nome, dove lo mangi, note cucina e corsia di pagamento su una schermata sola, al posto del flusso a tre
