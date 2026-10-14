@@ -74,8 +74,8 @@ test('resolveConfig reads optional TELEGRAM_MESSAGE_THREAD_ID', () => {
   assert.equal(config.telegramMessageThreadId, '42');
 });
 
-test('CHECKS covers exactly the 3 V1 endpoints with their expected status', () => {
-  assert.equal(CHECKS.length, 3);
+test('CHECKS covers the 3 V1 HTTP-status endpoints plus the payment-order-drift sensor check', () => {
+  assert.equal(CHECKS.length, 4);
   const byName = Object.fromEntries(CHECKS.map((c) => [c.name, c]));
   assert.equal(byName['create-checkout'].expectedStatus, 400);
   assert.equal(byName['create-checkout'].method, 'POST');
@@ -83,6 +83,9 @@ test('CHECKS covers exactly the 3 V1 endpoints with their expected status', () =
   assert.equal(byName['reconcile-sweep'].method, 'GET');
   assert.equal(byName['webhook'].expectedStatus, 200);
   assert.equal(byName['webhook'].method, 'POST');
+  assert.equal(byName['payment-order-drift'].mode, 'json-status');
+  assert.equal(byName['payment-order-drift'].method, 'GET');
+  assert.equal(byName['payment-order-drift'].requiresAuth, true);
 });
 
 test('runCheck reports ok:true when actual status matches expected', async () => {
@@ -239,7 +242,8 @@ test('runOnce persists state and only alerts once the threshold is crossed, zero
   const dir = await mkdtemp(path.join(os.tmpdir(), 'watchdog-test-'));
   try {
     const stateFile = path.join(dir, 'state.json');
-    // All 3 checks failing (wrong status) on every run.
+    // All 3 status checks failing (wrong status) on every run. No watchdogApiToken configured, so the
+    // payment-order-drift check short-circuits to sensor_error every run too (no fetch call for it).
     const fetchImpl = fakeFetch({
       'kitchen-sumup-create-checkout': 500,
       'kitchen-sumup-reconcile-sweep': 500,
@@ -248,11 +252,12 @@ test('runOnce persists state and only alerts once the threshold is crossed, zero
     const config = { baseUrl: 'https://example.com', stateFile, fetchImpl };
 
     const run1 = await runOnce(config);
-    assert.equal(run1.results.length, 3);
+    assert.equal(run1.results.length, 4);
     assert.equal(run1.toAlert.length, 0);
 
     const run2 = await runOnce(config);
-    assert.equal(run2.toAlert.length, 3);
+    // 3 status-check alerts + 1 payment-order-drift-sensor alert (2 consecutive sensor_error).
+    assert.equal(run2.toAlert.length, 4);
 
     const run3 = await runOnce(config);
     assert.equal(run3.toAlert.length, 0);
@@ -373,6 +378,11 @@ test('runOnce sends the Hermes diagnosis on the HERMES_OPS_THREAD_ID, separate f
     const stateFile = path.join(dir, 'state.json');
     const permissiveFetch = async (url) => {
       if (url.includes('kitchen-sumup-webhook')) return { ok: false, status: 500 };
+      // Kept healthy so this test stays focused on the webhook alert/Hermes flow — its own
+      // alert/Hermes behavior is covered separately in payment-order-drift-sensor.test.mjs.
+      if (url.includes('kitchen-ops/payment-order-drift')) {
+        return { ok: true, status: 200, json: async () => ({ status: 'healthy', drift_count: 0, records: [] }) };
+      }
       return { ok: true, status: url.includes('reconcile-sweep') ? 401 : 400 };
     };
 
@@ -389,6 +399,7 @@ test('runOnce sends the Hermes diagnosis on the HERMES_OPS_THREAD_ID, separate f
       baseUrl: 'https://example.com',
       stateFile,
       fetchImpl: telegramFetch,
+      watchdogApiToken: 'test-token',
       telegramBotToken: 'tok',
       telegramChatId: 'chat',
       telegramMessageThreadId: '1',

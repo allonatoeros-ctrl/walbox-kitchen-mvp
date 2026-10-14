@@ -17,11 +17,27 @@
 //   TELEGRAM_BOT_TOKEN          optional — if unset, alerts are only printed to stdout/stderr
 //   TELEGRAM_CHAT_ID            optional — required together with TELEGRAM_BOT_TOKEN to actually send
 //   TELEGRAM_MESSAGE_THREAD_ID  optional — if set, alerts are sent into this forum topic/thread
+//   KITCHEN_OPS_WATCHDOG_TOKEN  required for the payment-order-drift check — server-to-server bearer
+//                               token sent to /api/kitchen-ops/payment-order-drift. Same token must be
+//                               set as KITCHEN_OPS_WATCHDOG_TOKEN on the Vercel side (see that route).
+//                               The Watchdog process only ever holds this token, never the Supabase
+//                               service-role key — that key lives exclusively in the Vercel handler.
 //
 // Incident Auto-Diagnosis V1 (see incident-bridge.js) — fires only on a new alert episode,
 // collects minimal local evidence (git SHA, systemctl status, journal tail), then Hermes analyzes
 // ONLY that evidence read-only, no tool calls, no remediation. Config: HERMES_ENABLED,
 // HERMES_PYTHON_PATH, HERMES_TIMEOUT_MS, HERMES_OPS_THREAD_ID, EVIDENCE_TIMEOUT_MS.
+//
+// Payment / Order Drift Sensor V1 — the 4th check, `payment-order-drift`, is different from the other
+// 3: it doesn't compare an HTTP status code, it reads a JSON body's `status` field ('healthy' | 'drift'
+// | 'sensor_error') from a read-only, auth-gated diagnostic endpoint. Its result is split into TWO
+// independent incident episodes in the state machine (see updateState):
+//   payment-order-drift        (business incident) — increments only on 'drift', resets only on
+//                               'healthy'. A 'sensor_error' leaves this counter untouched: it must
+//                               never reset nor silently close an open business-drift incident.
+//   payment-order-drift-sensor (sensor incident)   — increments only on 'sensor_error', resets on
+//                               'healthy' OR 'drift' (either means the sensor itself is working).
+// Each reaches the same CONSECUTIVE_FAILURE_THRESHOLD independently and alerts/diagnoses separately.
 
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -52,9 +68,22 @@ export const CHECKS = [
     body: {},
     expectedStatus: 200,
   },
+  {
+    name: 'payment-order-drift',
+    path: '/api/kitchen-ops/payment-order-drift',
+    method: 'GET',
+    body: null,
+    mode: 'json-status',
+    requiresAuth: true,
+  },
 ];
 
 export const CONSECUTIVE_FAILURE_THRESHOLD = 2;
+
+// The 2 incident-episode names the payment-order-drift check can raise — see the header comment above
+// for why they're kept separate in the state machine.
+export const DRIFT_SENSOR_CHECK_NAME = 'payment-order-drift';
+export const DRIFT_SENSOR_ERROR_CHECK_NAME = 'payment-order-drift-sensor';
 
 export function resolveConfig(env = process.env) {
   const baseUrl = env.KITCHEN_WATCHDOG_BASE_URL;
@@ -67,16 +96,71 @@ export function resolveConfig(env = process.env) {
     telegramBotToken: env.TELEGRAM_BOT_TOKEN || null,
     telegramChatId: env.TELEGRAM_CHAT_ID || null,
     telegramMessageThreadId: env.TELEGRAM_MESSAGE_THREAD_ID || null,
+    watchdogApiToken: env.KITCHEN_OPS_WATCHDOG_TOKEN || null,
     hermes: resolveHermesConfig(env),
   };
 }
 
-export async function runCheck(check, { baseUrl, fetchImpl = fetch } = {}) {
+export async function runCheck(check, { baseUrl, fetchImpl = fetch, watchdogApiToken } = {}) {
   const url = `${baseUrl}${check.path}`;
   const init = { method: check.method, headers: {} };
   if (check.body !== null) {
     init.headers['Content-Type'] = 'application/json';
     init.body = JSON.stringify(check.body);
+  }
+
+  if (check.requiresAuth) {
+    if (!watchdogApiToken) {
+      return {
+        name: check.name,
+        ok: false,
+        mode: check.mode || 'status',
+        expectedStatus: check.expectedStatus ?? null,
+        actualStatus: null,
+        status: 'sensor_error',
+        driftCount: null,
+        records: [],
+        error: 'missing_watchdog_api_token',
+      };
+    }
+    init.headers['Authorization'] = `Bearer ${watchdogApiToken}`;
+  }
+
+  if (check.mode === 'json-status') {
+    try {
+      const res = await fetchImpl(url, init);
+      let body = null;
+      try {
+        body = await res.json();
+      } catch {
+        body = null;
+      }
+      const validBody = Boolean(res.ok && body && typeof body.status === 'string');
+      const status = validBody ? body.status : 'sensor_error';
+      return {
+        name: check.name,
+        ok: status === 'healthy',
+        mode: 'json-status',
+        expectedStatus: null,
+        actualStatus: res.status,
+        status,
+        driftCount: validBody ? (body.drift_count ?? null) : null,
+        records: validBody && Array.isArray(body.records) ? body.records : [],
+        error: validBody ? null : `unexpected_response_http_${res.status}`,
+      };
+    } catch (err) {
+      return {
+        name: check.name,
+        ok: false,
+        mode: 'json-status',
+        expectedStatus: null,
+        actualStatus: null,
+        status: 'sensor_error',
+        driftCount: null,
+        records: [],
+        error: err.message || String(err),
+      };
+    }
   }
 
   try {
@@ -85,6 +169,7 @@ export async function runCheck(check, { baseUrl, fetchImpl = fetch } = {}) {
     return {
       name: check.name,
       ok,
+      mode: 'status',
       expectedStatus: check.expectedStatus,
       actualStatus: res.status,
       error: null,
@@ -93,6 +178,7 @@ export async function runCheck(check, { baseUrl, fetchImpl = fetch } = {}) {
     return {
       name: check.name,
       ok: false,
+      mode: 'status',
       expectedStatus: check.expectedStatus,
       actualStatus: null,
       error: err.message || String(err),
@@ -113,6 +199,42 @@ export async function saveState(stateFile, state) {
   await writeFile(stateFile, JSON.stringify(state, null, 2), 'utf8');
 }
 
+function nextCounterEntry(prevEntry, failed, lastStatus) {
+  const prevCount = prevEntry?.consecutiveFailures || 0;
+  const nextCount = failed ? prevCount + 1 : 0;
+  return {
+    entry: { consecutiveFailures: nextCount, lastCheckedAt: new Date().toISOString(), lastStatus },
+    crossed: failed && nextCount === CONSECUTIVE_FAILURE_THRESHOLD,
+  };
+}
+
+// Splits one payment-order-drift result into its two independent incident-episode counters — see the
+// header comment for the rules. Mutates nextState/toAlert in place (called only from updateState).
+function applyDriftSensorResult(prevState, nextState, toAlert, result) {
+  // Business incident: 'drift' increments, 'healthy' resets, 'sensor_error' is left UNTOUCHED — it
+  // must never reset nor silently close an open business-drift incident.
+  if (result.status === 'drift') {
+    const { entry, crossed } = nextCounterEntry(prevState[DRIFT_SENSOR_CHECK_NAME], true, result.status);
+    nextState[DRIFT_SENSOR_CHECK_NAME] = entry;
+    if (crossed) toAlert.push({ ...result, name: DRIFT_SENSOR_CHECK_NAME });
+  } else if (result.status === 'healthy') {
+    nextState[DRIFT_SENSOR_CHECK_NAME] = nextCounterEntry(prevState[DRIFT_SENSOR_CHECK_NAME], false, result.status).entry;
+  } else if (prevState[DRIFT_SENSOR_CHECK_NAME]) {
+    nextState[DRIFT_SENSOR_CHECK_NAME] = prevState[DRIFT_SENSOR_CHECK_NAME];
+  }
+
+  // Sensor incident: 'sensor_error' increments, 'healthy' OR 'drift' resets (both mean the sensor
+  // itself is working — it successfully classified the underlying business state).
+  const sensorFailed = result.status === 'sensor_error';
+  const { entry: sensorEntry, crossed: sensorCrossed } = nextCounterEntry(
+    prevState[DRIFT_SENSOR_ERROR_CHECK_NAME],
+    sensorFailed,
+    result.status
+  );
+  nextState[DRIFT_SENSOR_ERROR_CHECK_NAME] = sensorEntry;
+  if (sensorCrossed) toAlert.push({ ...result, name: DRIFT_SENSOR_ERROR_CHECK_NAME });
+}
+
 // Applies one run's results to the persisted per-check consecutive-failure counters.
 // Returns { nextState, toAlert } where toAlert lists checks that just crossed the threshold
 // (i.e. alert exactly once per failure episode, not on every subsequent failing run).
@@ -121,6 +243,11 @@ export function updateState(prevState, results) {
   const toAlert = [];
 
   for (const result of results) {
+    if (result.name === DRIFT_SENSOR_CHECK_NAME && result.mode === 'json-status') {
+      applyDriftSensorResult(prevState, nextState, toAlert, result);
+      continue;
+    }
+
     const prevCount = prevState[result.name]?.consecutiveFailures || 0;
     const nextCount = result.ok ? 0 : prevCount + 1;
 
@@ -138,13 +265,26 @@ export function updateState(prevState, results) {
   return { nextState, toAlert };
 }
 
+// Both drift-sensor incident names resolve to the same underlying endpoint path.
+function resolveCheckPath(name) {
+  const lookupName = name === DRIFT_SENSOR_ERROR_CHECK_NAME ? DRIFT_SENSOR_CHECK_NAME : name;
+  return CHECKS.find((c) => c.name === lookupName)?.path;
+}
+
 export function formatAlertMessage(result, baseUrl) {
-  const detail = result.error
-    ? `error: ${result.error}`
-    : `expected ${result.expectedStatus}, got ${result.actualStatus}`;
+  const path = resolveCheckPath(result.name);
+  let detail;
+  if (result.mode === 'json-status') {
+    detail =
+      result.name === DRIFT_SENSOR_ERROR_CHECK_NAME
+        ? `sensor_error: ${result.error || 'unknown'}`
+        : `drift_count=${result.driftCount ?? 'n/a'}`;
+  } else {
+    detail = result.error ? `error: ${result.error}` : `expected ${result.expectedStatus}, got ${result.actualStatus}`;
+  }
   return (
     `[Kitchen Watchdog] ALERT — "${result.name}" failed ${CONSECUTIVE_FAILURE_THRESHOLD}x in a row\n` +
-    `Target: ${baseUrl}${CHECKS.find((c) => c.name === result.name)?.path || ''}\n` +
+    `Target: ${baseUrl}${path || ''}\n` +
     `Detail: ${detail}`
   );
 }
@@ -199,7 +339,7 @@ export async function runOnce(config) {
     await sendTelegramAlert(message, config);
 
     if (config.hermes?.enabled) {
-      const checkPath = CHECKS.find((c) => c.name === result.name)?.path;
+      const checkPath = resolveCheckPath(result.name);
       try {
         await runIncidentDiagnosis(result, {
           baseUrl: config.baseUrl,
@@ -227,8 +367,12 @@ async function main() {
 
   for (const result of results) {
     const label = result.ok ? 'PASS' : 'FAIL';
+    const detail =
+      result.mode === 'json-status'
+        ? `status=${result.status}${result.status === 'drift' ? `, drift_count=${result.driftCount}` : ''}`
+        : `expected ${result.expectedStatus}, got ${result.actualStatus ?? 'n/a'}`;
     console.log(
-      `[Kitchen Watchdog] ${label} ${result.name} — expected ${result.expectedStatus}, got ${result.actualStatus ?? 'n/a'}${result.error ? ` (${result.error})` : ''}`
+      `[Kitchen Watchdog] ${label} ${result.name} — ${detail}${result.error ? ` (${result.error})` : ''}`
     );
   }
 

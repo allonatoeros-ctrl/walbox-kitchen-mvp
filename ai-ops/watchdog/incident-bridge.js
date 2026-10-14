@@ -123,15 +123,40 @@ function runEvidenceCommand(command, args, { timeoutMs = EVIDENCE_COMMAND_TIMEOU
 // timestamp, runtime git SHA (if available), systemd unit status, and the service's recent
 // journal. Each command is isolated behind its own timeout — a stuck or missing command never
 // blocks the others or the Watchdog run, it just reports as "non disponibile". No remote calls.
+// Builds the human-readable "Status/Error" line for CURRENT INCIDENT. The payment-order-drift check
+// (mode 'json-status') carries domain fields (status/driftCount/records) instead of an HTTP
+// expected/actual status pair — see buildDriftDomainEvidence below for the extra fields it also adds.
+function buildIncidentDetail(result) {
+  if (result.mode === 'json-status') {
+    return result.name === 'payment-order-drift-sensor'
+      ? `sensor_error: ${result.error || 'unknown'}`
+      : `status=${result.status}, drift_count=${result.driftCount ?? 'n/a'}`;
+  }
+  return result.error ? `error: ${result.error}` : `expected ${result.expectedStatus}, got ${result.actualStatus}`;
+}
+
+// Extra deterministic evidence for the Payment / Order Drift Sensor — pulled ONLY from the data the
+// check already received in its HTTP response (no additional DB access from here, Hermes never
+// touches the DB either): drift_count and the oldest drifting order (order_id/total/order_created_at).
+// Absent/empty when the incident is a sensor_error (no drift data to report).
+function buildDriftDomainEvidence(result) {
+  if (result.mode !== 'json-status') return {};
+  const oldest = Array.isArray(result.records) && result.records.length > 0 ? result.records[0] : null;
+  return {
+    driftCount: result.driftCount ?? null,
+    oldestDrift: oldest
+      ? { orderId: oldest.order_id, total: oldest.total, orderCreatedAt: oldest.order_created_at }
+      : null,
+  };
+}
+
 export async function collectEvidence(
   result,
   baseUrl,
   checkPath,
   { cwd = process.cwd(), timeoutMs = EVIDENCE_COMMAND_TIMEOUT_MS, spawnImpl } = {}
 ) {
-  const detail = result.error
-    ? `error: ${result.error}`
-    : `expected ${result.expectedStatus}, got ${result.actualStatus}`;
+  const detail = buildIncidentDetail(result);
 
   const [gitSha, systemctlStatus, journalTail] = await Promise.all([
     runEvidenceCommand('git', ['rev-parse', 'HEAD'], { timeoutMs, cwd, spawnImpl }),
@@ -151,6 +176,7 @@ export async function collectEvidence(
     target: `${baseUrl}${checkPath || ''}`,
     timestamp: new Date().toISOString(),
     detail,
+    ...buildDriftDomainEvidence(result),
     gitSha: gitSha.ok ? gitSha.output : `non disponibile (${gitSha.error})`,
     systemctlStatus: systemctlStatus.ok ? systemctlStatus.output : `non disponibile (${systemctlStatus.error})`,
     journalTail: journalTail.ok ? journalTail.output : `non disponibile (${journalTail.error})`,
@@ -187,6 +213,14 @@ export function buildHermesPrompt(evidence) {
     `Target: ${evidence.target}\n` +
     `Status/Error: ${evidence.detail}\n` +
     `Timestamp: ${evidence.timestamp}\n` +
+    (evidence.driftCount !== undefined
+      ? `Drift count: ${evidence.driftCount ?? 'n/a'}\n` +
+        `Oldest drift order: ${
+          evidence.oldestDrift
+            ? `${evidence.oldestDrift.orderId} — total ${evidence.oldestDrift.total} — created_at ${evidence.oldestDrift.orderCreatedAt}`
+            : 'n/a'
+        }\n`
+      : '') +
     `\n` +
     `=== BACKGROUND CONTEXT (solo corroborazione, non sostituisce il CURRENT INCIDENT) ===\n` +
     `Runtime git SHA: ${evidence.gitSha}\n` +
