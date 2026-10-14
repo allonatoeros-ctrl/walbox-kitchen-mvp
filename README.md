@@ -1,21 +1,36 @@
-# React + Vite
+# Walbox Kitchen
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Ordini e pagamenti dal telefono (QR) per The Walrus Pub: il cliente ordina e paga, lo staff gestisce ordini e
+cassa, la TV mostra la cucina.
 
-Currently, two official plugins are available:
+> **Attenzione: la produzione gestisce pagamenti reali (SumUp).** Non applicare migration, non fare deploy e non
+> lanciare script "live" senza l'approvazione del product owner. Le regole del repo sono in `CLAUDE.md`.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+React 19 + Vite 8 (SPA, JavaScript) · funzioni Vercel in `api/` · Supabase (Postgres, RLS, Realtime, Auth,
+Edge Functions) · SumUp · Web Push.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Comandi
 
-## Expanding the ESLint configuration
+```bash
+npm run dev      # server di sviluppo
+npm run lint     # ESLint
+npm run build    # build di produzione (scrive dist/)
+node --test src/lib/*.test.js api/_lib/*.test.js   # test unitari (rete mockata)
+node --test tests/unit/*.test.mjs                  # test unitari aggiuntivi
+npm run test:e2e # Playwright (dev server con bypass auth)
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+`npm test` non esiste. Se `.env.local` punta alla produzione, il guard blocca `dev` e `build`: per una build
+locale usa un override.
 
-## Spotify OAuth Setup
-For Spotify integration to work properly, you must configure the following Redirect URIs in your Spotify Developer Dashboard:
-* **Local Development:** `http://127.0.0.1:5174/spotify-test`
-* **Production:** `https://<your-vercel-domain>/spotify-test`
+```bash
+VITE_SUPABASE_URL=http://127.0.0.1:54321 npm run build
+```
+
+## Dove leggere
+
+- `CLAUDE.md`: regole permanenti, aree protette, flusso di lavoro.
+- `CHECKPOINT.md`: stato corrente e prossimo passo.
+- `docs/ARCHITECTURE_KITCHEN.md`: architettura (route, hook, API, database).
