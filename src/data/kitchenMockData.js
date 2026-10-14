@@ -265,6 +265,28 @@ export const kitchenMenuItems = [
     ingredients: 'Brisket · provola affumicata · coleslaw · cetrioli sott’aceto · salsa BBQ',
     allergens: ['latte', 'uova'],
   },
+  // ANNIVERSARIO 15 ANNI (2026-10-13, decisione Eros) — panino speciale della serata.
+  // Il tag `anniversario` e' l'unico aggancio per il badge a tema in PesiMassimiSection:
+  // nessun id hardcoded nei componenti. Nessuna entry in `kitchenPesiMassimiCombos`
+  // (decisione Eros): il GARPEZ non ha la combo FALLO PESANTE, si vende solo come panino.
+  // `allergensVerified: false` come item-018: la lista qui sotto e' derivata dagli
+  // ingredienti, non da etichette fornitore. Due incerti non verificabili dal repo —
+  // solfiti nei cetriolini, burro nella cipolla caramellata — quindi la UI staff deve
+  // continuare a mostrare ALLERGENI NON VERIFICATI e chi ha un'allergia vera chiede al banco.
+  {
+    id: 'item-059',
+    name: 'Garpez',
+    category: 'bbq',
+    description: 'Quindici anni di Walrus in mezzo al pane. Non si ripete.',
+    price: 15.0,
+    points: null,
+    tags: ['special', 'v2', 'anniversario'],
+    image: '/assets/kitchen/photo-garpez-special.webp',
+    available: true,
+    ingredients: 'Stinco cotto nella birra Petrus Red Aged · cetriolini sott’aceto · cipolla caramellata · cheddar · senape',
+    allergens: ['glutine', 'latte', 'senape'],
+    allergensVerified: false,
+  },
   // BOX (standalone speciale, categoria bbq — no FALLO PESANTE: nessuna entry in kitchenPesiMassimiCombos)
   // MENU POLISH SPRINT (2026-09-16, decisione Eros): resta dentro PESI MASSIMI ma non va
   // MAI chiamato panino. `detailCtaLabel`/`priceNote` sono override di copy opzionali letti
