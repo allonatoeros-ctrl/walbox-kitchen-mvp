@@ -34,14 +34,14 @@ Funzioni Vercel api/ (Node) ◄──► SumUp REST                 Edge functio
   - `src/components/kitchen/` componenti condivisi.
   - `src/hooks/` stato e dati: `useKitchenOrders` (ordini + sync), `useKitchenPayments`, `useKitchenMenu`,
     `useKitchenServiceState`, `useKitchenOrderHistory`, `useOrderPaymentFlow` (flusso pagamento cliente),
-    `useSelectedServiceNight`, `usePromoPassIssue`, `useWebPushSubscription`, `useKitchenAudio`,
+    `useSelectedServiceNight`, `useWebPushSubscription`, `useKitchenAudio`,
     `useCustomerSession`, `useFullscreenToggle`.
   - `src/lib/` regole pure e client: `kitchenServiceRules` (orari, gruppi pagamento, stati operativi),
-    `kitchenCart`, `kitchenAllergens`, `kitchenOrderCode`, `kitchenPrepAggregation`, `kitchenCloseForCounter`,
+    `kitchenCart`, `kitchenAllergens`, `kitchenPrepAggregation`, `kitchenCloseForCounter`,
     `kitchenStaffLabels`, `supabaseClient`, `supabaseAuth`, `webPush`.
   - `src/data/kitchenMockData.js`: catalogo menu usato davvero dall'app (nonostante il nome). Area protetta.
 - PWA: `public/sw.js` + manifest (notifiche "ordine pronto").
-- Legacy non montato da nessuna route: `src/pages/KitchenPayments.jsx`, `src/pages/KitchenPromo.jsx`.
+- Le vecchie pagine non montate `KitchenPayments` e `KitchenPromo` sono state rimosse (Phase 4, 2026-10-14).
 
 ## 3. Backend
 

@@ -2,7 +2,7 @@
 // (Storico + Cassa), decisione Eros (Gate 1, 2026-09-21).
 //
 // Storico (overlay dentro KitchenSoloService.jsx) e Cassa (route separata /kitchen/payments,
-// KitchenPayments.jsx) sono due alberi React montati in momenti diversi dallo stesso router SPA
+// vecchia pagina KitchenPayments, ora rimossa) sono due alberi React montati in momenti diversi dallo stesso router SPA
 // (App.jsx: pushState/popstate, nessun full reload). Un modulo esterno (useSyncExternalStore) sopravvive al
 // cambio di route esattamente come un Context lo farebbe, senza toccare il routing (area
 // protetta) ne' introdurre una dipendenza nuova: "Apri Cassa →" da uno Storico su una notte

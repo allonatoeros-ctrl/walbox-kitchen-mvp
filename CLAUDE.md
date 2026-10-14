@@ -89,8 +89,7 @@ CRM. **TV** (`/kitchen/tv`) = leggibile a distanza. Niente asset con fondo bianc
 
 Mappa: `src/pages/` (pagine cliente e staff), `src/components/kitchen/`, `src/hooks/` (`useKitchen*`), `src/lib/`
 (regole pure, client Supabase), `api/` (SumUp, protetto), `supabase/` (protetto), `tests/`. Verifica nel repo
-prima di dare per scontato che un file esista. Legacy da non riattivare: `src/pages/KitchenPayments.jsx`,
-`src/pages/KitchenPromo.jsx`, file root `00_*`–`05_*`, `ai-ops/runner/` (router fermo da luglio).
+prima di dare per scontato che un file esista. Legacy da non riattivare: file root `00_*`–`05_*`, `ai-ops/runner/` (router fermo da luglio).
 Logica di business pura → `src/lib/` con test accanto (`*.test.js`).
 
 ## 10-11. Comandi
