@@ -1,0 +1,180 @@
+/* Banner ANNIVERSARIO 15 ANNI — fascia centrale della home, solo modalità evento. */
+.anv-root {
+  --anv-bg: #0e0c08;
+  --anv-yellow: #f7c21a;
+  --anv-cream: #f2d8a7;
+  --anv-sand: #d4c89a;
+  --anv-red: #c84020;
+  --anv-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
+
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-top: 10px;
+  padding: 12px 16px 12px;
+  background: var(--anv-bg);
+  border-top: 2px solid var(--anv-yellow);
+  border-bottom: 2px solid var(--anv-yellow);
+  font-family: var(--anv-font);
+}
+
+/* raggi da poster dietro il logo, centrati: solo decorazione */
+.anv-rays {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 420px;
+  height: 420px;
+  margin: -210px 0 0 -210px;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(247, 194, 26, 0.07) 0deg 9deg, transparent 9deg 22.5deg);
+  pointer-events: none;
+}
+
+.anv-kicker {
+  position: relative;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1;
+  color: var(--anv-cream);
+}
+
+.anv-kicker::before,
+.anv-kicker::after {
+  content: '';
+  width: 28px;
+  height: 2px;
+  background: var(--anv-yellow);
+}
+
+.anv-main {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.anv-logo-wrap {
+  flex: 0 0 auto;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow: 0 0 0 3px var(--anv-bg), 0 0 0 5px var(--anv-yellow), 0 6px 16px rgba(0, 0, 0, 0.55);
+}
+
+/* Il JPG ha gli angoli neri: leggero zoom + cerchio = bordo pulito, niente alone. */
+.anv-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.03);
+}
+
+.anv-title {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  line-height: 0.86;
+  font-weight: 900;
+}
+
+.anv-num {
+  display: inline-block;
+  font-size: 68px;
+  color: var(--anv-yellow);
+  text-shadow: 3px 3px 0 var(--anv-red);
+}
+
+.anv-word {
+  font-size: 36px;
+  letter-spacing: 0.02em;
+  color: var(--anv-cream);
+}
+
+.anv-sub {
+  position: relative;
+  margin: 8px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--anv-sand);
+}
+
+/* coriandoli: una sola pioggia all'ingresso dentro il banner, poi spariscono */
+.anv-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.anv-confetti span {
+  position: absolute;
+  top: -12px;
+  left: calc(3% + var(--i) * 6%);
+  width: 7px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--anv-yellow);
+  opacity: 0;
+  animation: anv-fall 1500ms cubic-bezier(0.3, 0.6, 0.5, 1) calc(250ms + var(--i) * 50ms) 1 both;
+}
+
+.anv-confetti span:nth-child(3n) { background: var(--anv-red); width: 6px; height: 9px; }
+.anv-confetti span:nth-child(3n + 1) { background: var(--anv-cream); }
+
+/* ── Ingresso (~1,2 s, una volta): il logo timbra, il 15 sbatte, il resto sfuma. ── */
+.anv-logo-wrap { animation: anv-stamp 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 100ms both; }
+.anv-num { animation: anv-slam 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 280ms both; }
+.anv-word, .anv-kicker { animation: anv-fade 300ms ease 400ms both; }
+.anv-sub { animation: anv-fade 300ms ease 600ms both; }
+
+@keyframes anv-stamp {
+  from { opacity: 0; transform: scale(1.6) rotate(-18deg); }
+  to { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+
+@keyframes anv-slam {
+  from { opacity: 0; transform: scale(1.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes anv-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes anv-fall {
+  0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+  80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(160px) rotate(540deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anv-logo-wrap,
+  .anv-num,
+  .anv-word,
+  .anv-kicker,
+  .anv-sub { animation: none; }
+  .anv-confetti { display: none; }
+}
+
+/* 430: un filo più di respiro */
+@media (min-width: 420px) {
+  .anv-logo-wrap { width: 70px; height: 70px; }
+  .anv-num { font-size: 74px; }
+  .anv-word { font-size: 40px; }
+}

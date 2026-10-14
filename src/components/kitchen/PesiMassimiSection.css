@@ -1026,3 +1026,27 @@
     transition-duration: 1ms;
   }
 }
+
+/* ANNIVERSARIO 15 ANNI: badge sulla card col tag `anniversario` (pattern pm-hero-badge),
+   appoggiato sulla foto a card chiusa; a card aperta sparisce con il blocco CLOSED. */
+.pm-anniv-badge {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  margin: 0;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 7px;
+  background: #f7c21a;
+  color: #0e0c08;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* Restyling evento: la card protagonista ha cornice gialla, in cima alla lista. */
+.pm-card--featured {
+  border: 2px solid #f7c21a;
+  box-shadow: 0 0 0 4px var(--pm-bg), 0 0 0 5px rgba(247, 194, 26, 0.35);
+}
+.pm-list:has(.pm-card--featured) { margin-top: 0; }

@@ -80,8 +80,12 @@ export default function PesiMassimiSection({
   forceDecimals = false,
   includedSide = null,
   beerOptions = [],
+  featuredTag = null,
 }) {
-  const [openId, setOpenId] = useState(null);
+  // Evento 15 anni (restyling 2026-10-14): l'item col `featuredTag` va in cima ed e' gia' aperto
+  // (protagonista), gli altri restano miniature. Senza `featuredTag` nulla cambia.
+  const featuredItem = featuredTag ? items?.find((i) => i.tags?.includes(featuredTag)) ?? null : null;
+  const [openId, setOpenId] = useState(() => (featuredItem && featuredItem.available !== false ? featuredItem.id : null));
   const [selectedBeerByItem, setSelectedBeerByItem] = useState({});
   const [previewBeerByItem, setPreviewBeerByItem] = useState({});
   // SCEGLI COME LO VUOI (2026-09-24): scelta esplicita e visibile tra SOLO PANINO e MENU
@@ -92,11 +96,13 @@ export default function PesiMassimiSection({
 
   if (!items || items.length === 0) return null;
 
+  const orderedItems = featuredItem ? [featuredItem, ...items.filter((i) => i.id !== featuredItem.id)] : items;
   const toggle = (id) => setOpenId((prev) => (prev === id ? null : id));
 
   return (
     <section className="pm-root" aria-label="Pesi Massimi">
       {/* ── HERO FOTOGRAFICA (128:2) ── */}
+      {!(featuredItem && !heroOnly) && (
       <div className="pm-hero">
         <div className="pm-hero-photos" aria-hidden="true">
           {items.map((item) => (
@@ -135,11 +141,12 @@ export default function PesiMassimiSection({
           </div>
         </div>
       </div>
+      )}
 
       {/* ── LISTA CLOSED / EXPANDED ── */}
       {!heroOnly && (
       <div className="pm-list" ref={listRef}>
-        {items.map((item) => {
+        {orderedItems.map((item) => {
           const isOpen = openId === item.id;
           const soldOut = item.available === false;
           const combo = hideCombo ? null : kitchenPesiMassimiCombos[item.id];
@@ -156,7 +163,7 @@ export default function PesiMassimiSection({
           return (
             <article
               key={item.id}
-              className={`pm-card${isOpen ? ' pm-card--open' : ''}${soldOut ? ' pm-card--soldout' : ''}`}
+              className={`pm-card${isOpen ? ' pm-card--open' : ''}${soldOut ? ' pm-card--soldout' : ''}${featuredItem?.id === item.id ? ' pm-card--featured' : ''}`}
             >
               <div className="pm-card-media">
                 <img className="pm-card-photo" src={item.image} alt={item.name} />
@@ -181,6 +188,9 @@ export default function PesiMassimiSection({
                   aria-expanded={isOpen}
                   tabIndex={isOpen ? -1 : 0}
                 >
+                  {featuredItem?.id === item.id && (
+                    <span className="pm-hero-badge pm-anniv-badge">15 ANNI</span>
+                  )}
                   <span className="pm-card-closed-name">{item.name.toUpperCase()}</span>
                   <span className="pm-card-closed-price">{formatPrice(item.price, forceDecimals)}</span>
                   <span className="pm-card-open-cta">
