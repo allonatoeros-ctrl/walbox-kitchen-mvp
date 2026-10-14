@@ -24,9 +24,12 @@ import TagliereSection from '../components/kitchen/TagliereSection';
 import BevandeSection from '../components/kitchen/BevandeSection';
 import AllergenBadges from '../components/kitchen/AllergenBadges';
 import CustomerCheckout from '../components/kitchen/CustomerCheckout';
+import AnniversaryBanner from '../components/kitchen/AnniversaryBanner';
+import GarpezHero from '../components/kitchen/GarpezHero';
+import EventDrinkPrompt from '../components/kitchen/EventDrinkPrompt';
 import { checkoutMissing, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
-import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, EVENT_CATEGORY, EVENT_CATEGORIES } from '../lib/kitchenEventMode';
+import { isEventModeActive, filterEventMenuItems, isEventDrink, excludeEventOnlyItems, EVENT_CATEGORY, EVENT_CATEGORIES } from '../lib/kitchenEventMode';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
 import './CustomerKitchenMenu.css';
@@ -279,6 +282,8 @@ export default function CustomerKitchenMenu() {
   const [cartOpen, setCartOpen] = useState(false);
   // Feedback add-to-cart (2026-09-24): toast breve + pulse del sacco + thumbnail che vola.
   const [addedToast, setAddedToast] = useState(null);
+  // Nome del panino appena aggiunto mentre il pannello bevande è aperto; null = pannello chiuso.
+  const [drinkPromptFor, setDrinkPromptFor] = useState(null);
   const [cartPulse, setCartPulse] = useState(false);
   const [flyers, setFlyers] = useState([]);
   const cartIconRef = useRef(null);
@@ -361,6 +366,9 @@ export default function CustomerKitchenMenu() {
   const visibleItems = customerItems.filter((i) => i.category === activeCategory);
 
   const pesiMassimiItems = customerItems.filter((i) => i.category === 'bbq');
+  const garpezFeatured = eventMode ? pesiMassimiItems.find((i) => i.tags?.includes('anniversario')) ?? null : null;
+  // Evento: birre e bevande per la riga "E DA BERE?" e per il pannello dopo il primo panino.
+  const eventDrinks = eventMode ? customerItems.filter(isEventDrink) : [];
 
   // FALLO PESANTE — regola corretta dopo rimozione Krombacher (correzione Eros 2026-09-22):
   // catalogo reale delle birre a scelta incluse nel combo, le 6 bottiglie rimaste (Krombacher
@@ -410,6 +418,8 @@ export default function CustomerKitchenMenu() {
   const activeCategoryRef = useRef(activeCategory);
   viewRef.current = view;
   cartOpenRef.current = cartOpen;
+  const drinkPromptOpenRef = useRef(false);
+  useEffect(() => { drinkPromptOpenRef.current = drinkPromptFor != null; }, [drinkPromptFor]);
   activeCategoryRef.current = activeCategory;
 
   useEffect(() => {
@@ -442,8 +452,9 @@ export default function CustomerKitchenMenu() {
       // Con il drawer aperto il back lo chiude e basta (gesture standard per una
       // bottom sheet): rimettiamo la entry appena consumata così la schermata
       // sotto non si muove.
-      if (cartOpenRef.current) {
-        setCartOpen(false);
+      if (cartOpenRef.current || drinkPromptOpenRef.current) {
+        if (cartOpenRef.current) setCartOpen(false);
+        else setDrinkPromptFor(null);
         window.history.pushState(
           { view: viewRef.current, category: activeCategoryRef.current },
           '',
@@ -503,9 +514,21 @@ export default function CustomerKitchenMenu() {
     window.setTimeout(() => setFlyers((prev) => prev.filter((f) => f.id !== id)), 700);
   };
 
+  // Evento: a ogni panino PESI MASSIMI aggiunto, se nel sacco non c'è ancora da bere, compare
+  // "CI METTI DA BERE?" (vale per tutti e 4 i panini). Con una bevanda già nel sacco non chiede.
+  // Fuori evento non fa nulla.
+  const maybeOfferDrink = (item) => {
+    if (!eventMode || eventDrinks.length === 0) return;
+    if (!pesiMassimiItems.some((i) => i.id === item.id)) return;
+    const drinkIds = new Set(eventDrinks.map((d) => d.id));
+    if (orderItems.some((o) => drinkIds.has(o.baseId || o.id))) return;
+    setDrinkPromptFor(item.name);
+  };
+
   // Punto unico di add-to-cart (scheda prodotto, drawer, pairing, FALLO PESANTE):
   // aggiunge al sacco e fa partire il feedback visivo.
   const addItem = (item) => {
+    maybeOfferDrink(item);
     pushCartItem(item);
     setAddedToast({ name: item.name });
     setCartPulse(true);
@@ -706,13 +729,24 @@ export default function CustomerKitchenMenu() {
       {/* ── HOME (Figma 111:58 — Walrus Kitchen Home V3.4 PHOTO MENU) ── */}
       {view === 'home' && (
         <>
-          <div className="kh-intro">
-            <p className="kh-intro-title">OGGI TI FACCIAMO VENIRE FAME.</p>
-            <p className="kh-intro-sub">Pesi Massimi, panini seri e il resto della faccenda.</p>
-          </div>
+          {eventMode && <AnniversaryBanner />}
 
-          {/* Hero PESI MASSIMI approvata (128:2) — invariata, solo hero */}
-          {pesiMassimiItems.length > 0 && (
+          {!(eventMode && garpezFeatured) && (
+            <div className="kh-intro">
+              <p className="kh-intro-title">OGGI TI FACCIAMO VENIRE FAME.</p>
+              <p className="kh-intro-sub">{eventMode ? 'Quindici anni di Walrus. Quattro Pesi Massimi.' : 'Pesi Massimi, panini seri e il resto della faccenda.'}</p>
+            </div>
+          )}
+
+          {/* Evento: un solo eroe (GARPEZ) + classici compatti. Altrimenti hero PESI MASSIMI approvata (128:2). */}
+          {eventMode && garpezFeatured ? (
+            <GarpezHero
+              featured={garpezFeatured}
+              others={pesiMassimiItems.filter((i) => i.id !== garpezFeatured.id)}
+              drinks={eventDrinks}
+              onAdd={addItem}
+            />
+          ) : pesiMassimiItems.length > 0 && (
             <PesiMassimiSection
               items={pesiMassimiItems}
               heroOnly
@@ -720,6 +754,7 @@ export default function CustomerKitchenMenu() {
             />
           )}
 
+          {!eventMode && (<>
           <div className="kh-section-head">
             <h2 className="kh-section-title">I PANINI DA SPACCO</h2>
             <p className="kh-section-sub">Quelli seri. Almeno loro.</p>
@@ -758,10 +793,11 @@ export default function CustomerKitchenMenu() {
           <button type="button" className="kh-cta-outline" onClick={() => openMenu('panini')}>
             VEDI TUTTI I PANINI →
           </button>
+          </>)}
 
           <div className="kh-menu-block">
             <p className="kh-menu-block-title">ADESSO ENTRA NEL MENU.</p>
-            <p className="kh-menu-block-sub">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande</p>
+            <p className="kh-menu-block-sub">{eventMode ? 'Pesi Massimi · Birre · Bevande' : 'Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande'}</p>
             <button type="button" className="kh-btn-menu" onClick={enterMenu}>
               ENTRA NEL MENU →
             </button>
@@ -784,7 +820,7 @@ export default function CustomerKitchenMenu() {
           </div>
 
           <h2 className="kh-cat-title">IL MENU</h2>
-          <p className="kh-cat-subtitle">Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande</p>
+          <p className="kh-cat-subtitle">{eventMode ? 'Pesi Massimi · Birre · Bevande' : 'Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande'}</p>
 
           <div className="kh-cat-list">
             {categoryRows.map((cat) => (
@@ -852,6 +888,8 @@ export default function CustomerKitchenMenu() {
         <PesiMassimiSection
           items={visibleItems}
           onAdd={addItem}
+          hideCombo={eventMode}
+          featuredTag={eventMode ? 'anniversario' : null}
           includedSide={falloPesanteSide}
           beerOptions={falloPesanteBeerOptions}
         />
@@ -930,6 +968,10 @@ export default function CustomerKitchenMenu() {
       </div>
       )}
       </>
+      )}
+
+      {drinkPromptFor != null && (
+        <EventDrinkPrompt drinks={eventDrinks} addedName={drinkPromptFor} onAdd={addItem} onClose={() => setDrinkPromptFor(null)} />
       )}
 
       {/* Feedback add-to-cart: toast breve + thumbnail che vola verso il sacco. */}
