@@ -117,7 +117,7 @@ export default function GarpezHero({ featured, others = [], onAdd }) {
                     {item.ingredients && <span className="gzh-chip-ingredients">{item.ingredients}</span>}
                     <span className="gzh-chip-price">{off ? 'ESAURITO' : formatPrice(item.price)}</span>
                   </span>
-                  <span className="gzh-chip-media">
+                  <span className={`gzh-chip-media${WIDE_PHOTO_IDS.has(item.id) ? ' gzh-chip-media--wide' : ''}`}>
                     <img className={`gzh-chip-photo${WIDE_PHOTO_IDS.has(item.id) ? ' gzh-chip-photo--wide' : ''}`} src={item.image} alt="" />
                     {!off && <span className="gzh-chip-plus" aria-hidden="true">{added ? '✓' : '+'}</span>}
                   </span>

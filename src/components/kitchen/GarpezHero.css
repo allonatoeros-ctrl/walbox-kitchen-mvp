@@ -190,10 +190,15 @@
   background: var(--gzh-card);
 }
 
-/* Foto larga (Orto Cattivo): intera nel quadrato, fondo nero come quello della foto. */
+/* Foto larga (Orto Cattivo, 3:2, panino a tutta larghezza): slot piu' largo, cosi' la foto intera
+   (nessun crop) occupa quasi tutto lo slot invece di restare piccola in un quadrato nero. */
+.gzh-chip-media--wide {
+  width: 152px;
+}
+
 .gzh-chip-photo--wide {
   object-fit: contain;
-  object-position: center 20%;
+  object-position: center;
   background: #000;
 }
 
