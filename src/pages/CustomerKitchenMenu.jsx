@@ -26,10 +26,10 @@ import AllergenBadges from '../components/kitchen/AllergenBadges';
 import CustomerCheckout from '../components/kitchen/CustomerCheckout';
 import AnniversaryBanner from '../components/kitchen/AnniversaryBanner';
 import GarpezHero from '../components/kitchen/GarpezHero';
-import EventDrinkPrompt from '../components/kitchen/EventDrinkPrompt';
+import EventSideChip from '../components/kitchen/EventSideChip';
 import { checkoutMissing, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
-import { isEventModeActive, filterEventMenuItems, isEventDrink, excludeEventOnlyItems, EVENT_CATEGORY, EVENT_CATEGORIES } from '../lib/kitchenEventMode';
+import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, shouldSuggestEventSide, EVENT_CATEGORY, EVENT_CATEGORIES, EVENT_SIDE_ITEM_ID } from '../lib/kitchenEventMode';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
 import './CustomerKitchenMenu.css';
@@ -283,7 +283,9 @@ export default function CustomerKitchenMenu() {
   // Feedback add-to-cart (2026-09-24): toast breve + pulse del sacco + thumbnail che vola.
   const [addedToast, setAddedToast] = useState(null);
   // Nome del panino appena aggiunto mentre il pannello bevande è aperto; null = pannello chiuso.
-  const [drinkPromptFor, setDrinkPromptFor] = useState(null);
+  // Evento: chip "PATATE AL FORNO" chiuso per la sessione dopo un NO o dopo averle aggiunte
+  // (solo memoria React, niente localStorage: al reload si riparte da zero).
+  const [sideChipDismissed, setSideChipDismissed] = useState(false);
   const [cartPulse, setCartPulse] = useState(false);
   const [flyers, setFlyers] = useState([]);
   const cartIconRef = useRef(null);
@@ -367,8 +369,10 @@ export default function CustomerKitchenMenu() {
 
   const pesiMassimiItems = customerItems.filter((i) => i.category === 'bbq');
   const garpezFeatured = eventMode ? pesiMassimiItems.find((i) => i.tags?.includes('anniversario')) ?? null : null;
-  // Evento: birre e bevande per la riga "E DA BERE?" e per il pannello dopo il primo panino.
-  const eventDrinks = eventMode ? customerItems.filter(isEventDrink) : [];
+  // Evento: l'Orto Cattivo (unico item `panini` del menu evento) sta coi classici, dopo i Pesi Massimi.
+  const eventVegPanini = eventMode ? customerItems.filter((i) => i.category === 'panini') : [];
+  const eventSandwiches = [...pesiMassimiItems, ...eventVegPanini];
+  const eventSide = eventMode ? customerItems.find((i) => i.id === EVENT_SIDE_ITEM_ID) ?? null : null;
 
   // FALLO PESANTE — regola corretta dopo rimozione Krombacher (correzione Eros 2026-09-22):
   // catalogo reale delle birre a scelta incluse nel combo, le 6 bottiglie rimaste (Krombacher
@@ -418,8 +422,6 @@ export default function CustomerKitchenMenu() {
   const activeCategoryRef = useRef(activeCategory);
   viewRef.current = view;
   cartOpenRef.current = cartOpen;
-  const drinkPromptOpenRef = useRef(false);
-  useEffect(() => { drinkPromptOpenRef.current = drinkPromptFor != null; }, [drinkPromptFor]);
   activeCategoryRef.current = activeCategory;
 
   useEffect(() => {
@@ -452,9 +454,8 @@ export default function CustomerKitchenMenu() {
       // Con il drawer aperto il back lo chiude e basta (gesture standard per una
       // bottom sheet): rimettiamo la entry appena consumata così la schermata
       // sotto non si muove.
-      if (cartOpenRef.current || drinkPromptOpenRef.current) {
-        if (cartOpenRef.current) setCartOpen(false);
-        else setDrinkPromptFor(null);
+      if (cartOpenRef.current) {
+        setCartOpen(false);
         window.history.pushState(
           { view: viewRef.current, category: activeCategoryRef.current },
           '',
@@ -472,7 +473,7 @@ export default function CustomerKitchenMenu() {
   // Righe MENU — CATEGORIE (Figma 166:2): conteggio e foto reali dai dati menu,
   // nessun valore inventato — foto = primo item con `image` in quella categoria.
   const categoryRows = CATEGORIES.map((cat) => {
-    const items = customerItems.filter((i) => i.category === cat.key);
+    const items = eventMode && cat.key === EVENT_CATEGORY ? eventSandwiches : customerItems.filter((i) => i.category === cat.key);
     const photo = items.find((i) => i.image)?.image || null;
     return { ...cat, count: items.length, photo };
   });
@@ -514,21 +515,9 @@ export default function CustomerKitchenMenu() {
     window.setTimeout(() => setFlyers((prev) => prev.filter((f) => f.id !== id)), 700);
   };
 
-  // Evento: a ogni panino PESI MASSIMI aggiunto, se nel sacco non c'è ancora da bere, compare
-  // "CI METTI DA BERE?" (vale per tutti e 4 i panini). Con una bevanda già nel sacco non chiede.
-  // Fuori evento non fa nulla.
-  const maybeOfferDrink = (item) => {
-    if (!eventMode || eventDrinks.length === 0) return;
-    if (!pesiMassimiItems.some((i) => i.id === item.id)) return;
-    const drinkIds = new Set(eventDrinks.map((d) => d.id));
-    if (orderItems.some((o) => drinkIds.has(o.baseId || o.id))) return;
-    setDrinkPromptFor(item.name);
-  };
-
   // Punto unico di add-to-cart (scheda prodotto, drawer, pairing, FALLO PESANTE):
   // aggiunge al sacco e fa partire il feedback visivo.
   const addItem = (item) => {
-    maybeOfferDrink(item);
     pushCartItem(item);
     setAddedToast({ name: item.name });
     setCartPulse(true);
@@ -552,7 +541,15 @@ export default function CustomerKitchenMenu() {
 
   const total = orderItems.reduce((sum, o) => sum + o.price * o.qty, 0);
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
-  const recommendedBeer = findRecommendedBeer(orderItems, menuItems);
+  // Evento: niente birre in menu, quindi nessun suggerimento birra nel sacco.
+  const recommendedBeer = eventMode ? null : findRecommendedBeer(orderItems, menuItems);
+  // Evento: chip patate inline (non modale).
+  const showSideChip = eventMode && shouldSuggestEventSide({
+    cartIds: orderItems.map((o) => o.baseId || o.id),
+    sandwichIds: eventSandwiches.map((i) => i.id),
+    sideAvailable: Boolean(eventSide) && eventSide.available !== false && eventSide.price != null,
+    dismissed: sideChipDismissed,
+  });
 
   const handleSubmit = async (lane) => {
     if (orderItems.length === 0 || submitting || submitLockRef.current) return;
@@ -742,8 +739,7 @@ export default function CustomerKitchenMenu() {
           {eventMode && garpezFeatured ? (
             <GarpezHero
               featured={garpezFeatured}
-              others={pesiMassimiItems.filter((i) => i.id !== garpezFeatured.id)}
-              drinks={eventDrinks}
+              others={eventSandwiches.filter((i) => i.id !== garpezFeatured.id)}
               onAdd={addItem}
             />
           ) : pesiMassimiItems.length > 0 && (
@@ -795,13 +791,15 @@ export default function CustomerKitchenMenu() {
           </button>
           </>)}
 
+          {!(eventMode && garpezFeatured) && (
           <div className="kh-menu-block">
             <p className="kh-menu-block-title">ADESSO ENTRA NEL MENU.</p>
-            <p className="kh-menu-block-sub">{eventMode ? 'Pesi Massimi · Birre · Bevande' : 'Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande'}</p>
+            <p className="kh-menu-block-sub">{eventMode ? 'Pesi Massimi · Contorni' : 'Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande'}</p>
             <button type="button" className="kh-btn-menu" onClick={enterMenu}>
               ENTRA NEL MENU →
             </button>
           </div>
+          )}
         </>
       )}
 
@@ -820,7 +818,7 @@ export default function CustomerKitchenMenu() {
           </div>
 
           <h2 className="kh-cat-title">IL MENU</h2>
-          <p className="kh-cat-subtitle">{eventMode ? 'Pesi Massimi · Birre · Bevande' : 'Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande'}</p>
+          <p className="kh-cat-subtitle">{eventMode ? 'Pesi Massimi · Contorni' : 'Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande'}</p>
 
           <div className="kh-cat-list">
             {categoryRows.map((cat) => (
@@ -886,7 +884,7 @@ export default function CustomerKitchenMenu() {
       {/* Menu items */}
       {activeCategory === 'bbq' && visibleItems.length > 0 && (
         <PesiMassimiSection
-          items={visibleItems}
+          items={eventMode ? [...visibleItems, ...eventVegPanini] : visibleItems}
           onAdd={addItem}
           hideCombo={eventMode}
           featuredTag={eventMode ? 'anniversario' : null}
@@ -970,13 +968,14 @@ export default function CustomerKitchenMenu() {
       </>
       )}
 
-      {drinkPromptFor != null && (
-        <EventDrinkPrompt drinks={eventDrinks} addedName={drinkPromptFor} onAdd={addItem} onClose={() => setDrinkPromptFor(null)} />
-      )}
-
       {/* Feedback add-to-cart: toast breve + thumbnail che vola verso il sacco. */}
       {addedToast && (
-        <div className="kitch-add-toast" data-testid="add-to-cart-toast" role="status">
+        <div
+          className="kitch-add-toast"
+          data-testid="add-to-cart-toast"
+          role="status"
+          style={showSideChip ? { bottom: 'calc(168px + env(safe-area-inset-bottom))' } : undefined}
+        >
           {addedToast.name && <span className="kitch-add-toast-name">{addedToast.name.toUpperCase()}</span>}
           <span className="kitch-add-toast-text"> aggiunto al sacco ✓</span>
         </div>
@@ -994,8 +993,15 @@ export default function CustomerKitchenMenu() {
 
       {itemCount > 0 && (
         <>
-          <div className="kitch-bottom-spacer" />
+          <div className="kitch-bottom-spacer" style={showSideChip ? { height: 160 } : undefined} />
           <div className="kitch-bottom-bar">
+            {showSideChip && (
+              <EventSideChip
+                item={eventSide}
+                onAdd={() => { setSideChipDismissed(true); addItem(eventSide); }}
+                onDismiss={() => setSideChipDismissed(true)}
+              />
+            )}
             <div className={`kitch-bottom-card kitch-bottom-card--filled${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
               <div
                 className="kitch-bottom-left"

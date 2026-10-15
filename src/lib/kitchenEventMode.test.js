@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { isEventModeActive, isEventMenuItem, filterEventMenuItems, isEventDrink, excludeEventOnlyItems, EVENT_CATEGORIES } from './kitchenEventMode.js';
+import {
+  isEventModeActive, isEventMenuItem, filterEventMenuItems, excludeEventOnlyItems, EVENT_CATEGORIES,
+  EVENT_EXTRA_ITEM_IDS, EVENT_SIDE_ITEM_ID, shouldSuggestEventSide,
+} from './kitchenEventMode.js';
 
 test('spenta di default, senza flag né override', () => {
   assert.equal(isEventModeActive('', false), false);
@@ -35,7 +38,7 @@ test('menu evento: solo i panini bbq special, niente Box né altre categorie', (
   assert.deepEqual(filterEventMenuItems(undefined), []);
 });
 
-test('menu evento: restano tutte le birre e le bevande (decisione Eros 2026-10-14)', () => {
+test('menu evento: birre e bevande NON ci sono (decisione Eros 2026-10-16)', () => {
   const items = [
     { id: 'g', category: 'bbq', tags: ['special', 'anniversario'] },
     { id: 'b1', category: 'birre', tags: ['birre-v1'] },
@@ -43,11 +46,8 @@ test('menu evento: restano tutte le birre e le bevande (decisione Eros 2026-10-1
     { id: 'd2', category: 'bevande' },
     { id: 'c', category: 'cicchetti', tags: ['special'] },
   ];
-  assert.deepEqual(filterEventMenuItems(items).map((i) => i.id), ['g', 'b1', 'd1', 'd2']);
-  assert.deepEqual(EVENT_CATEGORIES, ['bbq', 'birre', 'bevande']);
-  assert.equal(isEventDrink({ category: 'birre' }), true);
-  assert.equal(isEventDrink({ category: 'bbq' }), false);
-  assert.equal(isEventDrink(null), false);
+  assert.deepEqual(filterEventMenuItems(items).map((i) => i.id), ['g']);
+  assert.deepEqual(EVENT_CATEGORIES, ['bbq', 'contorni']);
 });
 
 test('modalità spenta: gli item col tag anniversario escono dal menu, gli altri restano identici', () => {
@@ -58,4 +58,38 @@ test('modalità spenta: gli item col tag anniversario escono dal menu, gli altri
   ];
   assert.deepEqual(excludeEventOnlyItems(items).map((i) => i.id), ['p', 'x']);
   assert.deepEqual(excludeEventOnlyItems(undefined), []);
+});
+
+test('menu evento: entrano anche Orto Cattivo (veg) e Patate al Forno, solo per id esplicito', () => {
+  const items = [
+    { id: 'item-013', category: 'panini', tags: ['veg', 'v2'] },
+    { id: 'item-014', category: 'panini', tags: ['v2'] },
+    { id: 'item-058', category: 'contorni', tags: ['veg', 'v2'] },
+    { id: 'altro-contorno', category: 'contorni' },
+    { id: 'g', category: 'bbq', tags: ['special', 'anniversario'] },
+  ];
+  assert.deepEqual(filterEventMenuItems(items).map((i) => i.id), ['item-013', 'item-058', 'g']);
+  assert.deepEqual(EVENT_EXTRA_ITEM_IDS, ['item-013', 'item-058']);
+  assert.equal(EVENT_SIDE_ITEM_ID, 'item-058');
+});
+
+test('modalità spenta: Orto Cattivo sparisce dal menu normale, Patate restano', () => {
+  const items = [
+    { id: 'item-013', category: 'panini', tags: ['veg', 'v2'] },
+    { id: 'item-058', category: 'contorni', tags: ['veg', 'v2'] },
+  ];
+  assert.deepEqual(excludeEventOnlyItems(items).map((i) => i.id), ['item-058']);
+});
+
+test('chip patate: solo con un panino nel sacco, senza patate e senza un no', () => {
+  const sandwichIds = ['g', 'item-013'];
+  const base = { sandwichIds, sideAvailable: true, dismissed: false };
+  assert.equal(shouldSuggestEventSide({ ...base, cartIds: [] }), false);
+  assert.equal(shouldSuggestEventSide({ ...base, cartIds: ['birra'] }), false);
+  assert.equal(shouldSuggestEventSide({ ...base, cartIds: ['g'] }), true);
+  assert.equal(shouldSuggestEventSide({ ...base, cartIds: ['item-013', 'birra'] }), true);
+  assert.equal(shouldSuggestEventSide({ ...base, cartIds: ['g', 'item-058'] }), false);
+  assert.equal(shouldSuggestEventSide({ ...base, cartIds: ['g'], dismissed: true }), false);
+  assert.equal(shouldSuggestEventSide({ ...base, cartIds: ['g'], sideAvailable: false }), false);
+  assert.equal(shouldSuggestEventSide({}), false);
 });

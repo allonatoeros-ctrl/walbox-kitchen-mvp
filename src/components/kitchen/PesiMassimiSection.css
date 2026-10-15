@@ -1050,3 +1050,9 @@
   box-shadow: 0 0 0 4px var(--pm-bg), 0 0 0 5px rgba(247, 194, 26, 0.35);
 }
 .pm-list:has(.pm-card--featured) { margin-top: 0; }
+
+/* Evento 2026-10-15: etichetta VEG (Orto Cattivo), stessa forma del badge 15 ANNI, verde del "NEL SACCO ✓". */
+.pm-veg-badge {
+  background: #3fa34d;
+  color: #fff;
+}
