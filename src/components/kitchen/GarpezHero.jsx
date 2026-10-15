@@ -10,7 +10,16 @@ import './GarpezHero.css';
  * Il panino speciale si riconosce dal tag `anniversario`, nessun id hardcoded.
  * Se il panino speciale non è ordinabile (esaurito) la card sparisce e i classici restano i protagonisti.
  * 2026-10-15: tra i classici c'è anche l'Orto Cattivo (tag `veg`): stessa misura, etichetta VEG testuale.
+ * 2026-10-16 (Opzione C, Eros): i classici passano a lista stile delivery (testo a sinistra, foto con "+" a destra) con etichette "avvertenze da pub" (mappa per id
+ * solo qui, non nei dati), max 2 righe di ingredienti reali e feedback "aggiunto" sul "+".
  */
+const BILLING_BY_ID = {
+  'item-009': 'SPORCA. TANTO.',
+  'item-010': 'TOVAGLIOLI A PARTE',
+  'item-011': 'NON È FRETTOLOSO',
+  'item-013': 'SÌ, È VERDURA. E ALLORA?',
+};
+
 function formatPrice(value) {
   if (value == null) return '';
   return Number.isInteger(value) ? `€${value}` : `€${value.toFixed(2).replace('.', ',')}`;
@@ -28,7 +37,13 @@ export default function GarpezHero({ featured, others = [], onAdd }) {
   // Conferma breve sulla CTA dopo il tap ("NEL SACCO ✓"), poi torna l'invito a prenderne un altro.
   const [justAdded, setJustAdded] = useState(false);
   const timerRef = useRef(null);
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+  // Stesso feedback sui classici, per singola card ("+" diventa "✓" per un attimo).
+  const [addedId, setAddedId] = useState(null);
+  const chipTimerRef = useRef(null);
+  useEffect(() => () => {
+    clearTimeout(timerRef.current);
+    clearTimeout(chipTimerRef.current);
+  }, []);
 
   if (!featured) return null;
   const soldOut = !isOrderable(featured);
@@ -40,6 +55,13 @@ export default function GarpezHero({ featured, others = [], onAdd }) {
     timerRef.current = window.setTimeout(() => setJustAdded(false), 1400);
   };
 
+  const addOther = (item) => {
+    onAdd?.(toCartItem(item));
+    setAddedId(item.id);
+    clearTimeout(chipTimerRef.current);
+    chipTimerRef.current = window.setTimeout(() => setAddedId(null), 1200);
+  };
+
   return (
     <section className="gzh-root" aria-label={`Walrus 15 anni: ${featured.name}`}>
       {!soldOut && (
@@ -49,6 +71,7 @@ export default function GarpezHero({ featured, others = [], onAdd }) {
           <div className="gzh-scrim" aria-hidden="true" />
         </div>
         <div className="gzh-body">
+          <p className="gzh-billing">VIETATO AI DEBOLI</p>
           <p className="gzh-edition">IL PANINO DEI 15 ANNI · SOLO STASERA</p>
           <div className="gzh-title-row">
             <h2 className="gzh-name">{featured.name.toUpperCase()}</h2>
@@ -72,21 +95,29 @@ export default function GarpezHero({ featured, others = [], onAdd }) {
           <div className="gzh-others-row">
             {others.map((item) => {
               const off = !isOrderable(item);
+              const added = addedId === item.id;
+              const billing = BILLING_BY_ID[item.id];
               return (
                 <button
                   key={item.id}
                   type="button"
-                  className="gzh-chip"
-                  onClick={() => onAdd?.(toCartItem(item))}
+                  className={`gzh-chip${added ? ' gzh-chip--added' : ''}`}
+                  onClick={() => addOther(item)}
                   disabled={off}
                   aria-label={`${off ? `${item.name}, esaurito` : `Aggiungi ${item.name} al sacco`}${item.tags?.includes('veg') ? ', vegetariano' : ''}`}
                 >
-                  <img className="gzh-chip-photo" src={item.image} alt="" />
-                  {item.tags?.includes('veg') && <span className="gzh-chip-veg">VEG</span>}
-                  <span className="gzh-chip-name">{item.name.toUpperCase()}</span>
-                  <span className="gzh-chip-foot">
+                  <span className="gzh-chip-text">
+                    {billing && <span className="gzh-chip-billing">{billing}</span>}
+                    <span className="gzh-chip-name">
+                      {item.tags?.includes('veg') && <span className="gzh-chip-veg">VEG</span>}
+                      {item.name.toUpperCase()}
+                    </span>
+                    {item.ingredients && <span className="gzh-chip-ingredients">{item.ingredients}</span>}
                     <span className="gzh-chip-price">{off ? 'ESAURITO' : formatPrice(item.price)}</span>
-                    {!off && <span className="gzh-chip-plus" aria-hidden="true">+</span>}
+                  </span>
+                  <span className="gzh-chip-media">
+                    <img className="gzh-chip-photo" src={item.image} alt="" />
+                    {!off && <span className="gzh-chip-plus" aria-hidden="true">{added ? '✓' : '+'}</span>}
                   </span>
                 </button>
               );
