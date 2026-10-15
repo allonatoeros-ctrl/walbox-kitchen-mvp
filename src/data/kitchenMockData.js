@@ -283,8 +283,8 @@ export const kitchenMenuItems = [
     tags: ['special', 'v2', 'anniversario'],
     image: '/assets/kitchen/photo-garpez-special.webp',
     available: true,
-    ingredients: 'Stinco cotto nella birra Petrus Red Aged · cetriolini sott’aceto · cipolla caramellata · cheddar · senape',
-    allergens: ['glutine', 'latte', 'senape'],
+    ingredients: 'Stinco cotto nella birra Petrus Red Aged, con cheddar, cipolla caramellata, cetriolini sott’aceto, insalata di cavolo cappuccio, maionese e senape al miele.',
+    allergens: ['glutine', 'latte', 'senape', 'uova'],
     allergensVerified: false,
   },
   // BOX (standalone speciale, categoria bbq — no FALLO PESANTE: nessuna entry in kitchenPesiMassimiCombos)
@@ -304,7 +304,7 @@ export const kitchenMenuItems = [
     available: true,
     detailCtaLabel: 'VEDI IL BOX',
     priceNote: 'SOLO BOX',
-    ingredients: 'Pulled pork senza pane · patate al forno · anelli di cipolla · salsa cheddar · maionese al pepe',
+    ingredients: 'Pulled pork senza pane · patate al forno · anelli di cipolla · salsa coleslaw · salsa cheddar · maionese al pepe',
     // Fix prudenziale allergeni (2026-09-16, pre-apertura 18/09). `allergens: []` NON e' una
     // dichiarazione affidabile qui: gli ingredienti includono salsa cheddar e maionese, gli
     // stessi di item-009 (Pulled Pork) che dichiara ['uova', 'latte']. Non inventiamo quei due
