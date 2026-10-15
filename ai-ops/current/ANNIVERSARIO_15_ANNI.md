@@ -340,3 +340,72 @@ Modello/effort: Sonnet medium.
 - Verifiche: `node --test src/lib/*.test.js` 167/167 · lint menu 13 (= baseline), altri file puliti · build ok · prova a video (evento=1: pannello, Esc, back; evento=0).
 - DECISO da Eros (opzione 1): GARPEZ visibile e ordinabile solo a modalità evento accesa. Filtro `excludeEventOnlyItems` (tag `anniversario`) in `kitchenEventMode.js`, applicato al catalogo del menu: fuori evento sparisce anche da un sacco salvato. Provato ON/OFF a video, 168 test ok.
 - Prossimo: `diff-risk-reviewer`, poi commit atomici su approvazione di Eros.
+
+## NOVITÀ 2026-10-15 — Patate al forno + Orto Cattivo (piano, NON eseguito, attende Gate 1)
+Richiesta Eros: aggiungere Patate al Forno e l'alternativa veg Orto Cattivo al menu della festa, mantenendo l'armonia visiva.
+Decisioni Eros: Orto Cattivo = **riga sotto i classici** (quinto panino, etichetta VEG; GARPEZ resta unico protagonista).
+Patate = **proposte anche singole**, consigliate come il "CI METTI DA BERE?"; Eros teme attrito → **prima una ricerca breve**.
+
+**Procedura che ha portato la pagina al livello attuale (da riusare identica):**
+1. Brief stile agenzia + 12 regole da ricerca: **`docs/design/ricerca-menu-evento.md`** (copia nel repo dei due piani,
+   leggerla prima di ogni modifica visiva del menu evento; la ricerca F0 su patate/attrito va aggiunta lì).
+2. Tutto solo in modalità evento (`kitchenEventMode.js`), `?evento=0` = menu identico a prima.
+3. Anteprima 390/430 a ogni passo. 4. QA indipendente `visual-reviewer` (report in
+`~/_ARCHIVIO_WALBOX/2026-10-14_phase2/.../anniversario-visual-review.md`) → fix P1/P2. 5. Pulizia, `diff-risk-reviewer`, commit atomici.
+
+**⚠ Rischio trovato (dedotto dal repo, da verificare in sola lettura sul DB):** `item-059` GARPEZ non compare in nessuna migration del
+catalogo server `kitchen_menu_items`; la RPC ordine fa `RAISE EXCEPTION 'unknown_menu_item'` se l'item manca. Se non è stato inserito a mano in
+produzione, **ordinare il GARPEZ fallisce**. Orto Cattivo (`item-013`, 8 €) e Patate (`item-058`, 5 €) invece ci sono.
+Nota: i commit anniversario sono sul branch `feat/anniversario-15-anni`, non su `main` (main = `3d740b9`).
+
+**Fasi:**
+- F0 Ricerca breve (subagent Sonnet): più suggerimenti in sequenza vs uno solo, cross-sell contorni, attrito. Aggiorna le 12 regole.
+  Ipotesi da verificare: **un solo pannello "COMPLETA IL SACCO"** (bere + patate) al posto di due pannelli in fila.
+- F1 `kitchenEventMode.js` + test: menu evento include anche `item-013` e `item-058` (lista id esplicita, niente modifica a `kitchenMockData.js`).
+- F2 Home + PESI MASSIMI: Orto Cattivo nella riga classici con badge VEG; patate visibili come contorno.
+- F3 Pannello suggerimenti secondo l'esito di F0 (`EventDrinkPrompt` + `CustomerKitchenMenu.jsx`).
+- F4 Test unit lib, lint file toccati, build con override, anteprima 390/430/desktop, `?evento=0` invariato, `visual-reviewer`, `diff-risk-reviewer`.
+File: `kitchenEventMode.js/.test.js`, `GarpezHero.jsx/.css`, `PesiMassimiSection.jsx/.css`, `EventDrinkPrompt.jsx/.css`, `CustomerKitchenMenu.jsx`.
+Gate: nessuna area protetta. Se il GARPEZ deve INCLUDERE le patate → cambia `kitchenMockData.js` (protetto) e forse il prezzo server (migration = gate Eros).
+DECISO Eros 2026-10-15: **patate solo a parte, GARPEZ invariato a 15 €** (niente aree protette). Gate 1 dato: "vai col piano partendo da F0".
+Modello/effort: F0 Sonnet medium · F1-F3 Opus medium · F4 Sonnet medium.
+- **F0 FATTA 2026-10-15**: ricerca in `docs/design/ricerca-menu-evento.md` § Ricerca 3 (regole 13-17, fonti medio-deboli).
+  Esito: pannello bevande invariato; patate = **chip inline non modale** (solo se c'è un panino e mancano le patate, sparisce dopo aggiunta o "no");
+  Orto Cattivo nella riga classici, stessa misura, etichetta VEG. **NEEDS_DECISION:** regola 15 ("un no vale per la sessione") contraddice la
+  decisione Eros 2026-10-14 (pannello bevande a ogni panino): **resta la decisione di Eros** finché non dice altro.
+  Prossimo: F1-F3 implementazione (subagent), poi F4.
+- **F1-F3 FATTE 2026-10-15 (non committate):** Orto Cattivo nella riga classici + scheda PESI MASSIMI evento (badge VEG), Patate in scheda CONTORNI
+  + chip inline `EventSideChip.jsx/.css` (nuovi). File: kitchenEventMode.js/.test.js, CustomerKitchenMenu.jsx, GarpezHero.jsx/.css, PesiMassimiSection.jsx/.css.
+  Unit lib 170 pass/0 fail/1 skip, lint file toccati 0 errori, build PASS, anteprima 360/390/430 ok, `?evento=0` invariato. Report: `ai-ops/reports/anniversario-patate-veg.md`.
+  **NEEDS_DECISION:** foto Orto Cattivo su fondo bianco (stona coi classici scuri, §8). **Fuori dal commit:** `.claude/settings.json`, `.claude/hooks/` (non nostri).
+  Rischio ancora aperto: GARPEZ `item-059` assente dal catalogo server (verifica in sola lettura sul DB = ok di Eros).
+  **Prossimo: F4** = `visual-reviewer` (390/430/desktop, `?evento=1`/`0`, reduced-motion) + `diff-risk-reviewer`, poi commit atomici su ok di Eros.
+- **DECISO Eros 2026-10-15 (foto Orto Cattivo):** manderà una foto su fondo scuro come gli altri; **intanto resta quella attuale**
+  (`/assets/kitchen/menu/panini/panino_orto_cattivo.webp`). Quando arriva: riformattare come il GARPEZ (Fase 2), anteprima a Eros, poi collegarla.
+  Nota: l'immagine è usata anche dal menu normale (item-013) → sostituirla cambia anche fuori evento, oppure usare un asset solo-evento: chiedere a Eros.
+- **ESEGUITO 2026-10-15 (foto Orto Cattivo, non committato):** Eros ha mandato la foto su fondo scuro (già 1536×1024 webp, nessuna
+  riformattazione) e ha deciso "sostituisci anche nel menu normale". Sovrascritto `public/assets/kitchen/menu/panini/panino_orto_cattivo.webp`
+  (vecchia foto in scratchpad `orto-backup/`, ripristino anche con `git restore` del singolo file). Nessun file di codice toccato.
+  Anteprima 375: evento (riga "ANCHE STASERA") perfetta. Menu normale (lista panini, `object-fit: contain` su fondo crema): la foto scura
+  è l'unica fra piatti chiari e lascia bande crema sopra/sotto. **NEEDS_DECISION Eros:** tenerla così o ripiegare su asset solo-evento.
+  `.claude/launch.json` creato per l'anteprima (URL Supabase locale + chiave fittizia): NON va committato.
+- **ESEGUITO 2026-10-15 (Orto Cattivo fuori dal menu normale, non committato):** decisione Eros "togli da menu normale Orto Cattivo con sfondo nero".
+  `item-013` aggiunto a `EVENT_ONLY_ITEM_IDS` in `kitchenEventMode.js`: con modalità spenta sparisce (e da un sacco salvato); in evento resta nella riga classici.
+  Test 10/10, lint pulito. `kitchenMockData.js` non toccato. Nota: il server ha ancora `item-013` nel catalogo, ma il client non lo mostra.
+- **2026-10-15:** GARPEZ ingredienti + insalata di cavolo cappuccio + maionese (richiesta Eros, solo item-059 in kitchenMockData.js); allergeni + 'uova' (maionese), allergensVerified resta false.
+- **2026-10-15:** ingredienti GARPEZ riscritti a frase (come gli altri item), 'senape al miele' (non senape normale).
+- **2026-10-16 (richiesta Eros, non committato):** (1) Box Pulled Pork (`item-018`): aggiunta "salsa coleslaw" agli ingredienti (vale anche nel menu normale; allergeni invariati, restano non verificati).
+  (2) Evento SENZA birre e bevande: `EVENT_DRINK_CATEGORIES = []` in `kitchenEventMode.js` (supera la decisione 2026-10-14 "tutte presenti"): niente schede BIRRE/BEVANDE, riga "E DA BERE?" e pannello bevande spariti.
+  Per riaccenderle: `['birre','bevande']`. Resta codice bevande dormiente (EventDrinkPrompt, riga in GarpezHero): da ripulire se confermato definitivo.
+- 2026-10-16: sottotitoli menu evento senza 'Birre · Bevande' (CustomerKitchenMenu.jsx righe 815/838).
+- 2026-10-16: evento: tolto suggerimento birra nel sacco (recommendedBeer=null) e blocco 'ENTRA NEL MENU' in fondo alla home (solo se GARPEZ in evidenza). Resta il link del GarpezHero (onOpen) da valutare.
+
+## DECISIONI FINALI 2026-10-16 (Eros) + pulizia — leggere questo per primo, supera le sezioni sopra
+**Menu evento (modalità `?evento=1` / `EVENT_MODE_ON = true`):**
+- Piatti: GARPEZ (15 €, eroe), Pulled Pork, Pastrami, Brisket, Orto Cattivo (VEG, riga "Anche stasera") + Patate al Forno a parte (chip dopo il primo panino). Box fuori.
+- **Nessuna birra né bevanda** in evento: niente schede, niente riga "E DA BERE?", niente pannello "CI METTI DA BERE?", niente suggerimento birra nel sacco, niente blocco "ENTRA NEL MENU" in fondo alla home. (Supera le decisioni 2026-10-14 "tutte presenti".)
+- **Orto Cattivo (`item-013`) solo in evento**: fuori dal menu normale (`EVENT_ONLY_ITEM_IDS`). Foto scura già sostituita.
+- GARPEZ ingredienti a frase: "Stinco cotto nella birra Petrus Red Aged, con cheddar, cipolla caramellata, cetriolini sott'aceto, insalata di cavolo cappuccio, maionese e senape al miele." Allergeni `glutine, latte, senape, uova`, `allergensVerified: false`.
+- Box Pulled Pork (menu normale): aggiunta "salsa coleslaw" agli ingredienti.
+**Pulizia codice (2026-10-16):** rimossi `EventDrinkPrompt.jsx/.css` (spostati in scratchpad `drink-prompt/`, recuperabili anche da git), stato/ref/popstate del pannello bevande e `maybeOfferDrink` in `CustomerKitchenMenu.jsx`, riga bevande e link `onOpen` in `GarpezHero.jsx/.css`, `EVENT_DRINK_CATEGORIES`/`isEventDrink` in `kitchenEventMode.js` e test. Unit lib 170/0, lint 0 errori. Per rimettere le bevande in evento: ripristinare da git.
+**Promemoria:** la sera `EVENT_MODE_ON = true` + deploy (gate Eros); dopo la festa `false`. Chi ha la pagina aperta vede il nuovo menu solo dopo il ricaricamento. Commit atomici: nulla è ancora committato; `.claude/launch.json`, `.claude/settings.json`, `.claude/hooks/` fuori dal commit.
