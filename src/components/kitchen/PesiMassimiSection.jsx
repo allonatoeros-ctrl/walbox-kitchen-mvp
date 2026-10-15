@@ -191,6 +191,10 @@ export default function PesiMassimiSection({
                   {featuredItem?.id === item.id && (
                     <span className="pm-hero-badge pm-anniv-badge">15 ANNI</span>
                   )}
+                  {/* Evento 2026-10-15: l'Orto Cattivo (unico item `veg` passato qui) ha l'etichetta VEG in testo. */}
+                  {item.tags?.includes('veg') && (
+                    <span className="pm-hero-badge pm-anniv-badge pm-veg-badge">VEG</span>
+                  )}
                   <span className="pm-card-closed-name">{item.name.toUpperCase()}</span>
                   <span className="pm-card-closed-price">{formatPrice(item.price, forceDecimals)}</span>
                   <span className="pm-card-open-cta">

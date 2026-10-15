@@ -9,6 +9,7 @@ import './GarpezHero.css';
  * bevande. Nessuna logica d'ordine propria: tutto passa da `onAdd` (= addItem del menu).
  * Il panino speciale si riconosce dal tag `anniversario`, nessun id hardcoded.
  * Se il panino speciale non è ordinabile (esaurito) la card sparisce e i classici restano i protagonisti.
+ * 2026-10-15: tra i classici c'è anche l'Orto Cattivo (tag `veg`): stessa misura, etichetta VEG testuale.
  */
 function formatPrice(value) {
   if (value == null) return '';
@@ -23,7 +24,7 @@ function isOrderable(item) {
   return item.available !== false && item.price != null;
 }
 
-export default function GarpezHero({ featured, others = [], drinks = [], onAdd, onOpen }) {
+export default function GarpezHero({ featured, others = [], onAdd }) {
   // Conferma breve sulla CTA dopo il tap ("NEL SACCO ✓"), poi torna l'invito a prenderne un altro.
   const [justAdded, setJustAdded] = useState(false);
   const timerRef = useRef(null);
@@ -38,8 +39,6 @@ export default function GarpezHero({ featured, others = [], drinks = [], onAdd, 
     clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => setJustAdded(false), 1400);
   };
-
-  const orderableDrinks = drinks.filter(isOrderable);
 
   return (
     <section className="gzh-root" aria-label={`Walrus 15 anni: ${featured.name}`}>
@@ -80,9 +79,10 @@ export default function GarpezHero({ featured, others = [], drinks = [], onAdd, 
                   className="gzh-chip"
                   onClick={() => onAdd?.(toCartItem(item))}
                   disabled={off}
-                  aria-label={off ? `${item.name}, esaurito` : `Aggiungi ${item.name} al sacco`}
+                  aria-label={`${off ? `${item.name}, esaurito` : `Aggiungi ${item.name} al sacco`}${item.tags?.includes('veg') ? ', vegetariano' : ''}`}
                 >
                   <img className="gzh-chip-photo" src={item.image} alt="" />
+                  {item.tags?.includes('veg') && <span className="gzh-chip-veg">VEG</span>}
                   <span className="gzh-chip-name">{item.name.toUpperCase()}</span>
                   <span className="gzh-chip-foot">
                     <span className="gzh-chip-price">{off ? 'ESAURITO' : formatPrice(item.price)}</span>
@@ -93,36 +93,6 @@ export default function GarpezHero({ featured, others = [], drinks = [], onAdd, 
             })}
           </div>
         </div>
-      )}
-
-      {orderableDrinks.length > 0 && (
-        <div className="gzh-strip">
-          <p className="gzh-strip-label">E DA BERE?</p>
-          <div className="gzh-drinks-row">
-            {orderableDrinks.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className="gzh-drink"
-                onClick={() => onAdd?.(toCartItem(item))}
-                aria-label={`Aggiungi ${item.name} al sacco`}
-              >
-                <img className="gzh-drink-photo" src={item.image} alt="" loading="lazy" />
-                <span className="gzh-drink-name">{(item.displayName || item.name).toUpperCase()}</span>
-                <span className="gzh-chip-foot">
-                  <span className="gzh-chip-price">{formatPrice(item.price)}</span>
-                  <span className="gzh-chip-plus" aria-hidden="true">+</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {onOpen && (
-        <button type="button" className="gzh-link" onClick={onOpen}>
-          VEDI IL MENU DELLA SERATA →
-        </button>
       )}
     </section>
   );

@@ -86,10 +86,6 @@
   line-height: 1.25;
   font-weight: 600;
   color: var(--gzh-sand);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
 }
 
 .gzh-cta {
@@ -114,9 +110,7 @@
 }
 
 .gzh-cta:focus-visible,
-.gzh-chip:focus-visible,
-.gzh-drink:focus-visible,
-.gzh-link:focus-visible {
+.gzh-chip:focus-visible {
   outline: 3px solid var(--gzh-cream);
   outline-offset: 2px;
 }
@@ -138,7 +132,7 @@
   .gzh-cta { transition: none; }
 }
 
-/* ── Righe sotto il poster: classici + bevande, un tap = nel sacco ── */
+/* ── Righe sotto il poster: classici, un tap = nel sacco ── */
 .gzh-strip {
   margin-top: 16px;
 }
@@ -158,8 +152,7 @@
   gap: 8px;
 }
 
-.gzh-chip,
-.gzh-drink {
+.gzh-chip {
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -175,10 +168,27 @@
   transition: transform 120ms ease;
 }
 
-.gzh-chip:active:not(:disabled),
-.gzh-drink:active { transform: scale(0.96); }
+.gzh-chip:active:not(:disabled) { transform: scale(0.96); }
 
 .gzh-chip:disabled { opacity: 0.5; cursor: default; }
+
+/* Orto Cattivo: etichetta VEG in testo sulla foto (stesso schema del badge 15 ANNI, colore
+   del "NEL SACCO ✓"), così la card resta della stessa misura degli altri classici. */
+.gzh-chip { position: relative; }
+.gzh-chip-veg {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: #3fa34d;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
 
 .gzh-chip-photo {
   display: block;
@@ -187,8 +197,7 @@
   object-fit: cover;
 }
 
-.gzh-chip-name,
-.gzh-drink-name {
+.gzh-chip-name {
   padding: 6px 8px 0;
   font-size: 15px;
   font-weight: 900;
@@ -225,62 +234,13 @@
   line-height: 1;
 }
 
-/* bevande: scorrono in orizzontale, foto su fondo scuro (le PNG delle birre sono scontornate) */
-.gzh-drinks-row {
-  display: flex;
-  gap: 8px;
-  margin: 0 -12px;
-  padding: 0 12px 4px;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-padding-inline: 12px;
-  scrollbar-width: none;
-}
-
-/* desktop: sfumatura a destra, così si capisce che le bevande continuano */
-@media (min-width: 768px) {
-  .gzh-drinks-row {
-    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
-    mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
-  }
-}
-
-.gzh-drinks-row::-webkit-scrollbar { display: none; }
-
-.gzh-drink {
-  flex: 0 0 112px;
-  scroll-snap-align: start;
-}
-
-.gzh-drink-photo {
-  display: block;
-  width: 100%;
-  height: 96px;
-  padding: 8px 0 0;
-  object-fit: contain;
-  background: var(--gzh-bg);
-}
-
-.gzh-drink-name {
-  min-height: 2.2em;
-  font-size: 14px;
-}
-
-.gzh-link {
-  display: block;
-  width: 100%;
-  min-height: 44px;
-  margin-top: 14px;
-  border: 2px solid #3a3424;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--gzh-cream);
-  font-family: inherit;
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: 0.05em;
-  cursor: pointer;
-}
+/* Riga classici a 4 voci (con l'Orto Cattivo): colonne da ~86 px a 390, prezzo e "+" più compatti
+   così il "+" non si schiaccia. Con 3 voci resta tutto com'era. */
+.gzh-chip-plus { flex: 0 0 auto; }
+.gzh-others-row:has(> :nth-child(4)) .gzh-chip-foot { gap: 4px; padding: 4px 6px 0; }
+.gzh-others-row:has(> :nth-child(4)) .gzh-chip-name { padding: 6px 6px 0; }
+.gzh-others-row:has(> :nth-child(4)) .gzh-chip-price { font-size: 15px; }
+.gzh-others-row:has(> :nth-child(4)) .gzh-chip-plus { width: 24px; height: 24px; font-size: 19px; }
 
 @media (max-width: 359px) {
   .gzh-name { font-size: 40px; }
