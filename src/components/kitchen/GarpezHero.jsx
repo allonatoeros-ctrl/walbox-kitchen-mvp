@@ -19,6 +19,8 @@ const BILLING_BY_ID = {
   'item-011': 'NON È FRETTOLOSO',
   'item-013': 'SÌ, È VERDURA. E ALLORA?',
 };
+// Foto larghe (ciabatta lunga): nel quadrato si mostrano intere invece di essere tagliate.
+const WIDE_PHOTO_IDS = new Set(['item-013']);
 
 function formatPrice(value) {
   if (value == null) return '';
@@ -116,7 +118,7 @@ export default function GarpezHero({ featured, others = [], onAdd }) {
                     <span className="gzh-chip-price">{off ? 'ESAURITO' : formatPrice(item.price)}</span>
                   </span>
                   <span className="gzh-chip-media">
-                    <img className="gzh-chip-photo" src={item.image} alt="" />
+                    <img className={`gzh-chip-photo${WIDE_PHOTO_IDS.has(item.id) ? ' gzh-chip-photo--wide' : ''}`} src={item.image} alt="" />
                     {!off && <span className="gzh-chip-plus" aria-hidden="true">{added ? '✓' : '+'}</span>}
                   </span>
                 </button>

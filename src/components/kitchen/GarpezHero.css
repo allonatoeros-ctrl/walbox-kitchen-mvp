@@ -190,6 +190,13 @@
   background: var(--gzh-card);
 }
 
+/* Foto larga (Orto Cattivo): intera nel quadrato, fondo nero come quello della foto. */
+.gzh-chip-photo--wide {
+  object-fit: contain;
+  object-position: center 20%;
+  background: #000;
+}
+
 /* Orto Cattivo: etichetta VEG in testo accanto al nome, colore del "NEL SACCO ✓". */
 .gzh-chip-veg {
   display: inline-block;
