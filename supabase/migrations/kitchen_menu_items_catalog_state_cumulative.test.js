@@ -11,7 +11,8 @@
 //
 //   §1 di 20260916120000 (40 righe, item-057 incluso)
 //     → DELETE di 20260922090000 (rimuove item-057)
-//     → stato finale (39 righe)
+//     → UPSERT di 20261016100000 (aggiunge item-059 GARPEZ)
+//     → stato finale (40 righe)
 //
 // e verifica che LO STATO FINALE — non la singola migration — combaci esattamente con
 // kitchenMockData.js. Stile repo: assert statiche sui sorgenti SQL letti da disco, nessuna
@@ -28,6 +29,7 @@ import { kitchenMenuItems, kitchenPesiMassimiCombos } from '../../src/data/kitch
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const seedSql = readFileSync(join(__dirname, '20260916120000_kitchen_menu_items_catalog_sync_v2.sql'), 'utf8');
 const removeSql = readFileSync(join(__dirname, '20260922090000_kitchen_menu_items_remove_krombacher_v1.sql'), 'utf8');
+const garpezSql = readFileSync(join(__dirname, '20261016100000_kitchen_menu_items_add_garpez_v1.sql'), 'utf8');
 
 // §1 di 20260916120000: l'unico INSERT che popola il catalogo (name/price authority). §2/§3 di
 // quella migration toccano solo righe legacy fuori catalogo e kitchen_menu_availability — nessuna
@@ -63,7 +65,13 @@ function applyDelete(state, deletedIds) {
   return out;
 }
 
-const finalState = applyDelete(stateAfter0916, deletedBy0922);
+// 20261016100000: UPSERT additivo di item-059 (GARPEZ). Le righe sono parsate dai soli statement
+// eseguibili (i commenti `--` non contano).
+const addedBy1016 = parseInsertRows(
+  garpezSql.split('\n').filter((line) => !line.trim().startsWith('--')).join('\n'),
+);
+
+const finalState = new Map([...applyDelete(stateAfter0916, deletedBy0922), ...addedBy1016]);
 
 test('stato intermedio (solo 20260916120000): item-057/Krombacher esiste, 40 righe, price 6', () => {
   assert.equal(stateAfter0916.size, 40);
@@ -75,9 +83,10 @@ test('la migration 20260922090000 rimuove esattamente e solo item-057 dallo stat
   assert.deepEqual([...deletedBy0922], ['item-057']);
 });
 
-test('stato finale (0916 → 0922 composte): item-057/Krombacher non appartiene più al catalogo corrente', () => {
-  assert.equal(finalState.size, 39);
+test('stato finale (0916 → 0922 → 1016 composte): item-057/Krombacher non appartiene più al catalogo corrente', () => {
+  assert.equal(finalState.size, 40);
   assert.ok(!finalState.has('item-057'), 'item-057 non deve più esistere dopo aver composto 0916+0922');
+  assert.deepEqual(addedBy1016.get('item-059'), { name: 'Garpez', price: 15 });
 });
 
 test('stato finale composto ≡ autorità cliente corrente (kitchenMockData.js), nessuna voce in più o in meno', () => {
