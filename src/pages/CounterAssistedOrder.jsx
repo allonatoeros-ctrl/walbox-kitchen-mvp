@@ -405,7 +405,8 @@ function CounterAssistedOrderView() {
             <div className="kca-grid">
               {visibleItems.map((item) => {
                 const blocked = counterItemBlockReason(item);
-                const combo = kitchenPesiMassimiCombos[item.id] ?? null;
+                // Nel tab EVENTO il MENU (combo con birra) non si vende: solo il panino singolo.
+                const combo = currentCategory === 'evento' ? null : kitchenPesiMassimiCombos[item.id] ?? null;
                 const menuBlocked = !!blocked || falloSideMissing || falloBeerOptions.length === 0;
                 return (
                   <div className="kca-cell" key={item.id}>
