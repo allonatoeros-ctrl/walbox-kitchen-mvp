@@ -3,6 +3,7 @@ import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { isEveningServiceActive, buildIncludedBeersNote } from '../lib/kitchenServiceRules';
 import { falloPesanteBeerOptions } from '../lib/kitchenAllergens';
+import { isEventModeActive, filterEventMenuItems } from '../lib/kitchenEventMode';
 import { buildFalloPesanteCartLine } from '../lib/kitchenPesiMassimi';
 import { kitchenPesiMassimiCombos, FALLO_PESANTE_INCLUDED_SIDE_ID } from '../data/kitchenMockData';
 import { getStaffSession, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
@@ -138,18 +139,25 @@ function CounterAssistedOrderView() {
   const [comboOpenId, setComboOpenId] = useState(null);
   const [comboBeerByItem, setComboBeerByItem] = useState({});
 
+  // Serata dei 15 anni: tab EVENTO in più (solo a modalità evento accesa), con i soli prodotti del
+  // menu evento. Le altre categorie restano tutte com'erano.
+  const [eventMode] = useState(() => isEventModeActive(window.location.search));
+
   const categories = useMemo(() => {
     const present = [...new Set(menuItems.map((i) => i.category).filter(Boolean))];
-    return present.sort((a, b) => {
+    const sorted = present.sort((a, b) => {
       const ia = CATEGORY_ORDER.indexOf(a);
       const ib = CATEGORY_ORDER.indexOf(b);
       return (ia === -1 ? 999 : ia) - (ib === -1 ? 999 : ib);
     });
-  }, [menuItems]);
+    return eventMode ? ['evento', ...sorted] : sorted;
+  }, [menuItems, eventMode]);
 
   const currentCategory = activeCategory ?? categories[0] ?? null;
   const visibleItems = useMemo(
-    () => menuItems.filter((i) => i.category === currentCategory),
+    () => (currentCategory === 'evento'
+      ? filterEventMenuItems(menuItems)
+      : menuItems.filter((i) => i.category === currentCategory)),
     [menuItems, currentCategory]
   );
 
