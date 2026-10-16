@@ -11,7 +11,7 @@
  *    La modalità NON si spegne da sola.
  *  - override URL `?evento=1` (accende) / `?evento=0` (spegne) per provare e per spegnere al volo.
  */
-export const EVENT_MODE_ON = false;
+export const EVENT_MODE_ON = true;
 
 export const EVENT_CATEGORY = 'bbq';
 
