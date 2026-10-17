@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  isEventModeActive, isEventMenuItem, filterEventMenuItems, excludeEventOnlyItems, EVENT_CATEGORIES,
+  EVENT_MODE_ON, isEventModeActive, isEventMenuItem, filterEventMenuItems, excludeEventOnlyItems, EVENT_CATEGORIES,
   EVENT_EXTRA_ITEM_IDS, EVENT_SIDE_ITEM_ID, shouldSuggestEventSide,
 } from './kitchenEventMode.js';
 
@@ -50,14 +50,19 @@ test('menu evento: birre e bevande NON ci sono (decisione Eros 2026-10-16)', () 
   assert.deepEqual(EVENT_CATEGORIES, ['bbq', 'contorni']);
 });
 
-test('modalità spenta: gli item col tag anniversario escono dal menu, gli altri restano identici', () => {
+test('modalità spenta: il GARPEZ (tag anniversario) resta nel menu, gli altri restano identici', () => {
   const items = [
     { id: 'p', category: 'bbq', tags: ['special'] },
     { id: 'g', category: 'bbq', tags: ['special', 'anniversario'] },
     { id: 'x', category: 'birre' },
   ];
-  assert.deepEqual(excludeEventOnlyItems(items).map((i) => i.id), ['p', 'x']);
+  assert.deepEqual(excludeEventOnlyItems(items).map((i) => i.id), ['p', 'g', 'x']);
   assert.deepEqual(excludeEventOnlyItems(undefined), []);
+});
+
+test('l\'interruttore è spento dopo la festa', () => {
+  assert.equal(EVENT_MODE_ON, false);
+  assert.equal(isEventModeActive(''), false);
 });
 
 test('menu evento: entrano anche Orto Cattivo (veg) e Patate al Forno, solo per id esplicito', () => {

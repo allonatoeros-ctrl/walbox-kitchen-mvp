@@ -11,7 +11,7 @@
  *    La modalità NON si spegne da sola.
  *  - override URL `?evento=1` (accende) / `?evento=0` (spegne) per provare e per spegnere al volo.
  */
-export const EVENT_MODE_ON = true;
+export const EVENT_MODE_ON = false;
 
 export const EVENT_CATEGORY = 'bbq';
 
@@ -53,13 +53,11 @@ export function shouldSuggestEventSide({ cartIds = [], sandwichIds = [], sideId 
   return cartIds.some((id) => sandwichIds.includes(id));
 }
 
-// Gli item col tag `anniversario` esistono solo per la serata: a modalità spenta il menu torna
-// quello di prima della festa (non visibili, non ordinabili, e un sacco salvato li perde).
-export const EVENT_ONLY_TAG = 'anniversario';
-
-// Orto Cattivo (foto su fondo scuro, decisione Eros 2026-10-15) è servito solo alla festa.
+// Orto Cattivo (foto su fondo scuro, decisione Eros 2026-10-15) è servito solo alla festa: a modalità
+// spenta esce dal menu. Il GARPEZ invece resta nel menu PESI MASSIMI anche dopo la festa
+// (decisione Eros 2026-10-17).
 export const EVENT_ONLY_ITEM_IDS = ['item-013'];
 
 export function excludeEventOnlyItems(items) {
-  return (items || []).filter((i) => !(Array.isArray(i?.tags) && i.tags.includes(EVENT_ONLY_TAG)) && !EVENT_ONLY_ITEM_IDS.includes(i?.id));
+  return (items || []).filter((i) => !EVENT_ONLY_ITEM_IDS.includes(i?.id));
 }
