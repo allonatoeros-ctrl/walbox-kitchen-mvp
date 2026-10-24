@@ -300,7 +300,7 @@ export const kitchenMenuItems = [
     price: 11.5,
     points: null,
     tags: ['v2'],
-    image: '/assets/kitchen/menu/box/box-pulled-pork.png',
+    image: '/assets/kitchen/menu/box/box-pulled-pork.webp',
     available: true,
     detailCtaLabel: 'VEDI IL BOX',
     priceNote: 'SOLO BOX',
