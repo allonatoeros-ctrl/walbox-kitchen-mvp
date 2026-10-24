@@ -221,6 +221,11 @@
   width: 100%;
   height: 230px;
   border-radius: 14px 14px 0 0;
+  /* Foto quadrate 1254x1254 con il cibo in basso (burger 38-88%, box 62-82% dell'altezza):
+     il frame aperto e' largo ~360-456 per 230 di altezza, quindi mostra solo il 50-64% della
+     foto. Con `center` il fondo del burger usciva dal riquadro; qui si ancora in basso.
+     La card chiusa e' 132x132 (quadrato nel quadrato) e non ne ha bisogno. Garpez (3:2) quasi invariato. */
+  object-position: 50% 72%;
 }
 
 .pm-card-accent {

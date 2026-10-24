@@ -20,7 +20,9 @@ const BILLING_BY_ID = {
   'item-013': 'SÌ, È VERDURA. E ALLORA?',
 };
 // Foto larghe (ciabatta lunga): nel quadrato si mostrano intere invece di essere tagliate.
-const WIDE_PHOTO_IDS = new Set(['item-013']);
+// 2026-10-24: l'Orto Cattivo ora e' una foto quadrata 1254x1254, lo slot largo 3:2 lasciava bande nere:
+// vuoto di proposito (il meccanismo resta per eventuali foto 3:2 future).
+const WIDE_PHOTO_IDS = new Set([]);
 
 function formatPrice(value) {
   if (value == null) return '';
