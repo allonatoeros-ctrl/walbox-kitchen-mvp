@@ -14,6 +14,7 @@ import {
   onlineErrorMessage,
 } from '../lib/kitchenOnlineLane';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
+import MenuHero from '../components/kitchen/MenuHero';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
 import PaniniSection from '../components/kitchen/PaniniSection';
 import CicchettiSection from '../components/kitchen/CicchettiSection';
@@ -377,10 +378,17 @@ export default function CustomerKitchenMenu() {
   // NON aggiungono voci di history (replaceState): il tasto indietro del telefono non deve
   // attraversare le categorie. Cambio linguetta = pagina in alto, cosi' la prima locandina si vede
   // sotto le chip sticky. replaceState tiene `history.state.category` allineato per il reload.
+  // Restyling hero: la hero sta in cima, quindi "in alto" non e' piu' la pagina intera ma l'inizio del
+  // menu (sotto la hero, dove stanno le linguette). Se il cliente e' gia' piu' in alto, non si sposta.
+  const menuStartRef = useRef(null);
+  const scrollToMenuStart = (behavior = 'auto') => {
+    const top = menuStartRef.current ? menuStartRef.current.getBoundingClientRect().top + window.scrollY : 0;
+    if (window.scrollY > top || behavior === 'smooth') window.scrollTo({ top, behavior });
+  };
   const selectCategoryTab = (category) => {
     setActiveCategory(category);
     window.history.replaceState({ view: 'menu', category }, '', '/kitchen');
-    window.scrollTo({ top: 0 });
+    scrollToMenuStart();
   };
 
   // Il listener popstate vive per tutta la vita del componente ma deve leggere
@@ -687,9 +695,22 @@ export default function CustomerKitchenMenu() {
         </button>
       )}
 
-      {/* Testata: striscia logo "The Walrus Pub · Food & Drink" (restyling poster, mockup B).
-          Sostituisce il vecchio banner "Walrus Kitchen" (kh-header, Figma 111:59). */}
+      {/* Testata (restyling hero): logo originale al centro, menu a sinistra (porta alle linguette),
+          carrello a destra con il numero dei pezzi (apre lo stesso sacco del dock in basso). */}
       <header className="kh-brand">
+        <button
+          type="button"
+          className="kh-brand-btn kh-brand-btn--menu"
+          aria-label="Vai alle categorie del menu"
+          onClick={() => {
+            scrollToMenuStart('smooth');
+            document.querySelector('.kp-chip.is-active')?.focus({ preventScroll: true });
+          }}
+        >
+          <svg viewBox="0 0 28 24" width="28" height="24" aria-hidden="true">
+            <path d="M1 3h26M1 12h26M1 21h26" stroke="currentColor" strokeWidth="2.6" strokeLinecap="square" fill="none" />
+          </svg>
+        </button>
         <img
           src="/assets/kitchen/walrus-pub-logo.webp"
           alt="The Walrus Pub · Food & Drink"
@@ -697,10 +718,22 @@ export default function CustomerKitchenMenu() {
           height="155"
           className="kh-brand-img"
         />
+        <button
+          type="button"
+          className="kh-brand-btn kh-brand-btn--cart"
+          aria-label={itemCount > 0 ? `Apri il sacco: ${itemCount} nel sacco` : 'Il sacco è vuoto'}
+          disabled={itemCount === 0}
+          onClick={() => setCartOpen(true)}
+        >
+          <svg viewBox="0 0 32 28" width="30" height="26" aria-hidden="true">
+            <path d="M1 2h5l3.2 15h15.6L28 7H8M12 24.2a1.6 1.6 0 1 0 0-.01M23 24.2a1.6 1.6 0 1 0 0-.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+          {itemCount > 0 && <span className="kh-brand-badge" aria-hidden="true">{itemCount}</span>}
+        </button>
       </header>
 
-      {/* Frase di benvenuto (striscia corta sotto il logo, Fase 3.4): niente schermata home. */}
-      <p className="kh-welcome">OGGI TI FACCIAMO VENIRE FAME.</p>
+      <MenuHero onDiscover={() => { selectCategoryTab('panini'); scrollToMenuStart('smooth'); }} />
+      <div ref={menuStartRef} aria-hidden="true" />
       {eventMode && <AnniversaryBanner />}
       {exitHint && (
         <div className="kh-exit-hint" role="status">Hai un ordine in corso. Tocca ancora indietro per uscire.</div>
@@ -740,7 +773,7 @@ export default function CustomerKitchenMenu() {
           && prices.every((pr) => pr != null && pr !== '' && pr === prices[0]);
         return (
           <header className={`kp-head${uniquePrice ? ' kp-head--stamp' : ''}`}>
-            <div className="kp-kicker">{kitchenOpen ? 'The Walrus · Cucina aperta' : 'The Walrus · Cucina chiusa'}</div>
+            {!kitchenOpen && <div className="kp-kicker">The Walrus · Cucina chiusa</div>}
             <h1 className="kp-title">
               {line1}
               {line2 && <em>{line2}</em>}
