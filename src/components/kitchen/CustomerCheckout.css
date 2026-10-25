@@ -2,10 +2,11 @@
    Vive dentro `.kitch-drawer-body` (sfondo crema). Mobile-first 390/430, colonna max 480px.
    Input a 16px: sotto, iOS Safari zooma al focus. Target di tocco ≥ 44px. */
 
-/* Arancio un filo più scuro del brand: crema su #f05a24 fa ~2.8:1, qui ~4.5:1 (testo piccolo). */
+/* Arancio più scuro del brand: crema su #f05a24 fa ~2.8:1. V7 (Fase 3.0): #d4481a dava 3,41:1,
+   #b33a12 dà 4,58:1 (testo piccolo, WCAG AA). */
 .cx {
-  --cx-cta: #d4481a;
-  --cx-cta-edge: #a8350f;
+  --cx-cta: #b33a12;
+  --cx-cta-edge: #8a2c0c;
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -85,7 +86,7 @@
   font-family: var(--k-font-body);
   font-size: 16px;
   font-weight: 600;
-  color: #a8927d;
+  color: #78654f; /* V7: 5,27:1 su #fff8ea (era #a8927d, 2,81:1) */
 }
 
 .cx-name-input:focus-visible {

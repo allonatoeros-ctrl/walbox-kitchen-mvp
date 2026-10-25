@@ -77,7 +77,17 @@ export default function TartareSection({ items, onAdd }) {
             </button>
 
             {/* ── EXPANDED (pattern PaniniSection, adattato) ── */}
-            <div className="tr-card-open-body">
+            <div
+              className="tr-card-open-body"
+              onTransitionEnd={(e) => {
+                // V1 (Fase 3.0): a card aperta la CTA non deve restare sotto il dock fisso
+                // (stesso schema di PesiMassimiSection; clearance via scroll-margin-bottom nel CSS).
+                if (isOpen && e.target === e.currentTarget && e.propertyName === 'grid-template-rows') {
+                  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+                  e.currentTarget.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+                }
+              }}
+            >
               <div className="tr-card-open-content">
                 <div className="tr-card-open-photo-wrap">
                   {item.image ? (

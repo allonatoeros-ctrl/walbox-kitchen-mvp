@@ -12,7 +12,7 @@
   --pm-cream: #e8ddb8;
   --pm-cream-hi: #f2d8a7;
   --pm-sand: #d4c89a;
-  --pm-muted: #8a7e60;
+  --pm-muted: #9f9376; /* V7: 5,72:1 su card #1c1a14 (era #8a7e60, 4,34:1) */
   --pm-rule: #2e2a1e;
   --pm-font: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
 
@@ -133,7 +133,7 @@
 .pm-hero-cta {
   flex-shrink: 0;
   width: 104px;
-  height: 28px;
+  height: 44px; /* V4 */
   border: none;
   border-radius: 9px;
   background: var(--pm-red);
@@ -356,8 +356,8 @@
 .pm-card-close {
   position: absolute;
   right: 14px;
-  top: 16px;
-  height: 32px;
+  top: 10px; /* V4: 44px di altezza, stesso centro verticale di prima */
+  height: 44px;
   width: 114px;
   display: flex;
   align-items: center;
@@ -627,7 +627,7 @@
   align-items: center;
   gap: 6px;
   max-width: 100%;
-  min-height: 34px;
+  min-height: 44px; /* V4 */
   border: 1px solid var(--pm-sand);
   border-radius: 999px;
   background: transparent;
@@ -829,7 +829,7 @@
 .pm-beer-detail-cta {
   width: 100%;
   min-width: 0;
-  min-height: 38px;
+  min-height: 44px; /* V4 */
   padding: 0 12px;
   border: none;
   border-radius: 10px;
@@ -849,7 +849,7 @@
 
 .pm-beer-detail-close {
   width: 100%;
-  min-height: 34px;
+  min-height: 44px; /* V4 */
   padding: 0 10px;
   border: none;
   background: transparent;
@@ -867,7 +867,7 @@
   width: auto;
   padding: 0 14px;
   white-space: nowrap;
-  height: 40px;
+  height: 44px; /* V4 */
   border: none;
   border-radius: 10px;
   background: var(--pm-gold);

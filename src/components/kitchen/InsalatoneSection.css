@@ -10,7 +10,7 @@
   --is-red: #c84020;
   --is-cream: #e8ddb8;
   --is-sand: #d4c89a;
-  --is-muted: #8a7e60;
+  --is-muted: #9f9376; /* V7: 5,72:1 su card #1c1a14 (era #8a7e60, 4,34:1) */
   --is-rule: #2e2a1e;
   --is-photo-bg: #fdf7f1;
   /* Fondo della foto EXPANDED: tono medio del fondo reale delle foto insalatone.
@@ -168,6 +168,8 @@
   display: grid;
   grid-template-rows: 0fr;
   transition: grid-template-rows 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* V1 (Fase 3.0): clearance per la .kitch-bottom-bar fissa, come .pm-card-body */
+  scroll-margin-bottom: 120px;
 }
 
 .is-card--open .is-card-open-body {
@@ -262,7 +264,7 @@
   width: auto;
   padding: 0 14px;
   white-space: nowrap;
-  height: 38px;
+  height: 44px; /* V4: target di tocco >= 44px */
   border: none;
   border-radius: 10px;
   background: var(--is-red);
@@ -280,7 +282,7 @@
 
 .is-card-close {
   margin: 18px 18px 22px;
-  height: 32px;
+  height: 44px; /* V4: target di tocco >= 44px */
   width: 114px;
   display: flex;
   align-items: center;

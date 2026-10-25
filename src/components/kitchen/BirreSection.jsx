@@ -99,7 +99,17 @@ export default function BirreSection({ items, onAdd }) {
             </button>
 
             {/* ── EXPANDED ── */}
-            <div className="br-card-body">
+            <div
+              className="br-card-body"
+              onTransitionEnd={(e) => {
+                // V1 (Fase 3.0): a card aperta la CTA non deve restare sotto il dock fisso
+                // (stesso schema di PesiMassimiSection; clearance via scroll-margin-bottom nel CSS).
+                if (isOpen && e.target === e.currentTarget && e.propertyName === 'grid-template-rows') {
+                  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+                  e.currentTarget.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+                }
+              }}
+            >
               <div className="br-card-body-content">
                 <div className="br-card-body-photo-wrap">
                   {item.image ? (

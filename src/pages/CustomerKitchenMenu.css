@@ -494,7 +494,7 @@
   border: none;
   border-radius: 10px;
   padding: 11px 12px;
-  min-height: 38px;
+  min-height: 44px; /* V4 */
   font-size: 13px;
   letter-spacing: 0.5px;
   cursor: pointer;
@@ -603,7 +603,7 @@
   font-family: var(--k-font-display);
   font-size: 14px;
   font-weight: 600;
-  color: #8a7e60;
+  color: #9f9376; /* V7: totale dock, 5,72:1 su #1c1a14 (era 4,34:1) */
 }
 
 .kitch-btn-vai {
@@ -614,7 +614,7 @@
   border: none;
   border-radius: 10px;
   padding: 11px 16px;
-  min-height: 38px;
+  min-height: 44px; /* V4 */
   font-size: 15px;
   cursor: pointer;
   letter-spacing: 0.75px;
@@ -780,6 +780,9 @@
   flex-direction: column;
   overflow-y: auto;
   flex: 1;
+  /* V2 (Fase 3.0): il footer sticky .cx-footer (~197px) copre il fondo dell'area scrollabile; con scroll-padding
+     focus, scrollIntoView e tab portano nome / dove / note SOPRA il footer, non sotto. */
+  scroll-padding-bottom: 220px;
 }
 
 .kitch-drawer-items-list {
@@ -860,8 +863,8 @@
   font-weight: 700;
   color: var(--k-surface);
   cursor: pointer;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 44px; /* V4 */
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -881,8 +884,8 @@
   font-size: 16px;
   cursor: pointer;
   margin-left: 4px;
-  min-width: 40px;
-  min-height: 40px;
+  min-width: 44px; /* V4 */
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1136,7 +1139,7 @@
   }
   .kitch-btn-lo-voglio {
     padding: 8px 10px;
-    min-height: 40px;
+    min-height: 44px; /* V4 */
     font-size: 13px;
   }
   .kitch-tabs {
@@ -1177,7 +1180,7 @@
   .kitch-btn-vai {
     font-size: 13px;
     padding: 8px 12px;
-    min-height: 40px;
+    min-height: 44px; /* V4 */
   }
 }
 
@@ -1197,7 +1200,7 @@
   }
   .kitch-btn-lo-voglio {
     padding: 6px 8px;
-    min-height: 40px;
+    min-height: 44px; /* V4 */
     font-size: 12px;
   }
   .kitch-tab {
@@ -1235,7 +1238,7 @@
   .kitch-btn-vai {
     font-size: 12px;
     padding: 6px 10px;
-    min-height: 40px;
+    min-height: 44px; /* V4 */
   }
 }
 
@@ -1260,7 +1263,7 @@
   --kh-gold: #c8960a;
   --kh-cream: #e8ddb8;
   --kh-sand: #d4c89a;
-  --kh-muted: #8a7e60;
+  --kh-muted: #9f9376; /* V7: 5,72:1 su #1c1a14 */
   --kh-rule: #2e2a1e;
   font-family: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
 }
@@ -1507,9 +1510,9 @@
 .kh-btn-want {
   position: absolute;
   left: 204px;
-  top: 316px;
+  top: 313px; /* V4: 44px di altezza, stesso centro di prima (316+19) */
   width: 144px;
-  height: 38px;
+  height: 44px;
   padding: 0 6px;
   border: none;
   border-radius: 10px;
@@ -1573,7 +1576,7 @@
 
 .kh-btn-menu {
   margin-top: 14px;
-  min-height: 40px;
+  min-height: 44px; /* V4 */
   padding: 0 16px;
   border: none;
   border-radius: 10px;
@@ -1596,7 +1599,7 @@
 }
 
 .kh-btn-back {
-  min-height: 40px;
+  min-height: 44px; /* V4 */
   padding: 0 16px;
   background: transparent;
   border: 1px solid rgba(200, 150, 10, 0.55);
@@ -1635,7 +1638,7 @@
 }
 
 .kh-cat-back {
-  min-height: 32px;
+  min-height: 44px; /* V4 */
   padding: 0 14px;
   background: transparent;
   border: 1px solid var(--kh-cream);

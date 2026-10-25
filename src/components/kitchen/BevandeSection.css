@@ -10,7 +10,7 @@
   --bv-red: #c84020;
   --bv-cream: #e8ddb8;
   --bv-sand: #d4c89a;
-  --bv-muted: #8a7e60;
+  --bv-muted: #9f9376; /* V7: 5,72:1 su card #1c1a14 (era #8a7e60, 4,34:1) */
   /* Fondo visibile solo durante il caricamento della foto. Le 6 foto consegnate
      (2026-09-16) sono su banco caldo chiaro, non sul fondo scuro che il README
      chiedeva: campionando i bordi dei file reali si ottiene ~#d9bd9c. Tenerlo su
@@ -136,7 +136,7 @@
   margin-top: auto;
   width: 100%;
   padding: 0 6px;
-  height: 36px;
+  height: 44px; /* V4 */
   border: none;
   border-radius: 10px;
   background: var(--bv-red);
