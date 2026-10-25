@@ -906,7 +906,7 @@ export default function CustomerKitchenMenu() {
         <InsalatoneSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'tartare' && visibleItems.length > 0 && (
-        <TartareSection items={visibleItems} onAdd={addItem} />
+        <TartareSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'birre' && visibleItems.length > 0 && (
         <BirreSection items={visibleItems} onAdd={addItem} />

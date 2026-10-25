@@ -5,7 +5,7 @@ import './PosterCard.css';
 
 /**
  * "Locandina" del menu cliente (Fase 3.2 restyling, direzione B "Poster da pub").
- * Usata da PaniniSection (pilota) e InsalatoneSection. Le altre categorie restano col look attuale.
+ * Usata da PaniniSection (pilota) e InsalatoneSection e TartareSection. Le altre categorie restano col look attuale.
  *
  * Sempre "aperta" (niente accordion): foto 4:3 a tutta larghezza con nome + prezzo sopra lo
  * scrim, sotto descrizione, ingredienti e allergeni come testo, CTA piena che diventa
