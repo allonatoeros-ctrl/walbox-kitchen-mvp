@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import AllergenBadges from './AllergenBadges';
 import { isEveningServiceActive } from '../../lib/kitchenServiceRules';
+import { formatPrice } from '../../lib/kitchenPrice';
 import './BirreSection.css';
 
 /**
@@ -29,11 +30,6 @@ import './BirreSection.css';
  * Stesso linguaggio CTA del resto del menu ("LO VOGLIO" / "ESAURITO" /
  * "PREZZO IN ARRIVO"), nessun secondo linguaggio introdotto.
  */
-
-function formatPrice(value) {
-  if (value == null) return '';
-  return `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`;
-}
 
 export default function BirreSection({ items, onAdd }) {
   const [openId, setOpenId] = useState(null);

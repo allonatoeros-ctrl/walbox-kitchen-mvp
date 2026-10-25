@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { kitchenPesiMassimiCombos } from '../../data/kitchenMockData';
 import { isEveningServiceActive } from '../../lib/kitchenServiceRules';
 import AllergenBadges from './AllergenBadges';
+import { formatPrice } from '../../lib/kitchenPrice';
 import './PesiMassimiSection.css';
 
 /**
@@ -49,12 +50,6 @@ import './PesiMassimiSection.css';
  */
 
 const CARET_SRC = '/assets/kitchen/pesi-massimi-caret.svg';
-
-function formatPrice(value, forceDecimals = false) {
-  if (value == null) return '';
-  if (!forceDecimals && Number.isInteger(value)) return `€${value}`;
-  return `€${value.toFixed(2).replace('.', ',')}`;
-}
 
 /**
  * Props opzionali (additive, non cambiano il rendering approvato):

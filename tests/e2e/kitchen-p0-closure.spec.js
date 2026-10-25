@@ -202,7 +202,7 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
 
     await expect(heavy).toBeEnabled();
-    await expect(heavy).toHaveText('AGGIUNGI IL MENU · €19');
+    await expect(heavy).toHaveText('AGGIUNGI IL MENU · 19 €');
     await heavy.scrollIntoViewIfNeeded();
     await heavy.click();
 

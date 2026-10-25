@@ -20,6 +20,23 @@
   color: var(--k-text);
   font-family: var(--k-font-body);
   overflow-x: hidden;
+
+  /* Token "poster da pub" (restyling Fase 3, direzione B): solo menu cliente, i --k-* globali
+     dello staff restano. Valori dal mockup ai-ops/reports/mockup-restyling/B-poster-da-pub.html. */
+  --poster-bg:     #120806;
+  --poster-panel:  #1b0f09;
+  --poster-line:   #3a2617;
+  --poster-ink:    #f7dfb5;
+  --poster-muted:  #c9b39a;
+  --poster-yellow: #ffc83d;
+  --poster-brick:  #b8472f;
+  --poster-on-yellow: #140a05;
+  --poster-font-display: 'Anton', Impact, sans-serif;
+  --poster-font-label:   'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --poster-font-body:    'Montserrat', system-ui, sans-serif;
+  /* K1: h1-h6 e button globali (index.css) leggono --font-display, che KitchenTvScreen.css
+     ridefinisce su :root in Bebas Neue. Il menu dichiara il suo, la TV non si tocca. */
+  --font-display: var(--poster-font-display);
 }
 
 /* ── Header ─────────────────────────────────────── */

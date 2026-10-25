@@ -1,3 +1,4 @@
+import { formatPrice } from '../../lib/kitchenPrice';
 import './BevandeSection.css';
 
 /**
@@ -41,11 +42,6 @@ const BEVANDE_LIST_ORDER = [
   'item-049', // SCHWEPPES LEMON
   'item-050', // SCHWEPPES TONICA
 ];
-
-function formatPrice(value) {
-  if (value == null) return '';
-  return `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`;
-}
 
 export default function BevandeSection({ items, onAdd }) {
   if (!items || items.length === 0) return null;

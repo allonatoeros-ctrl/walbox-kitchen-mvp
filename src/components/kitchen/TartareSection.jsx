@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import AllergenBadges from './AllergenBadges';
+import { formatPrice } from '../../lib/kitchenPrice';
 import './TartareSection.css';
 
 /**
@@ -18,11 +19,6 @@ const TARTARE_LIST_ORDER = [
   'item-020', // TARTARE 1
   'item-021', // TARTARE 2
 ];
-
-function formatPrice(value) {
-  if (value == null) return '';
-  return `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`;
-}
 
 export default function TartareSection({ items, onAdd }) {
   const [openId, setOpenId] = useState(null);

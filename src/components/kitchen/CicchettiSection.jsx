@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import AllergenBadges from './AllergenBadges';
+import { formatPrice } from '../../lib/kitchenPrice';
 import './CicchettiSection.css';
 
 /**
@@ -26,11 +27,6 @@ const CICCHETTI_LIST_ORDER = [
   'item-036', // SCAMORZA & CIPOLLE
   'item-037', // CICCHETTO VEG
 ];
-
-function formatPrice(value) {
-  if (value == null) return '';
-  return `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`;
-}
 
 export default function CicchettiSection({ items, onAdd }) {
   const [openId, setOpenId] = useState(null);

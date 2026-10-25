@@ -31,6 +31,7 @@ import { checkoutMissing, isValidCustomerName, normalizeCustomerName } from '../
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
 import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, shouldSuggestEventSide, EVENT_CATEGORY, EVENT_CATEGORIES, EVENT_SIDE_ITEM_ID } from '../lib/kitchenEventMode';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
+import { formatPrice } from '../lib/kitchenPrice';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
 import './CustomerKitchenMenu.css';
 
@@ -771,7 +772,7 @@ export default function CustomerKitchenMenu() {
                   <p className="kh-card-desc">{item.description}</p>
                   <div className="kh-card-rule" />
                   <span className="kh-card-price">
-                    {noPrice ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2).replace('.', ',')}`}
+                    {noPrice ? 'PREZZO IN ARRIVO' : formatPrice(item.price)}
                   </span>
                   <button
                     type="button"
@@ -951,7 +952,7 @@ export default function CustomerKitchenMenu() {
               <AllergenBadges allergens={item.allergens} />
               <div className="kitch-card-footer">
                 <div className={`kitch-card-price${item.price == null ? ' kitch-card-price--soon' : ''}`}>
-                  {item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2).replace('.', ',')}`}
+                  {item.price == null ? 'PREZZO IN ARRIVO' : formatPrice(item.price)}
                 </div>
                 <button
                   className="kitch-btn-lo-voglio"

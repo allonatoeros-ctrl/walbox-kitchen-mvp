@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { formatPrice } from '../../lib/kitchenPrice';
 import './GarpezHero.css';
 
 /**
@@ -23,11 +24,6 @@ const BILLING_BY_ID = {
 // 2026-10-24: l'Orto Cattivo ora e' una foto quadrata 1254x1254, lo slot largo 3:2 lasciava bande nere:
 // vuoto di proposito (il meccanismo resta per eventuali foto 3:2 future).
 const WIDE_PHOTO_IDS = new Set([]);
-
-function formatPrice(value) {
-  if (value == null) return '';
-  return Number.isInteger(value) ? `€${value}` : `€${value.toFixed(2).replace('.', ',')}`;
-}
 
 function toCartItem(item) {
   return { id: item.id, name: item.name, price: item.price, image: item.image };

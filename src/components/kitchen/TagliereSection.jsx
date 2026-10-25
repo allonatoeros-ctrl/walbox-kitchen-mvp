@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import AllergenBadges from './AllergenBadges';
+import { formatPrice } from '../../lib/kitchenPrice';
 import './TagliereSection.css';
 
 /**
@@ -30,11 +31,6 @@ const TAGLIERE_LIST_ORDER = [
   'item-044', // FORMAGGI DISCUTIBILI
   'item-045', // PACE FATTA
 ];
-
-function formatPrice(value) {
-  if (value == null) return '';
-  return `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`;
-}
 
 export default function TagliereSection({ items, onAdd }) {
   const [openId, setOpenId] = useState(null);

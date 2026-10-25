@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import AllergenBadges from './AllergenBadges';
+import { formatPrice } from '../../lib/kitchenPrice';
 import './InsalatoneSection.css';
 
 /**
@@ -19,11 +20,6 @@ const INSALATONE_LIST_ORDER = [
   'item-025', // SALMON
   'item-027', // VEGGY
 ];
-
-function formatPrice(value) {
-  if (value == null) return '';
-  return `€${Number.isInteger(value) ? value : value.toFixed(2).replace('.', ',')}`;
-}
 
 export default function InsalatoneSection({ items, onAdd }) {
   const [openId, setOpenId] = useState(null);
