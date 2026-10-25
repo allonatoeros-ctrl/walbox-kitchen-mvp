@@ -7,5 +7,5 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
-  padding: 6px 4px 8px;
+  padding: 22px 16px; /* mockup B .list */
 }

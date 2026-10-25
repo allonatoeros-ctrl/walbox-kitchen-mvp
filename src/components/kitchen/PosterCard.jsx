@@ -30,13 +30,28 @@ function allergenText(key) {
   return label.replace(/^[^\p{L}]+/u, '');
 }
 
-// Segni − e + disegnati (20 px, tratto 3): il glifo Anton è troppo piccolo dentro il bottone.
-const STEP_ICON_PROPS = {
-  width: 20, height: 20, viewBox: '0 0 20 20', fill: 'none', stroke: 'currentColor',
-  strokeWidth: 3, strokeLinecap: 'square', 'aria-hidden': true, focusable: 'false',
-};
-const MinusIcon = () => (<svg {...STEP_ICON_PROPS}><path d="M3 10h14" /></svg>);
-const PlusIcon = () => (<svg {...STEP_ICON_PROPS}><path d="M3 10h14M10 3v14" /></svg>);
+// Nome su 2 righe "da manifesto" come nel mockup B (<br> a mano): spezza al confine di parola più
+// bilanciato, solo se entrambe le metà sono corte. Nomi lunghi o di una parola: a capo naturale.
+function splitName(name) {
+  const words = String(name || '').trim().split(/\s+/);
+  if (words.length < 2) return null;
+  let best = null;
+  for (let i = 1; i < words.length; i += 1) {
+    const a = words.slice(0, i).join(' ');
+    const b = words.slice(i).join(' ');
+    const diff = Math.abs(a.length - b.length);
+    if (!best || diff < best.diff) best = { a, b, diff };
+  }
+  return best.a.length <= 14 && best.b.length <= 14 ? [best.a, best.b] : null;
+}
+
+// Prezzo come nel mockup: cifra grande + "€" piccolo ("8€", "14,50€").
+function PriceBig({ value }) {
+  const text = formatPrice(value);
+  const m = text.match(/^(.*?)[\s\u00A0]*€$/);
+  if (!m) return text;
+  return (<>{m[1]}<small>€</small></>);
+}
 
 export default function PosterCard({
   item,
@@ -91,7 +106,8 @@ export default function PosterCard({
     onAdd?.({ id: item.id, name: item.name, price: item.price, image: item.image });
   };
 
-  let ctaLabel = 'AGGIUNGI';
+  const nameLines = splitName(item.name);
+  let ctaLabel = '+ AGGIUNGI';
   if (soldOut) ctaLabel = 'ESAURITO';
   else if (noPrice) ctaLabel = 'PREZZO IN ARRIVO';
 
@@ -115,8 +131,10 @@ export default function PosterCard({
         <span className="pc-num" aria-hidden="true">N°{number}</span>
         {isVeg && <span className="pc-veg">VEG</span>}
         <div className="pc-over">
-          <h3 className="pc-name">{item.name}</h3>
-          {!noPrice && <span className="pc-price">{formatPrice(item.price)}</span>}
+          <h3 className="pc-name">
+            {nameLines ? (<>{nameLines[0]}<br />{nameLines[1]}</>) : item.name}
+          </h3>
+          {!noPrice && <span className="pc-price"><PriceBig value={item.price} /></span>}
         </div>
       </div>
 
@@ -125,7 +143,7 @@ export default function PosterCard({
         {item.ingredients && <p className="pc-ingredients">{item.ingredients}</p>}
         {allergens.length > 0 && (
           <p className="pc-allergens">
-            <span className="pc-allergens-label">Allergeni: </span>
+            Allergeni:{' '}
             {allergens.map(allergenText).join(' · ')}
           </p>
         )}
@@ -141,10 +159,10 @@ export default function PosterCard({
               }}
               aria-label={`Diminuisci quantità: ${item.name}`}
             >
-              <MinusIcon />
+              −
             </button>
             <output className="pc-step-qty" aria-live="polite">
-              {qty} NEL SACCO
+              {qty} nel carrello
             </output>
             <button
               ref={plusRef}
@@ -154,7 +172,7 @@ export default function PosterCard({
               disabled={!canAdd}
               aria-label={`Aumenta quantità: ${item.name}`}
             >
-              <PlusIcon />
+              +
             </button>
           </div>
         ) : (

@@ -14,6 +14,8 @@
   color: var(--poster-ink, #f7dfb5);
   font-family: var(--poster-font-body, 'Montserrat', system-ui, sans-serif);
   text-align: left;
+  line-height: normal; /* come il mockup: il line-height 1.5 globale ingrandiva i testi */
+  letter-spacing: normal;
   overflow: hidden;
 }
 
@@ -22,7 +24,7 @@
   position: relative;
   aspect-ratio: 4 / 3;
   overflow: hidden;
-  background: #2a1a10;
+  background: #e9dcc4; /* come il mockup */
 }
 
 .pc-photo {
@@ -41,6 +43,7 @@
   inset: 0;
   display: grid;
   place-items: center;
+  background: #2a1a10;
   padding-bottom: 28%; /* il centro ottico sta sopra al nome */
   font-family: var(--poster-font-label, 'Barlow Condensed', 'Arial Narrow', sans-serif);
   font-weight: 800;
@@ -54,13 +57,7 @@
 .pc-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    to top,
-    rgba(10, 4, 2, 0.95) 0%,
-    rgba(10, 4, 2, 0.78) 24%,
-    rgba(10, 4, 2, 0.4) 46%,
-    transparent 64%
-  );
+  background: linear-gradient(to top, rgba(10, 4, 2, 0.92) 0%, rgba(10, 4, 2, 0.55) 32%, transparent 58%);
   pointer-events: none;
 }
 
@@ -74,8 +71,8 @@
   color: var(--poster-on-yellow, #140a05);
   font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
   font-size: 18px;
-  line-height: 1.2;
-  letter-spacing: 0.02em;
+  line-height: normal;
+  letter-spacing: normal;
 }
 
 .pc-veg {
@@ -89,7 +86,7 @@
   font-family: var(--poster-font-label, 'Barlow Condensed', 'Arial Narrow', sans-serif);
   font-weight: 900;
   font-size: 14px;
-  line-height: 1;
+  line-height: normal;
   letter-spacing: 0.1em;
 }
 
@@ -111,10 +108,10 @@
   min-width: 0;
   margin: 0;
   font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
-  font-weight: 400; /* Anton esiste solo a 400: niente bold sintetico */
+  font-weight: 700; /* come il mockup (h2 di default): Anton con bold sintetico */
   font-size: 30px;
-  line-height: 0.98;
-  letter-spacing: 0.01em;
+  line-height: 0.95;
+  letter-spacing: normal;
   text-transform: uppercase;
   color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
@@ -130,12 +127,17 @@
 .pc-price {
   flex: none;
   font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
-  font-size: 40px;
+  font-weight: 400;
+  font-size: 44px;
   line-height: 0.9;
-  letter-spacing: 0.01em;
+  letter-spacing: normal;
   color: var(--poster-yellow, #ffc83d);
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
   white-space: nowrap;
+}
+
+.pc-price small {
+  font-size: 22px;
 }
 
 /* ── Sotto la foto: testo + CTA ───────────────────────────── */
@@ -149,7 +151,7 @@
 
 .pc-quip {
   font-size: 15px;
-  line-height: 1.35;
+  line-height: normal;
   font-style: italic;
   color: var(--poster-ink, #f7dfb5);
 }
@@ -157,22 +159,17 @@
 .pc-ingredients {
   margin-top: 6px;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: normal;
   color: var(--poster-muted, #c9b39a);
 }
 
 .pc-allergens {
-  margin-top: 8px;
+  margin-top: 6px;
   font-size: 12px;
-  line-height: 1.4;
+  line-height: normal;
   letter-spacing: 0.03em;
   text-transform: uppercase;
   color: var(--poster-muted, #c9b39a);
-}
-
-.pc-allergens-label {
-  font-weight: 700;
-  color: var(--poster-ink, #f7dfb5);
 }
 
 /* ── CTA piena 52 px → stepper ────────────────────────────── */
@@ -212,7 +209,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 2px;
+  padding: 0 4px; /* il bottone è 44 px (tocco) ma la parte gialla è 40 px come nel mockup */
   border: 2px solid var(--poster-yellow, #ffc83d);
   background: transparent;
   color: var(--poster-yellow, #ffc83d);
@@ -222,25 +219,26 @@
   flex: none;
   display: grid;
   place-items: center;
-  width: 48px;
+  width: 44px;
   height: 44px; /* tocco >= 44 px */
   min-height: 44px;
   margin: 0;
   padding: 0;
-  border: 0;
+  border: 2px solid transparent; /* area di tocco 44, quadrato giallo visibile 40 */
+  background-clip: padding-box;
   border-radius: 0;
-  background: var(--poster-yellow, #ffc83d);
+  background-color: var(--poster-yellow, #ffc83d);
   color: var(--poster-on-yellow, #140a05);
   font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
   font-weight: 400;
-  font-size: 28px;
+  font-size: 26px;
   line-height: 1;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 
 .pc-step-btn:disabled {
-  background: var(--poster-line, #3a2617);
+  background-color: var(--poster-line, #3a2617);
   color: var(--poster-muted, #c9b39a);
   cursor: not-allowed;
 }
@@ -249,7 +247,7 @@
   flex: 1 1 auto;
   text-align: center;
   font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
-  font-size: 20px;
+  font-size: 22px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--poster-yellow, #ffc83d);

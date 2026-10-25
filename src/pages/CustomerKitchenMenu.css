@@ -1781,3 +1781,191 @@
   font-weight: 900;
   color: var(--kh-gold);
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   RESTYLING POSTER DA PUB (menu cliente) — riferimento unico:
+   ai-ops/reports/mockup-restyling/B-poster-da-pub.html
+   Prefissi: .kh-brand (testata), .kp-* (tab, testata categoria), .kb-* (dock).
+   ══════════════════════════════════════════════════════════════════ */
+.kh-brand {
+  background: #222220;
+  border-bottom: 1px solid #000;
+}
+.kh-brand-img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Pagina menu = fondo manifesto del mockup. `overflow-x: clip` (non hidden) perché hidden
+   rompe lo sticky della barra chip. */
+.kitch-page--poster {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(184, 71, 47, 0.18), transparent 45%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 2px, transparent 2px 4px),
+    var(--poster-bg);
+  box-shadow: 0 0 0 100vmax #070302;
+  overflow-x: clip;
+}
+
+/* ── Barra chip categorie (mockup .top / .chip) ── */
+.kp-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: rgba(18, 8, 6, 0.94);
+  backdrop-filter: blur(8px);
+  border-bottom: 2px solid var(--poster-yellow);
+}
+.kp-tabs::-webkit-scrollbar { display: none; }
+
+.kp-chip {
+  flex: none;
+  height: 38px;
+  min-height: 38px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--poster-muted);
+  border: 2px solid var(--poster-line);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.kp-chip.is-active {
+  color: var(--poster-on-yellow);
+  background: var(--poster-yellow);
+  border-color: var(--poster-yellow);
+}
+/* Chip 38 px come il mockup, ma area di tocco 44 px (>= 44 richiesto): estensione invisibile. */
+.kp-chip { position: relative; }
+.kp-chip::after { content: ''; position: absolute; inset: -3px 0; }
+.kp-chip--back { padding: 0 12px; }
+.kp-chip:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
+
+/* ── Testata categoria da manifesto (mockup .poster-head) ── */
+.kp-head {
+  position: relative;
+  margin: 0 16px;
+  padding: 26px 0 18px;
+  border-bottom: 2px dashed var(--poster-line);
+  font-family: var(--poster-font-body);
+}
+.kp-kicker {
+  font-family: var(--poster-font-label);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  line-height: normal;
+  color: var(--poster-brick);
+}
+.kp-title {
+  margin: 6px 0 0;
+  font-family: var(--poster-font-display);
+  font-weight: 700; /* come il mockup (h1 di default, Anton con bold sintetico) */
+  letter-spacing: normal;
+  font-size: clamp(46px, 16.4vw, 64px);
+  line-height: 0.9;
+  text-transform: uppercase;
+  color: var(--poster-ink);
+  overflow-wrap: anywhere;
+}
+.kp-title em {
+  display: block;
+  font-style: normal;
+  color: var(--poster-yellow);
+}
+.kp-sub {
+  margin: 10px 0 0;
+  max-width: 300px;
+  font-size: 15px;
+  line-height: normal;
+  color: var(--poster-muted);
+}
+.kp-stamp {
+  position: absolute;
+  right: 2px;
+  top: 22px;
+  width: 86px;
+  height: 86px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border-radius: 50%;
+  border: 3px solid var(--poster-brick);
+  color: var(--poster-brick);
+  font-family: var(--poster-font-display);
+  font-size: 15px;
+  line-height: 1;
+  text-transform: uppercase;
+  transform: rotate(-12deg);
+  opacity: 0.9;
+}
+
+/* ── Dock: biglietto da bancone (mockup .dock / .ticket) ── */
+.kitch-bottom-bar {
+  padding: 12px 16px max(20px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--poster-bg) 70%, transparent);
+  border-top: none;
+}
+.kitch-bottom-bar .kb-wrap {
+  padding: 0;
+  gap: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  display: block;
+}
+.kitch-bottom-bar .kb-ticket {
+  width: 100%;
+  height: 58px;
+  min-height: 58px;
+  padding: 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+  outline: 3px solid var(--poster-brick);
+  border-radius: 0;
+  background: var(--poster-brick);
+  color: #fff;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 21px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.kitch-bottom-bar .kb-ticket:hover { background: var(--poster-brick); }
+.kitch-bottom-bar .kb-ticket:focus-visible { outline-color: var(--poster-ink); }
+.kitch-bottom-bar .kb-wrap.kitch-bottom-card--pulse { animation: none; }
+.kitch-bottom-bar .kb-wrap.kitch-bottom-card--pulse .kb-ticket { animation: kbPulse 600ms ease-out; }
+@keyframes kbPulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kitch-bottom-bar .kb-wrap.kitch-bottom-card--pulse .kb-ticket { animation: none; }
+}
+
+/* Schermi stretti: il kicker non deve finire sotto il timbro. */
+@media (max-width: 380px) {
+  .kp-head--stamp .kp-kicker { padding-right: 84px; }
+}

@@ -206,21 +206,20 @@ function drawerIcon(name) {
   return '🍔';
 }
 
-function getCategoryTitle(cat) {
-  if (cat === 'panini') return <>I PANINI DA <span style={{ color: 'var(--k-orange)' }}>SPACCO</span></>;
-  if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
-  if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
-  if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
-  if (cat === 'bbq') return <>PESI <span style={{ color: 'var(--k-orange)' }}>MASSIMI</span></>;
-  if (cat === 'tagliere') return <>TAGLI<span style={{ color: 'var(--k-orange)' }}>ERI</span></>;
-  if (cat === 'bevande') return <>BEVANDE</>;
-  if (cat === 'contorni') return <>CON<span style={{ color: 'var(--k-orange)' }}>TORNI</span></>;
-  return cat.toUpperCase();
+// Titolo da manifesto su 2 righe (riga 2 gialla). Solo copy già presente nell'app (vecchi titoli);
+// dove non c'è una seconda riga approvata resta una riga sola: niente testi inventati.
+function getPosterTitle(cat) {
+  if (cat === 'panini') return ['PANINI', 'DA SPACCO'];
+  if (cat === 'patatine') return ['FRITTO', 'TERAPEUTICO'];
+  if (cat === 'birre') return ['SETI', 'IMPLACABILI'];
+  if (cat === 'combo') return ['COMBO', 'LETALI'];
+  if (cat === 'bbq') return ['PESI', 'MASSIMI'];
+  return [(MENU_CATEGORIES.find((c) => c.key === cat)?.label || String(cat)).toUpperCase(), null];
 }
 
 function getCategorySubtitle(cat) {
   if (cat === 'bbq') return 'Affumicato, esagerato, senza scuse. Roba da mangiare con le mani.';
-  if (cat === 'panini') return 'Quelli seri. Almeno loro.';
+  if (cat === 'panini') return 'Sette panini, nessuno timido. Scegli con la pancia.';
   if (cat === 'cicchetti') return 'MORTAZZA · LARDO & NOCI · SCAMORZA & CIPOLLE · CIAPPI VEG';
   if (cat === 'insalatone') return 'CAESAR · SALMON · VEGGY';
   if (cat === 'tartare') return 'CRUDA E CONTENTA · DOLCE MA CRUDA';
@@ -666,7 +665,7 @@ export default function CustomerKitchenMenu() {
   // 2026-09-13): dopo l'invio si va sulla pagina pagamento dedicata (vedi handleSubmit,
   // follow-up UX 2026-09-18), che copre codice + bivio pagamento senza duplicarli in-page.
   return (
-    <div className="kitch-page">
+    <div className={`kitch-page${view === 'menu' ? ' kitch-page--poster' : ''}`}>
       <style>{`
         /* Card svg icons: dark color on cream background */
         .kitch-card-img svg {
@@ -712,19 +711,16 @@ export default function CustomerKitchenMenu() {
         </button>
       )}
 
-      {/* Header — Figma 111:59 (banner) + 111:63 cornice + 111:60/61/62 claim + 111:64 rule.
-          Il banner ha il vecchio claim stampato: 111:60 lo copre, 111:62 scrive quello nuovo. */}
-      <header className="kh-header">
+      {/* Testata: striscia logo "The Walrus Pub · Food & Drink" (restyling poster, mockup B).
+          Sostituisce il vecchio banner "Walrus Kitchen" (kh-header, Figma 111:59). */}
+      <header className="kh-brand">
         <img
-          src="/assets/kitchen/01_header_walrus_kitchen.webp"
-          alt="Walrus Kitchen"
-          className="kh-header-img"
+          src="/assets/kitchen/walrus-pub-logo.webp"
+          alt="The Walrus Pub · Food & Drink"
+          width="1120"
+          height="155"
+          className="kh-brand-img"
         />
-        <span className="kh-header-frame" aria-hidden="true" />
-        <span className="kh-header-claim-cover" aria-hidden="true" />
-        <span className="kh-header-claim-rule" aria-hidden="true" />
-        <p className="kh-header-claim">PANINI SERI. PERSONALITÀ DISCUTIBILE.</p>
-        <span className="kh-header-baseline" aria-hidden="true" />
       </header>
 
       {/* ── HOME (Figma 111:58 — Walrus Kitchen Home V3.4 PHOTO MENU) ── */}
@@ -850,13 +846,6 @@ export default function CustomerKitchenMenu() {
       {/* ── MENU COMPLETO ── */}
       {view === 'menu' && (
       <>
-      <div className="kh-menu-topbar">
-        <button type="button" className="kh-btn-back" onClick={() => window.history.back()}>
-          ← INDIETRO
-        </button>
-        <span className="kh-menu-topbar-label">{CATEGORIES.find((c) => c.key === activeCategory)?.label || 'MENU'}</span>
-      </div>
-
       {/* Promo hero card */}
       {activeCategory !== 'bbq' && kitchenCategoryPromos[activeCategory] ? (
         <div className="kitch-promo-wrapper">
@@ -873,17 +862,37 @@ export default function CustomerKitchenMenu() {
         categories={CATEGORIES}
         activeKey={activeCategory}
         onSelect={selectCategoryTab}
+        onBack={() => window.history.back()}
       />
 
-      {/* Section title */}
-      {activeCategory !== 'bbq' && (
-        <>
-          <div className="kitch-section-title">{getCategoryTitle(activeCategory)}</div>
-          {getCategorySubtitle(activeCategory) && (
-            <div className="kitch-section-subtitle">{getCategorySubtitle(activeCategory)}</div>
-          )}
-        </>
-      )}
+      {/* Testata categoria da manifesto (mockup B): kicker, titolo Anton su 2 righe, sottotitolo,
+          timbro "TUTTI x €" dove il prezzo è unico. PESI MASSIMI ha già il suo hero (bbq escluso). */}
+      {activeCategory !== 'bbq' && (() => {
+        const [line1, line2] = getPosterTitle(activeCategory);
+        // Panini: il numero nella battuta del mockup ("Sette panini...") segue i panini realmente a menu.
+        const NUM_WORDS = ['Zero', 'Un', 'Due', 'Tre', 'Quattro', 'Cinque', 'Sei', 'Sette', 'Otto', 'Nove', 'Dieci'];
+        const sub = activeCategory === 'panini' && NUM_WORDS[visibleItems.length] && visibleItems.length > 1
+          ? `${NUM_WORDS[visibleItems.length]} panini, nessuno timido. Scegli con la pancia.`
+          : getCategorySubtitle(activeCategory);
+        const prices = visibleItems.map((i) => i.price);
+        const uniquePrice = visibleItems.length >= 2
+          && prices.every((pr) => pr != null && pr !== '' && pr === prices[0]);
+        return (
+          <header className={`kp-head${uniquePrice ? ' kp-head--stamp' : ''}`}>
+            <div className="kp-kicker">{kitchenOpen ? 'The Walrus · Cucina aperta' : 'The Walrus · Cucina chiusa'}</div>
+            <h1 className="kp-title">
+              {line1}
+              {line2 && <em>{line2}</em>}
+            </h1>
+            {sub && <p className="kp-sub">{sub}</p>}
+            {uniquePrice && (
+              <div className="kp-stamp" aria-label={`Tutti ${formatPrice(prices[0])}`}>
+                <span aria-hidden="true">Tutti<br />{formatPrice(prices[0])}</span>
+              </div>
+            )}
+          </header>
+        );
+      })()}
 
       {/* Menu items */}
       {activeCategory === 'bbq' && visibleItems.length > 0 && (
@@ -900,7 +909,7 @@ export default function CustomerKitchenMenu() {
         <PaniniSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'cicchetti' && visibleItems.length > 0 && (
-        <CicchettiSection items={visibleItems} onAdd={addItem} />
+        <CicchettiSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'insalatone' && visibleItems.length > 0 && (
         <InsalatoneSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
@@ -912,7 +921,7 @@ export default function CustomerKitchenMenu() {
         <BirreSection items={visibleItems} onAdd={addItem} />
       )}
       {activeCategory === 'tagliere' && visibleItems.length > 0 && (
-        <TagliereSection items={visibleItems} onAdd={addItem} />
+        <TagliereSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'bevande' && visibleItems.length > 0 && (
         <BevandeSection items={visibleItems} onAdd={addItem} />
@@ -1006,33 +1015,16 @@ export default function CustomerKitchenMenu() {
                 onDismiss={() => setSideChipDismissed(true)}
               />
             )}
-            <div className={`kitch-bottom-card kitch-bottom-card--filled${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
-              <div
-                className="kitch-bottom-left"
-                onClick={() => setCartOpen(true)}
-                role="button"
-                aria-label="Apri carrello"
-              >
-                <div className="kitch-cart-icon-wrap" ref={cartIconRef}>
-                  <svg className="kitch-cart-svg" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
-                    <circle cx="23" cy="27" r="2" fill="#e8ddb8"/>
-                  </svg>
-                  <div className="kitch-cart-badge">{itemCount}</div>
-                </div>
-                <div className="kitch-bottom-text-wrap">
-                  <div className="kitch-bottom-title">IL TUO SACCO</div>
-                  <div className="kitch-bottom-total">
-                    {`${itemCount} ${itemCount === 1 ? 'articolo' : 'articoli'} · €${total.toFixed(2).replace('.', ',')}`}
-                  </div>
-                </div>
-              </div>
+            {/* Dock "biglietto da bancone" (mockup B): una sola barra rossa a bordo tratteggiato.
+                Stessa azione di prima (apre il sacco); solo markup/aspetto cambiano. */}
+            <div className={`kitch-bottom-card kitch-bottom-card--filled kb-wrap${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
               <button
-                className="kitch-btn-vai"
+                type="button"
+                className="kitch-btn-vai kb-ticket"
                 onClick={() => setCartOpen(true)}
               >
-                VAI ALL'ORDINE
+                <span ref={cartIconRef}>{itemCount} · Vai alla cassa</span>
+                <span>{`${total.toFixed(2).replace('.', ',')} €`}</span>
               </button>
             </div>
           </div>
