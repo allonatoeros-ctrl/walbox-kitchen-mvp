@@ -727,8 +727,8 @@ export default function CustomerKitchenMenu() {
       />
 
       {/* Testata categoria da manifesto (mockup B): kicker, titolo Anton su 2 righe, sottotitolo,
-          timbro "TUTTI x €" dove il prezzo è unico. PESI MASSIMI ha già il suo hero (bbq escluso). */}
-      {activeCategory !== 'bbq' && (() => {
+          timbro "TUTTI x €" dove il prezzo è unico. Vale anche per PESI MASSIMI (Fase 3.4b). */}
+      {(() => {
         const [line1, line2] = getPosterTitle(activeCategory);
         // Panini: il numero nella battuta del mockup ("Sette panini...") segue i panini realmente a menu.
         const NUM_WORDS = ['Zero', 'Un', 'Due', 'Tre', 'Quattro', 'Cinque', 'Sei', 'Sette', 'Otto', 'Nove', 'Dieci'];
@@ -764,6 +764,8 @@ export default function CustomerKitchenMenu() {
           featuredTag={eventMode ? 'anniversario' : null}
           includedSide={falloPesanteSide}
           beerOptions={falloPesanteBeerOptions}
+          onRemove={removeItem}
+          qtyById={qtyById}
         />
       )}
       {activeCategory === 'panini' && visibleItems.length > 0 && (

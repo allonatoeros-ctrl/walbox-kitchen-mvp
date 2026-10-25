@@ -18,6 +18,10 @@ import './PosterCard.css';
  *  - onAdd(p)    p = { id, name, price, image } (stesso payload che usava la card Panini)
  *  - onRemove(id) toglie 1 dal carrello
  *  - objectPosition  ritaglio 4:3 della foto quadrata (default centro)
+ *  - children    (opzionale) spazio extra dentro la card, prima della CTA (Fase 3.4b: scelta
+ *                SOLO PANINO / MENU di Pesi Massimi). Assente = card identica a prima.
+ *  - hideCta     (opzionale, default false) nasconde CTA/stepper della card: lo usa chi mette nei
+ *                `children` una propria CTA (MENU). Default = nessun cambiamento.
  *
  * Fallback: price null/vuoto → CTA spenta "PREZZO IN ARRIVO" (nessun prezzo inventato);
  * available === false → CTA spenta "ESAURITO"; foto assente o rotta → riquadro "FOTO IN ARRIVO".
@@ -60,6 +64,8 @@ export default function PosterCard({
   onAdd,
   onRemove,
   objectPosition = '50% 50%',
+  children = null,
+  hideCta = false,
 }) {
   // Salva l'URL che ha fallito (non un booleano): se cambia `item.image` la foto riprova da sola.
   const [failedSrc, setFailedSrc] = useState(null);
@@ -148,7 +154,9 @@ export default function PosterCard({
           </p>
         )}
 
-        {qty > 0 ? (
+        {children}
+
+        {hideCta ? null : qty > 0 ? (
           <div ref={stepperRef} className="pc-stepper" role="group" aria-label={`Quantità nel sacco: ${item.name}`}>
             <button
               type="button"
