@@ -27,6 +27,11 @@ import './PosterCard.css';
  *  - objectPosition  ritaglio 4:3 della foto quadrata (default centro)
  *  - children    (opzionale) spazio extra dentro la card, prima della CTA (Fase 3.4b: scelta
  *                SOLO PANINO / MENU di Pesi Massimi). Assente = nessun cambiamento.
+ *  - compact     (opzionale, default false) restyling hero: scheda bassa come nel riferimento, foto a sinistra e
+ *                a destra nome, ingredienti, prezzo e "+" giallo tondo (o stepper − N +). Stessi dati, stessi
+ *                handler, stessi aria-label; la battuta in corsivo non si mostra. Default = nessun cambiamento.
+ *  - photoZoom   (opzionale, solo compact, default 1) ingrandisce la foto attorno a `objectPosition`: le foto
+ *                quadrate con il panino piccolo (Pesi Massimi) nel riquadro stretto della scheda compatta.
  *  - hideCta     (opzionale, default false) nasconde CTA/stepper della card: lo usa chi mette nei
  *                `children` una propria CTA (MENU). Default = nessun cambiamento.
  *
@@ -100,6 +105,8 @@ export default function PosterCard({
   objectPosition = '50% 50%',
   children = null,
   hideCta = false,
+  compact = false,
+  photoZoom = 1,
 }) {
   // Salva l'URL che ha fallito (non un booleano): se cambia `item.image` la foto riprova da sola.
   const [failedSrc, setFailedSrc] = useState(null);
@@ -145,6 +152,110 @@ export default function PosterCard({
   let ctaLabel = '+ AGGIUNGI';
   if (soldOut) ctaLabel = 'ESAURITO';
   else if (noPrice) ctaLabel = 'PREZZO IN ARRIVO';
+
+  if (compact) {
+    const blurb = item.ingredients || item.description;
+    return (
+      <article
+        className={`pc-card pc-card--compact${soldOut ? ' pc-card--soldout' : ''}`}
+        data-testid="poster-card"
+      >
+        <div className="pc-row">
+          <div className="pc-shot">
+            {showPhoto ? (
+              <img
+                className="pc-photo"
+                src={item.image}
+                alt=""
+                style={photoZoom > 1
+                  ? { objectPosition, transform: `scale(${photoZoom})`, transformOrigin: objectPosition }
+                  : { objectPosition }}
+                loading={index < 2 ? 'eager' : 'lazy'}
+                decoding="async"
+                onError={() => setFailedSrc(item.image)}
+              />
+            ) : (
+              <span className="pc-photo-missing" aria-hidden="true">FOTO IN ARRIVO</span>
+            )}
+            {isVeg && (
+              <span className="pc-tags"><span className="pc-veg">VEG</span></span>
+            )}
+            {qty > 0 && (
+              <span className="pc-qty-badge" data-testid="poster-card-qty">
+                <span aria-hidden="true">×{qty}</span>
+                <span className="pc-sr">{qty} nel sacco</span>
+              </span>
+            )}
+            {soldOut && <span className="pc-soldout-stamp">ESAURITO</span>}
+          </div>
+          <div className="pc-info">
+            <h3 className="pc-name">{item.name}</h3>
+            {blurb && <p className="pc-ingredients">{blurb}</p>}
+            <div className="pc-buy">
+              {noPrice ? (
+                <span className="pc-price pc-price--soon">PREZZO IN ARRIVO</span>
+              ) : hideCta ? <span /> : (
+                // Con la CTA nascosta (Pesi Massimi: scelto il MENU) il prezzo della riga alta sarebbe quello del
+                // solo panino: la scelta sotto mostra già il prezzo giusto.
+                <span className="pc-price">{formatPrice(item.price).replace(/^(.*?)[\s\u00A0]*€$/, '€ $1')}</span>
+              )}
+              {hideCta ? null : qty > 0 ? (
+                <div ref={stepperRef} className="pc-stepper" role="group" aria-label={`Quantità nel sacco: ${item.name}`}>
+                  <button
+                    type="button"
+                    className="pc-step-btn"
+                    onClick={() => {
+                      if (qty === 1) pendingRef.current = { scroll: false };
+                      onRemove?.(item.id);
+                    }}
+                    aria-label={`Diminuisci quantità: ${item.name}`}
+                  >
+                    −
+                  </button>
+                  <output className="pc-step-qty" aria-live="polite">
+                    <span aria-hidden="true">{qty}</span>
+                    <span className="pc-sr">{qty} nel carrello</span>
+                  </output>
+                  <button
+                    ref={plusRef}
+                    type="button"
+                    className="pc-step-btn"
+                    onClick={handleAdd}
+                    disabled={!canAdd}
+                    aria-label={`Aumenta quantità: ${item.name}`}
+                  >
+                    +
+                  </button>
+                </div>
+              ) : (
+                <button
+                  ref={ctaRef}
+                  type="button"
+                  className="pc-cta"
+                  onClick={handleAdd}
+                  disabled={!canAdd}
+                  aria-label={canAdd ? `Aggiungi ${item.name}` : `${ctaLabel}: ${item.name}`}
+                >
+                  <span aria-hidden="true">+</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        {(allergens.length > 0 || children) && (
+          <div className="pc-under">
+            {allergens.length > 0 && (
+              <p className="pc-allergens">
+                Allergeni:{' '}
+                {allergens.map(allergenText).join(' · ')}
+              </p>
+            )}
+            {children}
+          </div>
+        )}
+      </article>
+    );
+  }
 
   return (
     <article

@@ -48,6 +48,7 @@ export default function InsalatoneSection({ items, onAdd, onRemove, qtyById }) {
           qty={qtyById?.[item.id] ?? 0}
           onAdd={onAdd}
           onRemove={onRemove}
+          compact
           objectPosition={OBJECT_POSITION_BY_ID[item.id] ?? '50% 50%'}
         />
       ))}

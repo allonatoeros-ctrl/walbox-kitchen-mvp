@@ -35,6 +35,7 @@ export default function CicchettiSection({ items, onAdd, onRemove, qtyById }) {
           qty={qtyById?.[item.id] ?? 0}
           onAdd={onAdd}
           onRemove={onRemove}
+          compact
         />
       ))}
     </div>

@@ -74,8 +74,11 @@ import './PesiMassimiSection.css';
 // Ritaglio 4:3 delle foto quadrate (stessa idea di PaniniSection). Default: centro.
 // Fase 3.4f: torna esattamente il ritaglio di HEAD f5ed050 (niente zoom).
 const OBJECT_POSITION_BY_ID = {
-  'item-018': '50% 100%', // Box Pulled Pork: sacchetto in basso a sinistra, lo si alza sopra il titolo
+  'item-018': '75% 62%', // Box Pulled Pork: scatola a sinistra, panino a destra
 };
+// Scheda compatta: riquadro stretto, il panino sta nella metà destra della foto quadrata (scatola Walrus a sinistra).
+const COMPACT_OBJECT_POSITION = '72% 62%';
+const COMPACT_PHOTO_ZOOM = 1.3;
 // Fase 3.4f: niente più scrim speciale per il Box (sacchetto bianco): con la sfumatura e l'ombra
 // del testo della PosterCard il nome sta già sopra 4,5:1 (misurato), quindi via il wrapper scuro.
 
@@ -419,8 +422,10 @@ export default function PesiMassimiSection({
               qty={qtyById?.[item.id] ?? 0}
               onAdd={onAdd}
               onRemove={onRemove}
-              objectPosition={OBJECT_POSITION_BY_ID[item.id] ?? '50% 50%'}
+              objectPosition={OBJECT_POSITION_BY_ID[item.id] ?? COMPACT_OBJECT_POSITION}
+              photoZoom={COMPACT_PHOTO_ZOOM}
               hideCta={isMenuChoice}
+              compact
             >
               {choiceBlock}
             </PosterCard>
