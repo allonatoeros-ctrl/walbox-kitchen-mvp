@@ -1,0 +1,269 @@
+/* PosterCard.css — "locandina" del menu cliente (Fase 3.2 restyling, direzione B).
+   Riferimento: ai-ops/reports/mockup-restyling/B-poster-da-pub.html.
+   Token --poster-* e font: definiti in `.kitch-page` (CustomerKitchenMenu.css, Fase 3.1).
+   Classi con prefisso .pc- : nessuna regola tocca le altre section. */
+
+.pc-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  border: 2px solid var(--poster-line, #3a2617);
+  background: var(--poster-panel, #1b0f09);
+  color: var(--poster-ink, #f7dfb5);
+  font-family: var(--poster-font-body, 'Montserrat', system-ui, sans-serif);
+  text-align: left;
+  overflow: hidden;
+}
+
+/* ── Foto 4:3 + scrim + testi sovrapposti ─────────────────── */
+.pc-shot {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #2a1a10;
+}
+
+.pc-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pc-card--soldout .pc-photo {
+  filter: grayscale(0.7) brightness(0.8);
+}
+
+.pc-photo-missing {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-bottom: 28%; /* il centro ottico sta sopra al nome */
+  font-family: var(--poster-font-label, 'Barlow Condensed', 'Arial Narrow', sans-serif);
+  font-weight: 800;
+  font-size: 18px;
+  letter-spacing: 0.14em;
+  color: var(--poster-muted, #c9b39a);
+  text-transform: uppercase;
+}
+
+/* Scrim più deciso in basso: sotto il nome le foto sono spesso carta chiara. */
+.pc-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(10, 4, 2, 0.95) 0%,
+    rgba(10, 4, 2, 0.78) 24%,
+    rgba(10, 4, 2, 0.4) 46%,
+    transparent 64%
+  );
+  pointer-events: none;
+}
+
+.pc-num {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 2px 8px;
+  background: var(--poster-yellow, #ffc83d);
+  color: var(--poster-on-yellow, #140a05);
+  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.pc-veg {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  padding: 4px 8px;
+  background: #2f4a2b;
+  color: #e6f4dc;
+  font-family: var(--poster-font-label, 'Barlow Condensed', 'Arial Narrow', sans-serif);
+  font-weight: 900;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+}
+
+.pc-over {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 14px 12px;
+}
+
+.pc-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-weight: 400; /* Anton esiste solo a 400: niente bold sintetico */
+  font-size: 30px;
+  line-height: 0.98;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  /* V19: nomi lunghi su max 2 righe */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.pc-price {
+  flex: none;
+  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-size: 40px;
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+  color: var(--poster-yellow, #ffc83d);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  white-space: nowrap;
+}
+
+/* ── Sotto la foto: testo + CTA ───────────────────────────── */
+.pc-under {
+  padding: 12px 14px 14px;
+}
+
+.pc-under p {
+  margin: 0;
+}
+
+.pc-quip {
+  font-size: 15px;
+  line-height: 1.35;
+  font-style: italic;
+  color: var(--poster-ink, #f7dfb5);
+}
+
+.pc-ingredients {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--poster-muted, #c9b39a);
+}
+
+.pc-allergens {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--poster-muted, #c9b39a);
+}
+
+.pc-allergens-label {
+  font-weight: 700;
+  color: var(--poster-ink, #f7dfb5);
+}
+
+/* ── CTA piena 52 px → stepper ────────────────────────────── */
+.pc-cta,
+.pc-stepper {
+  margin-top: 12px;
+  width: 100%;
+  height: 52px;
+  box-sizing: border-box;
+}
+
+.pc-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0;
+  padding: 0 12px;
+  background: var(--poster-yellow, #ffc83d);
+  color: var(--poster-on-yellow, #140a05);
+  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pc-cta:disabled {
+  background: var(--poster-line, #3a2617);
+  color: var(--poster-muted, #c9b39a);
+  cursor: not-allowed;
+}
+
+.pc-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px;
+  border: 2px solid var(--poster-yellow, #ffc83d);
+  background: transparent;
+  color: var(--poster-yellow, #ffc83d);
+}
+
+.pc-step-btn {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 44px; /* tocco >= 44 px */
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--poster-yellow, #ffc83d);
+  color: var(--poster-on-yellow, #140a05);
+  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pc-step-btn:disabled {
+  background: var(--poster-line, #3a2617);
+  color: var(--poster-muted, #c9b39a);
+  cursor: not-allowed;
+}
+
+.pc-step-qty {
+  flex: 1 1 auto;
+  text-align: center;
+  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-size: 20px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--poster-yellow, #ffc83d);
+}
+
+.pc-cta:focus-visible,
+.pc-step-btn:focus-visible {
+  outline: 3px solid var(--poster-ink, #f7dfb5);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pc-cta:not(:disabled):active,
+  .pc-step-btn:not(:disabled):active {
+    transform: scale(0.97);
+  }
+}

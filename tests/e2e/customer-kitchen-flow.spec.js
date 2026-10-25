@@ -460,10 +460,8 @@ test('3b. Sold-out item shows ESAURITO overlay and disabled ESAURITO CTA', async
 
   await expect(page.getByText('ESAURITO').first()).toBeVisible();
 
-  // La CTA disabilitata vive nella card EXPANDED (stesso pattern accordion di
-  // Pesi Massimi): va aperta la card del panino esaurito per raggiungerla.
-  await page.locator('.pn-card--soldout .pn-card-closed').click();
-  const soldOutButton = page.locator('.pn-card--soldout .pn-btn-want');
+  // Fase 3.2: la locandina (PosterCard) è sempre aperta, la CTA spenta è già visibile.
+  const soldOutButton = page.locator('.pc-card--soldout .pc-cta');
   await expect(soldOutButton).toBeVisible();
   await expect(soldOutButton).toHaveText('ESAURITO');
   await expect(soldOutButton).toBeDisabled();
@@ -507,24 +505,21 @@ test('3e. All panini sold out: every CTA disabled, category still browsable, not
 
   // Contratto visuale corrente (PaniniSection, no banner aggregato pre-Figma): ogni
   // card resta visibile e mostra il proprio badge ESAURITO sulla faccia chiusa.
-  await expect(page.locator('.pn-card--soldout')).toHaveCount(PANINI_IDS.length);
-  await expect(page.locator('.pn-card-closed .pn-card-open-cta', { hasText: 'ESAURITO' })).toHaveCount(PANINI_IDS.length);
+  await expect(page.locator('.pc-card--soldout')).toHaveCount(PANINI_IDS.length);
+  await expect(page.locator('.pc-card--soldout .pc-cta', { hasText: 'ESAURITO' })).toHaveCount(PANINI_IDS.length);
   await expect(page.getByText('NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA')).not.toBeVisible();
   await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).not.toBeVisible();
 
   // Requisito funzionale (di sicurezza, non solo visuale): la CTA add-to-cart di ogni
-  // panino esaurito è disabilitata nel markup, non solo nascosta dall'accordion chiuso.
-  await expect(page.locator('.pn-card--soldout .pn-btn-want:disabled')).toHaveCount(PANINI_IDS.length);
+  // panino esaurito è disabilitata nel markup.
+  await expect(page.locator('.pc-card--soldout .pc-cta:disabled')).toHaveCount(PANINI_IDS.length);
 
-  // Aprendo ciascuna card esaurita e forzando il click sulla CTA disabilitata, nessun
-  // panino deve finire nel carrello: un browser blocca il click nativo su un elemento
-  // disabled, quindi questo verifica il comportamento reale, non solo l'attributo.
-  const soldOutCards = await page.locator('.pn-card--soldout .pn-card-closed').all();
-  for (const closedCard of soldOutCards) {
-    await closedCard.click();
-    const wantBtn = page.locator('.pn-card--open .pn-btn-want');
-    await expect(wantBtn).toBeDisabled();
-    await wantBtn.click({ force: true }).catch(() => {});
+  // Forzando il click sulle CTA disabilitate nessun panino deve finire nel carrello: un
+  // browser blocca il click nativo su un elemento disabled, quindi questo verifica il
+  // comportamento reale, non solo l'attributo.
+  const soldOutCtas = await page.locator('.pc-card--soldout .pc-cta').all();
+  for (const cta of soldOutCtas) {
+    await cta.click({ force: true }).catch(() => {});
   }
 
   const addCta = page.getByRole('button', { name: 'AGGIUNGI QUALCOSA' });
@@ -557,8 +552,8 @@ test('3g. Regression: normal category with available items shows no empty/sold-o
 
   await expect(page.getByText('NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA')).not.toBeVisible();
   await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).not.toBeVisible();
-  // PANINI usa PaniniSection (.pn-card), non più la lista generica .kitch-card
-  await expect(page.locator('.pn-card').first()).toBeVisible();
+  // PANINI usa PaniniSection (locandine .pc-card), non più la lista generica .kitch-card
+  await expect(page.locator('.pc-card').first()).toBeVisible();
 });
 
 // ── Touch target sizes (mobile) ────────────────────────────────────

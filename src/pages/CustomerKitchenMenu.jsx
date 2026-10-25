@@ -540,6 +540,9 @@ export default function CustomerKitchenMenu() {
 
   const removeAllOfItem = (id) => setOrderItems((prev) => prev.filter((o) => o.id !== id));
 
+  // Quantità per id nel sacco (stepper − N + delle locandine; carrello ripristinato da localStorage incluso).
+  const qtyById = useMemo(() => Object.fromEntries(orderItems.map((o) => [o.id, o.qty])), [orderItems]);
+
   const total = orderItems.reduce((sum, o) => sum + o.price * o.qty, 0);
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
   // Evento: niente birre in menu, quindi nessun suggerimento birra nel sacco.
@@ -894,7 +897,7 @@ export default function CustomerKitchenMenu() {
         />
       )}
       {activeCategory === 'panini' && visibleItems.length > 0 && (
-        <PaniniSection items={visibleItems} onAdd={addItem} />
+        <PaniniSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'cicchetti' && visibleItems.length > 0 && (
         <CicchettiSection items={visibleItems} onAdd={addItem} />
