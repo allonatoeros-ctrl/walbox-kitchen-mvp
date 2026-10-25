@@ -1797,6 +1797,37 @@
   height: auto;
 }
 
+/* Frase di benvenuto sotto il logo (Fase 3.4): una riga, niente blocco intro. */
+.kh-welcome {
+  margin: 0;
+  padding: 10px 16px;
+  text-align: center;
+  font-family: var(--poster-font-label);
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--poster-yellow);
+  background: var(--poster-bg);
+}
+/* Avviso "tocca ancora indietro" (guard tasto indietro con sacco pieno). */
+.kh-exit-hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 84px;
+  z-index: 90;
+  padding: 10px 14px;
+  text-align: center;
+  font-family: var(--poster-font-label);
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.08em;
+  color: var(--poster-ink);
+  background: var(--poster-panel);
+  border: 1px solid var(--poster-yellow);
+}
+
 /* Pagina menu = fondo manifesto del mockup. `overflow-x: clip` (non hidden) perché hidden
    rompe lo sticky della barra chip. */
 .kitch-page--poster {
@@ -1853,7 +1884,6 @@
 /* Chip 38 px come il mockup, ma area di tocco 44 px (>= 44 richiesto): estensione invisibile. */
 .kp-chip { position: relative; }
 .kp-chip::after { content: ''; position: absolute; inset: -3px 0; }
-.kp-chip--back { padding: 0 12px; }
 .kp-chip:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
 
 /* ── Testata categoria da manifesto (mockup .poster-head) ── */

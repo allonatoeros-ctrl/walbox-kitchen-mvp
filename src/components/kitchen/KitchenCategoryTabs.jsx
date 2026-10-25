@@ -11,7 +11,7 @@ import { useEffect, useRef } from 'react';
  * 2026-09-14, "le icone si muovono al tap").
  */
 
-export default function KitchenCategoryTabs({ categories, activeKey, onSelect, onBack }) {
+export default function KitchenCategoryTabs({ categories, activeKey, onSelect }) {
   // A 390px la strip è più larga del viewport e non si spostava mai: con
   // TARTARE attiva il cerchio arancione restava tagliato sul bordo destro,
   // senza nulla che segnalasse lo scroll. Il tab attivo viene portato in vista
@@ -36,11 +36,6 @@ export default function KitchenCategoryTabs({ categories, activeKey, onSelect, o
   // tagliato sul bordo destro è già il segnale che la strip scorre in orizzontale.
   return (
     <nav className="kp-tabs" aria-label="Categorie del menu">
-      {onBack && (
-        <button type="button" className="kp-chip kp-chip--back" onClick={onBack} aria-label="Indietro">
-          ←
-        </button>
-      )}
       {categories.map((cat) => {
         const isActive = activeKey === cat.key;
         return (
