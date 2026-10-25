@@ -903,7 +903,7 @@ export default function CustomerKitchenMenu() {
         <CicchettiSection items={visibleItems} onAdd={addItem} />
       )}
       {activeCategory === 'insalatone' && visibleItems.length > 0 && (
-        <InsalatoneSection items={visibleItems} onAdd={addItem} />
+        <InsalatoneSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'tartare' && visibleItems.length > 0 && (
         <TartareSection items={visibleItems} onAdd={addItem} />

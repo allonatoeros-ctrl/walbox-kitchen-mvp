@@ -6,8 +6,8 @@ import './PaniniSection.css';
  *
  * Fase 3.2 restyling (direzione B "Poster da pub", pilota): ogni panino è una locandina
  * `PosterCard` sempre aperta (niente accordion, niente "VEDI IL PANINO"): AGGIUNGI è sempre
- * a un tap e diventa stepper − N + quando il panino è nel sacco. Le altre categorie
- * (Cicchetti, Insalatone, Tartare, Tagliere, Birre, Pesi Massimi) restano col look di oggi.
+ * a un tap e diventa stepper − N + quando il panino è nel sacco. Insalatone usa lo stesso
+ * schema (Fase 3.2b); Cicchetti, Tartare, Tagliere, Birre, Pesi Massimi restano col look di oggi.
  *
  * Fallback (gestiti da PosterCard): price null → CTA spenta "PREZZO IN ARRIVO", nessun prezzo
  * inventato; available === false → "ESAURITO"; foto rotta/assente → "FOTO IN ARRIVO".
