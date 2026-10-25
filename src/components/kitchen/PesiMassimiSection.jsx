@@ -10,7 +10,8 @@ import './PesiMassimiSection.css';
  * Source of truth visiva: Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED — Page 4
  *   HERO 128:2 · CLOSED 129:2 · EXPANDED 130:59 / 130:121 / 130:183
  *
- * FASE 3.4b (restyling poster): ogni Pesi Massimi è una `PosterCard` sempre aperta (come Panini);
+ * FASE 3.4b (restyling poster): ogni Pesi Massimi è una `PosterCard` (3.4f: sempre aperta, foto 4:3
+ * come HEAD f5ed050 con nome e prezzo sopra; il blocco SOLO PANINO / MENU è sempre visibile nella card);
  * la testata manifesto `kp-head` la rende CustomerKitchenMenu, qui non c'è più la hero dentro la
  * categoria (resta solo il ramo `heroOnly`, oggi non usato dal menu). Il blocco SCEGLI COME LO VUOI
  * vive nello spazio `children` della PosterCard; la logica sotto è invariata.
@@ -71,12 +72,12 @@ import './PesiMassimiSection.css';
  *    selettore non appare.
  */
 // Ritaglio 4:3 delle foto quadrate (stessa idea di PaniniSection). Default: centro.
+// Fase 3.4f: torna esattamente il ritaglio di HEAD f5ed050 (niente zoom).
 const OBJECT_POSITION_BY_ID = {
   'item-018': '50% 100%', // Box Pulled Pork: sacchetto in basso a sinistra, lo si alza sopra il titolo
 };
-
-// Foto con zona chiara sotto il titolo (sacchetto bianco del Box): scrim più scuro solo lì.
-const DARK_SCRIM_IDS = new Set(['item-018']);
+// Fase 3.4f: niente più scrim speciale per il Box (sacchetto bianco): con la sfumatura e l'ombra
+// del testo della PosterCard il nome sta già sopra 4,5:1 (misurato), quindi via il wrapper scuro.
 
 // Nome birra: le parole col trattino (LAND-PILS) non si spezzano a capo sul trattino.
 function beerNameNodes(name) {
@@ -88,15 +89,27 @@ function beerNameNodes(name) {
   ));
 }
 
-// Porta `el` sopra il dock fisso del sacco (altezza reale misurata, fallback 96 px), con
-// `prefers-reduced-motion` rispettato. Nessuna dipendenza da transitionend.
+// Porta `el` sopra il dock fisso del sacco (altezza reale misurata, fallback 96 px) e, se c'è,
+// sopra il toast "aggiunto al sacco" (3.4f), con `prefers-reduced-motion` rispettato. Nessuna
+// dipendenza da transitionend.
 function scrollAboveDock(el) {
   if (!el) return;
-  const dock = document.querySelector('.kitch-bottom-bar');
-  const dockH = dock ? dock.getBoundingClientRect().height : 96;
-  el.style.scrollMarginBottom = `${Math.ceil(dockH) + 16}px`;
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-  el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+  const place = () => {
+    const dock = document.querySelector('.kitch-bottom-bar');
+    const dockH = dock ? dock.getBoundingClientRect().height : 96;
+    const toast = document.querySelector('.kitch-add-toast');
+    // +28 px: il toast entra salendo di 12 px (kitchToastIn, qui lo si può misurare ancora in basso) + 16 px di aria.
+    const toastH = toast ? window.innerHeight - toast.getBoundingClientRect().top + 28 : 0;
+    el.style.scrollMarginBottom = `${Math.ceil(Math.max(dockH + 16, toastH))}px`;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+  };
+  place();
+  // Al primo toast della sessione il suo font si scarica in quel momento e il toast cresce di una
+  // riga: a font arrivato si rimisura (se serve, piccola correzione dello scroll).
+  if (document.querySelector('.kitch-add-toast') && document.fonts?.status === 'loading') {
+    document.fonts.ready.then(place);
+  }
 }
 
 export default function PesiMassimiSection({
@@ -130,7 +143,7 @@ export default function PesiMassimiSection({
     if (!p) return;
     pendingScrollRef.current = null;
     scrollAboveDock(p.kind === 'detail' ? detailRefs.current[p.id] : pickRefs.current[p.id]);
-  }, [previewBeerByItem, selectedBeerByItem]);
+  }, [previewBeerByItem, selectedBeerByItem, qtyById]);
 
   if (!items || items.length === 0) return null;
 
@@ -373,6 +386,8 @@ export default function PesiMassimiSection({
                   data-testid="fallo-pesante-cta"
                   onClick={() => {
                     if (comboBlocked || beerNotChosen) return;
+                    // Dopo l'add compare il dock del sacco (e il toast): porta la CTA del MENU sopra.
+                    pendingScrollRef.current = { id: item.id, kind: 'pick' };
                     onAdd({
                       id: chosenBeer ? `${combo.id}::${chosenBeer.id}` : combo.id,
                       baseId: combo.id,
@@ -396,7 +411,7 @@ export default function PesiMassimiSection({
             </div>
           ) : null;
 
-          const card = (
+          return (
             <PosterCard
               key={item.id}
               item={item}
@@ -410,9 +425,6 @@ export default function PesiMassimiSection({
               {choiceBlock}
             </PosterCard>
           );
-          return DARK_SCRIM_IDS.has(item.id)
-            ? <div key={item.id} className="pm-item--darkscrim">{card}</div>
-            : card;
         })}
       </div>
       )}

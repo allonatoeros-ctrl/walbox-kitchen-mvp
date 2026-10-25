@@ -1,4 +1,5 @@
-/* PosterCard.css — "locandina" del menu cliente (Fase 3.2 restyling, direzione B).
+/* PosterCard.css — "locandina" del menu cliente (Fase 3.2 restyling, direzione B; 3.4e card sempre aperta;
+   3.4f foto come HEAD f5ed050 con nome/prezzo sopra la foto e sfumatura più leggera).
    Riferimento: ai-ops/reports/mockup-restyling/B-poster-da-pub.html.
    Token --poster-* e font: definiti in `.kitch-page` (CustomerKitchenMenu.css, Fase 3.1).
    Classi con prefisso .pc- : nessuna regola tocca le altre section. */
@@ -17,9 +18,11 @@
   line-height: normal; /* come il mockup: il line-height 1.5 globale ingrandiva i testi */
   letter-spacing: normal;
   overflow: hidden;
+  /* Ombra leggera di nome/prezzo sulla foto (3.4f): alone stretto sui bordi + alone morbido. */
+  --pc-text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 0 12px rgba(0, 0, 0, 0.7);
 }
 
-/* ── Foto 4:3 + scrim + testi sovrapposti ─────────────────── */
+/* ── Foto 4:3 + scrim leggero + testi sovrapposti (come HEAD f5ed050) ── */
 .pc-shot {
   position: relative;
   aspect-ratio: 4 / 3;
@@ -45,51 +48,96 @@
   place-items: center;
   background: #2a1a10;
   padding-bottom: 28%; /* il centro ottico sta sopra al nome */
-  font-family: var(--poster-font-label, 'Barlow Condensed', 'Arial Narrow', sans-serif);
-  font-weight: 800;
-  font-size: 18px;
+  font-family: var(--poster-font-label, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
   letter-spacing: 0.14em;
   color: var(--poster-muted, #c9b39a);
   text-transform: uppercase;
 }
 
-/* Scrim più deciso in basso: sotto il nome le foto sono spesso carta chiara. */
+/* Sfumatura 3.4f, più leggera di HEAD (0.92 → 0.55 al 32% → trasparente al 58%): finisce al 44%
+   (sopra la foto è pulita) e in basso è più chiara (0.75). Resta piena (0.70) fino al 30% perché il
+   nome su 2 righe a 40 px arriva al ~33% della foto: è il minimo che tiene il contrasto ≥ 4,5:1 sul
+   punto più chiaro (carta bianca dei panini), misurato a 390/430 su tutte le card. */
 .pc-scrim {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, rgba(10, 4, 2, 0.92) 0%, rgba(10, 4, 2, 0.55) 32%, transparent 58%);
+  background: linear-gradient(to top, rgba(10, 4, 2, 0.75) 0%, rgba(10, 4, 2, 0.7) 30%, transparent 44%);
   pointer-events: none;
 }
 
-.pc-num {
+/* In alto a sinistra: N° + VEG in fila (a destra sta il badge ×N). */
+.pc-tags {
   position: absolute;
   top: 10px;
   left: 10px;
   z-index: 2;
+  display: flex;
+  gap: 6px;
+}
+
+.pc-num {
   padding: 2px 8px;
   background: var(--poster-yellow, #ffc83d);
   color: var(--poster-on-yellow, #140a05);
-  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
-  font-size: 18px;
-  line-height: normal;
-  letter-spacing: normal;
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
 }
 
 .pc-veg {
+  padding: 2px 8px;
+  background: #2f4a2b;
+  color: #e6f4dc;
+  font-family: var(--poster-font-label, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
+}
+
+/* Già nel sacco: ×N in alto a destra sulla foto. */
+.pc-qty-badge {
   position: absolute;
   top: 10px;
   right: 10px;
   z-index: 2;
-  padding: 4px 8px;
-  background: #2f4a2b;
-  color: #e6f4dc;
-  font-family: var(--poster-font-label, 'Barlow Condensed', 'Arial Narrow', sans-serif);
-  font-weight: 900;
-  font-size: 14px;
-  line-height: normal;
-  letter-spacing: 0.1em;
+  min-width: 44px;
+  box-sizing: border-box;
+  padding: 2px 10px;
+  background: var(--poster-yellow, #ffc83d);
+  color: var(--poster-on-yellow, #140a05);
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
+  text-align: center;
 }
 
+/* Esaurito: timbro sulla foto. Niente rosso (riservato al tasto cassa). */
+.pc-soldout-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  padding: 4px 16px;
+  border: 2px solid var(--poster-ink, #f7dfb5);
+  background: rgba(18, 8, 6, 0.88);
+  color: var(--poster-ink, #f7dfb5);
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
+  font-size: var(--poster-size-md, 40px);
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
+  transform: translate(-50%, -50%) rotate(-6deg);
+  white-space: nowrap;
+}
+
+/* Sopra la foto, in basso: nome (crema) a sinistra, prezzo (oro) a destra, allineati in basso. */
 .pc-over {
   position: absolute;
   left: 0;
@@ -107,14 +155,14 @@
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
-  font-weight: 700; /* come il mockup (h2 di default): Anton con bold sintetico */
-  font-size: 30px;
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400; /* League Gothic ha un solo peso: niente bold sintetico */
+  font-size: var(--poster-size-md, 40px);
   line-height: 0.95;
-  letter-spacing: normal;
+  letter-spacing: 0.01em;
   text-transform: uppercase;
-  color: #fff;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  color: var(--poster-ink, #f7dfb5);
+  text-shadow: var(--pc-text-shadow);
   /* V19: nomi lunghi su max 2 righe */
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -126,56 +174,81 @@
 
 .pc-price {
   flex: none;
-  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
   font-weight: 400;
-  font-size: 44px;
-  line-height: 0.9;
-  letter-spacing: normal;
+  font-size: var(--poster-size-md, 40px); /* stessa misura del nome */
+  line-height: 0.95;
+  letter-spacing: 0.01em;
   color: var(--poster-yellow, #ffc83d);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  text-shadow: var(--pc-text-shadow);
   white-space: nowrap;
 }
 
 .pc-price small {
-  font-size: 22px;
+  font-size: var(--poster-size-sm, 20px);
 }
 
-/* ── Sotto la foto: testo + CTA ───────────────────────────── */
+.pc-card--soldout .pc-price {
+  color: var(--poster-muted, #c9b39a);
+}
+
+/* Testo solo per lettori di schermo. */
+.pc-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ── Descrizione in 3 blocchi con aria + CTA (sempre visibili, 3.4e) ─── */
 .pc-under {
-  padding: 12px 14px 14px;
+  padding: 14px 14px 16px;
 }
 
 .pc-under p {
   margin: 0;
 }
 
+/* 1 · la battuta: corsivo, più grande */
 .pc-quip {
-  font-size: 15px;
-  line-height: normal;
+  font-size: 18px;
+  line-height: 1.4;
   font-style: italic;
   color: var(--poster-ink, #f7dfb5);
 }
 
+/* 2 · gli ingredienti */
 .pc-ingredients {
-  margin-top: 6px;
-  font-size: 13px;
-  line-height: normal;
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--poster-muted, #c9b39a);
 }
 
+/* 3 · ALLERGENI piccolo in oro */
 .pc-allergens {
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: normal;
-  letter-spacing: 0.03em;
+  font-family: var(--poster-font-label, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.15;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   text-transform: uppercase;
-  color: var(--poster-muted, #c9b39a);
+  color: var(--poster-yellow, #ffc83d);
+}
+
+/* Aria tra i blocchi: solo tra quelli presenti (un blocco mancante non lascia buchi). */
+.pc-under > p + p {
+  margin-top: 16px;
 }
 
 /* ── CTA piena 52 px → stepper ────────────────────────────── */
 .pc-cta,
 .pc-stepper {
-  margin-top: 12px;
+  margin-top: 18px;
   width: 100%;
   height: 52px;
   box-sizing: border-box;
@@ -190,10 +263,11 @@
   padding: 0 12px;
   background: var(--poster-yellow, #ffc83d);
   color: var(--poster-on-yellow, #140a05);
-  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
   font-weight: 400;
-  font-size: 22px;
-  letter-spacing: 0.06em;
+  font-size: var(--poster-size-md, 40px);
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   text-transform: uppercase;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -229,9 +303,9 @@
   border-radius: 0;
   background-color: var(--poster-yellow, #ffc83d);
   color: var(--poster-on-yellow, #140a05);
-  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
   font-weight: 400;
-  font-size: 26px;
+  font-size: var(--poster-size-md, 40px);
   line-height: 1;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
@@ -246,17 +320,31 @@
 .pc-step-qty {
   flex: 1 1 auto;
   text-align: center;
-  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
-  font-size: 22px;
-  letter-spacing: 0.06em;
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
+  font-size: var(--poster-size-md, 40px);
+  letter-spacing: var(--poster-track-sm, 0.06em);
   text-transform: uppercase;
   color: var(--poster-yellow, #ffc83d);
 }
 
-.pc-cta:focus-visible,
-.pc-step-btn:focus-visible {
+/* Focus da tastiera sui bottoni (3.4e, P2 V2 della 3.4d): anello crema attorno al bottone, sul fondo
+   scuro (c'è spazio: .pc-under ha 14 px di margine laterale, quindi overflow:hidden non lo taglia). */
+.pc-cta:focus-visible {
   outline: 3px solid var(--poster-ink, #f7dfb5);
   outline-offset: 3px;
+}
+
+/* Stepper: l'anello esterno crema abbraccia tutto lo stepper (fuori dal bordo oro, dove si vede),
+   e il bottone col focus ha un anello scuro dentro il quadrato giallo (dice quale dei due). */
+.pc-stepper:has(.pc-step-btn:focus-visible) {
+  outline: 3px solid var(--poster-ink, #f7dfb5);
+  outline-offset: 3px;
+}
+
+.pc-step-btn:focus-visible {
+  outline: 3px solid var(--poster-on-yellow, #140a05);
+  outline-offset: -8px;
 }
 
 @media (prefers-reduced-motion: no-preference) {

@@ -5,11 +5,18 @@ import './PosterCard.css';
 
 /**
  * "Locandina" del menu cliente (Fase 3.2 restyling, direzione B "Poster da pub").
- * Usata da PaniniSection (pilota) e InsalatoneSection e TartareSection. Le altre categorie restano col look attuale.
+ * Usata da Panini, Pesi Massimi, Insalatone, Tartare, Taglieri e Cicchetti (stesso schema per tutti).
  *
- * Sempre "aperta" (niente accordion): foto 4:3 a tutta larghezza con nome + prezzo sopra lo
- * scrim, sotto descrizione, ingredienti e allergeni come testo, CTA piena che diventa
- * stepper − N + quando il prodotto è già nel sacco.
+ * Fase 3.4f: card SEMPRE APERTA, foto come in HEAD f5ed050 (cornice 4:3, `objectPosition` per id,
+ * nessuno zoom) con nome (crema) + prezzo (oro) di nuovo SOPRA la foto, in basso:
+ *  - sfumatura leggera solo nel terzo basso della foto + ombra del testo leggera (leggibilità);
+ *  - sulla foto anche N°/VEG in alto a sinistra, badge ×N in alto a destra se il prodotto è già
+ *    nel sacco, timbro ESAURITO;
+ *  - sotto la foto: descrizione in 3 blocchi con aria (battuta in corsivo → ingredienti → ALLERGENI oro), poi
+ *    `children` (es. scelta SOLO PANINO / MENU dei Pesi Massimi) e CTA → stepper − N +, sempre visibili.
+ *  Niente stato aperta/chiusa: nessun tocco sulla foto, nessun "+" nell'angolo, nessuno scroll
+ *  "all'apertura". Resta lo scroll al primo AGGIUNGI: quando compare il dock del sacco lo stepper
+ *  viene portato sopra il dock e sopra il toast "aggiunto" (anche con prefers-reduced-motion: scroll istantaneo).
  *
  * Props:
  *  - item        { id, name, description, ingredients, price, image, allergens, tags, available }
@@ -19,12 +26,13 @@ import './PosterCard.css';
  *  - onRemove(id) toglie 1 dal carrello
  *  - objectPosition  ritaglio 4:3 della foto quadrata (default centro)
  *  - children    (opzionale) spazio extra dentro la card, prima della CTA (Fase 3.4b: scelta
- *                SOLO PANINO / MENU di Pesi Massimi). Assente = card identica a prima.
+ *                SOLO PANINO / MENU di Pesi Massimi). Assente = nessun cambiamento.
  *  - hideCta     (opzionale, default false) nasconde CTA/stepper della card: lo usa chi mette nei
  *                `children` una propria CTA (MENU). Default = nessun cambiamento.
  *
- * Fallback: price null/vuoto → CTA spenta "PREZZO IN ARRIVO" (nessun prezzo inventato);
- * available === false → CTA spenta "ESAURITO"; foto assente o rotta → riquadro "FOTO IN ARRIVO".
+ * Fallback: price null/vuoto → nessun prezzo accanto al nome, CTA spenta "PREZZO IN ARRIVO" (nessun
+ * prezzo inventato); available === false → timbro ESAURITO sulla foto + prezzo spento + CTA spenta
+ * "ESAURITO"; foto assente o rotta → riquadro "FOTO IN ARRIVO" (stessa cornice, niente salti).
  */
 
 // Etichetta allergene senza emoji iniziale (le emoji sono solo nei badge gialli di AllergenBadges).
@@ -57,6 +65,32 @@ function PriceBig({ value }) {
   return (<>{m[1]}<small>€</small></>);
 }
 
+// Porta `el` sopra il dock fisso del sacco (altezza reale misurata, fallback 96 px =
+// .kitch-bottom-spacer) e, se c'è, sopra il toast "aggiunto al sacco" (fisso sopra il dock per 1,2 s:
+// senza questo copriva "1 NEL CARRELLO"), rispettando prefers-reduced-motion.
+function scrollAboveDock(el, reduce) {
+  if (!el) return;
+  const place = () => {
+    const dock = document.querySelector('.kitch-bottom-bar');
+    const dockH = dock ? dock.getBoundingClientRect().height : 96;
+    const toast = document.querySelector('.kitch-add-toast');
+    // +28 px: il toast entra salendo di 12 px (kitchToastIn, qui lo si può misurare ancora in basso) + 16 px di aria.
+    const toastH = toast ? window.innerHeight - toast.getBoundingClientRect().top + 28 : 0;
+    el.style.scrollMarginBottom = `${Math.ceil(Math.max(dockH + 16, toastH))}px`;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+  };
+  place();
+  // Al primo toast della sessione il suo font si scarica in quel momento e il toast cresce di una
+  // riga: a font arrivato si rimisura (se serve, piccola correzione dello scroll).
+  if (document.querySelector('.kitch-add-toast') && document.fonts?.status === 'loading') {
+    document.fonts.ready.then(place);
+  }
+}
+
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+}
+
 export default function PosterCard({
   item,
   index = 0,
@@ -84,13 +118,8 @@ export default function PosterCard({
       // CTA → stepper: il bottone AGGIUNGI è stato smontato, il focus passa al "+".
       plusRef.current?.focus({ preventScroll: true });
       if (pending.scroll && stepperRef.current) {
-        // Al primo add compare il dock fisso del sacco: porta lo stepper sopra il dock, con
-        // l'altezza reale misurata (fallback 96 px = .kitch-bottom-spacer).
-        const dock = document.querySelector('.kitch-bottom-bar');
-        const dockH = dock ? dock.getBoundingClientRect().height : 96;
-        stepperRef.current.style.scrollMarginBottom = `${Math.ceil(dockH) + 16}px`;
-        const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-        stepperRef.current.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'nearest' });
+        // Al primo add compare il dock fisso del sacco: porta lo stepper sopra il dock.
+        scrollAboveDock(stepperRef.current, prefersReducedMotion());
       }
     } else {
       // stepper → CTA: il focus torna su AGGIUNGI invece di perdersi sul body.
@@ -118,7 +147,10 @@ export default function PosterCard({
   else if (noPrice) ctaLabel = 'PREZZO IN ARRIVO';
 
   return (
-    <article className={`pc-card${soldOut ? ' pc-card--soldout' : ''}`}>
+    <article
+      className={`pc-card${soldOut ? ' pc-card--soldout' : ''}`}
+      data-testid="poster-card"
+    >
       <div className="pc-shot">
         {showPhoto ? (
           <img
@@ -131,16 +163,29 @@ export default function PosterCard({
             onError={() => setFailedSrc(item.image)}
           />
         ) : (
-          <span className="pc-photo-missing">FOTO IN ARRIVO</span>
+          <span className="pc-photo-missing" aria-hidden="true">FOTO IN ARRIVO</span>
         )}
         <span className="pc-scrim" aria-hidden="true" />
-        <span className="pc-num" aria-hidden="true">N°{number}</span>
-        {isVeg && <span className="pc-veg">VEG</span>}
+        <span className="pc-tags">
+          <span className="pc-num" aria-hidden="true">N°{number}</span>
+          {isVeg && <span className="pc-veg">VEG</span>}
+        </span>
+        {qty > 0 && (
+          <span className="pc-qty-badge" data-testid="poster-card-qty">
+            <span aria-hidden="true">×{qty}</span>
+            <span className="pc-sr">{qty} nel sacco</span>
+          </span>
+        )}
+        {soldOut && <span className="pc-soldout-stamp">ESAURITO</span>}
         <div className="pc-over">
           <h3 className="pc-name">
             {nameLines ? (<>{nameLines[0]}<br />{nameLines[1]}</>) : item.name}
           </h3>
-          {!noPrice && <span className="pc-price"><PriceBig value={item.price} /></span>}
+          {!noPrice && (
+            <span className="pc-price">
+              <PriceBig value={item.price} />
+            </span>
+          )}
         </div>
       </div>
 

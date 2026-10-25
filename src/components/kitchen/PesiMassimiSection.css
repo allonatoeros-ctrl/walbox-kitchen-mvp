@@ -176,8 +176,9 @@
   color: var(--pm-cream);
 }
 
-/* ── FASE 3.4b: lista PosterCard + blocco SOLO PANINO / MENU (spazio `children` della card) ──
-   Token --poster-* definiti in `.kitch-page`. Etichette Barlow Condensed, tocco >= 44 px. */
+/* ── FASE 3.4b/3.4c: lista PosterCard + blocco SOLO PANINO / MENU (spazio `children` della card) ──
+   Token --poster-* definiti in `.kitch-page`. Font League Gothic (un solo peso: sempre 400),
+   misure fisse sm/md, separatori = riga oro sottile (--poster-rule). Tocco >= 44 px. */
 .pm-list {
   display: flex;
   flex-direction: column;
@@ -190,44 +191,43 @@
 .pmx {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px dashed var(--poster-line, #3a2617);
-  font-family: var(--poster-font-label, 'Barlow Condensed', 'Arial Narrow', sans-serif);
+  border-top: var(--poster-rule, 1px solid rgba(255, 200, 61, 0.8));
+  font-family: var(--poster-font-label, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
 }
 
 .pmx-title {
-  margin: 0 0 8px;
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 0.14em;
+  margin: 0 0 4px;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   text-transform: uppercase;
   color: var(--poster-muted, #c9b39a);
 }
 
+/* Due righe semplici separate dalla riga oro: niente riquadri. */
 .pmx-choose {
-  display: grid;
-  gap: 8px;
+  display: block;
 }
 
 .pmx-opt {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   width: 100%;
   min-height: 56px;
-  padding: 10px 12px;
-  border: 2px solid var(--poster-line, #3a2617);
+  padding: 10px 0;
+  border: 0;
+  border-bottom: var(--poster-rule, 1px solid rgba(255, 200, 61, 0.8));
   border-radius: 0;
   background: transparent;
   color: var(--poster-ink, #f7dfb5);
   font-family: inherit;
+  font-weight: 400;
   text-align: left;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-}
-
-.pmx-opt--on {
-  border-color: var(--poster-yellow, #ffc83d);
-  background: rgba(255, 200, 61, 0.08);
 }
 
 .pmx-radio {
@@ -235,49 +235,65 @@
   box-sizing: border-box;
   width: 22px;
   height: 22px;
-  margin-top: 2px;
   border: 2px solid var(--poster-muted, #c9b39a);
   border-radius: 50%;
 }
 
+/* Riga scelta: pallino oro pieno + testo oro. */
 .pmx-opt--on .pmx-radio {
   border-color: var(--poster-yellow, #ffc83d);
-  background: radial-gradient(circle, var(--poster-yellow, #ffc83d) 0 45%, transparent 50%);
+  background: radial-gradient(circle, var(--poster-yellow, #ffc83d) 0 50%, transparent 56%);
+}
+.pmx-opt--on .pmx-opt-name {
+  color: var(--poster-yellow, #ffc83d);
 }
 
+/* Corpo riga: nome (+ sottotitolo) a sinistra, prezzo a destra sulla stessa altezza. */
 .pmx-opt-body {
   display: grid;
-  gap: 2px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
   min-width: 0;
   flex: 1 1 auto;
 }
 
 .pmx-opt-name {
-  font-weight: 900;
-  font-size: 18px;
+  grid-column: 1;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
   line-height: 1.1;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   text-transform: uppercase;
+  color: var(--poster-ink, #f7dfb5);
 }
 
 .pmx-opt-sub {
-  font-weight: 600;
-  font-size: 15px;
-  line-height: 1.2;
+  grid-column: 1;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   color: var(--poster-muted, #c9b39a);
   overflow-wrap: anywhere;
 }
 
 .pmx-opt-price {
-  font-family: var(--poster-font-display, 'Anton', Impact, sans-serif);
-  font-size: 22px;
-  line-height: 1.1;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
+  font-weight: 400;
+  font-size: var(--poster-size-md, 40px);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
   color: var(--poster-yellow, #ffc83d);
 }
 
 /* ── Selettore birra (solo col MENU) ── */
 .pmx-beer {
-  margin-top: 12px;
+  margin-top: 14px;
 }
 
 .pmx-beer-head {
@@ -289,20 +305,23 @@
 
 .pmx-beer-title {
   margin: 0;
-  font-weight: 900;
-  font-size: 18px;
-  letter-spacing: 0.08em;
+  font-family: inherit;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   text-transform: uppercase;
-  color: var(--poster-ink, #f7dfb5);
+  color: var(--poster-yellow, #ffc83d);
 }
 
 .pmx-beer-badge {
   padding: 2px 8px;
-  background: var(--poster-brick, #b8472f);
-  color: #fff;
-  font-weight: 900;
-  font-size: 13px;
-  letter-spacing: 0.1em;
+  background: var(--poster-yellow, #ffc83d);
+  color: var(--poster-on-yellow, #140a05);
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
 }
 
 .pmx-beer-sub {
@@ -317,8 +336,9 @@
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
-  padding: 6px 8px;
-  border: 2px solid var(--poster-yellow, #ffc83d);
+  padding: 6px 0;
+  border-top: var(--poster-rule, 1px solid rgba(255, 200, 61, 0.8));
+  border-bottom: var(--poster-rule, 1px solid rgba(255, 200, 61, 0.8));
 }
 
 .pm-beer-chosen-photo {
@@ -331,9 +351,10 @@
 .pm-beer-chosen-name {
   flex: 1 1 auto;
   min-width: 0;
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 0.05em;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   color: var(--poster-yellow, #ffc83d);
   overflow-wrap: anywhere;
 }
@@ -343,14 +364,14 @@
   flex: none;
   min-height: 44px;
   padding: 0 12px;
-  border: 2px solid var(--poster-ink, #f7dfb5);
+  border: 1px solid var(--poster-ink, #f7dfb5);
   border-radius: 0;
   background: transparent;
   color: var(--poster-ink, #f7dfb5);
   font-family: inherit;
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 0.1em;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  letter-spacing: var(--poster-track-sm, 0.06em);
   cursor: pointer;
 }
 
@@ -367,15 +388,15 @@
   min-width: 0;
   min-height: 44px;
   padding: 4px 8px;
-  border: 2px solid var(--poster-line, #3a2617);
+  border: 1px solid var(--poster-line, #3a2617);
   border-radius: 0;
   background: transparent;
   color: var(--poster-ink, #f7dfb5);
   font-family: inherit;
-  font-weight: 800;
-  font-size: 15px;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
   line-height: 1.05;
-  letter-spacing: 0.03em;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   text-align: left;
   text-transform: uppercase;
   cursor: pointer;
@@ -403,7 +424,7 @@
 }
 
 .pm-beer-pill-lock {
-  font-size: 13px;
+  font-size: var(--poster-size-sm, 20px);
   color: var(--poster-muted, #c9b39a);
 }
 
@@ -413,7 +434,7 @@
   gap: 12px;
   margin-top: 10px;
   padding: 10px;
-  border: 2px solid var(--poster-line, #3a2617);
+  border: 1px solid var(--poster-line, #3a2617);
   background: rgba(0, 0, 0, 0.25);
 }
 
@@ -445,16 +466,21 @@
 }
 
 .pm-beer-detail-name {
-  font-weight: 900;
-  font-size: 19px;
-  letter-spacing: 0.06em;
+  font-family: inherit;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
+  text-transform: uppercase;
   color: var(--poster-ink, #f7dfb5);
 }
 
 .pm-beer-detail-choice,
 .pm-beer-detail-taste {
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   color: var(--poster-yellow, #ffc83d);
 }
 
@@ -468,9 +494,10 @@
 
 .pm-beer-detail-meta {
   margin-top: 4px;
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: 0.08em;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   color: var(--poster-muted, #c9b39a);
 }
 
@@ -489,9 +516,9 @@
   background: var(--poster-yellow, #ffc83d);
   color: var(--poster-on-yellow, #140a05);
   font-family: inherit;
-  font-weight: 900;
-  font-size: 16px;
-  letter-spacing: 0.08em;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  letter-spacing: var(--poster-track-sm, 0.06em);
   cursor: pointer;
 }
 
@@ -501,14 +528,21 @@
   cursor: not-allowed;
 }
 
-/* CTA del MENU: stessa forma di .pc-cta (classe condivisa), testo lungo su due righe se serve. */
+/* CTA del MENU: stessa forma di .pc-cta (classe condivisa). 3.4f (P1 E1 visual 3.4e): a 40 px andava
+   su 2 righe; 32 px tiene "AGGIUNGI IL MENU · 19 €" (254 px) e "· 20,90 €" (291 px) su 1 riga a 390
+   (spazio utile 302 px). Spenta (SCEGLI UNA BIRRA PER CONTINUARE 280 px / ESAURITO / NON DISPONIBILE)
+   = avviso, 24 px. Su schermi più stretti di 390 il testo può ancora andare a capo (altezza auto). */
 .pmx-menu-cta {
   height: auto;
   min-height: 52px;
   padding: 6px 12px;
   text-align: center;
-  line-height: 1.1;
-  font-size: 20px;
+  line-height: 1.05;
+  font-size: 32px;
+}
+
+.pmx-menu-cta:disabled {
+  font-size: 24px;
 }
 
 .pmx-opt:focus-visible,
@@ -522,9 +556,10 @@
 
 .pm-beer-pill-name { min-width: 0; overflow-wrap: anywhere; }
 
-/* Opzione MENU non ordinabile (patate finite) e blocco scelta su prodotto esaurito */
+/* Opzione MENU non ordinabile (patate finite) e blocco scelta su prodotto esaurito:
+   riga con riga oro tratteggiata, testo/prezzo/pallino attenuati. */
 .pmx-opt:disabled { cursor: not-allowed; }
-.pmx-opt--blocked { border-style: dashed; }
+.pmx-opt--blocked { border-bottom-style: dashed; }
 /* Il sottotitolo-avviso resta a piena opacità (contrasto), si attenua il resto. */
 .pmx-opt--blocked .pmx-opt-name,
 .pmx-opt--blocked .pmx-opt-price,
@@ -533,11 +568,6 @@
 
 .pm-nobreak { white-space: nowrap; }
 
-/* Box Pulled Pork: titolo bianco su sacchetto bianco, scrim più deciso solo su questa card. */
-.pm-item--darkscrim .pc-scrim {
-  background: linear-gradient(to top, rgba(10, 4, 2, 0.97) 0%, rgba(10, 4, 2, 0.9) 38%, rgba(10, 4, 2, 0.55) 62%, transparent 82%);
-}
-.pm-item--darkscrim .pc-name { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.95), 0 0 14px rgba(0, 0, 0, 0.8); }
 .pmx--off { opacity: 0.45; pointer-events: none; }
 
 /* Birra scelta, subito sopra la CTA del MENU */
@@ -545,8 +575,9 @@
 .pmx-pick .pmx-menu-cta { margin-top: 0; }
 .pmx-pick-beer {
   margin: 0 0 6px;
-  font-weight: 900;
-  font-size: 16px;
-  letter-spacing: 0.08em;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
   color: var(--poster-yellow, #ffc83d);
 }
