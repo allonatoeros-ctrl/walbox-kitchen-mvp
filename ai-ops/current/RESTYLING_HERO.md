@@ -51,6 +51,25 @@ Contorni/Birre/Bevande/sacco restano con le schede vecchie (decisione di Eros). 
 e2e (testi vecchi). File `.claude/*` modificati e `.claude/hooks/`, `launch.json` NON committati (guard hook: li copia Eros).
 **PROSSIMO:** Eros decide push/merge del branch `feat/restyling-hero`.
 
+## H2 giro 4 — FATTO 2026-10-26 (NON committato): V-06 chiuso, schede compatte anche su Contorni, Birre, Bevande
+- `PosterCard.jsx/.css`: nuove prop opzionali (solo `compact`) `meta` (riga formato/scelta), `displayName` (titolo
+  senza toccare il nome nel sacco: Pepsi 33cl → Pepsi), `lockedLabel` (CTA spenta + etichetta sulla foto, usata per
+  "SOLO LA SERA" della birra alla spina fuori orario), `photoFit="contain"` (bottiglie 1:2 intere, riquadro 190px).
+- `BirreSection.jsx` e `BevandeSection.jsx` riscritte con `PosterCard compact` (+ `onRemove`/`qtyById` dal menu);
+  Contorni: la lista generica in `CustomerKitchenMenu.jsx` ora usa `PosterCard compact` (classe `ct-list`; import
+  `AllergenBadges` rimosso perché inutilizzato). Accordion Birre e griglia 2 colonne Bevande eliminati.
+- Birre: la `story` approvata sostituisce la riga ingredienti nella scheda (era visibile solo da aperta).
+  Prima la scheda chiusa non mostrava nulla della storia: ora si legge sempre. `tasteSignals` non più mostrati.
+- CSS vecchio (`br-card*`, `bv-card*`, `kitch-card*`) lasciato nei file (c'è un unit test che legge BirreSection.css).
+- Verifiche: lint 8 errori = baseline (0 nuovi), unit `src/lib` 177/177, build ok, anteprima 390 e 320: nessun
+  overflow, "+" e stepper provati su Bevande, bottiglie intere. NON provato: SOLO LA SERA (nessuna birra evening_only
+  nel catalogo attuale), riverifica del reviewer visivo.
+- e2e riscritti e PASSATI (3/3, Supabase finto): 20 (Birre), 21b (Contorni), 24 (Bevande). Helper `openFullMenu` reso
+  tollerante (la home "ENTRA NEL MENU" non esiste dalla Fase 3.4: **gli altri e2e che lo usano erano già rotti da
+  allora**, ora almeno aprono il menu; dock ora "N · Vai alla cassa" / "6,00 €"). Gli ALTRI e2e NON sono stati
+  rieseguiti: molti cercano ancora testi vecchi (es. "AGGIUNGI SOLO PANINO", "VAI ALL'ORDINE", "N articolo").
+**PROSSIMO:** Eros decide push/merge; poi (task a parte) rieseguire l'intera suite e2e e sistemare i test stale.
+
 ## Audit H1 (verificato nel repo)
 - **Foto hero:** il panino del riferimento è `public/assets/kitchen/menu/panini/panino_orto_cattivo.webp` (1254×1254,
   orto cattivo: melanzana, peperoni, crema, carta Walrus in basso). Stessa foto, già usata nel menu (kitchenMockData:37).
