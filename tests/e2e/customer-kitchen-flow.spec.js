@@ -1040,7 +1040,7 @@ test('20. Birre ripristinate (2026-09-22): le 6 bottiglie visibili, nessun Kromb
   // Scelta · formato e `story` approvata visibili senza aprire nulla.
   await expect(helles.locator('.pc-meta')).toHaveText('VAI SUL SICURO · 50 cl') /* maiuscolo via CSS */;
   await expect(helles.getByText('La bionda che non deve dimostrare niente', { exact: false })).toBeVisible();
-  await expect(helles.locator('.pc-price')).toHaveText(/€\s?6/);
+  await expect(helles.locator('.pc-price')).toHaveText(/^6[\d,]*\s?€$/);
 
   // Tutte `all_day`: nessun gate serale residuo, ordinabile anche nel pomeriggio.
   const add = helles.getByRole('button', { name: 'Aggiungi Keiler Helles' });
@@ -1133,7 +1133,7 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   // La riga carrello porta la birra inclusa: e' cio' che finisce sulla comanda (P0-2).
   const row = page.locator('.kitch-drawer-row', { hasText: 'PULLED PORK — FALLO PESANTE · KEILER HELLES' });
   await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PULLED PORK — FALLO PESANTE · KEILER HELLES');
-  await expect(row.locator('.kitch-drawer-row-price')).toHaveText('€19,00');
+  await expect(row.locator('.kitch-drawer-row-price')).toHaveText('19,00 €');
 });
 
 test('21b. CONTORNI (2026-09-19): Patate al Forno ordinabile come item singolo a €5,00', async ({ page }) => {
@@ -1142,7 +1142,7 @@ test('21b. CONTORNI (2026-09-19): Patate al Forno ordinabile come item singolo a
 
   const patate = page.locator('.ct-list .pc-card', { hasText: 'Patate al Forno' });
   await expect(patate).toHaveCount(1);
-  await expect(patate.locator('.pc-price')).toHaveText(/€\s?5/);
+  await expect(patate.locator('.pc-price')).toHaveText(/^5[\d,]*\s?€$/);
 
   const cta = patate.getByRole('button', { name: 'Aggiungi Patate al Forno' });
   await expect(cta).toBeEnabled();
@@ -1177,7 +1177,7 @@ test('22. TAGLIERI (restyling hero): schede compatte sempre aperte con ingredien
   // Niente accordion: ingredienti e prezzo sono subito visibili, mai "VEDI IL PANINO".
   const salumi = page.locator('.tg-list .pc-card', { hasText: 'Salumi Serissimi' });
   await expect(salumi.locator('.pc-ingredients')).toContainText('Crudo, lardo, mortadella, speck.');
-  await expect(salumi.locator('.pc-price')).toHaveText(/€\s?8/);
+  await expect(salumi.locator('.pc-price')).toHaveText(/^8[\d,]*\s?€$/);
   await expect(salumi.getByRole('button', { name: 'Aggiungi Salumi Serissimi' })).toBeEnabled();
   await expect(page.getByText(/VEDI IL TAGLIERE|VEDI IL PANINO/)).toHaveCount(0);
 
@@ -1228,7 +1228,7 @@ test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun 
 
   const acqua = page.locator('.bv-list .pc-card', { hasText: 'Acqua' });
   await expect(acqua.locator('.pc-meta')).toHaveText('0,5 L');
-  await expect(acqua.locator('.pc-price')).toHaveText(/€\s?1/);
+  await expect(acqua.locator('.pc-price')).toHaveText(/^1[\d,]*\s?€$/);
   await expect(acqua.getByRole('button', { name: 'Aggiungi Acqua' })).toBeEnabled();
 
   // Pepsi: il formato sta nella sua riga, non ripetuto nel titolo.
@@ -1239,7 +1239,7 @@ test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun 
   // Formato non confermato → nessuna riga formato, mai un cl inventato.
   const tonica = page.locator('.bv-list .pc-card', { hasText: 'Schweppes Tonica' });
   await expect(tonica.locator('.pc-meta')).toHaveCount(0);
-  await expect(tonica.locator('.pc-price')).toHaveText(/€\s?4/);
+  await expect(tonica.locator('.pc-price')).toHaveText(/^4[\d,]*\s?€$/);
 
   // Foto: 6 <img> reali, nessun placeholder, nessun 404. Le foto sotto la piega sono `lazy`:
   // si portano in vista una a una e si aspetta che il file sia decodificato (`naturalWidth > 0`),

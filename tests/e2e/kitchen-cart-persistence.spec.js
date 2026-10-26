@@ -88,7 +88,7 @@ test('quantita: il + persiste e il totale e ricalcolato', async ({ page }) => {
   await addFalloPesante(page);
   await openCart(page);
   await page.locator('.kitch-drawer').getByRole('button', { name: /Aggiungi uno/i }).first().click();
-  await expect(page.locator('.kitch-drawer')).toContainText('€38,00');
+  await expect(page.locator('.kitch-drawer')).toContainText('38,00 €');
 
   await page.reload();
   await expect(page.locator('.kitch-bottom-bar')).toContainText('38,00 €');
@@ -122,7 +122,7 @@ test('il sacco NON viene svuotato quando l invio fallisce', async ({ page }) => 
 
   // senza Supabase configurato la creazione ordine fallisce: il carrello deve restare intatto
   await expect(page.getByTestId('order-submit-error')).toBeVisible();
-  await expect(page.locator('.kitch-drawer')).toContainText('€19,00');
+  await expect(page.locator('.kitch-drawer')).toContainText('19,00 €');
   const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), CART_KEY);
   expect(saved.items.length).toBe(1);
 });
