@@ -2062,3 +2062,11 @@
 @media (max-width: 380px) {
   .kp-head--stamp .kp-kicker { padding-right: 84px; }
 }
+
+/* Restyling hero: lista di schede compatte (PosterCard), come Panini/Tartare. */
+.ct-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 16px;
+}

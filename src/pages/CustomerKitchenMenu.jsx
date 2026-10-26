@@ -22,8 +22,8 @@ import InsalatoneSection from '../components/kitchen/InsalatoneSection';
 import TartareSection from '../components/kitchen/TartareSection';
 import BirreSection from '../components/kitchen/BirreSection';
 import TagliereSection from '../components/kitchen/TagliereSection';
+import PosterCard from '../components/kitchen/PosterCard';
 import BevandeSection from '../components/kitchen/BevandeSection';
-import AllergenBadges from '../components/kitchen/AllergenBadges';
 import CustomerCheckout from '../components/kitchen/CustomerCheckout';
 import AnniversaryBanner from '../components/kitchen/AnniversaryBanner';
 import EventSideChip from '../components/kitchen/EventSideChip';
@@ -814,13 +814,13 @@ export default function CustomerKitchenMenu() {
         <TartareSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'birre' && visibleItems.length > 0 && (
-        <BirreSection items={visibleItems} onAdd={addItem} />
+        <BirreSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'tagliere' && visibleItems.length > 0 && (
         <TagliereSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'bevande' && visibleItems.length > 0 && (
-        <BevandeSection items={visibleItems} onAdd={addItem} />
+        <BevandeSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {visibleItems.length === 0 && (
         <div className="kitch-menu-empty">NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA</div>
@@ -829,48 +829,17 @@ export default function CustomerKitchenMenu() {
         <div className="kitch-menu-soldout-banner">AL MOMENTO È TUTTO ESAURITO</div>
       )}
       {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && activeCategory !== 'birre' && activeCategory !== 'tagliere' && activeCategory !== 'bevande' && (
-      <div className="kitch-menu-list">
-        {visibleItems.map((item) => (
-          <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>
-            <div className="kitch-card-img" style={{ overflow: 'hidden', position: 'relative' }}>
-              {item.available === false && (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(14,12,8,0.55)',
-                  zIndex: 2,
-                }}>
-                  <span style={{
-                    fontSize: '13px', fontWeight: 900, letterSpacing: '0.12em',
-                    color: '#f5ead8', background: 'rgba(180,40,20,0.85)',
-                    padding: '4px 10px', borderRadius: '6px',
-                  }}>ESAURITO</span>
-                </div>
-              )}
-              {item.image
-                ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : (CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini)}
-            </div>
-            <div className="kitch-card-content">
-              <div className="kitch-card-header">
-                <div className="kitch-card-name">{item.name.toUpperCase()}</div>
-                <span className="kitch-card-icon">🦭</span>
-              </div>
-              <div className="kitch-card-desc">{item.description}</div>
-              <AllergenBadges allergens={item.allergens} />
-              <div className="kitch-card-footer">
-                <div className={`kitch-card-price${item.price == null ? ' kitch-card-price--soon' : ''}`}>
-                  {item.price == null ? 'PREZZO IN ARRIVO' : formatPrice(item.price)}
-                </div>
-                <button
-                  className="kitch-btn-lo-voglio"
-                  onClick={() => addItem(item)}
-                  disabled={item.available === false || item.price == null}
-                  style={item.available === false || item.price == null ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
-                >{item.available === false ? 'ESAURITO' : 'AGGIUNGI AL SACCO'}</button>
-              </div>
-            </div>
-          </div>
+      <div className="ct-list">
+        {visibleItems.map((item, index) => (
+          <PosterCard
+            key={item.id}
+            item={item}
+            index={index}
+            qty={qtyById?.[item.id] ?? 0}
+            onAdd={addItem}
+            onRemove={removeItem}
+            compact
+          />
         ))}
       </div>
       )}

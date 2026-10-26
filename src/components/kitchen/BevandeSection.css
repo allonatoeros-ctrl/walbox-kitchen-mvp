@@ -153,3 +153,11 @@
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Restyling hero: lista di schede compatte (PosterCard), come Panini/Tartare. */
+.bv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 16px;
+}

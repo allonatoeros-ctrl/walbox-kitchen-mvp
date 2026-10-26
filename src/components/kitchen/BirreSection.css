@@ -378,3 +378,11 @@
   font-weight: 900;
   cursor: pointer;
 }
+
+/* Restyling hero: lista di schede compatte (PosterCard), come Panini/Tartare. */
+.br-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 16px;
+}

@@ -32,6 +32,11 @@ import './PosterCard.css';
  *                handler, stessi aria-label; la battuta in corsivo non si mostra. Default = nessun cambiamento.
  *  - photoZoom   (opzionale, solo compact, default 1) ingrandisce la foto attorno a `objectPosition`: le foto
  *                quadrate con il panino piccolo (Pesi Massimi) nel riquadro stretto della scheda compatta.
+ *  - displayName (opzionale, solo compact) titolo mostrato al posto di `item.name` (nel sacco resta `item.name`).
+ *  - meta        (opzionale, solo compact) riga piccola sotto il nome (formato / scelta di una birra o bevanda).
+ *  - lockedLabel (opzionale, solo compact) blocca l'ordine con un motivo (es. "SOLO LA SERA" per la birra alla
+ *                spina fuori orario): CTA spenta, etichetta sulla foto, aria-label col motivo.
+ *  - photoFit    (opzionale, solo compact, default cover) "contain" per le foto verticali (bottiglie).
  *  - hideCta     (opzionale, default false) nasconde CTA/stepper della card: lo usa chi mette nei
  *                `children` una propria CTA (MENU). Default = nessun cambiamento.
  *
@@ -107,6 +112,10 @@ export default function PosterCard({
   hideCta = false,
   compact = false,
   photoZoom = 1,
+  displayName = null,
+  meta = null,
+  lockedLabel = null,
+  photoFit = 'cover',
 }) {
   // Salva l'URL che ha fallito (non un booleano): se cambia `item.image` la foto riprova da sola.
   const [failedSrc, setFailedSrc] = useState(null);
@@ -136,7 +145,7 @@ export default function PosterCard({
 
   const soldOut = item.available === false;
   const noPrice = item.price == null || item.price === '';
-  const canAdd = !soldOut && !noPrice;
+  const canAdd = !soldOut && !noPrice && !lockedLabel;
   const isVeg = Array.isArray(item.tags) && item.tags.includes('veg');
   const showPhoto = Boolean(item.image) && failedSrc !== item.image;
   const number = String(index + 1).padStart(2, '0');
@@ -151,6 +160,7 @@ export default function PosterCard({
   const nameLines = splitName(item.name);
   let ctaLabel = '+ AGGIUNGI';
   if (soldOut) ctaLabel = 'ESAURITO';
+  else if (lockedLabel) ctaLabel = lockedLabel;
   else if (noPrice) ctaLabel = 'PREZZO IN ARRIVO';
 
   if (compact) {
@@ -161,7 +171,7 @@ export default function PosterCard({
         data-testid="poster-card"
       >
         <div className="pc-row">
-          <div className="pc-shot">
+          <div className={`pc-shot${photoFit === 'contain' ? ' pc-shot--contain' : ''}`}>
             {showPhoto ? (
               <img
                 className="pc-photo"
@@ -169,7 +179,7 @@ export default function PosterCard({
                 alt=""
                 style={photoZoom > 1
                   ? { objectPosition, transform: `scale(${photoZoom})`, transformOrigin: objectPosition }
-                  : { objectPosition }}
+                  : { objectPosition, objectFit: photoFit }}
                 loading={index < 2 ? 'eager' : 'lazy'}
                 decoding="async"
                 onError={() => setFailedSrc(item.image)}
@@ -177,8 +187,11 @@ export default function PosterCard({
             ) : (
               <span className="pc-photo-missing" aria-hidden="true">FOTO IN ARRIVO</span>
             )}
-            {isVeg && (
-              <span className="pc-tags"><span className="pc-veg">VEG</span></span>
+            {(isVeg || (lockedLabel && !soldOut)) && (
+              <span className="pc-tags">
+                {isVeg && <span className="pc-veg">VEG</span>}
+                {lockedLabel && !soldOut && <span className="pc-lock">{lockedLabel}</span>}
+              </span>
             )}
             {qty > 0 && (
               <span className="pc-qty-badge" data-testid="poster-card-qty">
@@ -189,7 +202,8 @@ export default function PosterCard({
             {soldOut && <span className="pc-soldout-stamp">ESAURITO</span>}
           </div>
           <div className="pc-info">
-            <h3 className="pc-name">{item.name}</h3>
+            <h3 className="pc-name">{displayName ?? item.name}</h3>
+            {meta && <p className="pc-meta">{meta}</p>}
             {blurb && <p className="pc-ingredients">{blurb}</p>}
             <div className="pc-buy">
               {noPrice ? (

@@ -1,9 +1,13 @@
-import { formatPrice } from '../../lib/kitchenPrice';
+import PosterCard from './PosterCard';
 import './BevandeSection.css';
 
 /**
  * Blocco BEVANDE (categoria `bevande`) del menu cliente — MENU POLISH SPRINT
  * (2026-09-16, decisione Eros).
+ *
+ * Restyling hero: ogni bevanda è una scheda compatta `PosterCard` (foto a sinistra, nome, formato,
+ * descrizione, prezzo e "+" giallo) a lista verticale, come le altre categorie. Il resto del commento
+ * descrive la versione a 2 colonne precedente: restano valide la regola del formato e `displayName`.
  *
  * Volutamente **NON accordion**: una bibita non ha storytelling, ingredienti da
  * leggere né allergeni da controllare, quindi far aprire una card per scoprire
@@ -43,7 +47,7 @@ const BEVANDE_LIST_ORDER = [
   'item-050', // SCHWEPPES TONICA
 ];
 
-export default function BevandeSection({ items, onAdd }) {
+export default function BevandeSection({ items, onAdd, onRemove, qtyById }) {
   if (!items || items.length === 0) return null;
 
   const orderedItems = BEVANDE_LIST_ORDER
@@ -52,52 +56,20 @@ export default function BevandeSection({ items, onAdd }) {
     .concat(items.filter((i) => !BEVANDE_LIST_ORDER.includes(i.id)));
 
   return (
-    <div className="bv-grid">
-      {orderedItems.map((item) => {
-        const soldOut = item.available === false;
-        const noPrice = item.price == null;
-
-        let ctaLabel = 'AGGIUNGI AL SACCO';
-        if (soldOut) ctaLabel = 'ESAURITO';
-        else if (noPrice) ctaLabel = 'PREZZO IN ARRIVO';
-
-        return (
-          <article
-            key={item.id}
-            className={`bv-card${soldOut ? ' bv-card--soldout' : ''}`}
-          >
-            <div className="bv-card-photo-wrap">
-              {item.image ? (
-                <img className="bv-card-photo" src={item.image} alt={item.name} />
-              ) : (
-                <span className="bv-card-photo-placeholder">FOTO IN ARRIVO</span>
-              )}
-              {soldOut && <span className="bv-card-soldout-badge">ESAURITO</span>}
-            </div>
-            <div className="bv-card-accent-line" />
-            <div className="bv-card-body">
-              <h3 className="bv-card-name">{(item.displayName ?? item.name).toUpperCase()}</h3>
-              <p className="bv-card-format">{item.format ? item.format.toUpperCase() : ''}</p>
-              <p className={`bv-card-price${noPrice ? ' bv-card-price--soon' : ''}`}>
-                {noPrice ? 'PREZZO IN ARRIVO' : formatPrice(item.price)}
-              </p>
-              <button
-                type="button"
-                className="bv-btn-want"
-                disabled={soldOut || noPrice}
-                onClick={() => onAdd?.({
-                  id: item.id,
-                  name: item.name,
-                  price: item.price,
-                  image: item.image,
-                })}
-              >
-                {ctaLabel}
-              </button>
-            </div>
-          </article>
-        );
-      })}
+    <div className="bv-list">
+      {orderedItems.map((item, index) => (
+        <PosterCard
+          key={item.id}
+          item={item}
+          displayName={item.displayName}
+          index={index}
+          qty={qtyById?.[item.id] ?? 0}
+          onAdd={onAdd}
+          onRemove={onRemove}
+          compact
+          meta={item.format ? item.format.toUpperCase() : null}
+        />
+      ))}
     </div>
   );
 }
