@@ -58,8 +58,10 @@ function makeSeedOrder() {
 // La Home Kitchen (Figma Page 4) è la landing di /kitchen: il menu completo
 // (tabs PANINI / PESI MASSIMI / CICCHETTI / INSALATONE / TARTARE) si apre
 // con la CTA `ENTRA NEL MENU →`.
+// Dalla Fase 3.4 la home è stata tolta: il menu è già aperto, il pulsante resta solo per le schermate che lo avessero.
 async function openFullMenu(page) {
-  await page.getByRole('button', { name: /ENTRA NEL MENU/i }).click();
+  const enter = page.getByRole('button', { name: /ENTRA NEL MENU/i });
+  if (await enter.count()) await enter.click();
   await expect(page.getByRole('button', { name: /PANINI/i }).first()).toBeVisible();
 }
 
@@ -1020,27 +1022,28 @@ test('20. Birre ripristinate (2026-09-22): le 6 bottiglie visibili, nessun Kromb
 
   // Ripristino (2026-09-22, decisione Eros): le 6 bottiglie Keiler/Lupulus tornano visibili,
   // Krombacher (item-057) e' stata rimossa dal catalogo.
-  await expect(page.locator('.br-card')).toHaveCount(6);
+  // Restyling hero: le birre sono schede compatte `PosterCard` (sempre aperte, niente accordion).
+  await expect(page.locator('.br-list .pc-card--compact')).toHaveCount(6);
   await expect(page.getByText('KROMBACHER')).toHaveCount(0);
 
-  const helles = page.locator('.br-card', { hasText: 'KEILER HELLES' });
+  const helles = page.locator('.br-list .pc-card', { hasText: 'Keiler Helles' });
   await expect(helles).toHaveCount(1);
 
-  // MENU POLISH SPRINT (2026-09-16): le card birra sono accordion. La CTA d'ordine
-  // vive nell'EXPANDED, quindi va aperta la card prima di verificarla.
-  await helles.locator('.br-card-closed').click();
-  await expect(helles).toHaveClass(/br-card--open/);
+  // Scelta · formato e `story` approvata visibili senza aprire nulla.
+  await expect(helles.locator('.pc-meta')).toHaveText('VAI SUL SICURO · 50 cl') /* maiuscolo via CSS */;
   await expect(helles.getByText('La bionda che non deve dimostrare niente', { exact: false })).toBeVisible();
+  await expect(helles.locator('.pc-price')).toHaveText(/€\s?6/);
 
   // Tutte `all_day`: nessun gate serale residuo, ordinabile anche nel pomeriggio.
-  const cta = helles.locator('.br-btn-want');
-  await expect(cta).toHaveText('AGGIUNGI AL SACCO');
-  await expect(cta).toBeEnabled();
-  await expect(helles.getByText('€6').first()).toBeVisible();
+  const add = helles.getByRole('button', { name: 'Aggiungi Keiler Helles' });
+  await expect(add).toBeEnabled();
+  await add.click();
 
-  await cta.click();
-  await expect(page.getByText('1 articolo')).toBeVisible();
-  await expect(page.getByText('€6,00')).toBeVisible();
+  // Dopo l'aggiunta la scheda mostra lo stepper e il badge ×1; il sacco ha 1 articolo da €6,00.
+  await expect(helles.getByRole('group', { name: /Quantità nel sacco: Keiler Helles/ })).toBeVisible();
+  await expect(helles.getByTestId('poster-card-qty')).toContainText('×1');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('1 · Vai alla cassa');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('6,00 €');
 });
 
 test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANINO, birra solo col MENU, CTA unica dinamica', async ({ page }) => {
@@ -1129,16 +1132,16 @@ test('21b. CONTORNI (2026-09-19): Patate al Forno ordinabile come item singolo a
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'CONTORNI');
 
-  const patate = page.locator('.kitch-card', { hasText: 'PATATE AL FORNO' });
+  const patate = page.locator('.ct-list .pc-card', { hasText: 'Patate al Forno' });
   await expect(patate).toHaveCount(1);
-  await expect(patate.locator('.kitch-card-price')).toHaveText('€5,00');
+  await expect(patate.locator('.pc-price')).toHaveText(/€\s?5/);
 
-  const cta = patate.getByRole('button', { name: 'AGGIUNGI AL SACCO' });
+  const cta = patate.getByRole('button', { name: 'Aggiungi Patate al Forno' });
   await expect(cta).toBeEnabled();
   await cta.click();
 
-  await expect(page.getByText('1 articolo')).toBeVisible();
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('€5,00');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('1 · Vai alla cassa');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('5,00 €');
 });
 
 // Nota di copertura: l'autorizzazione "cliente redime solo il proprio ordine, non quello di un
@@ -1207,7 +1210,7 @@ test('23. Box Pulled Pork (MENU POLISH SPRINT): copy "VEDI IL BOX" / "SOLO BOX",
   await expect(panino.locator('.pm-card-open-cta')).toHaveText('VEDI IL PANINO');
 });
 
-test('24. BEVANDE (MENU POLISH SPRINT): sezione dedicata non-accordion, nessuna foto rotta, nessun formato inventato', async ({ page }) => {
+test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun formato inventato', async ({ page }) => {
   const missing404 = [];
   page.on('response', (res) => {
     if (res.status() === 404 && res.url().includes('/assets/kitchen/menu/bevande/')) {
@@ -1218,42 +1221,44 @@ test('24. BEVANDE (MENU POLISH SPRINT): sezione dedicata non-accordion, nessuna 
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'BEVANDE');
 
-  // 6 card nella sezione dedicata, nessun fallback `kitch-menu-list`.
-  await expect(page.locator('.bv-card')).toHaveCount(6);
+  // 6 schede compatte, nessun fallback `kitch-menu-list` (né la vecchia lista generica).
+  const cards = page.locator('.bv-list .pc-card--compact');
+  await expect(cards).toHaveCount(6);
   await expect(page.locator('.kitch-menu-list')).toHaveCount(0);
 
-  // Non-accordion: tutta l'anatomia è già visibile, nessuna CTA "VEDI ..." da aprire.
+  // Niente accordion: nessuna CTA "VEDI ..." da aprire.
   await expect(page.getByText(/VEDI LA BEVANDA|VEDI IL PANINO/)).toHaveCount(0);
 
-  const acqua = page.locator('.bv-card', { hasText: 'ACQUA' });
-  await expect(acqua.locator('.bv-card-format')).toHaveText('0,5 L');
-  await expect(acqua.locator('.bv-card-price')).toHaveText('€1');
-  await expect(acqua.locator('.bv-btn-want')).toHaveText('AGGIUNGI AL SACCO');
+  const acqua = page.locator('.bv-list .pc-card', { hasText: 'Acqua' });
+  await expect(acqua.locator('.pc-meta')).toHaveText('0,5 L');
+  await expect(acqua.locator('.pc-price')).toHaveText(/€\s?1/);
+  await expect(acqua.getByRole('button', { name: 'Aggiungi Acqua' })).toBeEnabled();
 
   // Pepsi: il formato sta nella sua riga, non ripetuto nel titolo.
-  const pepsi = page.locator('.bv-card', { hasText: 'PEPSI' }).first();
-  await expect(pepsi.locator('.bv-card-name')).toHaveText('PEPSI');
-  await expect(pepsi.locator('.bv-card-format')).toHaveText('33 CL');
+  const pepsi = page.locator('.bv-list .pc-card', { hasText: 'Pepsi' }).first();
+  await expect(pepsi.locator('.pc-name')).toHaveText('Pepsi');
+  await expect(pepsi.locator('.pc-meta')).toHaveText('33 CL');
 
-  // Formato non confermato → riga vuota, mai un cl inventato.
-  const tonica = page.locator('.bv-card', { hasText: 'SCHWEPPES TONICA' });
-  await expect(tonica.locator('.bv-card-format')).toHaveText('');
-  await expect(tonica.locator('.bv-card-price')).toHaveText('€4');
+  // Formato non confermato → nessuna riga formato, mai un cl inventato.
+  const tonica = page.locator('.bv-list .pc-card', { hasText: 'Schweppes Tonica' });
+  await expect(tonica.locator('.pc-meta')).toHaveCount(0);
+  await expect(tonica.locator('.pc-price')).toHaveText(/€\s?4/);
 
-  // Batch fotografico importato (2026-09-16): 6 <img> reali, nessun placeholder residuo,
-  // nessun 404. `naturalWidth > 0` e' l'unica prova che il file e' stato decodificato
-  // davvero: un <img> con src rotto resta nel DOM e passerebbe un toHaveCount().
-  await expect(page.locator('.bv-card-photo')).toHaveCount(6);
-  await expect(page.locator('.bv-card-photo-placeholder')).toHaveCount(0);
+  // Foto: 6 <img> reali, nessun placeholder, nessun 404. Le foto sotto la piega sono `lazy`:
+  // si portano in vista una a una e si aspetta che il file sia decodificato (`naturalWidth > 0`),
+  // unica prova che non è un <img> rotto rimasto nel DOM.
+  await expect(page.locator('.bv-list .pc-photo')).toHaveCount(6);
+  await expect(page.locator('.bv-list .pc-photo-missing')).toHaveCount(0);
 
-  const photos = await page.locator('.bv-card-photo').evaluateAll((imgs) =>
-    imgs.map((img) => ({
-      src: new URL(img.getAttribute('src'), location.origin).pathname,
-      decoded: img.complete && img.naturalWidth > 0,
-    }))
+  for (let i = 0; i < 6; i += 1) {
+    const img = page.locator('.bv-list .pc-photo').nth(i);
+    await img.scrollIntoViewIfNeeded();
+    await expect.poll(() => img.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true);
+  }
+  const srcs = await page.locator('.bv-list .pc-photo').evaluateAll((imgs) =>
+    imgs.map((img) => new URL(img.getAttribute('src'), location.origin).pathname)
   );
-  expect(photos.every((p) => p.decoded)).toBe(true);
-  expect(photos.map((p) => p.src)).toEqual([
+  expect(srcs).toEqual([
     '/assets/kitchen/menu/bevande/bevanda_acqua.webp',
     '/assets/kitchen/menu/bevande/bevanda_pepsi.webp',
     '/assets/kitchen/menu/bevande/bevanda_pepsi_zero.webp',
@@ -1263,9 +1268,9 @@ test('24. BEVANDE (MENU POLISH SPRINT): sezione dedicata non-accordion, nessuna 
   ]);
   expect(missing404).toEqual([]);
 
-  // L'ordine usa il nome reale (`name`), non il `displayName` della card.
-  await pepsi.locator('.bv-btn-want').click();
-  await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+  // L'ordine usa il nome reale (`name`), non il `displayName` del titolo.
+  await pepsi.getByRole('button', { name: 'Aggiungi Pepsi 33cl' }).click();
+  await page.locator('.kitch-bottom-bar').getByRole('button', { name: /Vai alla cassa/ }).click();
   await expect(page.locator('.kitch-drawer-row-name', { hasText: 'PEPSI 33CL' })).toBeVisible();
 });
 
