@@ -74,7 +74,50 @@ e2e (testi vecchi). File `.claude/*` modificati e `.claude/hooks/`, `launch.json
   Restano i 4 della coda staff, NON legati al menu: customer-kitchen-flow 14 e 15 (annulla ordine, riga W99 resta),
   kitchen-service-pressure 2b (D02), kitchen-cassa-assisted-order C7 (A07). Causa non indagata: provarli sul commit
   base `73e1de4` per capire se sono preesistenti. Report: `ai-ops/reports/e2e-suite-2026-10-26.md` (gitignored).
-**PROSSIMO:** commit dei test aggiornati (decisione di Eros); poi i 4 staff; poi push/merge.
+- 4 della coda staff VERIFICATI 2026-10-26 sul commit base `73e1de4` (worktree temporaneo, test del base): **falliscono
+  uguale** (14 e 15 annulla ordine, service-pressure 2b D02 non trovato, cassa C7 `cassa-tab-bbq` non trovato) →
+  **preesistenti, non causati dal restyling hero**. Non indagata la causa (lato staff/cassa, fuori scope).
+- **Riverifica visual-reviewer 2026-10-26 (HEAD 9a9b950): NEEDS FIX PASS · PARZIALE, P0 0 · P1 2 · P2 7.** Report
+  `ai-ops/reports/visual/restyling-hero/verdetto-giro4.md`. Corretti V-01, V-03, V-04, V-08, V-09; Contorni/Birre/Bevande ok,
+  niente overflow a 320-1280. **P1:** V-05 titolo Birre "SETI IMPLACABILI" a 320 si spezza a metà parola (in
+  `CustomerKitchenMenu.jsx:777-780` manca lo spazio tra `{line1}` e `<em>{line2}</em>`, verificato); V-06 il sacco ha ancora lo stile
+  vecchio crema (decisione di Eros). **P2:** CTA hero copre ancora ~38px di ripieno; prezzo in 3 formati; striscia scura sotto le
+  bottiglie di birra; col tasto indietro dal sacco si riparte dalla hero; ingredienti tagliati; "Acqua."/"Patate al forno."
+  ripetono il nome; foto bevande su fondo chiaro. Non verificabili (dati assenti): ESAURITO, prezzo mancante, SOLO LA SERA.
+## H2 giro 5 — IN CORSO 2026-10-26 (Eros ha approvato: fix pass + sacco compatto nero/giallo, NIENTE commit)
+Fix pass: V-05 (spazio titolo), N-02 (back dal sacco, scroll), N-01 (striscia foto birre), V-07 (un solo formato prezzo "13,90 €"),
+V-02 (foto hero ~40px a destra), N-04 (riga sotto il nome = description se ingredients uguale al nome). NON fatti (decisioni di
+Eros): N-03 ingredienti tagliati, N-05 foto bevande su fondo chiaro. Poi sacco (`.kitch-drawer*` in CustomerKitchenMenu.jsx:~903,
+CustomerCheckout.*) nello stile nero/giallo/League Gothic, SENZA toccare logica di pagamento/ordine. Esecuzione: subagent walbox-dev,
+poi riverifica visiva. Stato del lavoro dopo l'agente: vedi sotto.
+Stato 2026-10-26 sera: agente walbox-dev ha finito (vedi "Giro 5 — risultato agente" più sotto); diff controllato da me, solo file
+previsti. e2e: primo lancio NON affidabile (output troncato, 30 passati + lista non eseguiti; il "codice 0" era del `tail`).
+Rilanciato in background con output in `/private/tmp/claude-501/-Users-erosallonato-Desktop-02-PROGETTI-progetti-antigravity-progetti-walbox-kitchen-hero/07d8a6ec-ca93-4ada-9d61-fa815bd5e305/scratchpad/e2e-giro5.txt` (ultima riga `EXIT=<codice>`; atteso 161 passati/4 falliti staff preesistenti).
+Dev server SPENTO (serve riaccenderlo dopo gli e2e per il reviewer: `preview_start` hero-dev, vero indirizzo :5174).
+Domanda di Eros: anteprima su Vercel dal branch (origin/feat/restyling-hero esiste già, fermo al giro 2): richiede commit + push (gate di
+Eros) e controllo env "Preview" su Vercel (rischio DB/pagamenti reali). Alternativa sicura: `hero-telefono` http://192.168.1.51:5182/kitchen (dati finti).
+Worktree temporaneo `wt-base` (scratchpad) ancora registrato: da togliere con `git worktree remove` se Eros dice sì.
+**CORREZIONE 2026-10-26:** il lancio senza chiavi (`e2e-giro5.txt`) è INVALIDO: 135 falliti per "Supabase non configurato".
+Gli e2e vanno lanciati con `VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_SUPABASE_ANON_KEY=anteprima-locale npx playwright test`.
+Con le chiavi: i 4 staff (14, 15, 2b, C7) falliscono uguale su HEAD e su `73e1de4` → preesistenti CONFERMATO. Suite completa con chiavi
+rilanciata in `.../scratchpad/e2e-giro5-env.txt` (ultima riga `EXIT=`; atteso ~161 passati, 4 falliti).
+**e2e giro 5 VALIDO (con chiavi): 161 passati, 4 falliti (14, 15, 2b, C7 = preesistenti), 1 saltato** → nessuna rottura nuova.
+Dev server riacceso (hero-dev, :5174); visual-reviewer giro 5 lanciato (report `verdetto-giro5.md`).
+**Verdetto reviewer giro 5 (2026-10-26): NEEDS FIX PASS piccolo · PARZIALE, P0 0 · P1 1 · P2 7.** Report `verdetto-giro5.md`
+(screenshot `g5-*`). V-05, V-02, V-07, N-01, N-02 OK; sacco nuovo regge (tap ≥44px, niente overflow 320-1280).
+- **N-06 (P1, verificato):** sotto PATATE AL FORNO si legge "Patate al forno, standalone." = nota interna in `kitchenMockData.js:607`
+  (AREA PROTETTA), fatta comparire dal fix N-04. Fix: regola nel componente (non toccare il dato) oppure ok di Eros sul dato.
+- **N-07 (P2, verificato):** nome in "Come ti chiami?" minuscolo (16px): `src/index.css:224` `input{font-size:16px !important}` (anti-zoom iOS) vince sui 30px.
+- **N-09 (P2):** foto hero spostata: bordo sinistro visibile come riga verticale + blocco nero vuoto in basso a sinistra.
+- Altri P2: N-08, N-10, N-11 (decisione Eros: nel sacco il prezzo a destra è l'unitario), N-12, N-13 (decisione Eros: dock rosso, unico resto del vecchio stile).
+PROSSIMO: fix pass 2 (N-06 con regola nel componente, N-07, N-09 + P2 facili), poi Eros decide commit/push/anteprima.
+**e2e dopo fix pass 2 (con chiavi, 2026-10-26): 161 passati, 4 falliti (14, 15, 2b, C7 = preesistenti), 1 saltato.** Dev server riacceso.
+Fix pass 2 NON ancora riguardato dal visual-reviewer (hero N-09, nome sacco N-07, Patate N-06 solo misurati). Tutto NON committato.
+**PROSSIMO REALE:** Eros decide: commit del giro 5 + fix pass 2 (gruppi logici, via atomic-grouped-commit), eventuale riverifica visiva rapida,
+poi anteprima (telefono locale o Vercel dopo controllo env Preview) e push/merge. Decisioni aperte di Eros: N-11 prezzo unitario nel sacco,
+N-13 dock rosso, N-03 ingredienti tagliati, N-05 foto bevande chiare, emoji 🦭, due PAGO gialli. I 4 e2e staff = task separato.
+**PROSSIMO (superato, vedi sopra):** (1) [fatto] leggere esito e2e (file `e2e-giro5-env.txt`); (2) riaccendere dev server e lanciare visual-reviewer sul giro 5 (brief come giro 4, report
+`verdetto-giro5.md`, prefisso screenshot `g5-`); (3) Eros decide commit/push/merge e anteprima. I 4 staff = task separato.
 
 ## Audit H1 (verificato nel repo)
 - **Foto hero:** il panino del riferimento è `public/assets/kitchen/menu/panini/panino_orto_cattivo.webp` (1254×1254,
@@ -151,3 +194,28 @@ Metodo di lavoro
 Verifica a 390 px e anche a 320 e 430 px. Testo e CTA non devono coprire il ripieno. Mantieni ordinazione e categorie immediatamente accessibili.
 Se la fotografia disponibile non consente lo stesso incastro del riferimento, indica precisamente il limite prima di cambiare la composizione. Non sostituire silenziosamente questa direzione con un’altra.
 Non fare deploy.
+
+## Giro 5 — risultato agente (2026-10-26, NON committato)
+- Fix pass: V-05 spazio vero tra `line1` e `<em>` (+ tolto `margin-left` da `.kp-title em`): a 320/390/430 "SETI IMPLACABILI" misurato su 1 riga;
+  N-02 `CustomerKitchenMenu.jsx`: scroll salvato all'apertura del sacco e rimesso alla chiusura (effect su `cartOpen`, + rAF), niente cambi al
+  popstate; N-01 `.pc-shot--contain` `min-height:190` + foto fuori dal flusso (altezza = riga, striscia sparita, misurato 320/390/430);
+  V-07 tolta la regex "€ X" (ora "13,90 €" anche nella riga; test e2e di prezzo aggiornati); V-02 `.mh-photo` `right` -0.43w → -0.53w (~40px a 390);
+  N-04 riga sotto il nome = `description` se `ingredients` ripete il nome (Acqua → "Acqua naturale o frizzante, 0,5L.").
+- Sacco: `.kitch-drawer*` e `CustomerCheckout.css` riscritti nero caldo/crema/giallo/League Gothic; righe a griglia (miniatura, nome, prezzo "19,00 €",
+  stepper giallo − N + e cestino SVG sotto il nome); totale giallo 46px; PAGO ORA / PAGO AL BANCO gialli (6px). Markup: prezzo spostato a livello riga,
+  wrapper `.kitch-qty-pill`, emoji tolte da dado/MANGIO QUI/PORTO VIA/PAGO/chip (sostituiti da SVG o niente). Logica, testid, aria-label, testi dei pulsanti invariati.
+  Restano le emoji nel copy "Piacere, X! 🦭" e "il Tricheco approva 🦭" (testo testato) e il fallback `drawerIcon` per righe senza foto.
+- Verifiche: eslint 8 errori = baseline (0 nuovi); `node --test src/lib/*.test.js` 177 pass/1 skip; build ok (scratchpad); misure DOM a 320/390/430
+  senza screenshot: 0 overflow orizzontale col sacco aperto, footer e CTA raggiungibili, back reale e × mantengono lo scroll.
+- NON eseguiti: e2e (porta 5174 occupata dal dev server, `reuseExistingServer:false`); riverifica visiva (reviewer). Test e2e modificati ma non rieseguiti:
+  customer-kitchen-flow (5 regex `.pc-price`, prezzo riga sacco), kitchen-cart-persistence (2 totali "38,00 €"/"19,00 €").
+
+## Fix pass 2 — risultato agente (2026-10-26, NON committato)
+- N-06 `PosterCard.jsx` (ramo compact + quip non compact): testi con "standalone" mai mostrati; se resta solo un testo che ripete il nome, nessuna riga (Patate al Forno senza sottotitolo). Dati in `kitchenMockData.js` non toccati. Grep: nessun altro "standalone" a schermo nelle 9 categorie (320/390/430).
+- N-07 `CustomerCheckout.css`: `.cx-name-input { font-size: 30px !important }` (specificità maggiore di `input` in index.css, che resta invariato; 30px >= 16px: niente zoom iOS). Misurato 30px League Gothic.
+- N-09 `MenuHero.css`: maschera sinistra della foto 16% -> 34% + chiarore caldo radiale in basso a sinistra sul fondo hero. CTA invariata (fine a x 176/211/231 a 320/390/430, ripieno oltre).
+- N-08 `CustomerKitchenMenu.css`: `gap: 10px` sul biglietto del dock + font 24px sotto 340px. N-10: `flex-shrink: 0` sulla maniglia (4px).
+- N-12 `CustomerCheckout.css`: sotto 700px di altezza via le sottoscritte dei PAGO e totale 32px (footer 236 -> 207px a 320x640; resta il 36% del foglio).
+- Saltati: N-11 e N-13 (decisioni di Eros), N-03/N-05 (giro 4).
+- Verifiche: eslint 8 errori = baseline (tutti CustomerKitchenMenu.jsx, 0 nuovi); `node --test src/lib/*.test.js` 177 pass/0 fail/1 skip; build ok (scratchpad build-g5b); misure DOM 320/390/430: 0 overflow su 9 categorie e sacco, Birre titolo 1 riga.
+- NON eseguiti: e2e (porta occupata), riverifica del reviewer, dock con totale >= 100 € a 320 (solo CSS, non simulato), tastiera su iPhone.
