@@ -164,7 +164,16 @@ export default function PosterCard({
   else if (noPrice) ctaLabel = 'PREZZO IN ARRIVO';
 
   if (compact) {
-    const blurb = item.ingredients || item.description;
+    // Se gli ingredienti ripetono il nome ("Acqua." sotto ACQUA) la riga utile e' la descrizione.
+    const sameAsName = (t) => String(t ?? '').trim().replace(/\.$/, '').toLowerCase()
+      === String(item.name ?? '').trim().replace(/\.$/, '').toLowerCase();
+    // N-06: mai mostrare al cliente note interne dei dati ("Patate al forno, standalone."): un testo che contiene
+    // "standalone" e' scartato. Se resta solo un testo che ripete il nome, nessuna riga.
+    const isInternalNote = (t) => /standalone/i.test(String(t ?? ''));
+    const usable = (t) => Boolean(t) && !isInternalNote(t);
+    let blurb = null;
+    if (usable(item.ingredients) && !sameAsName(item.ingredients)) blurb = item.ingredients;
+    else if (usable(item.description) && !sameAsName(item.description)) blurb = item.description;
     return (
       <article
         className={`pc-card pc-card--compact${soldOut ? ' pc-card--soldout' : ''}`}
@@ -211,7 +220,7 @@ export default function PosterCard({
               ) : hideCta ? <span /> : (
                 // Con la CTA nascosta (Pesi Massimi: scelto il MENU) il prezzo della riga alta sarebbe quello del
                 // solo panino: la scelta sotto mostra già il prezzo giusto.
-                <span className="pc-price">{formatPrice(item.price).replace(/^(.*?)[\s\u00A0]*€$/, '€ $1')}</span>
+                <span className="pc-price">{formatPrice(item.price)}</span>
               )}
               {hideCta ? null : qty > 0 ? (
                 <div ref={stepperRef} className="pc-stepper" role="group" aria-label={`Quantità nel sacco: ${item.name}`}>
@@ -315,7 +324,7 @@ export default function PosterCard({
       </div>
 
       <div className="pc-under">
-        {item.description && <p className="pc-quip">{item.description}</p>}
+        {item.description && !/standalone/i.test(item.description) && <p className="pc-quip">{item.description}</p>}
         {item.ingredients && <p className="pc-ingredients">{item.ingredients}</p>}
         {allergens.length > 0 && (
           <p className="pc-allergens">

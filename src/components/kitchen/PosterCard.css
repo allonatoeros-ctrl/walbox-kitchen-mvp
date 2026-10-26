@@ -531,14 +531,20 @@
   letter-spacing: var(--poster-track-sm, 0.06em);
 }
 
-/* Foto verticali (bottiglie di birra) intere in un riquadro di altezza fissa, senza allungare la scheda. */
+/* Foto verticali (bottiglie di birra) intere in un riquadro alto almeno 190 px: se il testo e' piu' alto la foto riempie la riga. */
 .pc-card--compact .pc-shot--contain {
-  height: 190px;
-  padding: 8px 0;
+  height: auto;
+  min-height: 190px;
   box-sizing: border-box;
 }
 
 .pc-card--compact .pc-shot--contain .pc-photo {
+  /* fuori dal flusso: l'altezza della riga la decide il testo (min 190 px), la foto riempie il riquadro
+     senza allungarlo con le sue proporzioni 1:2 */
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 0;
   width: 100%;
-  height: 100%;
+  height: calc(100% - 16px);
 }

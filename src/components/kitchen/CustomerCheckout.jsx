@@ -18,13 +18,13 @@ import './CustomerCheckout.css';
 // CustomerKitchenMenu.handleSubmit; qui solo UI, focus sul campo mancante e microcopy.
 
 const FULFILLMENT_OPTIONS = [
-  { value: 'eat_here', label: 'MANGIO QUI', sub: 'ti chiamiamo', emoji: '🍽️' },
-  { value: 'takeaway', label: 'PORTO VIA', sub: 'impacchettiamo', emoji: '🥡' },
+  { value: 'eat_here', label: 'MANGIO QUI', sub: 'ti chiamiamo' },
+  { value: 'takeaway', label: 'PORTO VIA', sub: 'impacchettiamo' },
 ];
 
 const PAY_OPTIONS = [
-  { value: 'online', label: 'PAGO ORA', sub: 'dal telefono, va dritto in cucina', emoji: '💳' },
-  { value: 'counter', label: 'PAGO AL BANCO', sub: 'ti diamo un codice, paghi in cassa', emoji: '🧾' },
+  { value: 'online', label: 'PAGO ORA', sub: 'dal telefono, va dritto in cucina' },
+  { value: 'counter', label: 'PAGO AL BANCO', sub: 'ti diamo un codice, paghi in cassa' },
 ];
 
 const MISSING_TEXT = {
@@ -134,7 +134,14 @@ export default function CustomerCheckout({
             aria-label="Scegli un nome a sorpresa"
             data-testid="customer-name-dice"
           >
-            <span aria-hidden="true">🎲</span>
+            <svg className="cx-dice-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
+              <rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
+              <circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" />
+              <circle cx="15.5" cy="8.5" r="1.4" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.4" fill="currentColor" />
+              <circle cx="8.5" cy="15.5" r="1.4" fill="currentColor" />
+              <circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" />
+            </svg>
           </button>
         </div>
         <div className="cx-chips" role="group" aria-label="Nomi veloci">
@@ -179,7 +186,6 @@ export default function CustomerCheckout({
               disabled={submitting}
               className={`cx-where-btn${fulfillmentType === opt.value ? ' cx-where-btn--on' : ''}`}
             >
-              <span className="cx-where-emoji" aria-hidden="true">{opt.emoji}</span>
               <span className="cx-where-text">
                 <span className="cx-where-title">{opt.label}</span>
                 <span className="cx-where-sub">{opt.sub}</span>
@@ -212,10 +218,10 @@ export default function CustomerCheckout({
           <div id="cx-notes-panel" className="cx-notes-panel">
             <div className="cx-chips" role="group" aria-label="Scorciatoie note">
               <button type="button" className="cx-chip cx-chip--warn" onClick={() => addNotePrefix('ALLERGIA: ')} data-testid="note-chip-allergy">
-                <span aria-hidden="true">⚠️</span> ALLERGIA
+                ALLERGIA
               </button>
               <button type="button" className="cx-chip" onClick={() => addNotePrefix('SENZA ')} data-testid="note-chip-senza">
-                <span aria-hidden="true">🚫</span> SENZA…
+                SENZA…
               </button>
             </div>
             <label className="cx-sr-only" htmlFor="kitchen-note-input">Note per la cucina</label>
@@ -250,7 +256,7 @@ export default function CustomerCheckout({
           <div data-testid="pay-lane-step" role="group" aria-labelledby="cx-pay-label">
             <div className="cx-pay-head">
               <span className="cx-title" id="cx-pay-label">COME PAGHI?</span>
-              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>€{total.toFixed(2).replace('.', ',')}</span>
+              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>{total.toFixed(2).replace('.', ',')}&nbsp;€</span>
             </div>
             <div
               key={ready ? 'ready' : 'idle'}
@@ -272,7 +278,6 @@ export default function CustomerCheckout({
                   disabled={submitting}
                   aria-describedby="cx-pay-status"
                 >
-                  <span className="cx-pay-emoji" aria-hidden="true">{opt.emoji}</span>
                   <span className="cx-pay-text">
                     <span className="cx-pay-title">{opt.label}</span>
                     <span className="cx-pay-sub">{opt.sub}</span>
@@ -287,7 +292,7 @@ export default function CustomerCheckout({
           <>
             <div className="cx-pay-head">
               <span className="cx-title">COME PAGHI?</span>
-              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>€{total.toFixed(2).replace('.', ',')}</span>
+              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>{total.toFixed(2).replace('.', ',')}&nbsp;€</span>
             </div>
             <button
               type="button"

@@ -403,6 +403,23 @@ export default function CustomerKitchenMenu() {
   activeCategoryRef.current = activeCategory;
   cartCountRef.current = orderItems.length;
 
+  // Sacco: salva lo scroll all'apertura e lo rimette alla chiusura. Il back reale del telefono
+  // riporta la pagina in cima (hero): cosi' il cliente resta dove era. Il secondo scrollTo (rAF)
+  // copre il browser che ripristina lo scroll dell'entry DOPO l'evento popstate.
+  const cartScrollYRef = useRef(null);
+  useEffect(() => {
+    if (cartOpen) {
+      cartScrollYRef.current = window.scrollY;
+      return undefined;
+    }
+    const y = cartScrollYRef.current;
+    if (y == null) return undefined;
+    cartScrollYRef.current = null;
+    window.scrollTo({ top: y });
+    const raf = window.requestAnimationFrame(() => window.scrollTo({ top: y }));
+    return () => window.cancelAnimationFrame(raf);
+  }, [cartOpen]);
+
   useEffect(() => {
     if (window.location.pathname !== '/kitchen') return undefined;
 
@@ -776,6 +793,7 @@ export default function CustomerKitchenMenu() {
             {!kitchenOpen && <div className="kp-kicker">The Walrus · Cucina chiusa</div>}
             <h1 className="kp-title">
               {line1}
+              {line2 && ' '}
               {line2 && <em>{line2}</em>}
             </h1>
             {sub && <p className="kp-sub">{sub}</p>}
@@ -923,13 +941,19 @@ export default function CustomerKitchenMenu() {
                   </div>
                   <div className="kitch-drawer-row-content">
                     <div className="kitch-drawer-row-name">{o.name.toUpperCase()}</div>
-                    <div className="kitch-drawer-row-price">€{o.price.toFixed(2).replace('.', ',')}</div>
                   </div>
+                  <div className="kitch-drawer-row-price">{formatPrice(o.price, true)}</div>
                   <div className="kitch-drawer-row-controls">
-                    <button className="kitch-qty-btn" onClick={() => removeItem(o.id)} aria-label={`Togli uno: ${o.name}`}>−</button>
-                    <span className="kitch-qty-num">{o.qty}</span>
-                    <button className="kitch-qty-btn" onClick={() => addItem(o)} aria-label={`Aggiungi uno: ${o.name}`}>+</button>
-                    <button className="kitch-trash-btn" onClick={() => removeAllOfItem(o.id)} aria-label={`Rimuovi dal sacco: ${o.name}`}>🗑️</button>
+                    <div className="kitch-qty-pill">
+                      <button className="kitch-qty-btn" onClick={() => removeItem(o.id)} aria-label={`Togli uno: ${o.name}`}>−</button>
+                      <span className="kitch-qty-num">{o.qty}</span>
+                      <button className="kitch-qty-btn" onClick={() => addItem(o)} aria-label={`Aggiungi uno: ${o.name}`}>+</button>
+                    </div>
+                    <button className="kitch-trash-btn" onClick={() => removeAllOfItem(o.id)} aria-label={`Rimuovi dal sacco: ${o.name}`}>
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                        <path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -953,7 +977,7 @@ export default function CustomerKitchenMenu() {
                   onClick={() => addItem(recommendedBeer)}
                   data-testid="beer-pairing-add"
                 >
-                  +€{recommendedBeer.price.toFixed(2).replace('.', ',')}
+                  +{formatPrice(recommendedBeer.price, true)}
                 </button>
               </div>
             )}

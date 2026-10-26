@@ -1,12 +1,12 @@
 /* CustomerCheckout.css — checkout cliente in un solo schermo (Customer Experience V2).
-   Vive dentro `.kitch-drawer-body` (sfondo crema). Mobile-first 390/430, colonna max 480px.
-   Input a 16px: sotto, iOS Safari zooma al focus. Target di tocco ≥ 44px. */
+   Vive dentro `.kitch-drawer-body` (fondo nero caldo del sacco, giro 5 del restyling hero).
+   Token --poster-* definiti in `.kitch-page` (CustomerKitchenMenu.css): nero caldo, crema, giallo ufficiale,
+   League Gothic per titoli/prezzi, angoli 12px (6px sui pulsanti, come la CTA della hero).
+   Mobile-first 390/430, colonna max 480px. Input a 16px+: sotto, iOS Safari zooma al focus.
+   Target di tocco >= 44px. */
 
-/* Arancio più scuro del brand: crema su #f05a24 fa ~2.8:1. V7 (Fase 3.0): #d4481a dava 3,41:1,
-   #b33a12 dà 4,58:1 (testo piccolo, WCAG AA). */
 .cx {
-  --cx-cta: #b33a12;
-  --cx-cta-edge: #8a2c0c;
+  --cx-error: #ff8a6b; /* rosso caldo chiaro: leggibile sul nero (>= 7:1) */
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -18,16 +18,18 @@
 
 .cx-title {
   display: block;
-  font-family: var(--k-font-display);
-  font-size: 15px;
-  letter-spacing: 0.5px;
-  color: var(--k-surface);
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
+  color: var(--poster-ink);
 }
 
 .cx-help {
-  margin: 2px 0 10px;
+  margin: 4px 0 10px;
   font-size: 12px;
-  color: #6b5741;
+  color: var(--poster-muted);
 }
 
 .cx-error {
@@ -35,7 +37,7 @@
   margin-top: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: #b8261d;
+  color: var(--cx-error);
 }
 
 .cx-sr-only {
@@ -52,12 +54,12 @@
 
 /* ── 1. Nome ─────────────────────────────────────── */
 .cx-name {
-  padding-top: 12px;
+  padding-top: 14px;
   padding-bottom: 10px;
 }
 
 .cx-name .cx-title {
-  font-size: 20px;
+  font-size: 32px;
 }
 
 .cx-name-row {
@@ -71,56 +73,59 @@
   min-width: 0;
   min-height: 56px;
   box-sizing: border-box;
-  background: #fff8ea;
-  border: 2px solid #e0c89e;
-  border-radius: var(--k-radius);
-  color: var(--k-surface);
-  font-family: var(--k-font-display);
-  font-size: 22px;
-  padding: 8px 14px;
+  background: var(--poster-panel);
+  border: 2px solid var(--poster-line);
+  border-radius: 12px;
+  color: var(--poster-ink);
+  font-family: var(--poster-font-display);
+  /* !important: batte `input { font-size: 16px !important }` di index.css (anti-zoom iOS). 30px resta >= 16px: niente zoom. */
+  font-size: 30px !important;
+  letter-spacing: 0.02em;
+  padding: 6px 14px;
   outline: none;
-  transition: var(--k-transition);
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 .cx-name-input::placeholder {
-  font-family: var(--k-font-body);
+  font-family: var(--poster-font-body);
   font-size: 16px;
   font-weight: 600;
-  color: #78654f; /* V7: 5,27:1 su #fff8ea (era #a8927d, 2,81:1) */
+  letter-spacing: 0;
+  color: var(--poster-muted);
 }
 
 .cx-name-input:focus-visible {
-  border-color: var(--k-orange);
-  box-shadow: 0 0 0 3px rgba(240, 90, 36, 0.28);
+  border-color: var(--poster-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 200, 61, 0.28);
 }
 
 .cx-name-input--ok {
-  border-color: var(--k-green);
+  border-color: var(--poster-yellow);
 }
 
 .cx-name-input[aria-invalid='true'] {
-  border-color: #b8261d;
+  border-color: var(--cx-error);
 }
 
 .cx-dice {
   flex: 0 0 56px;
   min-height: 56px;
-  border: 2px solid #c0421a;
-  border-radius: var(--k-radius);
-  background: var(--k-orange);
-  box-shadow: 0 2px 0 #c0421a;
-  font-size: 26px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--poster-yellow);
+  color: var(--poster-on-yellow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
   cursor: pointer;
 }
 
 .cx-dice:active {
-  transform: translateY(2px);
-  box-shadow: none;
+  transform: scale(0.96);
 }
 
-.cx-dice--rolling span {
-  display: inline-block;
+.cx-dice--rolling .cx-dice-icon {
   animation: cx-roll 0.45s ease-out;
 }
 
@@ -134,24 +139,24 @@
 .cx-chip {
   min-height: 44px;
   padding: 0 14px;
-  border: 1.5px solid #d8bd93;
-  border-radius: 22px;
-  background: #fff8ea;
-  color: #4a3a28;
-  font-family: var(--k-font-body);
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  border: 1px solid var(--poster-line);
+  border-radius: 12px;
+  background: var(--poster-panel);
+  color: var(--poster-ink);
+  font-family: var(--poster-font-display);
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
+  text-transform: uppercase;
   cursor: pointer;
 }
 
 .cx-chip:active {
-  background: #eaddc2;
+  background: #2a1a10;
 }
 
 .cx-chip--warn {
-  border-color: #c8960a;
-  background: #fff1c9;
+  border-color: var(--poster-yellow);
 }
 
 .cx-name-status {
@@ -161,9 +166,10 @@
 
 .cx-hello {
   display: inline-block;
-  font-family: var(--k-font-display);
-  font-size: 14px;
-  color: var(--k-green);
+  font-family: var(--poster-font-display);
+  font-size: 20px;
+  letter-spacing: var(--poster-track-sm);
+  color: var(--poster-yellow);
   animation: cx-pop 0.3s ease-out;
 }
 
@@ -180,13 +186,13 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  border: 2px solid #e0c89e;
-  border-radius: var(--k-radius);
-  background: #fff8ea;
+  padding: 8px 14px;
+  border: 2px solid var(--poster-line);
+  border-radius: 12px;
+  background: var(--poster-panel);
   text-align: left;
   cursor: pointer;
-  transition: var(--k-transition);
+  transition: background-color 0.15s, border-color 0.15s;
 }
 
 .cx-where-btn:focus-visible,
@@ -195,12 +201,8 @@
 .cx-dice:focus-visible,
 .cx-notes-toggle:focus-visible,
 .cx-note-input:focus-visible {
-  outline: 3px solid var(--k-surface);
+  outline: 3px solid var(--poster-ink);
   outline-offset: 2px;
-}
-
-.cx-where-emoji {
-  font-size: 22px;
 }
 
 .cx-where-text {
@@ -210,33 +212,34 @@
 }
 
 .cx-where-title {
-  font-family: var(--k-font-display);
-  font-size: 14px;
-  color: var(--k-surface);
-  line-height: 1.1;
+  font-family: var(--poster-font-display);
+  font-size: 24px;
+  color: var(--poster-ink);
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
 }
 
 .cx-where-sub {
-  font-family: var(--k-font-body);
+  margin-top: 2px;
+  font-family: var(--poster-font-body);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
-  color: #5a4630;
+  color: var(--poster-muted);
 }
 
 .cx-where-btn--on {
-  background: var(--cx-cta);
-  border-color: var(--cx-cta-edge);
-  box-shadow: 0 2px 0 var(--cx-cta-edge);
+  background: var(--poster-yellow);
+  border-color: var(--poster-yellow);
 }
 
 .cx-where-btn--on .cx-where-title {
-  color: var(--k-cream);
+  color: var(--poster-on-yellow);
 }
 
 .cx-where-btn--on .cx-where-sub {
-  color: #fff6e4;
+  color: rgba(20, 10, 5, 0.82);
 }
 
 /* ── 3. Note cucina ──────────────────────────────── */
@@ -251,28 +254,29 @@
   align-items: center;
   gap: 8px;
   padding: 0 14px;
-  border: 1.5px dashed #b99d72;
-  border-radius: var(--k-radius-sm);
+  border: 1px dashed var(--poster-muted);
+  border-radius: 12px;
   background: transparent;
-  color: #4a3a28;
-  font-family: var(--k-font-body);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  color: var(--poster-ink);
+  font-family: var(--poster-font-display);
+  font-size: 20px;
+  letter-spacing: var(--poster-track-sm);
   text-align: left;
   cursor: pointer;
 }
 
 .cx-notes-toggle--open {
   border-style: solid;
-  background: #fff8ea;
+  border-color: var(--poster-line);
+  background: var(--poster-panel);
 }
 
 .cx-notes-icon {
-  font-size: 18px;
+  font-size: 24px;
   line-height: 1;
   width: 14px;
   text-align: center;
+  color: var(--poster-yellow);
 }
 
 .cx-notes-name {
@@ -281,10 +285,11 @@
 
 .cx-notes-hint {
   margin-left: auto;
+  font-family: var(--poster-font-body);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
-  color: #6b5741;
+  color: var(--poster-muted);
   text-align: right;
 }
 
@@ -297,15 +302,19 @@
   width: 100%;
   box-sizing: border-box;
   margin-top: 10px;
-  background: #fff8ea;
-  border: 2px solid #e0c89e;
-  border-radius: var(--k-radius-sm);
-  color: var(--k-surface);
-  font-family: var(--k-font-body);
+  background: var(--poster-panel);
+  border: 2px solid var(--poster-line);
+  border-radius: 12px;
+  color: var(--poster-ink);
+  font-family: var(--poster-font-body);
   font-size: 16px;
   line-height: 1.4;
   padding: 10px 12px;
   resize: none;
+}
+
+.cx-note-input::placeholder {
+  color: var(--poster-muted);
 }
 
 .cx-note-foot {
@@ -314,7 +323,7 @@
   gap: 12px;
   margin-top: 4px;
   font-size: 12px;
-  color: #6b5741;
+  color: var(--poster-muted);
 }
 
 /* ── 4. Totale + come paghi (agganciato in basso) ── */
@@ -322,11 +331,11 @@
   position: sticky;
   bottom: 0;
   z-index: 2;
-  padding: 10px 20px;
+  padding: 12px 20px;
   padding-bottom: max(12px, env(safe-area-inset-bottom));
-  background: var(--k-cream);
-  border-top: 1px solid #e0c89e;
-  box-shadow: 0 -6px 12px -8px rgba(32, 18, 11, 0.35);
+  background: var(--poster-bg);
+  border-top: 1px solid var(--poster-line);
+  box-shadow: 0 -8px 14px -8px rgba(0, 0, 0, 0.7);
 }
 
 .cx-pay-head {
@@ -337,27 +346,29 @@
 }
 
 .cx-total {
-  font-family: var(--k-font-display);
-  font-size: 20px;
-  color: var(--k-surface);
+  font-family: var(--poster-font-display);
+  font-size: 46px;
+  line-height: 1;
+  color: var(--poster-yellow);
   white-space: nowrap;
 }
 
 .cx-total small {
-  font-size: 12px;
-  margin-right: 6px;
-  letter-spacing: 0.5px;
+  font-size: 20px;
+  margin-right: 8px;
+  letter-spacing: var(--poster-track-sm);
+  color: var(--poster-muted);
 }
 
 .cx-status {
-  margin: 2px 0 8px;
+  margin: 4px 0 8px;
   font-size: 12px;
   font-weight: 700;
-  color: #5a4630;
+  color: var(--poster-muted);
 }
 
 .cx-status--ready {
-  color: #2f6a24;
+  color: var(--poster-yellow);
   animation: cx-pop 0.35s ease-out;
 }
 
@@ -367,26 +378,25 @@
   gap: 8px;
 }
 
+/* CTA gialle come quella della hero: League Gothic maiuscolo su giallo, angoli 6px. */
 .cx-pay {
   width: 100%;
-  min-height: 54px;
+  min-height: 56px;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 6px 14px;
   border: none;
-  border-radius: var(--k-radius);
-  background: var(--cx-cta);
-  color: var(--k-cream);
-  box-shadow: 0 3px 0 var(--cx-cta-edge);
+  border-radius: 6px;
+  background: var(--poster-yellow);
+  color: var(--poster-on-yellow);
   text-align: left;
   cursor: pointer;
-  transition: var(--k-transition);
+  transition: opacity 0.15s;
 }
 
 .cx-pay:active:not(:disabled) {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 var(--cx-cta-edge);
+  transform: scale(0.98);
 }
 
 .cx-pay:disabled {
@@ -395,21 +405,18 @@
 }
 
 /* "Non ancora": resta cliccabile (il tap spiega cosa manca), ma si vede che non è pronto.
-   Solo desaturato, luminosità invariata: il contrasto del testo non cala. */
+   Giallo attenuato sul nero; il testo scuro resta sopra 7:1. */
 .cx-pay--idle {
-  filter: saturate(0.7);
+  opacity: 0.78;
 }
 
 .cx-pay--closed {
   justify-content: center;
-  font-family: var(--k-font-display);
-  font-size: 18px;
-  background: #8a7358;
-  box-shadow: none;
-}
-
-.cx-pay-emoji {
-  font-size: 24px;
+  font-family: var(--poster-font-display);
+  font-size: 28px;
+  letter-spacing: var(--poster-track-sm);
+  background: var(--poster-line);
+  color: var(--poster-muted);
 }
 
 .cx-pay-text {
@@ -420,25 +427,27 @@
 }
 
 .cx-pay-title {
-  font-family: var(--k-font-display);
-  font-size: 16px;
-  line-height: 1.1;
+  font-family: var(--poster-font-display);
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
 }
 
 .cx-pay-sub {
   margin-top: 2px;
-  font-family: var(--k-font-body);
+  font-family: var(--poster-font-body);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
   line-height: 1.25;
-  color: #fff6e4;
+  color: rgba(20, 10, 5, 0.85);
 }
 
 .cx-pay-arrow {
-  font-family: var(--k-font-display);
-  font-size: 22px;
+  font-family: var(--poster-font-display);
+  font-size: 30px;
+  line-height: 1;
 }
 
 .cx-foot-hint,
@@ -446,24 +455,25 @@
   margin-top: 8px;
   text-align: center;
   font-size: 12px;
-  color: #5a4630;
+  color: var(--poster-muted);
 }
 
 .cx-sending {
   font-weight: 800;
   letter-spacing: 0.06em;
+  color: var(--poster-yellow);
 }
 
 .cx-order-error {
   margin-bottom: 10px;
   padding: 12px 14px;
-  border: 2px solid #b8261d;
-  border-radius: var(--k-radius);
-  background: rgba(224, 60, 44, 0.12);
+  border: 2px solid var(--cx-error);
+  border-radius: 12px;
+  background: rgba(255, 138, 107, 0.1);
   text-align: center;
   font-weight: 800;
   font-size: 13px;
-  color: #8f1a12;
+  color: var(--cx-error);
 }
 
 /* ── Microinterazioni (disattivate con prefers-reduced-motion) ── */
@@ -490,7 +500,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cx-dice--rolling span,
+  .cx-dice--rolling .cx-dice-icon,
   .cx-hello,
   .cx-status--ready,
   .cx-shake {
@@ -511,11 +521,25 @@
   .cx-notes-hint {
     display: none;
   }
+  .cx-total {
+    font-size: 40px;
+  }
+}
+
+/* Schermi bassi (giro 5b N-12): il footer agganciato occupa il 40% del foglio e copre MANGIO QUI / PORTO VIA mentre
+   si scrive il nome. Via le sottoscritte dei PAGO (i titoli bastano) e totale piu' piccolo. */
+@media (max-height: 700px) {
+  .cx-pay-sub {
+    display: none;
+  }
+  .cx-total {
+    font-size: 32px;
+  }
 }
 
 /* Il footer è agganciato in basso: quando un campo prende il focus (tastiera aperta) il browser
    lo porta in vista lasciando sotto spazio per il footer, così non resta mai coperto. */
 .cx-name-input,
 .cx-note-input {
-  scroll-margin-bottom: 230px;
+  scroll-margin-bottom: 240px;
 }

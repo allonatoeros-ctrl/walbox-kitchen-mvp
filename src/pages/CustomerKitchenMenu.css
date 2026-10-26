@@ -757,8 +757,13 @@
   /* Allineato alla colonna da 480px di .kitch-page (vedi commento lì). */
   max-width: 480px;
   margin-inline: auto;
-  background: var(--k-cream);
-  border-radius: 24px 24px 0 0;
+  /* Giro 5: sacco nello stesso linguaggio del menu (nero caldo, crema, giallo, League Gothic, angoli 12px). */
+  background: var(--poster-bg);
+  color: var(--poster-ink);
+  font-family: var(--poster-font-body);
+  border-top: 1px solid var(--poster-line);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
   z-index: 300;
   max-height: 90vh;
   display: flex;
@@ -768,39 +773,46 @@
 .kitch-drawer-handle {
   width: 40px;
   height: 4px;
-  background: #ccc;
+  background: var(--poster-muted);
+  opacity: 0.5;
   border-radius: 2px;
   margin: 12px auto;
+  flex-shrink: 0; /* giro 5b N-10: col sacco pieno il foglio e' una colonna flex, la maniglia non deve schiacciarsi */
 }
 
 .kitch-drawer-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px 16px;
-  border-bottom: 1px solid #e0c89e;
+  padding: 0 20px 8px;
+  border-bottom: 1px solid var(--poster-line);
 }
 
 .kitch-drawer-title {
-  font-family: var(--k-font-display);
-  font-size: 24px;
-  color: var(--k-surface);
-  letter-spacing: 1px;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1;
+  color: var(--poster-ink);
+  letter-spacing: 0.04em;
 }
 
 .kitch-drawer-close {
   background: transparent;
   border: none;
-  font-size: 28px;
-  color: var(--k-surface);
+  font-size: 34px;
+  color: var(--poster-ink);
   cursor: pointer;
   line-height: 1;
   min-width: 44px;
   min-height: 44px;
+  margin-right: -10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
+.kitch-drawer-close:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: -4px; }
 
 .kitch-drawer-body {
   display: flex;
@@ -809,35 +821,40 @@
   flex: 1;
   /* V2 (Fase 3.0): il footer sticky .cx-footer (~197px) copre il fondo dell'area scrollabile; con scroll-padding
      focus, scrollIntoView e tab portano nome / dove / note SOPRA il footer, non sotto. */
-  scroll-padding-bottom: 220px;
+  scroll-padding-bottom: 240px;
 }
 
 .kitch-drawer-items-list {
-  padding: 16px 20px;
+  padding: 14px 20px 8px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
 }
 
-/* A 390px la colonna del nome era ~104px: "BRISKET — FALLO PESANTE" andava su
-   3 righe, con la lineetta orfana su una riga da sola. Il nome ha ora una base
-   di 200px, quindi sotto quella soglia il blocco quantità va a capo su una
-   riga propria allineata a destra invece di stritolare il nome. Nessuna
-   riduzione dei target di tocco. */
+/* Riga compatta come le schede: miniatura a sinistra, nome (con la scelta) al centro, prezzo a destra,
+   sotto il nome lo stepper giallo - N + e il cestino. A 320 px la colonna del nome resta >= 130 px. */
 .kitch-drawer-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  row-gap: 8px;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "img name price"
+    "img ctrl ctrl";
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--poster-line);
   flex-shrink: 0;
 }
 
+.kitch-drawer-row:last-child { border-bottom: 0; }
+
 .kitch-drawer-row-img {
+  grid-area: img;
   width: 60px;
   height: 60px;
-  background: var(--k-surface);
-  border-radius: var(--k-radius);
+  background: #2a1a10;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -853,42 +870,57 @@
 }
 
 .kitch-drawer-row-content {
-  flex: 1 1 200px;
+  grid-area: name;
   min-width: 0;
 }
 
 .kitch-drawer-row-name {
-  font-family: var(--k-font-display);
-  font-size: 16px;
-  line-height: 1.15;
-  color: var(--k-surface);
-  margin-bottom: 4px;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--poster-ink);
+  overflow-wrap: break-word;
 }
 
 .kitch-drawer-row-price {
-  color: #b8261d;
-  font-weight: 700;
-  font-size: 14px;
+  grid-area: price;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--poster-yellow);
+  white-space: nowrap;
+  text-align: right;
 }
 
 .kitch-drawer-row-controls {
+  grid-area: ctrl;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #eaddc2;
-  padding: 6px 12px;
-  border-radius: 20px;
-  flex-shrink: 0;
-  /* quando va a capo (vedi .kitch-drawer-row) resta allineato a destra */
-  margin-left: auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Stepper giallo come quello delle schede compatte. */
+.kitch-qty-pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--poster-yellow);
 }
 
 .kitch-qty-btn {
   background: transparent;
   border: none;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--k-surface);
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--poster-on-yellow);
   cursor: pointer;
   min-width: 44px; /* V4 */
   min-height: 44px;
@@ -897,26 +929,32 @@
   justify-content: center;
 }
 
+.kitch-qty-btn:focus-visible { outline: 3px solid var(--poster-on-yellow); outline-offset: -8px; }
+
 .kitch-qty-num {
-  font-family: var(--k-font-display);
-  font-size: 18px;
-  color: var(--k-surface);
-  min-width: 20px;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--poster-on-yellow);
+  min-width: 18px;
   text-align: center;
 }
 
 .kitch-trash-btn {
   background: transparent;
   border: none;
-  font-size: 16px;
+  color: var(--poster-muted);
   cursor: pointer;
-  margin-left: 4px;
+  margin-left: 2px;
   min-width: 44px; /* V4 */
   min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
+.kitch-trash-btn:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: -6px; }
 
 /* ── Drawer totals + submit ──────────────────────── */
 .kitch-drawer-footer {
@@ -972,10 +1010,11 @@
 
 /* ── Drawer — suggerimento birra contestuale (AUTO-SELLING V1) ───────── */
 .kitch-pairing-banner {
-  margin: 0 20px 16px;
+  margin: 8px 20px 16px;
   padding: 12px 14px;
-  border-radius: var(--k-radius);
-  background: #eaddc2;
+  border: 1px solid var(--poster-line);
+  border-radius: 12px;
+  background: var(--poster-panel);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -990,30 +1029,36 @@
 }
 
 .kitch-pairing-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #6b5c3e;
+  font-family: var(--poster-font-label);
+  font-size: 16px;
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm);
+  color: var(--poster-muted);
 }
 
 .kitch-pairing-name {
-  font-family: var(--k-font-display);
-  font-size: 16px;
-  line-height: 1.15;
-  color: var(--k-surface);
+  font-family: var(--poster-font-display);
+  font-size: 22px;
+  line-height: 1.05;
+  color: var(--poster-ink);
 }
 
 .kitch-pairing-add {
   flex-shrink: 0;
-  background: var(--k-orange);
-  color: var(--k-cream);
+  min-height: 44px;
+  background: var(--poster-yellow);
+  color: var(--poster-on-yellow);
   border: none;
-  border-radius: 20px;
-  padding: 8px 14px;
-  font-family: var(--k-font-display);
-  font-size: 14px;
+  border-radius: 6px;
+  padding: 0 14px;
+  font-family: var(--poster-font-display);
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
   cursor: pointer;
 }
+
+.kitch-pairing-add:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 3px; }
 
 /* ── Drawer — DOVE LO MANGI? (fulfillment, unica domanda) ────────────── */
 .kitch-fulfillment-wrap {
@@ -1959,7 +2004,6 @@
 }
 .kp-title em {
   display: inline;
-  margin-left: 0.22em;
   font-style: normal;
   color: var(--poster-yellow);
 }
@@ -2043,7 +2087,11 @@
   letter-spacing: 0.05em;
   text-transform: uppercase;
   white-space: nowrap;
+  gap: 10px; /* giro 5b N-08: con totale >= 100 EUR a 320 px le due scritte si toccavano */
   cursor: pointer;
+}
+@media (max-width: 340px) {
+  .kitch-bottom-bar .kb-ticket { font-size: 24px; }
 }
 .kitch-bottom-bar .kb-ticket:hover { background: var(--poster-brick); }
 .kitch-bottom-bar .kb-ticket:focus-visible { outline-color: var(--poster-ink); }

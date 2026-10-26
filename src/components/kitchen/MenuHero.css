@@ -10,7 +10,8 @@
   margin-inline: auto;
   height: calc(var(--mh-w) * 0.98);
   overflow: hidden;
-  background: #0b0705;
+  /* giro 5b (N-09): chiarore caldo in basso a sinistra, dove nel riferimento corre la carta sotto la CTA */
+  background: radial-gradient(ellipse 75% 38% at 16% 100%, rgba(74, 50, 32, 0.6) 0%, transparent 72%), #0b0705;
   isolation: isolate;
 }
 
@@ -19,16 +20,16 @@
 .mh-photo {
   position: absolute;
   z-index: 0;
-  right: calc(var(--mh-w) * -0.43);
+  right: calc(var(--mh-w) * -0.53); /* giro 5: ~40 px a destra a 390, cosi' la CTA non copre piu' il ripieno */
   bottom: calc(var(--mh-w) * -0.36);
   width: calc(var(--mh-w) * 1.1);
   height: auto;
   aspect-ratio: 1 / 1;
   object-fit: cover;
-  /* dissolvenza sul bordo alto (parete scura) e sul bordo sinistro: nessun riquadro visibile */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 30%), linear-gradient(to right, transparent 0%, #000 16%);
+  /* dissolvenza sul bordo alto (parete scura) e sul bordo sinistro (34%, giro 5b N-09: niente riga verticale): nessun riquadro visibile */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 30%), linear-gradient(to right, transparent 0%, #000 34%);
   -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 30%), linear-gradient(to right, transparent 0%, #000 16%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 30%), linear-gradient(to right, transparent 0%, #000 34%);
   mask-composite: intersect;
 }
 
