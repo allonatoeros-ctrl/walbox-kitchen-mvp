@@ -12,37 +12,36 @@ const INCLUDED_BEER = 'Keiler Helles';
 async function gotoMenu(page) {
   await page.clock.setFixedTime(EVENING);
   await page.goto('/kitchen?nickname=Eros');
-  await page.getByRole('button', { name: /ENTRA NEL MENU/i }).click();
+  await expect(page.getByRole('button', { name: /PESI MASSIMI/i }).first()).toBeVisible();
 }
 
 /** Aggiunge un FALLO PESANTE: e' la riga carrello piu' fragile da ripristinare (id composito
  *  `combo::birra` + `includesBeerId`). Sceglie sempre la stessa birra per determinismo. */
 async function addFalloPesante(page) {
   await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
-  await page.locator('.pm-card-closed').first().click();
-  const card = page.locator('.pm-card--open').first();
+  const card = page.locator('.pm-list .pc-card').first();
   // SCEGLI COME LO VUOI (2026-09-24): il selettore birra appare solo scegliendo MENU.
   await card.getByTestId('choose-menu').click();
   await card.locator('.pm-beer-pill', { hasText: INCLUDED_BEER }).click();
   await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
-  await expect(card.locator('.pm-btn-heavy')).toBeEnabled();
-  await card.locator('.pm-btn-heavy').click();
+  await expect(card.getByTestId('fallo-pesante-cta')).toBeEnabled();
+  await card.getByTestId('fallo-pesante-cta').click();
   return INCLUDED_BEER;
 }
 
 async function openCart(page) {
-  await page.locator('.kitch-bottom-bar').getByText(/VAI ALL'ORDINE/i).click();
+  await page.locator('.kitch-bottom-bar').getByText(/VAI ALLA CASSA/i).click();
   await expect(page.locator('.kitch-drawer')).toBeVisible();
 }
 
 test('refresh: item, quantita e birra del FALLO PESANTE restano nel sacco', async ({ page }) => {
   await gotoMenu(page);
   const beer = await addFalloPesante(page);
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('€19,00');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('19,00 €');
 
   await page.reload();
 
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('€19,00');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('19,00 €');
   await openCart(page);
   await expect(page.locator('.kitch-drawer')).toContainText('FALLO PESANTE');
   await expect(page.locator('.kitch-drawer')).toContainText(beer.toUpperCase().slice(0, 6));
@@ -68,12 +67,12 @@ test('refresh: nota e scelta di ritiro restano, e la nota e subito visibile', as
 test('back/forward fuori e dentro /kitchen: il sacco resta', async ({ page }) => {
   await gotoMenu(page);
   await addFalloPesante(page);
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('€19,00');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('19,00 €');
 
   await page.goto('/kitchen/status');
   await page.goBack();
 
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('€19,00');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('19,00 €');
 });
 
 test('riapertura della pagina in una nuova navigazione: il sacco e ancora li', async ({ page }) => {
@@ -81,7 +80,7 @@ test('riapertura della pagina in una nuova navigazione: il sacco e ancora li', a
   await addFalloPesante(page);
   await page.goto('about:blank');
   await page.goto('/kitchen');
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('€19,00');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('19,00 €');
 });
 
 test('quantita: il + persiste e il totale e ricalcolato', async ({ page }) => {
@@ -92,7 +91,7 @@ test('quantita: il + persiste e il totale e ricalcolato', async ({ page }) => {
   await expect(page.locator('.kitch-drawer')).toContainText('€38,00');
 
   await page.reload();
-  await expect(page.locator('.kitch-bottom-bar')).toContainText('€38,00');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('38,00 €');
 });
 
 test('svuotamento esplicito col cestino: sacco vuoto, e resta vuoto dopo il refresh', async ({ page }) => {

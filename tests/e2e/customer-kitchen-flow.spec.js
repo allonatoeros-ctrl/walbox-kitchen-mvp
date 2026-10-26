@@ -77,10 +77,9 @@ async function openCategoryList(page, categoryName) {
 // categoria con prodotti ordinabili è PESI MASSIMI.
 async function addFirstOrderableItem(page) {
   await page.getByRole('button', { name: /PESI MASSIMI/i }).click();
-  await page.locator('.pm-card-closed').first().click();
-  // Default della card aperta è SOLO PANINO (2026-09-24): la CTA è dinamica e
-  // include il prezzo, "AGGIUNGI AL SACCO" non è mai il suo testo reale.
-  await page.getByRole('button', { name: /AGGIUNGI SOLO PANINO/i }).first().click();
+  // Restyling hero: le schede sono sempre aperte; con SOLO PANINO (default) la CTA e' il "+" giallo
+  // della scheda compatta (aria-label "Aggiungi <nome>").
+  await page.locator('.pm-list .pc-cta:not(.pmx-menu-cta)').first().click();
 }
 
 // Il Sacco Pulito (2026-09-13): unica scelta obbligatoria nel drawer prima che "Invia ordine"
@@ -244,12 +243,12 @@ test.beforeEach(async ({ page }) => {
 test('1. Root entry point (/) redirects to /kitchen and renders the Kitchen home', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/kitchen$/);
-  await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('button', { name: /PESI MASSIMI/i }).first()).toBeVisible({ timeout: 10000 });
 });
 
 test('2. /kitchen is reachable directly as the native entry point, no Jukebox bridge needed', async ({ page }) => {
   await page.goto('/kitchen');
-  await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /PESI MASSIMI/i }).first()).toBeVisible();
   await openFullMenu(page);
   await expect(page.getByRole('button', { name: /PESI MASSIMI/i })).toBeVisible();
 });
@@ -265,7 +264,7 @@ test('2. /kitchen is reachable directly as the native entry point, no Jukebox br
 test('2b. /kitchen/entry redirects to /kitchen and renders the real Kitchen home', async ({ page }) => {
   await page.goto('/kitchen/entry');
   await expect(page).toHaveURL(/\/kitchen$/);
-  await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('button', { name: /PESI MASSIMI/i }).first()).toBeVisible({ timeout: 10000 });
 });
 
 test('3. Full Kitchen order uses customer identity from the native name step', async ({ page }) => {
@@ -278,7 +277,7 @@ test('3. Full Kitchen order uses customer identity from the native name step', a
   await addFirstOrderableItem(page);
 
   // Open cart bottom sheet via the floating pill
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
 
   // Il Sacco Pulito (2026-09-13): fulfillment obbligatorio prima dell'invio, il pagamento no.
   await chooseFulfillment(page, 'eat_here');
@@ -330,7 +329,7 @@ test('3h. Corsia di pagamento senza "dove lo mangi": nessun ordine, campo segnal
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
 
   await submitOrder(page);
   await choosePayLane(page, 'counter');
@@ -350,7 +349,7 @@ test('3i. Checkout takeaway: ordine creato con fulfillment_type=takeaway, redire
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'takeaway');
   await submitAndPay(page, 'counter');
 
@@ -393,7 +392,7 @@ test('3j. Cucina chiusa: banner visibile, menu navigabile, invio ordine bloccato
   await expect(page.getByTestId('kitchen-closed-banner')).toBeVisible();
 
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'eat_here');
 
   const submitBtn = page.getByTestId('submit-order-btn');
@@ -417,7 +416,7 @@ test('3m. RPC kitchen_closed (client stale): nessun ordine creato, messaggio spe
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'eat_here');
   await submitAndPay(page, 'counter');
 
@@ -439,7 +438,7 @@ test('3k. RPC di creazione ordine fallita: nessun ordine fantasma, carrello rest
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'eat_here');
   await submitAndPay(page, 'online');
 
@@ -465,7 +464,9 @@ test('3b. Sold-out item shows ESAURITO overlay and disabled ESAURITO CTA', async
   // Fase 3.2: la locandina (PosterCard) è sempre aperta, la CTA spenta è già visibile.
   const soldOutButton = page.locator('.pc-card--soldout .pc-cta');
   await expect(soldOutButton).toBeVisible();
-  await expect(soldOutButton).toHaveText('ESAURITO');
+  // Scheda compatta: la CTA e' un "+" tondo, il motivo ("ESAURITO") sta nell'aria-label e nel timbro sulla foto.
+  await expect(soldOutButton).toHaveAttribute('aria-label', /^ESAURITO: /);
+  await expect(page.locator('.pc-card--soldout .pc-soldout-stamp').first()).toHaveText('ESAURITO');
   await expect(soldOutButton).toBeDisabled();
 });
 
@@ -482,10 +483,10 @@ test('3c. Empty cart hides the bottom bar entirely; appears on first item, disap
   await addFirstOrderableItem(page);
   const bar = page.locator('.kitch-bottom-bar');
   await expect(bar).toBeVisible();
-  await expect(bar.getByRole('button', { name: "VAI ALL'ORDINE" })).toBeEnabled();
+  await expect(bar.getByRole('button', { name: /VAI ALLA CASSA/i })).toBeEnabled();
 
   // Remove the last product from the drawer
-  await bar.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+  await bar.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await expect(page.locator('.kitch-drawer')).toBeVisible();
   await page.getByRole('button', { name: /Rimuovi dal sacco/i }).first().click();
 
@@ -507,14 +508,18 @@ test('3e. All panini sold out: every CTA disabled, category still browsable, not
 
   // Contratto visuale corrente (PaniniSection, no banner aggregato pre-Figma): ogni
   // card resta visibile e mostra il proprio badge ESAURITO sulla faccia chiusa.
-  await expect(page.locator('.pc-card--soldout')).toHaveCount(PANINI_IDS.length);
-  await expect(page.locator('.pc-card--soldout .pc-cta', { hasText: 'ESAURITO' })).toHaveCount(PANINI_IDS.length);
+  // Alcuni id del catalogo sono nascosti al cliente (CUSTOMER_HIDDEN_ITEM_IDS): si contano le schede davvero visibili.
+  const visibleCards = await page.locator('.pn-list .pc-card').count();
+  expect(visibleCards).toBeGreaterThan(0);
+  expect(visibleCards).toBeLessThanOrEqual(PANINI_IDS.length);
+  await expect(page.locator('.pc-card--soldout')).toHaveCount(visibleCards);
+  await expect(page.locator('.pc-card--soldout .pc-cta[aria-label^="ESAURITO: "]')).toHaveCount(visibleCards);
   await expect(page.getByText('NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA')).not.toBeVisible();
   await expect(page.getByText('AL MOMENTO È TUTTO ESAURITO')).not.toBeVisible();
 
   // Requisito funzionale (di sicurezza, non solo visuale): la CTA add-to-cart di ogni
   // panino esaurito è disabilitata nel markup.
-  await expect(page.locator('.pc-card--soldout .pc-cta:disabled')).toHaveCount(PANINI_IDS.length);
+  await expect(page.locator('.pc-card--soldout .pc-cta:disabled')).toHaveCount(visibleCards);
 
   // Forzando il click sulle CTA disabilitate nessun panino deve finire nel carrello: un
   // browser blocca il click nativo su un elemento disabled, quindi questo verifica il
@@ -572,19 +577,20 @@ for (const viewport of TOUCH_TARGET_VIEWPORTS) {
     await page.goto('/kitchen?table=12&nickname=Eros');
     await openFullMenu(page);
     await page.getByRole('button', { name: /PESI MASSIMI/i }).click();
-    await page.locator('.pm-card-closed').first().click();
 
-    // CTA `AGGIUNGI AL SACCO`: min-height 40
-    const loVoglioBox = await page.getByRole('button', { name: 'AGGIUNGI AL SACCO' }).first().boundingBox();
+    // "+" della scheda compatta: tondo almeno 40x40
+    const addBtn = page.locator('.pm-list .pc-cta:not(.pmx-menu-cta)').first();
+    const loVoglioBox = await addBtn.boundingBox();
     expect(loVoglioBox.height).toBeGreaterThanOrEqual(40);
+    expect(loVoglioBox.width).toBeGreaterThanOrEqual(40);
 
-    // Add item, then CTA `VAI ALL'ORDINE`: min-height 40
-    await page.getByRole('button', { name: 'AGGIUNGI AL SACCO' }).first().click();
-    const vaiBox = await page.getByRole('button', { name: "VAI ALL'ORDINE" }).boundingBox();
+    // Add item, then CTA `VAI ALLA CASSA`: min-height 40
+    await addBtn.click();
+    const vaiBox = await page.getByRole('button', { name: /VAI ALLA CASSA/i }).boundingBox();
     expect(vaiBox.height).toBeGreaterThanOrEqual(40);
 
     // Open drawer
-    await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+    await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
     await expect(page.locator('.kitch-drawer')).toBeVisible();
 
     // Drawer close: min 44x44
@@ -976,7 +982,7 @@ test('18. Nessun controllo codice promo nel carrello e nessun redeem durante l\'
   await page.goto('/kitchen');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
 
   await expect(page.getByTestId('customer-checkout')).toBeVisible();
   await expect(page.getByRole('button', { name: /HO UN CODICE/i })).toHaveCount(0);
@@ -998,7 +1004,7 @@ test('19. Note cucina: scorciatoia ALLERGIA + testo libero arrivano nella comand
   await page.goto('/kitchen');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'eat_here');
 
   const toggle = page.getByTestId('kitchen-note-toggle');
@@ -1007,6 +1013,8 @@ test('19. Note cucina: scorciatoia ALLERGIA + testo libero arrivano nella comand
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await page.getByTestId('kitchen-note-input').fill('senza cipolla');
   await page.getByTestId('note-chip-allergy').click();
+  // Il chip rimette il focus sul campo al frame successivo: si attende prima di digitare.
+  await expect(page.getByTestId('kitchen-note-input')).toBeFocused();
   await page.keyboard.type('glutine');
   await expect(page.getByTestId('kitchen-note-input')).toHaveValue('senza cipolla · ALLERGIA: glutine');
 
@@ -1050,21 +1058,21 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'PESI MASSIMI');
-  await page.locator('.pm-card-closed').first().click();
 
-  const openCard = page.locator('.pm-card--open');
+  // Restyling hero: le schede sono sempre aperte, nessun accordion da aprire.
+  const openCard = page.locator('.pm-list .pc-card').first();
 
   // Titolo + due opzioni esplicite; default SOLO PANINO selezionato.
-  await expect(openCard.locator('.pm-choose-title')).toHaveText('SCEGLI COME LO VUOI');
+  await expect(openCard.locator('.pmx-title')).toHaveText('1 · SCEGLI COME LO VUOI');
   const soloOption = openCard.getByTestId('choose-solo');
   const menuOption = openCard.getByTestId('choose-menu');
-  await expect(soloOption).toHaveClass(/pm-choose-option--selected/);
-  await expect(menuOption).not.toHaveClass(/pm-choose-option--selected/);
+  await expect(soloOption).toHaveClass(/pmx-opt--on/);
+  await expect(menuOption).not.toHaveClass(/pmx-opt--on/);
 
-  // Default SOLO PANINO: CTA unica sul panino, selettore birra nascosto, nessun MENU.
-  await expect(openCard.getByTestId('fallo-pesante-cta')).toHaveText('AGGIUNGI SOLO PANINO · €13,90');
-  await expect(openCard.locator('.pm-upsell-beer-picker')).toHaveCount(0);
-  await expect(openCard.locator('.pm-btn-heavy')).toHaveCount(0);
+  // Default SOLO PANINO: la CTA e' il "+" della scheda sul panino, selettore birra nascosto, nessuna CTA MENU.
+  await expect(openCard.getByRole('button', { name: /^Aggiungi Pulled Pork/i })).toBeEnabled();
+  await expect(openCard.locator('.pmx-beer')).toHaveCount(0);
+  await expect(openCard.getByTestId('fallo-pesante-cta')).toHaveCount(0);
 
   // Opzione MENU: contenuto combo reale, prezzo unico del menu, NIENTE differenza vs panino.
   await expect(menuOption).toContainText('MENU · FALLO PESANTE');
@@ -1072,18 +1080,17 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await expect(includes).toContainText('PANINO');
   await expect(includes).toContainText('BIRRA');
   await expect(includes).toContainText('PATATE AL FORNO');
-  await expect(menuOption.locator('.pm-choose-option-price')).toHaveText('€19');
-  await expect(menuOption.locator('.pm-choose-diff')).toHaveCount(0);
+  await expect(menuOption.locator('.pmx-opt-price')).toHaveText(/19\s?€/);
   await expect(menuOption).not.toContainText('rispetto al panino');
 
   // Seleziono MENU: evidenziato, appare lo STEP 2 birra, CTA bloccata finché non si sceglie.
   await menuOption.click();
-  await expect(menuOption).toHaveClass(/pm-choose-option--selected/);
-  await expect(soloOption).not.toHaveClass(/pm-choose-option--selected/);
-  await expect(openCard.getByTestId('fallo-pesante-beer-step')).toHaveText('2 · SCEGLI LA TUA BIRRA');
-  await expect(openCard.locator('.pm-beer-step-badge')).toHaveText('OBBLIGATORIO');
-  await expect(openCard.locator('.pm-beer-step-sub')).toHaveText('Seleziona una birra inclusa nel menu');
-  const heavyCta = openCard.locator('.pm-btn-heavy');
+  await expect(menuOption).toHaveClass(/pmx-opt--on/);
+  await expect(soloOption).not.toHaveClass(/pmx-opt--on/);
+  await expect(openCard.getByTestId('fallo-pesante-beer-step')).toContainText('2 · SCEGLI LA TUA BIRRA');
+  await expect(openCard.locator('.pmx-beer-badge')).toHaveText('OBBLIGATORIO');
+  await expect(openCard.locator('.pmx-beer-sub')).toHaveText('Seleziona una birra inclusa nel menu');
+  const heavyCta = openCard.getByTestId('fallo-pesante-cta');
   // Nessuna birra scelta: FALLO PESANTE resta disabilitato, nessun add silenzioso.
   await expect(heavyCta).toBeDisabled();
   await expect(heavyCta).toHaveText('SCEGLI UNA BIRRA PER CONTINUARE');
@@ -1108,20 +1115,21 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await expect(openCard.locator('.pm-beer-detail')).toHaveCount(0);
   await expect(heavyCta).toBeEnabled();
   // Scegliere la birra non cambia il prezzo del combo.
-  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · €19');
+  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 19 €');
 
   // Tornando su SOLO PANINO il selettore birra sparisce e la CTA torna sul panino.
   await soloOption.click();
-  await expect(openCard.locator('.pm-upsell-beer-picker')).toHaveCount(0);
-  await expect(openCard.getByTestId('fallo-pesante-cta')).toHaveText('AGGIUNGI SOLO PANINO · €13,90');
+  await expect(openCard.locator('.pmx-beer')).toHaveCount(0);
+  await expect(openCard.getByTestId('fallo-pesante-cta')).toHaveCount(0);
+  await expect(openCard.getByRole('button', { name: /^Aggiungi Pulled Pork/i })).toBeEnabled();
 
   // Ripasso a MENU: la birra scelta è ricordata, CTA attiva.
   await menuOption.click();
   await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ KEILER HELLES SELEZIONATA');
-  await expect(openCard.locator('.pm-btn-heavy')).toBeEnabled();
-  await openCard.locator('.pm-btn-heavy').click();
+  await expect(heavyCta).toBeEnabled();
+  await heavyCta.click();
 
-  await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   // La riga carrello porta la birra inclusa: e' cio' che finisce sulla comanda (P0-2).
   const row = page.locator('.kitch-drawer-row', { hasText: 'PULLED PORK — FALLO PESANTE · KEILER HELLES' });
   await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PULLED PORK — FALLO PESANTE · KEILER HELLES');
@@ -1157,57 +1165,46 @@ test('21b. CONTORNI (2026-09-19): Patate al Forno ordinabile come item singolo a
 // MENU POLISH SPRINT (2026-09-16) — TAGLIERI · BOX · BEVANDE
 // ─────────────────────────────────────────────────────────────────────────────
 
-test('22. TAGLIERI (MENU POLISH SPRINT): accordion coerente con Panini — storytelling, ingredienti e allergeni solo da aperta, CTA "VEDI IL TAGLIERE"', async ({ page }) => {
+test('22. TAGLIERI (restyling hero): schede compatte sempre aperte con ingredienti, allergeni e "+" giallo', async ({ page }) => {
   await page.goto('/kitchen?table=12&nickname=Eros');
   // Tab label = 'TAGLIERI' (MENU_CATEGORIES), la category key resta 'tagliere'.
   await openCategoryList(page, 'TAGLIERI');
 
-  // Le 3 voci sono nella sezione dedicata, non più nel fallback generico `kitch-menu-list`.
-  await expect(page.locator('.tg-card')).toHaveCount(3);
+  // Le 3 voci sono nella sezione dedicata, non nel fallback generico `kitch-menu-list`.
+  await expect(page.locator('.tg-list .pc-card--compact')).toHaveCount(3);
   await expect(page.locator('.kitch-menu-list')).toHaveCount(0);
 
-  const salumi = page.locator('.tg-card', { hasText: 'SALUMI SERISSIMI' });
-  // CLOSED: mai "VEDI IL PANINO" — non sono panini.
-  await expect(salumi.locator('.tg-card-open-cta')).toHaveText(/VEDI IL TAGLIERE/);
-  await expect(salumi.locator('.tg-card-closed-body .tg-card-price')).toHaveText('€8');
-  await expect(salumi).not.toHaveClass(/tg-card--open/);
+  // Niente accordion: ingredienti e prezzo sono subito visibili, mai "VEDI IL PANINO".
+  const salumi = page.locator('.tg-list .pc-card', { hasText: 'Salumi Serissimi' });
+  await expect(salumi.locator('.pc-ingredients')).toContainText('Crudo, lardo, mortadella, speck.');
+  await expect(salumi.locator('.pc-price')).toHaveText(/€\s?8/);
+  await expect(salumi.getByRole('button', { name: 'Aggiungi Salumi Serissimi' })).toBeEnabled();
+  await expect(page.getByText(/VEDI IL TAGLIERE|VEDI IL PANINO/)).toHaveCount(0);
 
-  await salumi.locator('.tg-card-closed').click();
-  await expect(salumi).toHaveClass(/tg-card--open/);
-  // Storytelling approvato + riga ingredienti tecnica, visibili solo da aperta.
-  await expect(salumi.locator('.tg-card-microcopy')).toContainText('Serissimi solo nel nome');
-  await expect(salumi.locator('.tg-card-ingredients')).toHaveText('Crudo, lardo, mortadella, speck.');
-  await expect(salumi.locator('.tg-btn-want')).toBeEnabled();
-
-  // Una sola card aperta alla volta (stessa regola di Panini/Pesi Massimi).
-  const formaggi = page.locator('.tg-card', { hasText: 'FORMAGGI DISCUTIBILI' });
-  await formaggi.locator('.tg-card-closed').click();
-  await expect(formaggi).toHaveClass(/tg-card--open/);
-  await expect(salumi).not.toHaveClass(/tg-card--open/);
-  // Gli allergeni del tagliere formaggi restano esposti nell'EXPANDED.
-  await expect(formaggi.getByText('LATTE', { exact: false }).first()).toBeVisible();
+  // Gli allergeni del tagliere formaggi sono esposti sulla scheda.
+  const formaggi = page.locator('.tg-list .pc-card', { hasText: 'Formaggi Discutibili' });
+  await expect(formaggi.locator('.pc-allergens')).toContainText(/latte/i);
 
   // L'ordine finisce nel carrello col nome reale del tagliere.
-  await formaggi.locator('.tg-btn-want').click();
-  await page.getByRole('button', { name: "VAI ALL'ORDINE" }).click();
+  await formaggi.getByRole('button', { name: 'Aggiungi Formaggi Discutibili' }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await expect(page.locator('.kitch-drawer-row-name', { hasText: 'FORMAGGI DISCUTIBILI' })).toBeVisible();
 });
 
-test('23. Box Pulled Pork (MENU POLISH SPRINT): copy "VEDI IL BOX" / "SOLO BOX", i panini smoked restano su "VEDI IL PANINO"', async ({ page }) => {
+test('23. Box Pulled Pork (restyling hero): il box non ha la scelta MENU, i panini smoked si', async ({ page }) => {
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'PESI MASSIMI');
 
-  const box = page.locator('.pm-card', { hasText: 'BOX PULLED PORK' });
-  await expect(box.locator('.pm-card-open-cta')).toHaveText('VEDI IL BOX');
-
-  await box.locator('.pm-card-closed').click();
-  await expect(box.locator('.pm-price-note')).toHaveText('SOLO BOX');
+  const box = page.locator('.pm-list .pc-card', { hasText: 'Box Pulled Pork' });
+  await expect(box).toHaveCount(1);
+  await expect(box.getByRole('button', { name: /^Aggiungi Box Pulled Pork/i })).toBeEnabled();
   // Nessun upsell FALLO PESANTE sul box (non ha entry in kitchenPesiMassimiCombos).
-  await expect(box.locator('.pm-btn-heavy')).toHaveCount(0);
+  await expect(box.getByTestId('fallo-pesante-choose')).toHaveCount(0);
+  await expect(box.getByTestId('fallo-pesante-cta')).toHaveCount(0);
 
   // Fallback invariato sugli altri item bbq: nessun id hardcoded nel componente.
-  const panino = page.locator('.pm-card', { hasText: 'PULLED PORK' }).filter({ hasNotText: 'BOX' }).first();
-  await expect(panino.locator('.pm-card-open-cta')).toHaveText('VEDI IL PANINO');
+  const panino = page.locator('.pm-list .pc-card', { hasText: 'Pulled Pork' }).filter({ hasNotText: 'Box' }).first();
+  await expect(panino.getByTestId('fallo-pesante-choose')).toBeVisible();
 });
 
 test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun formato inventato', async ({ page }) => {
@@ -1344,7 +1341,7 @@ test('26. P0 privacy: il dispositivo di un altro cliente non vede il mio ordine,
   await page.goto('/kitchen');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'eat_here');
   // S5: dopo il nome si sceglie AL BANCO e si atterra direttamente sullo status.
   await submitAndPay(page, 'counter');
@@ -1385,7 +1382,7 @@ test('27. P0 privacy: dopo il reload il cliente ritrova il PROPRIO ordine, non l
   await page.goto('/kitchen');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'takeaway');
   // S5: dopo il nome si sceglie AL BANCO e si atterra direttamente sullo status.
   await submitAndPay(page, 'counter');
@@ -1733,7 +1730,7 @@ test('37. Checkout V2: nome, dove, note e corsie sono sullo stesso schermo; ness
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
 
   // Tutto insieme, senza passaggi intermedi (niente CONFERMA → CONTINUA).
   await expect(page.getByTestId('customer-name-input')).toBeVisible();
@@ -1758,7 +1755,7 @@ test('37b. Tap su una corsia senza nome: nessun ordine, messaggio e focus sul no
   await page.goto('/kitchen');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'eat_here');
 
   await choosePayLane(page, 'counter');
@@ -1781,7 +1778,7 @@ test('37c. Nome veloce: chip e dado compilano il campo; il nome scelto parte nel
   await page.goto('/kitchen');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
 
   const input = page.getByTestId('customer-name-input');
   await expect(input).toHaveValue('');
@@ -2000,7 +1997,7 @@ async function fillCartToPayStep(page, { fulfillment = 'eat_here' } = {}) {
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openFullMenu(page);
   await addFirstOrderableItem(page);
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, fulfillment);
   await submitOrder(page);
   await expect(page.getByTestId('pay-lane-step')).toBeVisible();
@@ -2238,7 +2235,7 @@ test('53. S5 rete giù alla creazione: carrello intatto e stesso client_request_
 
   // carrello cambiato dopo l'errore (ritiro diverso): id nuovo, poi la creazione riesce
   await page.reload();
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'takeaway');
   await submitOrder(page);
   await choosePayLane(page, 'counter');

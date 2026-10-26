@@ -181,15 +181,13 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     await page.goto('/kitchen?nickname=Eros');
     // HOME -> CATEGORIE -> PESI MASSIMI (stessa navigazione di openCategoryList in
     // customer-kitchen-flow.spec.js: la lista si apre solo dalla tile della categoria).
-    await page.getByRole('button', { name: /ENTRA NEL MENU/i }).click();
     await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
 
-    // Apre la prima card (accordion): l'upsell FALLO PESANTE e' interattivo solo da aperta.
-    await page.locator('.pm-card-closed').first().click();
-    const card = page.locator('.pm-card--open').first();
+    // Restyling hero: le schede sono sempre aperte, l'upsell FALLO PESANTE e' subito interattivo.
+    const card = page.locator('.pm-list .pc-card').first();
     // SCEGLI COME LO VUOI (2026-09-24): default SOLO PANINO, il combo si attiva col MENU.
     await card.getByTestId('choose-menu').click();
-    const heavy = card.locator('.pm-btn-heavy');
+    const heavy = card.getByTestId('fallo-pesante-cta');
     await expect(heavy).toBeVisible();
 
     // Krombacher rimossa dal catalogo (2026-09-22): non compare tra le pillole selezionabili.
