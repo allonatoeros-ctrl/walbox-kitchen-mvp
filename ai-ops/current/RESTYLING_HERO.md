@@ -68,7 +68,13 @@ e2e (testi vecchi). File `.claude/*` modificati e `.claude/hooks/`, `launch.json
   tollerante (la home "ENTRA NEL MENU" non esiste dalla Fase 3.4: **gli altri e2e che lo usano erano già rotti da
   allora**, ora almeno aprono il menu; dock ora "N · Vai alla cassa" / "6,00 €"). Gli ALTRI e2e NON sono stati
   rieseguiti: molti cercano ancora testi vecchi (es. "AGGIUNGI SOLO PANINO", "VAI ALL'ORDINE", "N articolo").
-**PROSSIMO:** Eros decide push/merge; poi (task a parte) rieseguire l'intera suite e2e e sistemare i test stale.
+- Suite e2e completa 2026-10-26 dopo l'aggiornamento dei test (NON committato): **161 passati, 4 falliti, 1 saltato** (prima
+  117/48). Aggiornati: home tolta, Pesi Massimi sempre aperti (helper `addFirstOrderableItem`), dock "Vai alla cassa" e
+  "19,00 €", test 19 (attesa del focus), 21, 22, 23, 3b, 3e, kitchen-cart-persistence, kitchen-p0-closure, smoke.
+  Restano i 4 della coda staff, NON legati al menu: customer-kitchen-flow 14 e 15 (annulla ordine, riga W99 resta),
+  kitchen-service-pressure 2b (D02), kitchen-cassa-assisted-order C7 (A07). Causa non indagata: provarli sul commit
+  base `73e1de4` per capire se sono preesistenti. Report: `ai-ops/reports/e2e-suite-2026-10-26.md` (gitignored).
+**PROSSIMO:** commit dei test aggiornati (decisione di Eros); poi i 4 staff; poi push/merge.
 
 ## Audit H1 (verificato nel repo)
 - **Foto hero:** il panino del riferimento è `public/assets/kitchen/menu/panini/panino_orto_cattivo.webp` (1254×1254,
