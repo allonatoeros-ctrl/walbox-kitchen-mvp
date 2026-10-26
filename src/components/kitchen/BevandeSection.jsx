@@ -6,19 +6,12 @@ import './BevandeSection.css';
  * (2026-09-16, decisione Eros).
  *
  * Restyling hero: ogni bevanda è una scheda compatta `PosterCard` (foto a sinistra, nome, formato,
- * descrizione, prezzo e "+" giallo) a lista verticale, come le altre categorie. Il resto del commento
- * descrive la versione a 2 colonne precedente: restano valide la regola del formato e `displayName`.
+ * descrizione, prezzo e "+" giallo) a lista verticale, come le altre categorie.
  *
  * Volutamente **NON accordion**: una bibita non ha storytelling, ingredienti da
  * leggere né allergeni da controllare, quindi far aprire una card per scoprire
- * "Bibita analcolica gassata" sarebbe un click a vuoto. Anatomia approvata, tutta
- * visibile nello stato unico della card:
- *
- *   foto → nome → formato → prezzo → LO VOGLIO
- *
- * Layout a 2 colonne (le card sono corte: in lista verticale sprecherebbero mezzo
- * schermo mobile). Stessi token colore/font di Panini/Taglieri/Birre: il blocco è
- * più compatto, non un secondo linguaggio visivo.
+ * "Bibita analcolica gassata" sarebbe un click a vuoto. Tutto è visibile nello stato
+ * unico della card.
  *
  * Immagini: le 6 foto reali sono in `public/assets/kitchen/menu/bevande/` (512×512
  * .webp, spec nel README della cartella) e `item.image` punta al path definitivo di
@@ -29,8 +22,7 @@ import './BevandeSection.css';
  *
  * Formato: renderizzato solo se `item.format` esiste. Per Pepsi Zero / Seven Up /
  * Schweppes il formato non è confermato da nessuna fonte e non viene inventato
- * (stessa regola di Krombacher in BirreSection). La riga ha altezza riservata in
- * CSS, così le card restano allineate anche quando il formato manca.
+ * (stessa regola di Krombacher in BirreSection).
  *
  * `displayName` (solo Pepsi 33cl) evita di ripetere il formato nel titolo: il nome
  * reale che finisce nel carrello e nell'ordine resta `item.name`.

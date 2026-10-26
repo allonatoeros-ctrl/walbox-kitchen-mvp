@@ -35,109 +35,25 @@ import { formatPrice } from '../lib/kitchenPrice';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
 import './CustomerKitchenMenu.css';
 
-// Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
-const CATEGORY_SVGS = {
-  panini: (
-    <svg width="38" height="30" viewBox="0 0 38 30" fill="none">
-      <path d="M4,10 C4,5.5 10,2 19,2 C28,2 34,5.5 34,10 H4 Z M12.5,6.5 L13,5.5 L13.5,6.5 L13,7 Z M18.5,5 L19,4 L19.5,5 L19,5.5 Z M24.5,6.5 L25,5.5 L25.5,6.5 L25,7 Z" fill="currentColor" fillRule="evenodd" />
-      <path d="M2,13.5 H36 V15.5 C36,17 33,17.5 31,17.5 C29,17.5 28,16 26,16 C24,16 23,17.5 21,17.5 C19,17.5 18,16 16,16 C14,16 13,17.5 11,17.5 C9,17.5 8,16 6,16 C4,16 2,16.5 2,15 Z" fill="currentColor" />
-      <rect x="4" y="20" width="30" height="4" rx="2" fill="currentColor" />
-      <path d="M4,26 C4,25 6,25 19,25 C32,25 34,25 34,26 V27 C34,28.5 29,30 19,30 C9,30 4,28.5 4,27 Z" fill="currentColor" />
-    </svg>
-  ),
-  patatine: (
-    <svg width="30" height="36" viewBox="0 0 30 36" fill="none">
-      <rect x="6" y="5" width="4" height="13" rx="1.5" transform="rotate(-10 8 11.5)" fill="currentColor" />
-      <rect x="11" y="2" width="4.5" height="16" rx="2" fill="currentColor" />
-      <rect x="16" y="4" width="4.5" height="14" rx="2" transform="rotate(5 18.25 11)" fill="currentColor" />
-      <rect x="21" y="7" width="4" height="11" rx="1.5" transform="rotate(15 23 12.5)" fill="currentColor" />
-      <path d="M5,15 C9,18 21,18 25,15 L22.5,33 C22.2,34.5 21,35 15,35 C9,35 7.8,34.5 7.5,33 Z M15,21.5 A3.5,3.5 0 1,0 15,28.5 A3.5,3.5 0 1,0 15,21.5 Z" fill="currentColor" fillRule="evenodd" />
-    </svg>
-  ),
-  birre: (
-    <svg width="22" height="36" viewBox="0 0 22 36" fill="none">
-      <rect x="9" y="1" width="4" height="2" rx="0.5" fill="currentColor" />
-      <path d="M9.5,3 H12.5 V11 C12.5,11.5 13,12 17,15 V33 C17,34.5 15.5,35 11,35 C6.5,35 5,34.5 5,33 V15 C9,12 9.5,11.5 9.5,11 Z M7,19 V26 H15 V19 Z M9.5,6 V7.5 H12.5 V6 Z" fill="currentColor" fillRule="evenodd" />
-    </svg>
-  ),
-  combo: (
-    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-      <path d="M18 2 C19.5 9 24.5 12 34 13 C25.5 17 26 23.5 28 33 C20 28 16 28 8 33 C10 23.5 10.5 17 2 13 C11.5 12 16.5 9 18 2 Z" fill="currentColor" />
-    </svg>
-  ),
-  bbq: (
-    <svg width="38" height="20" viewBox="0 0 38 20" fill="none">
-      <rect x="1" y="4" width="6" height="12" rx="2" fill="currentColor" />
-      <rect x="0" y="7" width="3" height="6" rx="1" fill="currentColor" />
-      <rect x="31" y="4" width="6" height="12" rx="2" fill="currentColor" />
-      <rect x="35" y="7" width="3" height="6" rx="1" fill="currentColor" />
-      <rect x="7" y="9" width="24" height="2" fill="currentColor" />
-    </svg>
-  ),
-  cicchetti: (
-    <svg width="14" height="36" viewBox="0 0 14 36" fill="none">
-      <rect x="6" y="1" width="2" height="33" rx="1" fill="currentColor" />
-      <circle cx="7" cy="10" r="5.5" fill="currentColor" />
-      <circle cx="7" cy="21" r="5.5" fill="currentColor" />
-      <path d="M3.5,32 H10.5 L7,36 Z" fill="currentColor" />
-    </svg>
-  ),
-  insalatone: (
-    <svg width="36" height="30" viewBox="0 0 36 30" fill="none">
-      <path d="M2,14 H34 C34,22.5 27,28.5 18,28.5 C9,28.5 2,22.5 2,14 Z" fill="currentColor" />
-      <path d="M4,14 C4,8 10,4 18,4 C26,4 32,8 32,14 Z" fill="currentColor" opacity="0.4" />
-      <path d="M18,4 C20.5,7 20.5,10 17,12.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-    </svg>
-  ),
-  tartare: (
-    <svg width="34" height="30" viewBox="0 0 34 30" fill="none">
-      <ellipse cx="17" cy="19" rx="15" ry="8.5" fill="currentColor" />
-      <ellipse cx="17" cy="15.5" rx="11" ry="5.5" fill="currentColor" opacity="0.5" />
-      <circle cx="17" cy="9.5" r="3" fill="currentColor" />
-    </svg>
-  ),
-};
-
-// Icona categoria TAGLIERI (fallback coerente, nessun asset fotografico generato):
-// tagliere + 3 fette — 1 sola tab cliente, raggruppa i 3 taglieri (decisione Eros 2026-09-10).
-CATEGORY_SVGS.tagliere = (
-  <svg width="36" height="26" viewBox="0 0 36 26" fill="none">
-    <rect x="1" y="3" width="34" height="20" rx="7" fill="currentColor" />
-    <circle cx="10" cy="13" r="3.2" fill="currentColor" opacity="0.45" />
-    <circle cx="18" cy="10" r="3.2" fill="currentColor" opacity="0.45" />
-    <circle cx="26" cy="14" r="3.2" fill="currentColor" opacity="0.45" />
-  </svg>
-);
-// Icona categoria CONTORNI (2026-09-19): riusa l'icona `patatine` già disegnata — stesso
-// mondo (fritto/contorno), nessun asset nuovo generato. `patatine` non è più una categoria
-// di navigazione (vedi MENU_CATEGORIES), quindi l'icona non è condivisa con nulla di attivo.
-CATEGORY_SVGS.contorni = CATEGORY_SVGS.patatine;
-CATEGORY_SVGS.bevande = (
-  <svg width="24" height="34" viewBox="0 0 24 34" fill="none">
-    <path d="M4,8 L20,8 L18,32 C17.8,33 17,33.5 12,33.5 C7,33.5 6.2,33 6,32 Z" fill="currentColor" />
-    <rect x="13" y="1" width="2.4" height="12" rx="1.2" transform="rotate(12 14.2 7)" fill="currentColor" />
-  </svg>
-);
-
 // Categorie del menu completo — Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED, Page 4
 // (`MENU — CATEGORIE` 166:2). PATATINE / COMBO non sono più navigazione primaria:
 // restano nei dati, non nel menu. BIRRE riesposta come categoria primaria cliente
 // (BEER SPRINT V1, 2026-09-14, decisione Eros: posizionata prima di BEVANDE, nessun
 // frame Figma dedicato per questa voce di nav).
 const MENU_CATEGORIES = [
-  { key: 'bbq', label: 'PESI MASSIMI', icon: CATEGORY_SVGS.bbq },
-  { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
-  { key: 'cicchetti', label: 'CICCHETTI', icon: CATEGORY_SVGS.cicchetti },
-  { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.insalatone },
-  { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.tartare },
-  { key: 'tagliere', label: 'TAGLIERI', icon: CATEGORY_SVGS.tagliere },
+  { key: 'bbq', label: 'PESI MASSIMI' },
+  { key: 'panini', label: 'PANINI' },
+  { key: 'cicchetti', label: 'CICCHETTI' },
+  { key: 'insalatone', label: 'INSALATONE' },
+  { key: 'tartare', label: 'TARTARE' },
+  { key: 'tagliere', label: 'TAGLIERI' },
   // CONTORNI esposta come categoria cliente (2026-09-19, decisione Eros): oggi contiene la
   // sola Patate al Forno (`item-058`, €5), che è anche il contorno incluso nel FALLO PESANTE.
   // Nessuna sezione dedicata: cade sulla card generica in fondo a questo file, come le
   // categorie senza componente proprio.
-  { key: 'contorni', label: 'CONTORNI', icon: CATEGORY_SVGS.contorni },
-  { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
-  { key: 'bevande', label: 'BEVANDE', icon: CATEGORY_SVGS.bevande },
+  { key: 'contorni', label: 'CONTORNI' },
+  { key: 'birre', label: 'BIRRE' },
+  { key: 'bevande', label: 'BEVANDE' },
 ];
 
 // Item presenti a catalogo ma nascosti al SOLO menu cliente. Non vengono rimossi da
@@ -667,13 +583,6 @@ export default function CustomerKitchenMenu() {
   // follow-up UX 2026-09-18), che copre codice + bivio pagamento senza duplicarli in-page.
   return (
     <div className="kitch-page kitch-page--poster">
-      <style>{`
-        /* Card svg icons: dark color on cream background */
-        .kitch-card-img svg {
-          color: #1c1a14 !important;
-        }
-      `}</style>
-
       {/* KITCHEN_OPEN_CLOSE_V1: banner cucina chiusa — sempre visibile, su tutte le view, il menu
           resta comunque navigabile. Zero interazione: informa soltanto, il blocco vero è sulla
           CTA di invio (vedi CONFERMA ORDINE) e sulla RPC server-side. */}
@@ -899,7 +808,7 @@ export default function CustomerKitchenMenu() {
             )}
             {/* Dock "biglietto da bancone" (mockup B): una sola barra rossa a bordo tratteggiato.
                 Stessa azione di prima (apre il sacco); solo markup/aspetto cambiano. */}
-            <div className={`kitch-bottom-card kitch-bottom-card--filled kb-wrap${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
+            <div className={`kitch-bottom-card kb-wrap${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
               <button
                 type="button"
                 className="kitch-btn-vai kb-ticket"

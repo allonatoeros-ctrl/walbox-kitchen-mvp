@@ -12,9 +12,9 @@ import './PesiMassimiSection.css';
  *
  * FASE 3.4b (restyling poster): ogni Pesi Massimi è una `PosterCard` (3.4f: sempre aperta, foto 4:3
  * come HEAD f5ed050 con nome e prezzo sopra; il blocco SOLO PANINO / MENU è sempre visibile nella card);
- * la testata manifesto `kp-head` la rende CustomerKitchenMenu, qui non c'è più la hero dentro la
- * categoria (resta solo il ramo `heroOnly`, oggi non usato dal menu). Il blocco SCEGLI COME LO VUOI
- * vive nello spazio `children` della PosterCard; la logica sotto è invariata.
+ * la testata manifesto `kp-head` la rende CustomerKitchenMenu, qui non c'è nessuna hero dentro la
+ * categoria. Il blocco SCEGLI COME LO VUOI vive nello spazio `children` della PosterCard; la logica
+ * sotto è invariata.
  * (Storico) Interazione pre-3.4b: CLOSED → tap → EXPANDED (una card aperta alla volta) → CHIUDI ↑.
  * SCEGLI COME LO VUOI (2026-09-24): nel prodotto aperto la scelta SOLO PANINO / MENU ·
  * FALLO PESANTE è esplicita, con default SOLO PANINO. Il selettore birra appare solo col
@@ -44,9 +44,6 @@ import './PesiMassimiSection.css';
  * infrastruttura viva in `kitchenServiceRules.js` per birre future — nessuna delle 6
  * birre attuali lo usa, quindi oggi non blocca nulla.
  *
- * HERO (FINAL UX POLISH 2026-09-16): il badge "WALRUS SPECIAL" non è in overlay sulle foto
- * dei panini, vive nel blocco contenuto sopra il titolo PESI MASSIMI (vedi il CSS).
- *
  * MENU POLISH SPRINT (2026-09-16): la CTA della card chiusa e la nota prezzo dell'EXPANDED
  * accettano un override per-item (`item.detailCtaLabel` / `item.priceNote`). Serve al
  * Box Pulled Pork (`item-018`), che sta in PESI MASSIMI per decisione di Eros ma non è un
@@ -57,8 +54,6 @@ import './PesiMassimiSection.css';
 
 /**
  * Props opzionali (additive, non cambiano il rendering approvato):
- *  - heroOnly: renderizza SOLO la hero fotografica (128:2), usata nella Home.
- *  - onHeroCta: override del CTA `SCOPRI →` (default: scroll alla lista CLOSED).
  *  - hideCombo: nasconde il blocco upsell FALLO PESANTE. Serve a /kitchen/promo,
  *    dove il menu mostra solo panini singoli. Default false = menu invariato.
  *  - forceDecimals: forza i due decimali anche sui prezzi interi (€19,00 invece
@@ -118,8 +113,6 @@ function scrollAboveDock(el) {
 export default function PesiMassimiSection({
   items,
   onAdd,
-  heroOnly = false,
-  onHeroCta,
   hideCombo = false,
   forceDecimals = false,
   includedSide = null,
@@ -135,7 +128,6 @@ export default function PesiMassimiSection({
   // SCEGLI COME LO VUOI (2026-09-24): scelta esplicita e visibile tra SOLO PANINO e MENU
   // per ogni prodotto aperto. Default SOLO PANINO — il selettore birra compare solo col MENU.
   const [choiceByItem, setChoiceByItem] = useState({});
-  const listRef = useRef(null);
   // Scroll dopo il render: { id, kind: 'detail' | 'pick' } (dettaglio birra aperto / birra confermata).
   const pendingScrollRef = useRef(null);
   const detailRefs = useRef({});
@@ -154,51 +146,8 @@ export default function PesiMassimiSection({
 
   return (
     <section className="pm-root" aria-label="Pesi Massimi">
-      {/* ── HERO FOTOGRAFICA (128:2): solo `heroOnly` (ex Home, oggi non usato dal menu) ── */}
-      {heroOnly && (
-      <div className="pm-hero">
-        <div className="pm-hero-photos" aria-hidden="true">
-          {items.map((item) => (
-            <img key={item.id} src={item.image} alt="" className="pm-hero-photo" />
-          ))}
-        </div>
-        <div className="pm-hero-scrim" />
-        <div className="pm-accent-bar" />
-        <div className="pm-hero-body">
-          <p className="pm-hero-badge">WALRUS SPECIAL</p>
-          <h2 className="pm-hero-title">PESI MASSIMI</h2>
-          <p className="pm-hero-sub">
-            {items.map((i) => i.name.toUpperCase()).join(' · ')}
-          </p>
-          <div className="pm-hero-cta-row">
-            <p className="pm-hero-tagline">AFFUMICATO. ESAGERATO. SENZA SCUSE.</p>
-            <button
-              type="button"
-              className="pm-hero-cta"
-              onClick={() => {
-                if (onHeroCta) onHeroCta();
-                else listRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
-            >
-              SCOPRI →
-            </button>
-          </div>
-          <div className="pm-hero-rule" />
-          <div className="pm-hero-prices">
-            {items.map((item) => (
-              <div key={item.id}>
-                <p className="pm-hero-price-label">{item.name.toUpperCase()}</p>
-                <p className="pm-hero-price-value">{formatPrice(item.price, forceDecimals)}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      )}
-
       {/* ── LISTA: PosterCard sempre aperte ── */}
-      {!heroOnly && (
-      <div className="pm-list" ref={listRef}>
+      <div className="pm-list">
         {orderedItems.map((item, index) => {
           const soldOut = item.available === false;
           const combo = hideCombo ? null : kitchenPesiMassimiCombos[item.id];
@@ -432,7 +381,6 @@ export default function PesiMassimiSection({
           );
         })}
       </div>
-      )}
     </section>
   );
 }
