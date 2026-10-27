@@ -477,7 +477,7 @@
    ══════════════════════════════════════════════════════════════════ */
 .kh-brand {
   position: relative;
-  background: #222220; /* stesso grigio del file del logo: il logo resta intatto, senza riquadro visibile */
+  background: #000; /* H3: logo "walrus-pub-logo-nero" = stesso file con il fondo grigio portato a nero (livelli, niente AI) */
   border-bottom: 1px solid #000;
 }
 .kh-brand-img {

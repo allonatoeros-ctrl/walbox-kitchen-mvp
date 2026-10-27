@@ -638,7 +638,7 @@ export default function CustomerKitchenMenu() {
           </svg>
         </button>
         <img
-          src="/assets/kitchen/walrus-pub-logo.webp"
+          src="/assets/kitchen/walrus-pub-logo-nero.webp"
           alt="The Walrus Pub · Food & Drink"
           width="1120"
           height="155"
