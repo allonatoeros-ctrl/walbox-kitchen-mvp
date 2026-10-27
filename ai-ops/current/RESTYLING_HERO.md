@@ -254,3 +254,40 @@ NON fatto: e2e, revisore visivo, commit. **PROSSIMO:** Eros guarda la hero e dec
 `levels.mjs`) + cwebp, niente AI. `CustomerKitchenMenu.jsx:641` usa il logo nero, `.kh-brand` background #000. Verificato 390: fondo
 rgb(0,0,0), logo caricato, nessun riquadro, nessun overflow. Banner arancione "ordine attivo" NON toccato.
 Decisione di Eros 2026-10-27: il banner arancione "ordine attivo" resta arancione. **PROSSIMO:** Eros decide il commit di H3 + H3b (foto hero, logo nero, MenuHero.*, CustomerKitchenMenu.jsx/.css), niente push.
+
+## H4 — MENU (Fallo Pesante) anche con bibite (proposta 2026-10-27, in attesa di scelta di Eros)
+Richiesta di Eros: "fare i menu con le bevande normali", soluzione bella e con meno attrito possibile.
+Oggi (verificato): il MENU esiste solo per Pulled Pork / Pastrami / Brisket (`kitchenPesiMassimiCombos`, item-040/041/042,
+€19/20/20) = panino + patate + birra OBBLIGATORIA tra 6 bottiglie. Chi non beve birra non può prendere il menu.
+La bevanda scelta NON va al server come riga: diventa una nota "🍺 BIRRA INCLUSA: …" (`buildIncludedBeersNote`), il server
+vede solo item-040 al prezzo di catalogo. Quindi aggiungere le bibite a parità di prezzo = solo frontend, zero migration.
+Conti (listino): con bibita €4 il menu resta conveniente (PP 13,90+5+4=22,90 vs 19; Pastrami 23,50 vs 20; Brisket 24 vs 20).
+Opzioni:
+- A (consigliata) Un solo menu, scelta "COSA BEVI?": striscia birre + striscia "SENZA ALCOL" (Pepsi, Pepsi Zero, Seven Up,
+  Schweppes Lemon/Tonica) con le foto che ci sono già. Stesso prezzo. Sottotitolo "PANINO + DA BERE + PATATE". Nota cucina/banco
+  generalizzata ("🥤 BIBITA INCLUSA: PEPSI ZERO"). Stessa scelta anche in cassa staff. Niente aree protette.
+- B Due menu a prezzi diversi (menu birra / menu bibita più economico): servono nuove righe catalogo su Supabase (migration,
+  allowlist promo) = area protetta, più lavoro e una scelta in più per il cliente.
+- C Menu solo birra com'è + suggerimento "aggiungi una bibita" dopo il panino: non è un menu, nessuno sconto.
+File toccati (A): `PesiMassimiSection.jsx/.css`, `kitchenPesiMassimi.js`, `kitchenServiceRules.js` (+test), `kitchenCart.js`
+(commento/nome campo), `CustomerKitchenMenu.jsx` (pairing birra: non suggerire birra se il menu ha già una bibita),
+`CounterAssistedOrder.jsx`, `kitchenMockData.js` (solo sottotitolo combo: area protetta → serve OK esplicito), e2e Pesi Massimi.
+NEEDS_DECISION: (1) prezzo uguale con bibita? (consigliato sì) (2) acqua inclusa tra le scelte? (consigliato no: €1 fa sembrare
+il menu caro) (3) ok a toccare il sottotitolo in `kitchenMockData.js`.
+Test: unit nota (birra, bibita, mista), reconcile carrello con bibita, e2e scelta bibita → sacco → nota; 320/390/430.
+Modello/effort: Sonnet 5.5 / medium (implementazione), revisione visiva finale con visual-reviewer.
+**H4 Gate 1 APPROVATO 2026-10-27 (Eros):** opzione A, stesso prezzo, acqua (item-038) esclusa, OK a toccare SOLO il sottotitolo
+dei 3 combo in `src/data/kitchenMockData.js`. Esecuzione delegata a subagent walbox-dev (Sonnet). Niente commit/push.
+
+## H4 — risultato agente (2026-10-27, NON committato)
+- File toccati: `src/lib/kitchenPesiMassimi.js` (costante acqua esclusa + `isFalloPesanteDrinkAllowed` + `falloPesanteDrinkOptions`), `src/lib/kitchenServiceRules.js` (nota separata per tipo, nuovo export `INCLUDED_DRINK_NOTE_PREFIX`), `src/lib/kitchenCart.js` (reconcile: una bibita non ammessa/acqua fa cadere la riga), `src/components/kitchen/PesiMassimiSection.jsx/.css` ("2 · COSA BEVI?", fila birre invariata + "SENZA ALCOL" con pillole bibita a scelta diretta, "DA BERE: X", "SCEGLI DA BERE PER CONTINUARE"), `src/pages/CustomerKitchenMenu.jsx` (solo import + prop `drinkOptions` + commento sul pairing), `src/pages/CounterAssistedOrder.jsx` (bibite nel pannello MENU, riuso classi esistenti), `src/data/kitchenMockData.js` (SOLO `subtitle` dei 3 combo -> 'PANINO + DA BERE + PATATE AL FORNO'), test: `kitchenServiceRules.test.js`, `kitchenCart.test.js`, `kitchenMenuCopy.test.js`, e2e `customer-kitchen-flow.spec.js` (adattati testi + nuovo 21a), `kitchen-cart-persistence.spec.js` (nuovo test bibita), `kitchen-cassa-assisted-order.spec.js` (nuovo C14).
+- Invariati: nome campo `includesBeerId`, `INCLUDED_BEER_NOTE_PREFIX`, formato nota birra, server/RPC/api/supabase/routing. `findRecommendedBeer` non modificato (gia' esclude ogni riga con `includesBeerId`, quindi anche con bibita): solo commento.
+- Nota cucina: birra "🍺 BIRRA INCLUSA: A · 2x B", bibita "🥤 BIBITA INCLUSA: PEPSI ZERO", misto uniti da " · " (birre prima).
+- Verifiche: unit `node --test src/lib/*.test.js api/_lib/*.test.js` 188 pass / 0 fail / 1 skip (+6 nuovi); eslint sui file toccati = 12 errori tutti preesistenti (8 CustomerKitchenMenu.jsx, 1 `no-empty` kitchenCart.js:82 gia' esistente, 3 in customer-kitchen-flow.spec.js righe 123/651/1586), 0 nuovi; build ok (scratchpad `build-h4`); e2e: kitchen-cart-persistence 9/9, kitchen-p0-closure 9/9, customer-kitchen-flow 49 pass / 5 fail (14, 15, 36, 49, 52: annulla ordine staff e SumUp, non toccano Pesi Massimi), cassa 13/14 (C7 coda /kitchen/solo fallisce). Visivo 320/390/430: scrollWidth = larghezza viewport (nessun overflow), pillole 44-52 px, nessun testo tagliato.
+- E2E: porta 5174 occupata da un dev server esterno, usata config temporanea in scratchpad su 5175; nel worktree manca `.env.local`, quindi Supabase finto SOLO nelle variabili del processo di test (`VITE_SUPABASE_URL=http://127.0.0.1:54321`, chiave fasulla), rete mockata.
+- NON verificato: i 6 e2e falliti (staff/SumUp) non sono stati confrontati con una baseline pulita (probabile effetto dell'ambiente finto, da riverificare con l'ambiente di Eros); iPhone reali; cassa visiva; allergeni staff: `kitchenAllergens.js` (fuori scope) calcola l'unione allergeni del combo solo sulle birre, le bibite non vi entrano (le bibite non hanno allergeni dichiarati nel catalogo, ma va deciso).
+- Da cancellare a mano: `tests/e2e/zz-dbg.spec.js` (file di debug creato per errore, ora solo un commento; `rm` vietato).
+**H4 verifica sessione principale (2026-10-27):** unit rilanciati 188/0/1 skip (verificato); screenshot 390 guardato: ok, coerente.
+I 6 e2e rossi (14, 15, 36, 49, 52 flow + C7 cassa) sono annulla staff / SumUp / coda: non toccano codice cambiato (dedotto, non
+confrontato con baseline). Da fare: Eros cancella a mano `tests/e2e/zz-dbg.spec.js`; decisione allergeni bibite nel combo
+(`kitchenAllergens.js`, fuori scope). **PROSSIMO:** Eros prova a telefono e decide il commit (esclusi `.claude/*` e zz-dbg), niente push.
