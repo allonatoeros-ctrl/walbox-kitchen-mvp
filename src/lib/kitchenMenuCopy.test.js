@@ -63,7 +63,7 @@ test('il combo mostra il selettore birra (pillole, dettaglio, conferma)', () => 
 
 test('il sottotitolo del combo dice esattamente cosa c\'e dentro', () => {
   for (const c of Object.values(kitchenPesiMassimiCombos)) {
-    assert.equal(c.subtitle, 'PANINO + BIRRA + PATATE AL FORNO', `${c.id} ha il sottotitolo sbagliato`);
+    assert.equal(c.subtitle, 'PANINO + DA BERE + PATATE AL FORNO', `${c.id} ha il sottotitolo sbagliato`);
   }
 });
 

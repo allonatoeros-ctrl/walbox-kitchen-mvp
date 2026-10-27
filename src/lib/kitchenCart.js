@@ -13,7 +13,7 @@
 // Cosa NON fa: non si fida dei prezzi salvati. Al ripristino ogni riga viene riconciliata col
 // catalogo corrente (vedi reconcileCartItems): nome e prezzo tornano dal catalogo, e cio' che non
 // e' piu' ordinabile viene scartato. Il totale e' sempre ricalcolato, mai lo snapshot salvato.
-import { buildFalloPesanteCartLine } from './kitchenPesiMassimi.js';
+import { buildFalloPesanteCartLine, isFalloPesanteDrinkAllowed } from './kitchenPesiMassimi.js';
 
 export const CART_STORAGE_KEY = 'walbox_kitchen_cart_v1';
 
@@ -56,7 +56,7 @@ export function loadCart(storage) {
   }
 }
 
-/** Salva solo l'essenziale: identita' riga, quantita', birra scelta, nota e scelta di ritiro.
+/** Salva solo l'essenziale: identita' riga, quantita', bevanda scelta (birra o bibita), nota e scelta di ritiro.
  *  Nome/prezzo/immagine NON si salvano: si ricavano sempre dal catalogo al ripristino. */
 export function saveCart({ items, note, fulfillmentType }, storage) {
   const store = storageOr(storage);
@@ -101,10 +101,12 @@ export function reconcileCartItems(savedItems, menuItems, combos) {
   for (const line of savedItems ?? []) {
     const comboRef = comboById.get(line.baseId);
     if (comboRef) {
-      // Un FALLO PESANTE vale solo con la sua birra: se la birra scelta non e' piu' servibile
-      // la riga cade, perche' il combo senza birra non e' un prodotto che esiste a menu.
+      // Un FALLO PESANTE vale solo con la sua bevanda (`includesBeerId` = birra o bibita): se non
+      // e' piu' servibile, o e' una bibita non ammessa (acqua), la riga cade, perche' il combo
+      // senza bevanda non e' un prodotto che esiste a menu.
       const beer = line.includesBeerId ? byId.get(line.includesBeerId) : null;
-      if (!beer || !isOrderable(beer)) { dropped.push(line.baseId); continue; }
+      const allowedDrink = !!beer && (beer.category !== 'bevande' || isFalloPesanteDrinkAllowed(beer));
+      if (!beer || !isOrderable(beer) || !allowedDrink) { dropped.push(line.baseId); continue; }
       const base = byId.get(comboRef.baseItemId);
       if (!isOrderable(base)) { dropped.push(line.baseId); continue; }
       items.push(buildFalloPesanteCartLine(comboRef.combo, beer, line.qty));

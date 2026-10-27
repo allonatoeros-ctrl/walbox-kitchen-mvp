@@ -7,7 +7,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { kitchenMenuItems, kitchenPesiMassimiCombos } from '../data/kitchenMockData.js';
 import { loadCart, saveCart, clearCart, reconcileCartItems, cartTotal, CART_STORAGE_KEY } from './kitchenCart.js';
-import { buildFalloPesanteCartLine } from './kitchenPesiMassimi.js';
+import { buildFalloPesanteCartLine, falloPesanteDrinkOptions, isFalloPesanteDrinkAllowed } from './kitchenPesiMassimi.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const menuSrc = readFileSync(join(__dirname, '../pages/CustomerKitchenMenu.jsx'), 'utf8');
@@ -47,6 +47,44 @@ test('FALLO PESANTE: la birra scelta sopravvive e il nome viene ricostruito dal 
   assert.equal(items[0].id, `${COMBO.id}::${BEER.id}`);
   assert.equal(items[0].name, `${COMBO.name} · ${BEER.name}`);
   assert.equal(items[0].price, COMBO.price);
+});
+
+// H4 (2026-10-27): bibita al posto della birra nel FALLO PESANTE, stesso prezzo.
+const drinkLine = (id, qty = 1) => ({ id: `${COMBO.id}::${id}`, baseId: COMBO.id, qty, includesBeerId: id });
+
+test('H4: lista bibite del MENU = bevande ordinabili, acqua esclusa', () => {
+  const ids = falloPesanteDrinkOptions(kitchenMenuItems).map((i) => i.id);
+  assert.deepEqual(ids, ['item-046', 'item-047', 'item-048', 'item-049', 'item-050']);
+  assert.ok(!ids.includes('item-038'), 'l\'acqua non e una bibita del menu');
+  // non ordinabili (esaurita / senza prezzo) escluse; nessun id hardcoded fuori dalla lib.
+  const edited = kitchenMenuItems.map((i) => (
+    i.id === 'item-046' ? { ...i, available: false } : i.id === 'item-047' ? { ...i, price: null } : i
+  ));
+  assert.deepEqual(falloPesanteDrinkOptions(edited).map((i) => i.id), ['item-048', 'item-049', 'item-050']);
+  assert.deepEqual(falloPesanteDrinkOptions(null), []);
+  assert.equal(isFalloPesanteDrinkAllowed(BEER), false, 'una birra non e una bibita');
+});
+
+test('H4: un FALLO PESANTE con bibita sopravvive al ripristino, stesso prezzo del combo', () => {
+  const s = fakeStorage();
+  saveCart({ items: [drinkLine('item-047', 2)], note: '', fulfillmentType: null }, s);
+  const { items, dropped } = reconcileCartItems(loadCart(s).items, kitchenMenuItems, kitchenPesiMassimiCombos);
+  assert.equal(dropped.length, 0);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].includesBeerId, 'item-047');
+  assert.equal(items[0].baseId, COMBO.id);
+  assert.equal(items[0].id, `${COMBO.id}::item-047`);
+  assert.equal(items[0].name, `${COMBO.name} · Pepsi Zero`);
+  assert.equal(items[0].price, COMBO.price);
+  assert.equal(items[0].qty, 2);
+});
+
+test('H4: bevanda non piu ammessa (acqua) o non ordinabile -> la riga cade come per la birra', () => {
+  const lines = [drinkLine('item-038'), drinkLine('item-047'), drinkLine('item-048')];
+  const edited = kitchenMenuItems.map((i) => (i.id === 'item-048' ? { ...i, available: false } : i));
+  const { items, dropped } = reconcileCartItems(lines, edited, kitchenPesiMassimiCombos);
+  assert.deepEqual(items.map((l) => l.includesBeerId), ['item-047']);
+  assert.equal(dropped.length, 2);
 });
 
 test('il totale e ricalcolato dai dati correnti, non letto dallo snapshot', () => {
@@ -142,7 +180,7 @@ test('buildFalloPesanteCartLine: id composito solo-UI, baseId reale, birra inclu
 test('la cassa mappa il payload sul baseId (combo) e mette la birra inclusa in nota', () => {
   const cassa = readFileSync(join(__dirname, '../pages/CounterAssistedOrder.jsx'), 'utf8');
   // riusa l'helper condiviso neutro, MAI il modulo carrello cliente
-  assert.match(cassa, /import \{ buildFalloPesanteCartLine \} from '\.\.\/lib\/kitchenPesiMassimi'/);
+  assert.match(cassa, /import \{ buildFalloPesanteCartLine(, falloPesanteDrinkOptions)? \} from '\.\.\/lib\/kitchenPesiMassimi'/);
   // itemId del payload = baseId || id (per un combo è item-040/041/042, non l'id composito)
   assert.match(cassa, /itemId: l\.baseId \|\| l\.id/);
   // la birra scelta viaggia in nota con la stessa funzione del flusso cliente

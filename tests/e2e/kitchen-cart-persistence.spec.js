@@ -47,6 +47,23 @@ test('refresh: item, quantita e birra del FALLO PESANTE restano nel sacco', asyn
   await expect(page.locator('.kitch-drawer')).toContainText(beer.toUpperCase().slice(0, 6));
 });
 
+test('refresh: il FALLO PESANTE con BIBITA (H4) resta nel sacco, stesso prezzo', async ({ page }) => {
+  await gotoMenu(page);
+  await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
+  const card = page.locator('.pm-list .pc-card').first();
+  await card.getByTestId('choose-menu').click();
+  await card.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
+  await card.getByTestId('fallo-pesante-cta').click();
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('19,00 €');
+
+  await page.reload();
+
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('19,00 €');
+  await openCart(page);
+  await expect(page.locator('.kitch-drawer')).toContainText('FALLO PESANTE');
+  await expect(page.locator('.kitch-drawer')).toContainText('PEPSI ZERO');
+});
+
 test('refresh: nota e scelta di ritiro restano, e la nota e subito visibile', async ({ page }) => {
   await gotoMenu(page);
   await addFalloPesante(page);

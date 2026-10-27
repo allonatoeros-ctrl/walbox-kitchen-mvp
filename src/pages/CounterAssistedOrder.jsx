@@ -4,7 +4,7 @@ import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { isEveningServiceActive, buildIncludedBeersNote } from '../lib/kitchenServiceRules';
 import { falloPesanteBeerOptions } from '../lib/kitchenAllergens';
 import { isEventModeActive, filterEventMenuItems } from '../lib/kitchenEventMode';
-import { buildFalloPesanteCartLine } from '../lib/kitchenPesiMassimi';
+import { buildFalloPesanteCartLine, falloPesanteDrinkOptions } from '../lib/kitchenPesiMassimi';
 import { kitchenPesiMassimiCombos, FALLO_PESANTE_INCLUDED_SIDE_ID } from '../data/kitchenMockData';
 import { getStaffSession, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
 import './CounterAssistedOrder.css';
@@ -174,6 +174,9 @@ function CounterAssistedOrderView() {
     return falloPesanteBeerOptions().map((b) => liveById.get(b.id) ?? b);
   }, [menuItems]);
 
+  // H4: bibite ammesse al posto della birra (stessa lista del menu cliente, acqua esclusa).
+  const falloDrinkOptions = useMemo(() => falloPesanteDrinkOptions(menuItems), [menuItems]);
+
   const total = cart.reduce((sum, l) => sum + l.price * l.qty, 0);
   const itemCount = cart.reduce((sum, l) => sum + l.qty, 0);
 
@@ -209,7 +212,9 @@ function CounterAssistedOrderView() {
 
   const addCombo = () => {
     if (!comboOpenCombo || !comboOpenBeerId) return;
-    const beer = falloBeerOptions.find((b) => b.id === comboOpenBeerId);
+    // Bevanda inclusa = birra o bibita (`includesBeerId` nella riga, nome campo invariato).
+    const beer = falloBeerOptions.find((b) => b.id === comboOpenBeerId)
+      ?? falloDrinkOptions.find((d) => d.id === comboOpenBeerId);
     if (!beer) return;
     addLine(buildFalloPesanteCartLine(comboOpenCombo, beer));
     closeCombo();
@@ -360,10 +365,12 @@ function CounterAssistedOrderView() {
                 </div>
                 {falloPesanteSide && (
                   <div className="kca-combo-sub">
-                    INCLUDE {falloPesanteSide.name.toUpperCase()} + 1 BIRRA
+                    INCLUDE {falloPesanteSide.name.toUpperCase()} + 1 BIRRA O BIBITA
                   </div>
                 )}
-                {falloBeerOptions.length > 0 ? (
+                {falloBeerOptions.length > 0 || falloDrinkOptions.length > 0 ? (
+                  <>
+                  {falloBeerOptions.length > 0 && (
                   <div className="kca-combo-beers" role="group" aria-label="Scegli la birra inclusa">
                     {falloBeerOptions.map((beer) => {
                       const beerLocked = beer.availability === 'evening_only' && !isEveningServiceActive();
@@ -383,8 +390,32 @@ function CounterAssistedOrderView() {
                       );
                     })}
                   </div>
+                  )}
+                  {falloDrinkOptions.length > 0 && (
+                    <>
+                      <div className="kca-combo-sub">SENZA ALCOL</div>
+                      <div className="kca-combo-beers" role="group" aria-label="Scegli la bibita inclusa">
+                        {falloDrinkOptions.map((drink) => {
+                          const selected = comboOpenBeerId === drink.id;
+                          return (
+                            <button
+                              key={drink.id}
+                              type="button"
+                              aria-pressed={selected}
+                              data-testid={`cassa-combo-drink-${drink.id}`}
+                              className={`kca-combo-beer${selected ? ' kca-combo-beer--on' : ''}`}
+                              onClick={() => chooseComboBeer(comboOpenItem.id, drink.id)}
+                            >
+                              {drink.name}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+                  </>
                 ) : (
-                  <div className="kca-combo-sub">NESSUNA BIRRA DISPONIBILE</div>
+                  <div className="kca-combo-sub">NESSUNA BEVANDA DISPONIBILE</div>
                 )}
                 <button
                   type="button"
@@ -397,7 +428,7 @@ function CounterAssistedOrderView() {
                     ? 'CONTORNO NON DISPONIBILE'
                     : comboOpenBeerId
                       ? `AGGIUNGI MENU · € ${comboOpenCombo.price.toFixed(2)}`
-                      : 'SCEGLI UNA BIRRA'}
+                      : 'SCEGLI DA BERE'}
                 </button>
               </div>
             )}
@@ -407,7 +438,7 @@ function CounterAssistedOrderView() {
                 const blocked = counterItemBlockReason(item);
                 // Nel tab EVENTO il MENU (combo con birra) non si vende: solo il panino singolo.
                 const combo = currentCategory === 'evento' ? null : kitchenPesiMassimiCombos[item.id] ?? null;
-                const menuBlocked = !!blocked || falloSideMissing || falloBeerOptions.length === 0;
+                const menuBlocked = !!blocked || falloSideMissing || (falloBeerOptions.length === 0 && falloDrinkOptions.length === 0);
                 return (
                   <div className="kca-cell" key={item.id}>
                     <button
@@ -435,8 +466,8 @@ function CounterAssistedOrderView() {
                             ? 'MENU'
                             : falloSideMissing
                               ? 'MENU · CONTORNO NON DISP.'
-                              : falloBeerOptions.length === 0
-                                ? 'MENU · NO BIRRE'
+                              : menuBlocked
+                                ? 'MENU · NO BEVANDE'
                                 : 'MENU'}
                         </span>
                         {!menuBlocked && <span>€ {combo.price.toFixed(2)}</span>}

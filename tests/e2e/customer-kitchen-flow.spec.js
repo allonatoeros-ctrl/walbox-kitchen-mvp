@@ -1078,7 +1078,7 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await expect(menuOption).toContainText('MENU · FALLO PESANTE');
   const includes = openCard.getByTestId('fallo-pesante-includes');
   await expect(includes).toContainText('PANINO');
-  await expect(includes).toContainText('BIRRA');
+  await expect(includes).toContainText('DA BERE');
   await expect(includes).toContainText('PATATE AL FORNO');
   await expect(menuOption.locator('.pmx-opt-price')).toHaveText(/19\s?€/);
   await expect(menuOption).not.toContainText('rispetto al panino');
@@ -1087,13 +1087,13 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await menuOption.click();
   await expect(menuOption).toHaveClass(/pmx-opt--on/);
   await expect(soloOption).not.toHaveClass(/pmx-opt--on/);
-  await expect(openCard.getByTestId('fallo-pesante-beer-step')).toContainText('2 · SCEGLI LA TUA BIRRA');
+  await expect(openCard.getByTestId('fallo-pesante-beer-step')).toContainText('2 · COSA BEVI?');
   await expect(openCard.locator('.pmx-beer-badge')).toHaveText('OBBLIGATORIO');
-  await expect(openCard.locator('.pmx-beer-sub')).toHaveText('Seleziona una birra inclusa nel menu');
+  await expect(openCard.locator('.pmx-beer-sub')).toHaveText('Una birra o una bibita, il prezzo del menu non cambia');
   const heavyCta = openCard.getByTestId('fallo-pesante-cta');
   // Nessuna birra scelta: FALLO PESANTE resta disabilitato, nessun add silenzioso.
   await expect(heavyCta).toBeDisabled();
-  await expect(heavyCta).toHaveText('SCEGLI UNA BIRRA PER CONTINUARE');
+  await expect(heavyCta).toHaveText('SCEGLI DA BERE PER CONTINUARE');
 
   // Solo le 6 bottiglie rimaste sono selezionabili: Krombacher (rimossa dal catalogo) non c'e'.
   await expect(openCard.locator('.pm-beer-pill')).toHaveCount(6);
@@ -1133,6 +1133,47 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   // La riga carrello porta la birra inclusa: e' cio' che finisce sulla comanda (P0-2).
   const row = page.locator('.kitch-drawer-row', { hasText: 'PULLED PORK — FALLO PESANTE · KEILER HELLES' });
   await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PULLED PORK — FALLO PESANTE · KEILER HELLES');
+  await expect(row.locator('.kitch-drawer-row-price')).toHaveText('19,00 €');
+});
+
+test('21a. FALLO PESANTE con BIBITA (H4, 2026-10-27): scelta diretta, stesso prezzo, acqua esclusa, nessuna anteprima', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openCategoryList(page, 'PESI MASSIMI');
+
+  const openCard = page.locator('.pm-list .pc-card').first();
+  await openCard.getByTestId('choose-menu').click();
+  const heavyCta = openCard.getByTestId('fallo-pesante-cta');
+  await expect(heavyCta).toBeDisabled();
+
+  // Birre invariate (6), sotto "SENZA ALCOL" le 5 bibite ammesse: l'acqua non c'e'.
+  await expect(openCard.locator('.pm-beer-pills .pm-beer-pill')).toHaveCount(6);
+  await expect(openCard.getByTestId('fallo-pesante-drinks-label')).toHaveText('SENZA ALCOL');
+  const drinks = openCard.locator('.pm-drink-pill');
+  await expect(drinks).toHaveCount(5);
+  await expect(openCard.locator('.pm-drink-pill', { hasText: 'Acqua' })).toHaveCount(0);
+  await expect(openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' })).toHaveCount(1);
+
+  // Tap su una bibita = scelta diretta: nessuna anteprima/"storia", CTA subito attiva, stesso prezzo.
+  await openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
+  await expect(openCard.locator('.pm-beer-detail')).toHaveCount(0);
+  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ PEPSI ZERO SELEZIONATA');
+  await expect(openCard.locator('.pmx-pick-beer')).toHaveText('DA BERE: PEPSI ZERO');
+  await expect(heavyCta).toBeEnabled();
+  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 19 €');
+
+  // Scegliere una birra dopo la bibita sostituisce la scelta (mai entrambe).
+  await openCard.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
+  await openCard.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
+  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ KEILER HELLES SELEZIONATA');
+  await expect(openCard.locator('.pm-drink-pill--on')).toHaveCount(0);
+
+  // Torno sulla bibita e aggiungo: il sacco mostra il menu con la bibita, a 19 EUR.
+  await openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
+  await heavyCta.click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
+  const row = page.locator('.kitch-drawer-row', { hasText: 'PULLED PORK — FALLO PESANTE · PEPSI ZERO' });
+  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PULLED PORK — FALLO PESANTE · PEPSI ZERO');
   await expect(row.locator('.kitch-drawer-row-price')).toHaveText('19,00 €');
 });
 

@@ -29,6 +29,7 @@ import AnniversaryBanner from '../components/kitchen/AnniversaryBanner';
 import EventSideChip from '../components/kitchen/EventSideChip';
 import { checkoutMissing, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
+import { falloPesanteDrinkOptions } from '../lib/kitchenPesiMassimi';
 import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, shouldSuggestEventSide, EVENT_CATEGORY, EVENT_CATEGORIES, EVENT_SIDE_ITEM_ID } from '../lib/kitchenEventMode';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
 import { formatPrice } from '../lib/kitchenPrice';
@@ -75,7 +76,8 @@ const CUSTOMER_HIDDEN_ITEM_IDS = [];
 const BEER_PAIRING_CATEGORY_PRIORITY = ['panini', 'bbq', 'cicchetti', 'tagliere', 'insalatone', 'tartare'];
 
 // Nessun suggerimento se il sacco ha già una birra (standalone o già inclusa in
-// un FALLO PESANTE via `includesBeerId`), se nessuna categoria food nel sacco ha
+// un FALLO PESANTE via `includesBeerId`, che da H4 vale anche per una bibita: con un menu già
+// completo di bevanda non si propone una birra in più), se nessuna categoria food nel sacco ha
 // un pairing configurato, o se la birra consigliata non è ordinabile (prezzo non
 // confermato / esaurita) — mai un CTA morto, mai un doppione della birra già presa.
 //
@@ -290,6 +292,9 @@ export default function CustomerKitchenMenu() {
   const falloPesanteBeerOptions = menuItems.filter(
     (i) => i.category === 'birre' && i.tags?.includes('birre-v1'),
   );
+  // Bibite ammesse nel MENU al posto della birra (H4): categoria `bevande` ordinabili, acqua esclusa
+  // (regola nella lib, nessun id qui).
+  const falloPesanteDrinkChoices = falloPesanteDrinkOptions(menuItems);
   // Navigazione (Fase 3.4): niente home, la pagina e' sempre il menu con le linguette. Le linguette
   // NON aggiungono voci di history (replaceState): il tasto indietro del telefono non deve
   // attraversare le categorie. Cambio linguetta = pagina in alto, cosi' la prima locandina si vede
@@ -724,6 +729,7 @@ export default function CustomerKitchenMenu() {
           featuredTag={eventMode ? 'anniversario' : null}
           includedSide={falloPesanteSide}
           beerOptions={falloPesanteBeerOptions}
+          drinkOptions={falloPesanteDrinkChoices}
           onRemove={removeItem}
           qtyById={qtyById}
         />

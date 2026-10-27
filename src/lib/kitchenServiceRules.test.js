@@ -18,6 +18,7 @@ import {
   isEveningServiceActive,
   EVENING_SERVICE_START_HOUR,
   INCLUDED_BEER_NOTE_PREFIX,
+  INCLUDED_DRINK_NOTE_PREFIX,
 } from './kitchenServiceRules.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -80,6 +81,39 @@ test('il nome della birra NON viene ricavato dal nome della riga carrello', () =
   const note = buildIncludedBeersNote([line], kitchenMenuItems);
   assert.ok(note.includes(beers[0].name.toUpperCase()), note);
   assert.doesNotMatch(note, /NOME SBAGLIATO/);
+});
+
+// H4 (2026-10-27): il MENU puo' avere una bibita al posto della birra, stesso prezzo.
+const PEPSI_ZERO = kitchenMenuItems.find((i) => i.id === 'item-047');
+const SEVEN_UP = kitchenMenuItems.find((i) => i.id === 'item-048');
+
+test('H4 nota: solo birra resta identica al formato storico', () => {
+  const note = buildIncludedBeersNote([comboCartLine('item-009', beers[3]), comboCartLine('item-010', beers[5], 2)], kitchenMenuItems);
+  assert.equal(note, `\u{1F37A} BIRRA INCLUSA: ${beers[3].name.toUpperCase()} \u00B7 2x ${beers[5].name.toUpperCase()}`);
+  assert.doesNotMatch(note, new RegExp(INCLUDED_DRINK_NOTE_PREFIX));
+});
+
+test('H4 nota: solo bibita usa il prefisso BIBITA INCLUSA, mai BIRRA INCLUSA', () => {
+  const note = buildIncludedBeersNote([comboCartLine('item-009', PEPSI_ZERO)], kitchenMenuItems);
+  assert.equal(note, '\u{1F964} BIBITA INCLUSA: PEPSI ZERO');
+  assert.equal(INCLUDED_DRINK_NOTE_PREFIX, 'BIBITA INCLUSA');
+  assert.doesNotMatch(note, new RegExp(INCLUDED_BEER_NOTE_PREFIX));
+});
+
+test('H4 nota: carrello misto (birra + bibite), quantita sommate per tipo, unite da " · "', () => {
+  const note = buildIncludedBeersNote(
+    [
+      comboCartLine('item-009', PEPSI_ZERO),
+      comboCartLine('item-010', beers[0]),
+      comboCartLine('item-011', PEPSI_ZERO, 2),
+      comboCartLine('item-009', SEVEN_UP),
+    ],
+    kitchenMenuItems,
+  );
+  assert.equal(
+    note,
+    `\u{1F37A} BIRRA INCLUSA: ${beers[0].name.toUpperCase()} \u00B7 \u{1F964} BIBITA INCLUSA: 3x PEPSI ZERO \u00B7 SEVEN UP`,
+  );
 });
 
 test('handleSubmit mette la birra PRIMA della nota cliente e non cambia il payload item', () => {

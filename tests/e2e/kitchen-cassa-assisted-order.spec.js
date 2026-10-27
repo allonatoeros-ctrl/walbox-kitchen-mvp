@@ -366,3 +366,26 @@ test('C13. MENU: stesso Peso Massimo con birre diverse resta su due righe distin
   await expect(page.getByTestId('cassa-line-item-040::item-051')).toBeVisible();
   await expect(page.getByTestId('cassa-line-item-040::item-052')).toBeVisible();
 });
+
+test('C14. MENU con BIBITA (H4): acqua esclusa, stesso prezzo, riga carrello con la bibita', async ({ page }) => {
+  await mockAnonymousAuth(page);
+  await mockEmptyMenuAvailability(page);
+  await page.goto('/kitchen/cassa');
+  await page.getByTestId('cassa-tab-bbq').click();
+
+  await page.getByTestId('cassa-menu-item-009').click();
+  await expect(page.getByTestId('cassa-combo-add')).toBeDisabled();
+  // Le 5 bibite ammesse ci sono, l'acqua (item-038) no.
+  for (const id of ['item-046', 'item-047', 'item-048', 'item-049', 'item-050']) {
+    await expect(page.getByTestId(`cassa-combo-drink-${id}`)).toBeVisible();
+  }
+  await expect(page.getByTestId('cassa-combo-drink-item-038')).toHaveCount(0);
+
+  await page.getByTestId('cassa-combo-drink-item-047').click();
+  await expect(page.getByTestId('cassa-combo-add')).toBeEnabled();
+  await page.getByTestId('cassa-combo-add').click();
+  await expect(page.getByTestId('cassa-combo-panel')).toHaveCount(0);
+
+  await expect(page.getByTestId('cassa-line-item-040::item-047')).toBeVisible();
+  await expect(page.getByTestId('cassa-total')).toHaveText('€ 19.00');
+});

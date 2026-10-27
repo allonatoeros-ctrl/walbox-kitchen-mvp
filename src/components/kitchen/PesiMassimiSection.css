@@ -213,7 +213,8 @@
   gap: 8px;
 }
 
-.pm-beer-pill {
+.pm-beer-pill,
+.pm-drink-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -235,7 +236,8 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.pm-beer-pill--on {
+.pm-beer-pill--on,
+.pm-drink-pill--on {
   border-color: var(--poster-yellow, #ffc83d);
   color: var(--poster-yellow, #ffc83d);
 }
@@ -253,6 +255,16 @@
   width: 24px;
   height: 24px;
   object-fit: contain;
+}
+
+.pm-drink-label {
+  margin: 12px 0 6px;
+  font-weight: 400;
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm, 0.06em);
+  text-transform: uppercase;
+  color: var(--poster-muted, #c9b39a);
 }
 
 .pm-beer-pill-lock {
@@ -379,6 +391,7 @@
 
 .pmx-opt:focus-visible,
 .pm-beer-pill:focus-visible,
+.pm-drink-pill:focus-visible,
 .pm-beer-chosen-change:focus-visible,
 .pm-beer-detail-cta:focus-visible,
 .pm-beer-detail-close:focus-visible {
