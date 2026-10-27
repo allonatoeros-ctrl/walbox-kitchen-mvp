@@ -3,7 +3,8 @@ import './MenuHero.css';
 /**
  * Hero del menu cliente (restyling hero, 2026-10-25): titolo + CTA e foto del panino nella STESSA fascia.
  * Riferimento: ai-ops/reports/visual/restyling-hero/riferimento-grande.webp (solo composizione, mai incorporato).
- * La foto è un asset reale del progetto (`panino_orto_cattivo`), ritagliata via CSS; nessun ritocco sul cibo.
+ * La foto è una foto reale del pub (pulled pork con la scatola Walrus, data da Eros 2026-10-27), solo ritagliata e
+ * ridimensionata con `cwebp` (niente AI, nessun ritocco sul cibo).
  *
  * Props:
  *  - onDiscover  tocco sulla CTA "SCOPRI I NOSTRI PANINI" (il padre apre la linguetta Panini)
@@ -13,10 +14,10 @@ export default function MenuHero({ onDiscover }) {
     <section className="mh-hero" aria-label="Oggi ti facciamo venire fame">
       <img
         className="mh-photo"
-        src="/assets/kitchen/menu/panini/panino_orto_cattivo.webp"
+        src="/assets/kitchen/menu/hero/hero-pulled-pork.webp"
         alt=""
-        width="1254"
-        height="1254"
+        width="1080"
+        height="1058"
         fetchPriority="high"
         decoding="async"
       />

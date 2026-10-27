@@ -15,21 +15,20 @@
   isolation: isolate;
 }
 
-/* Foto: ingrandita, ancorata in basso e spinta fuori dal bordo destro (il panino "esce" dalla hero).
-   Il bordo alto sfuma nel nero della hero: lì c'è solo la parete scura dell'originale. */
+/* Foto (H3): pulled pork reale, ritagliata nel file (scatola nera a sinistra, carta Walrus in basso).
+   Spinta a destra e un po' in basso: il panino esce dal bordo come nel riferimento e lascia il ripieno libero
+   da titolo e CTA. Il bordo sinistro è la scatola nera, quindi la dissolvenza nel nero della hero non si vede. */
 .mh-photo {
   position: absolute;
   z-index: 0;
-  right: calc(var(--mh-w) * -0.53); /* giro 5: ~40 px a destra a 390, cosi' la CTA non copre piu' il ripieno */
-  bottom: calc(var(--mh-w) * -0.36);
+  right: calc(var(--mh-w) * -0.42);
+  bottom: calc(var(--mh-w) * -0.06);
   width: calc(var(--mh-w) * 1.1);
   height: auto;
-  aspect-ratio: 1 / 1;
-  object-fit: cover;
-  /* dissolvenza sul bordo alto (parete scura) e sul bordo sinistro (34%, giro 5b N-09: niente riga verticale): nessun riquadro visibile */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 30%), linear-gradient(to right, transparent 0%, #000 34%);
+  aspect-ratio: 1080 / 1058;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%), linear-gradient(to right, transparent 0%, #000 22%);
   -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 30%), linear-gradient(to right, transparent 0%, #000 34%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 14%), linear-gradient(to right, transparent 0%, #000 22%);
   mask-composite: intersect;
 }
 
