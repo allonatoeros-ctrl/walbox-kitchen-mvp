@@ -227,3 +227,30 @@ Non fare deploy.
 - Dubbi lasciati: (1) `PosterCard` ramo non `compact` (+`splitName`, `PriceBig`, `.pc-scrim/.pc-num/.pc-over/.pc-quip`): tutti i chiamanti passano `compact`, ma toglierlo cambia l'API e tocca Panini/Tagliere/Tartare (fuori ambito); (2) blocco promo `kitchenCategoryPromos` in `CustomerKitchenMenu.jsx` (+`.kitch-promo-wrapper`): oggi `null` per tutte le categorie del menu (dati protetti); (3) rami `patatine`/`combo` di `getPosterTitle`, `CUSTOMER_HIDDEN_ITEM_IDS = []`; (4) dichiarazioni base di `.kitch-bottom-card`/`.kitch-btn-vai` quasi tutte sovrascritte dal dock: restano perché cambierebbero valori calcolati; (5) fragment `<>` e condizione ripetuta due volte nel menu.
 - Verifiche: eslint 8 errori = baseline (tutti `CustomerKitchenMenu.jsx`, 0 nuovi, 0 warning); `node --test src/lib/*.test.js` 176 pass/0 fail/1 skip; build ok (scratchpad `build-clean`); confronto DOM prima/dopo (computed style di ogni elemento + pseudo, rect, scrollWidth) a 320/390/430 su 15 stati (9 categorie, 3 stati combo Pesi Massimi, dock, sacco, sacco con errore): 0 differenze su 45 snapshot (baseline ripetuta 2 volte = identica). Pulse dock: `.kb-wrap` animation none, `.kb-ticket` kbPulse come prima.
 - NON verificato: e2e (porta occupata), stati `:hover`/`:focus`, reduced-motion, cucina chiusa, modalità evento, esaurito, toast/flyer, banner ordine attivo, iPhone reali (per quelle regole fa fede il grep: nessuna classe rimossa compare in src/ o nei test, salvo `.kitch-card`/`.kitch-menu-list` usate solo in `toHaveCount(0)`).
+
+## H3 — Immagine hero ritagliata SENZA AI (proposta 2026-10-27, in attesa di scelta di Eros)
+Stato git: tutto committato e PUSHATO (origin/feat/restyling-hero = HEAD d0dc936). Non fatto: merge/deploy.
+Richiesta di Eros: immagine per la hero ottenuta solo ritagliando la foto vera (niente AI).
+Limite verificato: in `panino_orto_cattivo.webp` il panino è orizzontale e occupa TUTTA la larghezza; nel riferimento sta a destra
+con spazio libero a sinistra. Oggi la hero lo ottiene in CSS (foto spostata a destra + maschere): panino piccolo, mezzo fuori.
+Strumenti senza installare nulla: canvas nel browser headless (Playwright già presente) + `cwebp` per comprimere. Niente PIL/sharp/magick.
+Opzioni:
+- A (consigliata) Ritaglio stretto sul ripieno (~1,5×) con sfumature verso il nero già dentro il file; CSS hero semplificato (una sola
+  immagine, via le maschere). Nuovo file `public/assets/kitchen/menu/hero/hero_orto_cattivo.webp` (~100 KB). Rischio basso.
+- B Scontorno a mano del panino (tracciato a punti disegnato da me, non AI) su fondo nero + carta solo in basso: il più vicino al
+  riferimento, ma i bordi della crosta possono sembrare "appiccicati". Più lavoro, da giudicare a occhio.
+- C Solo ritocchi CSS a zoom/posizione della foto attuale, nessun file nuovo.
+Metodo: prima 2 prove (A e B) in scratchpad affiancate al riferimento, Eros sceglie, poi codice (MenuHero.jsx/.css) + verifica 320/390/430.
+File toccati: MenuHero.jsx/.css + 1 asset nuovo. Niente aree protette, niente deps, commit/push solo con OK.
+Modello/effort: Sonnet 5.5 / medium (prove immagine + CSS), revisione visiva finale con visual-reviewer.
+**H3 FATTO 2026-10-27 (NON committato):** Eros ha scelto la SUA foto (pulled pork + scatola Walrus, 2000×2000, sorgente in chat).
+Ritaglio senza AI: `cwebp -crop 560 300 1440 1411 -resize 1080 0 -q 80` → NUOVO `public/assets/kitchen/menu/hero/hero-pulled-pork.webp`
+(1080×1058, 91 KB). `MenuHero.jsx`: src/width/height/commento. `MenuHero.css` `.mh-photo`: right -0.42w, bottom -0.06w, width 1.1w,
+maschere 14% alto / 22% sinistra (il bordo sinistro è la scatola nera). Verifiche: eslint MenuHero 0 errori, unit 176/0/1 skip, build ok
+(scratchpad build-h3), 320/390/430 nessun overflow, CTA non copre il ripieno (a 320 CTA finisce a x176). `panino_orto_cattivo` non più in hero.
+NON fatto: e2e, revisore visivo, commit. **PROSSIMO:** Eros guarda la hero e decide: ritocchi oppure commit.
+**H3b FATTO 2026-10-27 (NON committato):** testata tutta nera. NUOVO `public/assets/kitchen/walrus-pub-logo-nero.webp` = stesso logo con
+"livelli" per canale (grigio #222220 → nero, bianco invariato; giallo cambia di pochi punti), fatto con dwebp + script node (scratchpad
+`levels.mjs`) + cwebp, niente AI. `CustomerKitchenMenu.jsx:641` usa il logo nero, `.kh-brand` background #000. Verificato 390: fondo
+rgb(0,0,0), logo caricato, nessun riquadro, nessun overflow. Banner arancione "ordine attivo" NON toccato.
+Decisione di Eros 2026-10-27: il banner arancione "ordine attivo" resta arancione. **PROSSIMO:** Eros decide il commit di H3 + H3b (foto hero, logo nero, MenuHero.*, CustomerKitchenMenu.jsx/.css), niente push.
