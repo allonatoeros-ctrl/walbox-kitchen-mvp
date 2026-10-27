@@ -1,0 +1,25 @@
+name: Watchdog observability
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/functions/watchdog-observability/**'
+      - 'supabase/config.toml'
+      - '.github/workflows/watchdog-observability.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  local-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Migration contracts
+        run: node --test supabase/migrations/20261023100000_watchdog_observability_v1.test.js supabase/migrations/20261024100000_watchdog_obs_https_gateway_v1.test.js
+      - name: HMAC gateway with simulated upstream
+        run: node --experimental-transform-types --test supabase/functions/watchdog-observability/handler.test.mjs
