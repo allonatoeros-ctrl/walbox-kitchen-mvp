@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const dir = dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(join(dir, '20261028130211_kitchen_ready_push_timeout_alignment_v2.sql'), 'utf8');
+const src = readFileSync(join(dir, '20261028192100_kitchen_ready_push_timeout_alignment_v2.sql'), 'utf8');
 const pushLogic = readFileSync(join(dir, '../functions/send-order-ready-push/logic.js'), 'utf8');
 
 test('pg_net timeout exceeds the ready-push wait with a safety margin', () => {
