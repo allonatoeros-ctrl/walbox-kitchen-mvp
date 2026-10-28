@@ -80,12 +80,17 @@ function defaultGenerateId() {
   });
 }
 
-/** Impronta del carrello: righe (itemId+qty, ordinate), ritiro e nota. Stesso carrello = stessa stringa. */
-export function cartFingerprint({ items, fulfillmentType, note } = {}) {
+/** Impronta del carrello: righe (itemId+qty, ordinate), ritiro, nota e orario di ritiro.
+ *  Stesso carrello = stessa stringa. L'orario (RITIRO AL WALRUS, 2026-10-28) entra solo se c'e':
+ *  le impronte dei carrelli senza orario restano identiche a prima, e cambiare orario genera un
+ *  client_request_id nuovo (la v2/v3 "vince il primo" altrimenti restituirebbe l'ordine con
+ *  l'orario vecchio). */
+export function cartFingerprint({ items, fulfillmentType, note, pickupSlot } = {}) {
   const lines = (items ?? [])
     .map((i) => `${i.itemId}:${i.quantity}`)
     .sort();
-  return JSON.stringify([lines, fulfillmentType ?? null, (note ?? '').trim()]);
+  const base = [lines, fulfillmentType ?? null, (note ?? '').trim()];
+  return JSON.stringify(pickupSlot ? [...base, pickupSlot] : base);
 }
 
 /**
@@ -135,7 +140,16 @@ const ERROR_MESSAGES = [
   ['order_already_paid', 'Questo ordine risulta già pagato.'],
   ['order_cancelled', 'Questo ordine è stato annullato.'],
   ['kitchen_closed', 'LA CUCINA È CHIUSA — NON PUOI INVIARE ORDINI ORA'],
+  // RITIRO AL WALRUS (RPC v3, 20261028121000).
+  ['pickup_slot_in_past', "Quell'orario di ritiro è già passato: scegline un altro."],
+  ['invalid_pickup_slot', 'Orario di ritiro non valido: scegline un altro tra quelli proposti.'],
 ];
+
+/** true se l'errore di creazione riguarda l'orario di ritiro: la UI lo azzera e lo fa riscegliere. */
+export function isPickupSlotError(err) {
+  const raw = typeof err === 'string' ? err : (err?.message || err?.error || '');
+  return raw.includes('pickup_slot_in_past') || raw.includes('invalid_pickup_slot');
+}
 
 /** Mappa un errore (stringa, Error, body API) in un messaggio cliente. Mai testo tecnico grezzo. */
 export function onlineErrorMessage(err, fallback = 'Qualcosa non ha funzionato — riprova.') {
@@ -203,6 +217,9 @@ export function buildRebuildCart(order, existingCart) {
     .map((i) => ({ id: i.itemId, baseId: i.itemId, qty: Math.floor(Number(i.quantity)) }));
   const existingItems = existingCart?.items ?? [];
   if (!existingItems.length) {
+    // Un ritiro con orario torna come RITIRO (valore UI 'pickup'): l'orario, se ormai passato,
+    // lo scarta loadCart e il cliente lo risceglie.
+    if (order?.pickupSlot) return { items, note: '', fulfillmentType: 'pickup', pickupSlot: order.pickupSlot };
     return { items, note: '', fulfillmentType: order?.fulfillmentType ?? null };
   }
   const merged = existingItems.map((l) => ({ ...l }));
@@ -215,5 +232,6 @@ export function buildRebuildCart(order, existingCart) {
     items: merged,
     note: existingCart?.note ?? '',
     fulfillmentType: existingCart?.fulfillmentType ?? order?.fulfillmentType ?? null,
+    pickupSlot: existingCart?.fulfillmentType ? (existingCart?.pickupSlot ?? null) : null,
   };
 }

@@ -199,7 +199,6 @@
 .cx-pay:focus-visible,
 .cx-chip:focus-visible,
 .cx-dice:focus-visible,
-.cx-notes-toggle:focus-visible,
 .cx-note-input:focus-visible {
   outline: 3px solid var(--poster-ink);
   outline-offset: 2px;
@@ -242,59 +241,113 @@
   color: rgba(20, 10, 5, 0.82);
 }
 
-/* ── 3. Note cucina ──────────────────────────────── */
-.cx-notes {
-  padding-bottom: 16px;
+/* ── 2b. Ritiro al Walrus: orario ─────────────────── */
+.cx-where-btn--wide {
+  grid-column: 1 / -1;
 }
 
-.cx-notes-toggle {
-  width: 100%;
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 14px;
-  border: 1px dashed var(--poster-muted);
+.cx-where-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cx-pickup-off {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--poster-muted);
+}
+
+.cx-pickup {
+  margin-top: 12px;
+  padding: 12px;
+  border: 2px solid var(--poster-yellow);
   border-radius: 12px;
-  background: transparent;
-  color: var(--poster-ink);
-  font-family: var(--poster-font-display);
-  font-size: 20px;
-  letter-spacing: var(--poster-track-sm);
-  text-align: left;
-  cursor: pointer;
-}
-
-.cx-notes-toggle--open {
-  border-style: solid;
-  border-color: var(--poster-line);
   background: var(--poster-panel);
 }
 
-.cx-notes-icon {
-  font-size: 24px;
+.cx-pickup-title {
+  font-family: var(--poster-font-display);
+  font-size: 26px;
   line-height: 1;
-  width: 14px;
-  text-align: center;
+  letter-spacing: var(--poster-track-sm);
   color: var(--poster-yellow);
 }
 
-.cx-notes-name {
-  flex: 0 0 auto;
+.cx-pickup-group {
+  margin-top: 10px;
 }
 
-.cx-notes-hint {
-  margin-left: auto;
-  font-family: var(--poster-font-body);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0;
+.cx-pickup-group-name {
+  font-family: var(--poster-font-display);
+  font-size: 16px;
+  letter-spacing: var(--poster-track-sm);
   color: var(--poster-muted);
-  text-align: right;
 }
 
-.cx-notes-panel {
-  margin-top: 4px;
+.cx-pickup-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.cx-slot {
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid var(--poster-line);
+  border-radius: 6px;
+  background: var(--poster-bg);
+  color: var(--poster-ink);
+  font-family: var(--poster-font-display);
+  font-size: 22px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.cx-slot--on {
+  background: var(--poster-yellow);
+  border-color: var(--poster-yellow);
+  color: var(--poster-on-yellow);
+}
+
+.cx-slot:focus-visible {
+  outline: 3px solid var(--poster-ink);
+  outline-offset: 2px;
+}
+
+.cx-pickup-ok {
+  margin-top: 10px;
+  font-family: var(--poster-font-display);
+  font-size: 20px;
+  letter-spacing: var(--poster-track-sm);
+  color: var(--poster-yellow);
+}
+
+/* ── 3. Note cucina (sempre aperte, 2026-10-28) ──── */
+.cx-notes {
+  margin: 0 12px 16px;
+  padding: 14px 8px 16px;
+  border: 2px solid var(--poster-yellow);
+  border-radius: 12px;
+}
+
+.cx-notes-title {
+  font-size: 30px;
+  color: var(--poster-yellow);
+}
+
+.cx-notes-help {
+  margin-bottom: 0;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--poster-ink);
+}
+
+.cx-notes-chips .cx-chip--warn {
+  background: var(--poster-yellow);
+  color: var(--poster-on-yellow);
 }
 
 .cx-note-input {

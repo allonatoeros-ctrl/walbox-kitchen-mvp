@@ -169,6 +169,8 @@ export function buildPreparingTickets(orders, { limit = DEFAULT_TICKET_LIMIT } =
         allergens,
         allergensUnverified: hasUnknown,
         note,
+        // RITIRO AL WALRUS (2026-10-28): orario 'HH:MM' o null; solo etichetta, non cambia l'ordinamento.
+        pickupSlot: order.pickupSlot ?? null,
       };
     })
     // Nessun item con itemId/quantita' valida (fixture minime): niente ticket fantasma.

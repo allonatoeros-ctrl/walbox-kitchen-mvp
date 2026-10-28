@@ -416,7 +416,8 @@ export const NON_MAPPED_CATEGORY = 'non mappato';
 
 // Mapping esplicito per item che non possono essere risolti su `kitchenMenuItems`:
 // - item-040/041/042 sono i tre combo FALLO PESANTE, che vivono in `kitchenPesiMassimiCombos`
-//   (mai nel catalogo standalone) e appartengono ai Pesi Massimi (`bbq`);
+//   (mai nel catalogo standalone) e appartengono ai Pesi Massimi (`bbq`); dal MENU OTTOBRE
+//   (2026-10-28) lo stesso vale per le varianti con bibita item-060/061/062 (`softDrink`);
 // - item-057 (Krombacher Pils) è stato rimosso dal catalogo cliente ma gli ordini storici
 //   restano `birre`.
 // `kitchenMenuItems` resta il lookup principale per tutto il resto; questa tabella copre solo
@@ -425,7 +426,13 @@ const CATEGORY_BY_ITEM_ID = {
   'item-040': 'bbq',
   'item-041': 'bbq',
   'item-042': 'bbq',
+  'item-060': 'bbq',
+  'item-061': 'bbq',
+  'item-062': 'bbq',
   'item-057': 'birre',
+  // Schweppes Lemon/Tonica: tolte dal catalogo il 2026-10-28, gli ordini storici restano `bevande`.
+  'item-049': 'bevande',
+  'item-050': 'bevande',
 };
 
 export function computeTopProductsAndCategories(orders, night, menuItems = [], topN = 5) {

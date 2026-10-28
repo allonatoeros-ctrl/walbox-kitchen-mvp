@@ -23,6 +23,7 @@ import { aggregatePrepBoard, buildPreparingTickets } from '../lib/kitchenPrepAgg
 import { kitchenMenuItems } from '../data/kitchenMockData';
 import { ALLERGEN_LABEL } from '../components/kitchen/AllergenBadges';
 import { STAFF_DISAMBIGUATION_LABEL } from '../lib/kitchenStaffLabels';
+import { formatPickupBadge } from '../lib/kitchenPickup';
 import './KitchenPrepBoard.css';
 
 const imageByItemId = new Map(kitchenMenuItems.map((i) => [i.id, i.image]));
@@ -90,11 +91,32 @@ function TicketAllergens({ allergens, unverified }) {
   );
 }
 
+// Nota cucina (2026-10-28): riquadro con etichetta NOTA, testo grande, leggibile a distanza.
+// Se parla di ALLERGIA diventa rosso d'allarme. Tetto a 6 righe solo per non sfondare la griglia.
+function TicketNote({ note }) {
+  const allergy = /allergi/i.test(note);
+  return (
+    <div
+      className={`kpb-ticket-note${allergy ? ' kpb-ticket-note--allergy' : ''}`}
+      data-testid="prep-ticket-note"
+      data-allergy={allergy ? 'true' : undefined}
+    >
+      <span className="kpb-ticket-note-label">{allergy ? '⚠ ALLERGIA · NOTA' : 'NOTA'}</span>
+      <p className="kpb-ticket-note-text">{note}</p>
+    </div>
+  );
+}
+
 function PrepTicket({ ticket }) {
   return (
     <article className="kpb-ticket">
       <header className="kpb-ticket-header">
         <span className="kpb-ticket-code">{ticket.orderCode}</span>
+        {formatPickupBadge(ticket.pickupSlot) && (
+          <span className="kpb-ticket-pickup" data-testid={`prep-pickup-${ticket.orderCode}`}>
+            {formatPickupBadge(ticket.pickupSlot)}
+          </span>
+        )}
         <span className="kpb-ticket-flame" aria-hidden="true">🔥</span>
       </header>
       <ul className="kpb-ticket-items">
@@ -115,7 +137,7 @@ function PrepTicket({ ticket }) {
         })}
       </ul>
       <TicketAllergens allergens={ticket.allergens} unverified={ticket.allergensUnverified} />
-      {ticket.note && <p className="kpb-ticket-note">📝 {ticket.note}</p>}
+      {ticket.note && <TicketNote note={ticket.note} />}
     </article>
   );
 }

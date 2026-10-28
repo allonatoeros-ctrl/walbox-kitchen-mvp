@@ -1007,10 +1007,10 @@ test('19. Note cucina: scorciatoia ALLERGIA + testo libero arrivano nella comand
   await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await chooseFulfillment(page, 'eat_here');
 
-  const toggle = page.getByTestId('kitchen-note-toggle');
-  await expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  await toggle.click();
-  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  // 2026-10-28: le note sono sempre aperte, niente toggle da toccare.
+  await expect(page.getByTestId('kitchen-note-toggle')).toHaveCount(0);
+  await expect(page.getByTestId('kitchen-note-input')).toBeVisible();
+  await expect(page.getByTestId('note-chip-allergy')).toBeVisible();
   await page.getByTestId('kitchen-note-input').fill('senza cipolla');
   await page.getByTestId('note-chip-allergy').click();
   // Il chip rimette il focus sul campo al frame successivo: si attende prima di digitare.
@@ -1060,7 +1060,8 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await openCategoryList(page, 'PESI MASSIMI');
 
   // Restyling hero: le schede sono sempre aperte, nessun accordion da aprire.
-  const openCard = page.locator('.pm-list .pc-card').first();
+  // MENU OTTOBRE (2026-10-28): il panino Pulled Pork non ha piu il MENU, si prova sul Pastrami.
+  const openCard = page.locator('.pm-list .pc-card', { hasText: 'Pastrami' });
 
   // Titolo + due opzioni esplicite; default SOLO PANINO selezionato.
   await expect(openCard.locator('.pmx-title')).toHaveText('1 · SCEGLI COME LO VUOI');
@@ -1070,17 +1071,19 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await expect(menuOption).not.toHaveClass(/pmx-opt--on/);
 
   // Default SOLO PANINO: la CTA e' il "+" della scheda sul panino, selettore birra nascosto, nessuna CTA MENU.
-  await expect(openCard.getByRole('button', { name: /^Aggiungi Pulled Pork/i })).toBeEnabled();
+  await expect(openCard.getByRole('button', { name: /^Aggiungi Pastrami/i })).toBeEnabled();
   await expect(openCard.locator('.pmx-beer')).toHaveCount(0);
   await expect(openCard.getByTestId('fallo-pesante-cta')).toHaveCount(0);
 
-  // Opzione MENU: contenuto combo reale, prezzo unico del menu, NIENTE differenza vs panino.
+  // Opzione MENU: contenuto combo reale e i DUE prezzi (birra / bibita), NIENTE differenza vs panino.
   await expect(menuOption).toContainText('MENU · FALLO PESANTE');
   const includes = openCard.getByTestId('fallo-pesante-includes');
   await expect(includes).toContainText('PANINO');
   await expect(includes).toContainText('DA BERE');
   await expect(includes).toContainText('PATATE AL FORNO');
-  await expect(menuOption.locator('.pmx-opt-price')).toHaveText(/19\s?€/);
+  await expect(openCard.getByTestId('fallo-pesante-prices')).toHaveText('CON BIRRA 17,90 € · CON BIBITA 16,90 €');
+  // Senza bevanda scelta il prezzo grande e' il "DA" piu basso.
+  await expect(menuOption.locator('.pmx-opt-price')).toHaveText('DA 16,90 €');
   await expect(menuOption).not.toContainText('rispetto al panino');
 
   // Seleziono MENU: evidenziato, appare lo STEP 2 birra, CTA bloccata finché non si sceglie.
@@ -1089,7 +1092,7 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await expect(soloOption).not.toHaveClass(/pmx-opt--on/);
   await expect(openCard.getByTestId('fallo-pesante-beer-step')).toContainText('2 · COSA BEVI?');
   await expect(openCard.locator('.pmx-beer-badge')).toHaveText('OBBLIGATORIO');
-  await expect(openCard.locator('.pmx-beer-sub')).toHaveText('Una birra o una bibita, il prezzo del menu non cambia');
+  await expect(openCard.locator('.pmx-beer-sub')).toHaveText('Con la birra 17,90 €, con una bibita 16,90 €');
   const heavyCta = openCard.getByTestId('fallo-pesante-cta');
   // Nessuna birra scelta: FALLO PESANTE resta disabilitato, nessun add silenzioso.
   await expect(heavyCta).toBeDisabled();
@@ -1114,14 +1117,15 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ KEILER HELLES SELEZIONATA');
   await expect(openCard.locator('.pm-beer-detail')).toHaveCount(0);
   await expect(heavyCta).toBeEnabled();
-  // Scegliere la birra non cambia il prezzo del combo.
-  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 19 €');
+  // Con la birra il MENU costa 17,90 (prezzo e CTA seguono la bevanda).
+  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 17,90 €');
+  await expect(menuOption.locator('.pmx-opt-price')).toHaveText('17,90 €');
 
   // Tornando su SOLO PANINO il selettore birra sparisce e la CTA torna sul panino.
   await soloOption.click();
   await expect(openCard.locator('.pmx-beer')).toHaveCount(0);
   await expect(openCard.getByTestId('fallo-pesante-cta')).toHaveCount(0);
-  await expect(openCard.getByRole('button', { name: /^Aggiungi Pulled Pork/i })).toBeEnabled();
+  await expect(openCard.getByRole('button', { name: /^Aggiungi Pastrami/i })).toBeEnabled();
 
   // Ripasso a MENU: la birra scelta è ricordata, CTA attiva.
   await menuOption.click();
@@ -1131,50 +1135,53 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
 
   await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   // La riga carrello porta la birra inclusa: e' cio' che finisce sulla comanda (P0-2).
-  const row = page.locator('.kitch-drawer-row', { hasText: 'PULLED PORK — FALLO PESANTE · KEILER HELLES' });
-  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PULLED PORK — FALLO PESANTE · KEILER HELLES');
-  await expect(row.locator('.kitch-drawer-row-price')).toHaveText('19,00 €');
+  const row = page.locator('.kitch-drawer-row', { hasText: 'PASTRAMI — FALLO PESANTE · KEILER HELLES' });
+  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PASTRAMI — FALLO PESANTE · KEILER HELLES');
+  await expect(row.locator('.kitch-drawer-row-price')).toHaveText('17,90 €');
 });
 
-test('21a. FALLO PESANTE con BIBITA (H4, 2026-10-27): scelta diretta, stesso prezzo, acqua esclusa, nessuna anteprima', async ({ page }) => {
+test('21a. FALLO PESANTE con BIBITA (H4 + MENU OTTOBRE): scelta diretta, prezzo bibita, acqua esclusa, nessuna anteprima', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'PESI MASSIMI');
 
-  const openCard = page.locator('.pm-list .pc-card').first();
+  const openCard = page.locator('.pm-list .pc-card', { hasText: 'Brisket' });
   await openCard.getByTestId('choose-menu').click();
   const heavyCta = openCard.getByTestId('fallo-pesante-cta');
   await expect(heavyCta).toBeDisabled();
 
-  // Birre invariate (6), sotto "SENZA ALCOL" le 5 bibite ammesse: l'acqua non c'e'.
+  // Birre invariate (6), sotto "SENZA ALCOL" le 7 bibite ammesse: l'acqua non c'e', Schweppes tolte.
   await expect(openCard.locator('.pm-beer-pills .pm-beer-pill')).toHaveCount(6);
   await expect(openCard.getByTestId('fallo-pesante-drinks-label')).toHaveText('SENZA ALCOL');
   const drinks = openCard.locator('.pm-drink-pill');
-  await expect(drinks).toHaveCount(5);
+  await expect(drinks).toHaveCount(7);
+  await expect(openCard.locator('.pm-drink-pill', { hasText: 'Schweppes' })).toHaveCount(0);
+  await expect(openCard.locator('.pm-drink-pill', { hasText: 'Estathé Limone' })).toHaveCount(1);
   await expect(openCard.locator('.pm-drink-pill', { hasText: 'Acqua' })).toHaveCount(0);
   await expect(openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' })).toHaveCount(1);
 
-  // Tap su una bibita = scelta diretta: nessuna anteprima/"storia", CTA subito attiva, stesso prezzo.
+  // Tap su una bibita = scelta diretta: nessuna anteprima/"storia", CTA subito attiva, prezzo bibita.
   await openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
   await expect(openCard.locator('.pm-beer-detail')).toHaveCount(0);
   await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ PEPSI ZERO SELEZIONATA');
   await expect(openCard.locator('.pmx-pick-beer')).toHaveText('DA BERE: PEPSI ZERO');
   await expect(heavyCta).toBeEnabled();
-  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 19 €');
+  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 16,90 €');
 
-  // Scegliere una birra dopo la bibita sostituisce la scelta (mai entrambe).
+  // Scegliere una birra dopo la bibita sostituisce la scelta (mai entrambe) e il prezzo torna 17,90.
   await openCard.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
   await openCard.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
   await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ KEILER HELLES SELEZIONATA');
   await expect(openCard.locator('.pm-drink-pill--on')).toHaveCount(0);
+  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 17,90 €');
 
-  // Torno sulla bibita e aggiungo: il sacco mostra il menu con la bibita, a 19 EUR.
+  // Torno sulla bibita e aggiungo: il sacco mostra la variante bibita, a 16,90 EUR.
   await openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
   await heavyCta.click();
   await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
-  const row = page.locator('.kitch-drawer-row', { hasText: 'PULLED PORK — FALLO PESANTE · PEPSI ZERO' });
-  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PULLED PORK — FALLO PESANTE · PEPSI ZERO');
-  await expect(row.locator('.kitch-drawer-row-price')).toHaveText('19,00 €');
+  const row = page.locator('.kitch-drawer-row', { hasText: 'BRISKET — MENU BIBITA · PEPSI ZERO' });
+  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('BRISKET — MENU BIBITA · PEPSI ZERO');
+  await expect(row.locator('.kitch-drawer-row-price')).toHaveText('16,90 €');
 });
 
 test('21b. CONTORNI (2026-09-19): Patate al Forno ordinabile come item singolo a €5,00', async ({ page }) => {
@@ -1232,20 +1239,53 @@ test('22. TAGLIERI (restyling hero): schede compatte sempre aperte con ingredien
   await expect(page.locator('.kitch-drawer-row-name', { hasText: 'FORMAGGI DISCUTIBILI' })).toBeVisible();
 });
 
-test('23. Box Pulled Pork (restyling hero): il box non ha la scelta MENU, i panini smoked si', async ({ page }) => {
+test('23. MENU OTTOBRE: il MENU Pulled Pork sta sul Box (niente patate a parte), il panino Pulled Pork non lo ha piu', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'PESI MASSIMI');
 
   const box = page.locator('.pm-list .pc-card', { hasText: 'Box Pulled Pork' });
   await expect(box).toHaveCount(1);
   await expect(box.getByRole('button', { name: /^Aggiungi Box Pulled Pork/i })).toBeEnabled();
-  // Nessun upsell FALLO PESANTE sul box (non ha entry in kitchenPesiMassimiCombos).
-  await expect(box.getByTestId('fallo-pesante-choose')).toHaveCount(0);
-  await expect(box.getByTestId('fallo-pesante-cta')).toHaveCount(0);
+  // Scelta SOLO BOX / MENU: la copy non parla di panino ne' di patate a parte.
+  await expect(box.getByTestId('fallo-pesante-choose')).toBeVisible();
+  await expect(box.getByTestId('choose-solo')).toContainText('SOLO BOX');
+  await expect(box.getByTestId('fallo-pesante-includes')).toHaveText('BOX CON PATATE + DA BERE');
+  await expect(box.getByTestId('fallo-pesante-choose')).not.toContainText(/PANINO|PATATE AL FORNO/);
+  await expect(box.getByTestId('fallo-pesante-prices')).toHaveText('CON BIRRA 15,90 € · CON BIBITA 13,90 €');
 
-  // Fallback invariato sugli altri item bbq: nessun id hardcoded nel componente.
+  await box.getByTestId('choose-menu').click();
+  const cta = box.getByTestId('fallo-pesante-cta');
+  await box.locator('.pm-drink-pill', { hasText: 'Fanta' }).click();
+  await expect(cta).toHaveText('AGGIUNGI IL MENU · 13,90 €');
+  await cta.click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
+  const row = page.locator('.kitch-drawer-row', { hasText: 'BOX PULLED PORK — MENU BIBITA · FANTA' });
+  await expect(row.locator('.kitch-drawer-row-price')).toHaveText('13,90 €');
+
+  // Il panino Pulled Pork resta vendibile da solo, senza scelta MENU.
   const panino = page.locator('.pm-list .pc-card', { hasText: 'Pulled Pork' }).filter({ hasNotText: 'Box' }).first();
-  await expect(panino.getByTestId('fallo-pesante-choose')).toBeVisible();
+  await expect(panino.getByRole('button', { name: /^Aggiungi Pulled Pork/i })).toBeEnabled();
+  await expect(panino.getByTestId('fallo-pesante-choose')).toHaveCount(0);
+});
+
+test('23b. MENU OTTOBRE: patate finite → MENU di Pastrami/Brisket bloccati, MENU del Box ordinabile', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
+  await page.addInitScript(() => {
+    localStorage.setItem('walbox_kitchen_menu_availability', JSON.stringify({ 'item-058': false }));
+  });
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openCategoryList(page, 'PESI MASSIMI');
+
+  const pastrami = page.locator('.pm-list .pc-card', { hasText: 'Pastrami' });
+  await expect(pastrami.getByTestId('choose-menu')).toBeDisabled();
+  await expect(pastrami.getByTestId('fallo-pesante-includes')).toHaveText('PATATE FINITE: SOLO PANINO');
+
+  const box = page.locator('.pm-list .pc-card', { hasText: 'Box Pulled Pork' });
+  await expect(box.getByTestId('choose-menu')).toBeEnabled();
+  await box.getByTestId('choose-menu').click();
+  await box.locator('.pm-drink-pill', { hasText: 'Sprite' }).click();
+  await expect(box.getByTestId('fallo-pesante-cta')).toBeEnabled();
 });
 
 test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun formato inventato', async ({ page }) => {
@@ -1259,9 +1299,14 @@ test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun 
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'BEVANDE');
 
-  // 6 schede compatte, nessun fallback `kitch-menu-list` (né la vecchia lista generica).
+  // 8 schede compatte, nessun fallback `kitch-menu-list` (né la vecchia lista generica).
+  // Ordine MENU OTTOBRE: ACQUA · PEPSI · PEPSI ZERO · SEVEN UP · FANTA · SPRITE · ESTATHÉ PESCA · ESTATHÉ LIMONE.
   const cards = page.locator('.bv-list .pc-card--compact');
-  await expect(cards).toHaveCount(6);
+  await expect(cards).toHaveCount(8);
+  await expect(page.locator('.bv-list .pc-name')).toHaveText([
+    'Acqua', 'Pepsi', 'Pepsi Zero', 'Seven Up', 'Fanta', 'Sprite', 'Estathé Pesca', 'Estathé Limone',
+  ]);
+  await expect(page.locator('.bv-list .pc-card', { hasText: 'Schweppes' })).toHaveCount(0);
   await expect(page.locator('.kitch-menu-list')).toHaveCount(0);
 
   // Niente accordion: nessuna CTA "VEDI ..." da aprire.
@@ -1278,17 +1323,20 @@ test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun 
   await expect(pepsi.locator('.pc-meta')).toHaveText('33 CL');
 
   // Formato non confermato → nessuna riga formato, mai un cl inventato.
-  const tonica = page.locator('.bv-list .pc-card', { hasText: 'Schweppes Tonica' });
-  await expect(tonica.locator('.pc-meta')).toHaveCount(0);
-  await expect(tonica.locator('.pc-price')).toHaveText(/^4[\d,]*\s?€$/);
+  const fanta = page.locator('.bv-list .pc-card', { hasText: 'Fanta' });
+  await expect(fanta.locator('.pc-meta')).toHaveCount(0);
+  await expect(fanta.locator('.pc-price')).toHaveText(/^4[\d,]*\s?€$/);
 
-  // Foto: 6 <img> reali, nessun placeholder, nessun 404. Le foto sotto la piega sono `lazy`:
-  // si portano in vista una a una e si aspetta che il file sia decodificato (`naturalWidth > 0`),
-  // unica prova che non è un <img> rotto rimasto nel DOM.
-  await expect(page.locator('.bv-list .pc-photo')).toHaveCount(6);
-  await expect(page.locator('.bv-list .pc-photo-missing')).toHaveCount(0);
+  // Foto: 4 <img> reali, nessun 404. Le 4 bibite nuove (Fanta, Sprite, Estathé) non hanno ancora
+  // la foto: riquadro "FOTO IN ARRIVO", mai un <img> rotto. Le foto sotto la piega sono `lazy`:
+  // si portano in vista una a una e si aspetta che il file sia decodificato (`naturalWidth > 0`).
+  await expect(page.locator('.bv-list .pc-photo')).toHaveCount(4);
+  await expect(page.locator('.bv-list .pc-photo-missing')).toHaveCount(4);
+  for (const name of ['Fanta', 'Sprite', 'Estathé Pesca', 'Estathé Limone']) {
+    await expect(page.locator('.bv-list .pc-card', { hasText: name }).locator('.pc-photo-missing')).toHaveText('FOTO IN ARRIVO');
+  }
 
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < 4; i += 1) {
     const img = page.locator('.bv-list .pc-photo').nth(i);
     await img.scrollIntoViewIfNeeded();
     await expect.poll(() => img.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true);
@@ -1301,8 +1349,6 @@ test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun 
     '/assets/kitchen/menu/bevande/bevanda_pepsi.webp',
     '/assets/kitchen/menu/bevande/bevanda_pepsi_zero.webp',
     '/assets/kitchen/menu/bevande/bevanda_seven_up.webp',
-    '/assets/kitchen/menu/bevande/bevanda_schweppes_lemon.webp',
-    '/assets/kitchen/menu/bevande/bevanda_schweppes_tonica.webp',
   ]);
   expect(missing404).toEqual([]);
 
@@ -1776,7 +1822,7 @@ test('37. Checkout V2: nome, dove, note e corsie sono sullo stesso schermo; ness
   // Tutto insieme, senza passaggi intermedi (niente CONFERMA → CONTINUA).
   await expect(page.getByTestId('customer-name-input')).toBeVisible();
   await expect(page.getByTestId('fulfillment-eat_here')).toBeVisible();
-  await expect(page.getByTestId('kitchen-note-toggle')).toBeVisible();
+  await expect(page.getByTestId('kitchen-note-input')).toBeVisible();
   await expect(page.getByTestId('pay-lane-step')).toBeVisible();
   await expect(page.getByTestId('pay-lane-counter')).toBeVisible();
   await expect(page.getByTestId('pay-lane-online')).toBeVisible();
@@ -2356,4 +2402,68 @@ test('59. S5 attempt_start rifiuta (online_payment_expired / order_payment_aband
   await expect(page.getByTestId('ost-pop-sumup-error')).toHaveText('Il tempo per pagare online è finito. Puoi pagare al banco.');
   await page.getByTestId('ost-pop-retry').click();
   await expect(page.getByTestId('ost-pop-sumup-error')).toHaveText('Ordine annullato: il pagamento non è stato completato entro 5 minuti.');
+});
+
+// RITIRO AL WALRUS (2026-10-28): terza scelta con orario. Ora fissata a Roma (15/01/2026 12:30,
+// UTC+1) per non dipendere dall'orologio reale; data nel passato così il token mockato non risulta
+// scaduto. Al server va takeaway + p_pickup_slot sulla v3, mai sulla v2.
+test('60. Ritiro al Walrus: scelta orario -> RPC v3 con takeaway + p_pickup_slot', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-01-15T12:30:00+01:00'));
+  const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'takeaway', orderCode: 'R01' });
+  const v3 = { calls: [] };
+  await page.route('**/rest/v1/rpc/kitchen_customer_create_order_v3', async (route) => {
+    const body = route.request().postDataJSON();
+    v3.calls.push(body);
+    sent.createdRow = sent.createdRow ?? {
+      id: 'order-e2e-pickup', order_code: 'R01', venue_id: 'walrus-main', table_id: null,
+      nickname: body.p_nickname, status: 'pending_counter_payment', total: 13.9,
+      payment_status: 'pending_counter_payment', payment_method: null, online_payment_disabled: false,
+      fulfillment_type: body.p_fulfillment_type, pickup_slot: body.p_pickup_slot,
+      customer_note: body.p_customer_note ?? null, service_day: '2026-01-15', service_sequence: 1,
+      created_at: new Date().toISOString(),
+      kitchen_order_items: (body.p_items ?? []).map((i) => ({ item_id: i.item_id, name: i.name, quantity: i.quantity, price: i.price })),
+    };
+    const row = { ...sent.createdRow };
+    delete row.kitchen_order_items;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(row) });
+  });
+
+  await page.goto('/kitchen');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
+  await chooseFulfillment(page, 'pickup');
+
+  // Alle 12:30 la prima fascia prenotabile è 12:45 (anticipo minimo 15 minuti), la sera c'è tutta.
+  const slots = page.getByTestId('pickup-slots');
+  await expect(slots).toBeVisible();
+  await expect(page.getByTestId('pickup-slot-1230')).toHaveCount(0);
+  await expect(page.getByTestId('pickup-slot-1245')).toBeVisible();
+  await expect(page.getByTestId('pickup-slot-2230')).toBeVisible();
+
+  // Senza orario l'ordine non parte: si viene riportati sulla scelta dell'orario.
+  await submitAndPay(page, 'counter');
+  await expect(page.getByTestId('pickup-slot-error')).toBeVisible();
+  expect(v3.calls).toHaveLength(0);
+
+  await page.getByTestId('pickup-slot-1315').click();
+  await expect(page.getByTestId('pickup-slot-chosen')).toContainText('13:15');
+  await choosePayLane(page, 'counter');
+  await expect(page).toHaveURL(/\/kitchen\/status/);
+
+  expect(v3.calls).toHaveLength(1);
+  expect(v3.calls[0].p_fulfillment_type).toBe('takeaway');
+  expect(v3.calls[0].p_pickup_slot).toBe('13:15');
+  expect(sent.calls).toHaveLength(0); // nessuna chiamata alla v2
+  await expect(page.getByTestId('ost-pickup')).toHaveText('Ritiro alle 13:15');
+});
+
+test('61. Ritiro al Walrus: dopo le 22:15 la scelta è spenta con spiegazione', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-01-15T22:40:00+01:00'));
+  await page.goto('/kitchen');
+  await openFullMenu(page);
+  await addFirstOrderableItem(page);
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
+  await expect(page.getByTestId('fulfillment-pickup')).toBeDisabled();
+  await expect(page.getByTestId('pickup-unavailable')).toContainText('fasce sono finite');
 });

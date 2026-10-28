@@ -287,7 +287,8 @@ export const kitchenMenuItems = [
     allergens: ['glutine', 'latte', 'senape', 'uova'],
     allergensVerified: false,
   },
-  // BOX (standalone speciale, categoria bbq — no FALLO PESANTE: nessuna entry in kitchenPesiMassimiCombos)
+  // BOX (standalone speciale, categoria bbq). Dal 2026-10-28 ha il MENU (item-040/060 in
+  // kitchenPesiMassimiCombos): box + da bere, le patate sono gia' nella box.
   // MENU POLISH SPRINT (2026-09-16, decisione Eros): resta dentro PESI MASSIMI ma non va
   // MAI chiamato panino. `detailCtaLabel`/`priceNote` sono override di copy opzionali letti
   // da PesiMassimiSection.jsx: assenti sugli altri item bbq → fallback "VEDI IL PANINO" /
@@ -564,30 +565,60 @@ export const kitchenMenuItems = [
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
   },
+  // MENU OTTOBRE (2026-10-28, decisione Eros): via Schweppes Lemon/Tonica (item-049/050, tolte
+  // anche dal catalogo server), dentro Fanta, Sprite, Estathé Pesca e Limone in lattina a €4.
+  // Foto non ancora consegnate: `image: null` → la card mostra "FOTO IN ARRIVO". Formato non
+  // confermato: nessun `format`, stessa regola delle altre bibite.
   {
-    id: 'item-049',
-    name: 'Schweppes Lemon',
+    id: 'item-063',
+    name: 'Fanta',
     category: 'bevande',
     description: 'Bibita analcolica gassata.',
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: '/assets/kitchen/menu/bevande/bevanda_schweppes_lemon.webp',
+    image: null,
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
   },
   {
-    id: 'item-050',
-    name: 'Schweppes Tonica',
+    id: 'item-064',
+    name: 'Sprite',
     category: 'bevande',
     description: 'Bibita analcolica gassata.',
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: '/assets/kitchen/menu/bevande/bevanda_schweppes_tonica.webp',
+    image: null,
     available: true,
     ingredients: 'Bibita analcolica gassata.',
+    allergens: [],
+  },
+  {
+    id: 'item-065',
+    name: 'Estathé Pesca',
+    category: 'bevande',
+    description: 'Tè freddo alla pesca, in lattina.',
+    price: 4.0,
+    points: null,
+    tags: ['drink'],
+    image: null,
+    available: true,
+    ingredients: 'Tè freddo alla pesca, in lattina.',
+    allergens: [],
+  },
+  {
+    id: 'item-066',
+    name: 'Estathé Limone',
+    category: 'bevande',
+    description: 'Tè freddo al limone, in lattina.',
+    price: 4.0,
+    points: null,
+    tags: ['drink'],
+    image: null,
+    available: true,
+    ingredients: 'Tè freddo al limone, in lattina.',
     allergens: [],
   },
   // CONTORNI — MENU CLEANUP + PRICE SPRINT (2026-09-15, prezzo confermato da Eros).
@@ -625,29 +656,41 @@ export const kitchenMenuItems = [
 // rimaste (item-051→056, Krombacher esclusa). Le birre selezionabili si leggono da
 // `falloPesanteBeerOptions()` (kitchenAllergens.js), filtro per tag `birre-v1`, non per id
 // fisso: seguono da sole se il catalogo birre cambia.
+//
+// MENU OTTOBRE (2026-10-28, decisione Eros): due prezzi per menu, con birra o con bibita.
+// La variante birra resta sull'id storico (`id`/`price`), la variante bibita ha un id di
+// catalogo proprio (`softDrink.id`/`softDrink.price`) perche' il server prezza per item_id.
+// Il menu Pulled Pork ora e' sul BOX (item-018, patate gia' dentro la box): niente contorno
+// a parte (`includesSide: false`). Il panino Pulled Pork (item-009) resta vendibile da solo.
 export const FALLO_PESANTE_INCLUDED_SIDE_ID = 'item-058';
 
 export const kitchenPesiMassimiCombos = {
-  'item-009': {
+  'item-018': {
     id: 'item-040',
-    name: 'Pulled Pork — Fallo Pesante',
-    subtitle: 'PANINO + DA BERE + PATATE AL FORNO',
-    price: 19.0,
-    image: '/assets/kitchen/photo-pulled-pork-special.webp',
+    name: 'Box Pulled Pork — Fallo Pesante',
+    subtitle: 'BOX CON PATATE + DA BERE',
+    price: 15.9,
+    image: '/assets/kitchen/menu/box/box-pulled-pork.webp',
+    includesSide: false,
+    softDrink: { id: 'item-060', name: 'Box Pulled Pork — Menu Bibita', price: 13.9 },
   },
   'item-010': {
     id: 'item-041',
     name: 'Pastrami — Fallo Pesante',
     subtitle: 'PANINO + DA BERE + PATATE AL FORNO',
-    price: 20.0,
+    price: 17.9,
     image: '/assets/kitchen/photo-pastrami-special.webp',
+    includesSide: true,
+    softDrink: { id: 'item-061', name: 'Pastrami — Menu Bibita', price: 16.9 },
   },
   'item-011': {
     id: 'item-042',
     name: 'Brisket — Fallo Pesante',
     subtitle: 'PANINO + DA BERE + PATATE AL FORNO',
-    price: 20.0,
+    price: 17.9,
     image: '/assets/kitchen/photo-brisket-special.webp',
+    includesSide: true,
+    softDrink: { id: 'item-062', name: 'Brisket — Menu Bibita', price: 16.9 },
   },
 };
 

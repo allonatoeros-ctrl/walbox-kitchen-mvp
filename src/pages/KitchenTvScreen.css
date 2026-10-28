@@ -777,3 +777,16 @@
     transform: translate(-100%, 0);
   }
 }
+/* RITIRO AL WALRUS (2026-10-28): orario di ritiro sulle card, leggibile a distanza. */
+.tv-pickup-tag {
+  display: inline-block;
+  margin: 0.4vh 0.6vw 0.4vh 0;
+  padding: 0.3vh 0.7vw;
+  border-radius: 4px;
+  background: #ffc83d;
+  color: #111;
+  font-weight: 900;
+  font-size: 1.8vh;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}

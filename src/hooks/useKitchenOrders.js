@@ -142,6 +142,7 @@ export function mapSupabaseOrder(row) {
     paymentMethod: row.payment_method ?? null,
     onlinePaymentDisabled: row.online_payment_disabled ?? false,
     fulfillmentType: row.fulfillment_type ?? null,
+    pickupSlot:    row.pickup_slot ?? null,
     paidAt:        row.paid_at ?? null,
     createdAt:     row.created_at,
     readyAt:       row.ready_at ?? null,
@@ -602,9 +603,13 @@ export async function createOrderOnServer(order) {
     // S5 (Payment Lifecycle V2): con `paymentLane` ('counter' | 'online') l'ordine nasce dalla v2,
     // che decide lo status (PCP o POP) e rende idempotente il retry via `clientRequestId`. Senza
     // `paymentLane` resta la chiamata v1 di sempre (cassa assistita, T3: comportamento invariato).
+    //
+    // RITIRO AL WALRUS (2026-10-28): con `pickupSlot` ('HH:MM') l'ordine nasce dalla v3
+    // (20261028121000), che valida l'orario e delega alla v2. Senza orario resta la v2: MANGIO QUI
+    // e PORTO VIA non dipendono dalla migration nuova.
     if (order.paymentLane) {
-      const { paymentLane, clientRequestId, ...baseOrder } = order;
-      const { data, error } = await supabase.rpc('kitchen_customer_create_order_v2', {
+      const { paymentLane, clientRequestId, pickupSlot, ...baseOrder } = order;
+      const rpcArgs = {
         p_venue_id: 'walrus-main',
         p_nickname: order.nickname,
         p_customer_note: order.note ?? null,
@@ -612,7 +617,10 @@ export async function createOrderOnServer(order) {
         p_fulfillment_type: order.fulfillmentType,
         p_payment_lane: paymentLane,
         p_client_request_id: clientRequestId ?? crypto.randomUUID(),
-      });
+      };
+      const { data, error } = pickupSlot
+        ? await supabase.rpc('kitchen_customer_create_order_v3', { ...rpcArgs, p_pickup_slot: pickupSlot })
+        : await supabase.rpc('kitchen_customer_create_order_v2', rpcArgs);
       if (error) throw error;
       if (!data?.id || !data?.order_code || !data?.status) throw new Error('order_creation_invalid_response');
 
@@ -631,6 +639,7 @@ export async function createOrderOnServer(order) {
           total: Number(data.total),
           createdAt: data.created_at,
           fulfillmentType: data.fulfillment_type ?? order.fulfillmentType ?? null,
+          pickupSlot: data.pickup_slot ?? pickupSlot ?? null,
           status: data.status,
           paymentStatus: data.payment_status ?? null,
           paymentMethod: data.payment_method ?? null,

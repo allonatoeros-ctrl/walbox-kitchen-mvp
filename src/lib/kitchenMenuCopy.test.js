@@ -62,8 +62,10 @@ test('il combo mostra il selettore birra (pillole, dettaglio, conferma)', () => 
 });
 
 test('il sottotitolo del combo dice esattamente cosa c\'e dentro', () => {
+  // MENU OTTOBRE (2026-10-28): il MENU Pulled Pork sta sul Box, che ha gia' le patate dentro.
   for (const c of Object.values(kitchenPesiMassimiCombos)) {
-    assert.equal(c.subtitle, 'PANINO + DA BERE + PATATE AL FORNO', `${c.id} ha il sottotitolo sbagliato`);
+    const want = c.includesSide === false ? 'BOX CON PATATE + DA BERE' : 'PANINO + DA BERE + PATATE AL FORNO';
+    assert.equal(c.subtitle, want, `${c.id} ha il sottotitolo sbagliato`);
   }
 });
 

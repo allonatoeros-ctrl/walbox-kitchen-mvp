@@ -22,7 +22,9 @@ function fakeStorage(initial = {}) {
   };
 }
 
-const COMBO = kitchenPesiMassimiCombos['item-009'];
+// MENU OTTOBRE (2026-10-28): il combo di riferimento e' il Pastrami (item-010); il panino Pulled
+// Pork (item-009) non ha piu' il MENU, che ora sta sul Box (item-018).
+const COMBO = kitchenPesiMassimiCombos['item-010'];
 const BEER = kitchenMenuItems.find((i) => i.id === 'item-054');
 const comboLine = (qty = 1) => ({ id: `${COMBO.id}::${BEER.id}`, baseId: COMBO.id, qty, includesBeerId: BEER.id });
 
@@ -37,6 +39,31 @@ test('round-trip: item, quantita, nota e scelta di ritiro sopravvivono al salvat
   assert.equal(back.items[1].qty, 3);
 });
 
+test('RITIRO AL WALRUS: scelta e orario sopravvivono; un orario ormai passato non torna', () => {
+  // 28/10/2026, Roma = UTC+1.
+  const at = (h, m) => Date.UTC(2026, 9, 28, h - 1, m);
+  const s = fakeStorage();
+  saveCart({ items: [{ id: 'item-016', baseId: 'item-016', qty: 1 }], note: '', fulfillmentType: 'pickup', pickupSlot: '13:15' }, s);
+  assert.deepEqual(
+    { ...loadCart(s, { now: at(12, 0) }), items: [] },
+    { items: [], note: '', fulfillmentType: 'pickup', pickupSlot: '13:15' },
+  );
+  const late = loadCart(s, { now: at(13, 5) });
+  assert.equal(late.fulfillmentType, 'pickup', 'resta la scelta RITIRO');
+  assert.equal(late.pickupSlot, null, 'orario scaduto: da riscegliere, mai inviato');
+
+  // Un orario rimasto in memoria con PORTO VIA non si salva.
+  saveCart({ items: [], note: '', fulfillmentType: 'takeaway', pickupSlot: '13:15' }, s);
+  assert.equal(JSON.parse(s.getItem(CART_STORAGE_KEY)).pickupSlot, null);
+
+  // Carrello salvato prima del ritiro (nessun campo pickupSlot): si legge come sempre.
+  s.setItem(CART_STORAGE_KEY, JSON.stringify({ v: 1, items: [], note: 'x', fulfillmentType: 'eat_here' }));
+  assert.deepEqual(loadCart(s, { now: at(12, 0) }), { items: [], note: 'x', fulfillmentType: 'eat_here', pickupSlot: null });
+  // Orario non valido salvato a mano: scartato.
+  s.setItem(CART_STORAGE_KEY, JSON.stringify({ v: 1, items: [], note: '', fulfillmentType: 'pickup', pickupSlot: '15:00' }));
+  assert.equal(loadCart(s, { now: at(10, 0) }).pickupSlot, null);
+});
+
 test('FALLO PESANTE: la birra scelta sopravvive e il nome viene ricostruito dal catalogo', () => {
   const s = fakeStorage();
   saveCart({ items: [comboLine()], note: '', fulfillmentType: null }, s);
@@ -49,33 +76,35 @@ test('FALLO PESANTE: la birra scelta sopravvive e il nome viene ricostruito dal 
   assert.equal(items[0].price, COMBO.price);
 });
 
-// H4 (2026-10-27): bibita al posto della birra nel FALLO PESANTE, stesso prezzo.
+// H4 (2026-10-27): bibita al posto della birra nel FALLO PESANTE. Da MENU OTTOBRE la bibita ha la
+// sua variante di catalogo (`COMBO.softDrink`): qui la riga salvata e' nel formato H4 (baseId birra),
+// il reconcile la deve riportare sulla variante bibita.
 const drinkLine = (id, qty = 1) => ({ id: `${COMBO.id}::${id}`, baseId: COMBO.id, qty, includesBeerId: id });
 
 test('H4: lista bibite del MENU = bevande ordinabili, acqua esclusa', () => {
   const ids = falloPesanteDrinkOptions(kitchenMenuItems).map((i) => i.id);
-  assert.deepEqual(ids, ['item-046', 'item-047', 'item-048', 'item-049', 'item-050']);
+  assert.deepEqual(ids, ['item-046', 'item-047', 'item-048', 'item-063', 'item-064', 'item-065', 'item-066']);
   assert.ok(!ids.includes('item-038'), 'l\'acqua non e una bibita del menu');
   // non ordinabili (esaurita / senza prezzo) escluse; nessun id hardcoded fuori dalla lib.
   const edited = kitchenMenuItems.map((i) => (
     i.id === 'item-046' ? { ...i, available: false } : i.id === 'item-047' ? { ...i, price: null } : i
   ));
-  assert.deepEqual(falloPesanteDrinkOptions(edited).map((i) => i.id), ['item-048', 'item-049', 'item-050']);
+  assert.deepEqual(falloPesanteDrinkOptions(edited).map((i) => i.id), ['item-048', 'item-063', 'item-064', 'item-065', 'item-066']);
   assert.deepEqual(falloPesanteDrinkOptions(null), []);
   assert.equal(isFalloPesanteDrinkAllowed(BEER), false, 'una birra non e una bibita');
 });
 
-test('H4: un FALLO PESANTE con bibita sopravvive al ripristino, stesso prezzo del combo', () => {
+test('H4: un FALLO PESANTE con bibita sopravvive al ripristino, riportato sulla variante bibita', () => {
   const s = fakeStorage();
   saveCart({ items: [drinkLine('item-047', 2)], note: '', fulfillmentType: null }, s);
   const { items, dropped } = reconcileCartItems(loadCart(s).items, kitchenMenuItems, kitchenPesiMassimiCombos);
   assert.equal(dropped.length, 0);
   assert.equal(items.length, 1);
   assert.equal(items[0].includesBeerId, 'item-047');
-  assert.equal(items[0].baseId, COMBO.id);
-  assert.equal(items[0].id, `${COMBO.id}::item-047`);
-  assert.equal(items[0].name, `${COMBO.name} · Pepsi Zero`);
-  assert.equal(items[0].price, COMBO.price);
+  assert.equal(items[0].baseId, COMBO.softDrink.id, 'payload sulla variante bibita (item-061)');
+  assert.equal(items[0].id, `${COMBO.softDrink.id}::item-047`);
+  assert.equal(items[0].name, `${COMBO.softDrink.name} · Pepsi Zero`);
+  assert.equal(items[0].price, COMBO.softDrink.price);
   assert.equal(items[0].qty, 2);
 });
 
@@ -123,11 +152,61 @@ test('combo la cui birra non e piu servibile: cade tutta la riga (un combo senza
   assert.deepEqual(dropped, [COMBO.id]);
 });
 
+// MENU OTTOBRE (2026-10-28): reconcile delle varianti birra/bibita e dei carrelli vecchi.
+test('MENU OTTOBRE: variante bibita (item-060/061/062) riconosciuta e riprezzata dal catalogo', () => {
+  const fanta = 'item-063';
+  const saved = [
+    { id: `item-061::${fanta}`, baseId: 'item-061', qty: 1, includesBeerId: fanta },
+    { id: 'item-060::item-064', baseId: 'item-060', qty: 2, includesBeerId: 'item-064' },
+  ];
+  const { items, dropped } = reconcileCartItems(saved, kitchenMenuItems, kitchenPesiMassimiCombos);
+  assert.deepEqual(dropped, []);
+  assert.deepEqual(items.map((l) => [l.baseId, l.price, l.qty]), [['item-061', 16.9, 1], ['item-060', 13.9, 2]]);
+  assert.equal(items[1].name, 'Box Pulled Pork — Menu Bibita · Sprite');
+});
+
+test('MENU OTTOBRE: la variante segue SEMPRE la bevanda salvata, mai il baseId salvato', () => {
+  // baseId bibita con dentro una birra (riga incoerente/manomessa) → torna sulla variante birra.
+  const { items } = reconcileCartItems(
+    [{ id: 'item-061::item-054', baseId: 'item-061', qty: 1, includesBeerId: 'item-054' }],
+    kitchenMenuItems, kitchenPesiMassimiCombos);
+  assert.equal(items[0].baseId, 'item-041');
+  assert.equal(items[0].id, 'item-041::item-054');
+  assert.equal(items[0].price, 17.9);
+});
+
+test('MENU OTTOBRE: carrelli vecchi (prezzi 19/20, Schweppes, menu PP del panino) mai incoerenti', () => {
+  const saved = [
+    // menu Pulled Pork salvato quando item-040 era sul panino: torna come MENU del Box, a prezzo e nome correnti
+    { id: 'item-040::item-051', baseId: 'item-040', qty: 1, includesBeerId: 'item-051', price: 19, name: 'Pulled Pork — Fallo Pesante' },
+    // Brisket a 20: riprezzato
+    { id: 'item-042::item-052', baseId: 'item-042', qty: 1, includesBeerId: 'item-052', price: 20 },
+    // menu con Schweppes (tolta dal catalogo): cade
+    { id: 'item-041::item-049', baseId: 'item-041', qty: 1, includesBeerId: 'item-049' },
+    // Schweppes singola: cade
+    { id: 'item-050', baseId: 'item-050', qty: 1 },
+  ];
+  const { items, dropped } = reconcileCartItems(saved, kitchenMenuItems, kitchenPesiMassimiCombos);
+  assert.deepEqual(items.map((l) => [l.baseId, l.price]), [['item-040', 15.9], ['item-042', 17.9]]);
+  assert.match(items[0].name, /^Box Pulled Pork — Fallo Pesante · /);
+  assert.deepEqual(dropped, ['item-041', 'item-050']);
+});
+
+test('MENU OTTOBRE: Box esaurito → cadono entrambe le varianti del suo MENU', () => {
+  const boxOut = kitchenMenuItems.map((i) => (i.id === 'item-018' ? { ...i, available: false } : i));
+  const { items, dropped } = reconcileCartItems([
+    { id: 'item-040::item-051', baseId: 'item-040', qty: 1, includesBeerId: 'item-051' },
+    { id: 'item-060::item-046', baseId: 'item-060', qty: 1, includesBeerId: 'item-046' },
+  ], boxOut, kitchenPesiMassimiCombos);
+  assert.deepEqual(items, []);
+  assert.deepEqual(dropped, ['item-040', 'item-060']);
+});
+
 test('storage corrotto o assente: carrello vuoto, nessuna eccezione', () => {
   const s = fakeStorage({ [CART_STORAGE_KEY]: '{non json' });
-  assert.deepEqual(loadCart(s), { items: [], note: '', fulfillmentType: null });
+  assert.deepEqual(loadCart(s), { items: [], note: '', fulfillmentType: null, pickupSlot: null });
   const boom = { getItem() { throw new Error('denied'); }, setItem() { throw new Error('denied'); }, removeItem() { throw new Error('denied'); } };
-  assert.deepEqual(loadCart(boom), { items: [], note: '', fulfillmentType: null });
+  assert.deepEqual(loadCart(boom), { items: [], note: '', fulfillmentType: null, pickupSlot: null });
   assert.doesNotThrow(() => saveCart({ items: [], note: '', fulfillmentType: null }, boom));
   assert.doesNotThrow(() => clearCart(boom));
 });
@@ -150,7 +229,7 @@ test('clear svuota davvero', () => {
   saveCart({ items: [comboLine()], note: 'x', fulfillmentType: 'eat_here' }, s);
   clearCart(s);
   assert.equal(s.getItem(CART_STORAGE_KEY), null);
-  assert.deepEqual(loadCart(s), { items: [], note: '', fulfillmentType: null });
+  assert.deepEqual(loadCart(s), { items: [], note: '', fulfillmentType: null, pickupSlot: null });
 });
 
 test('chiave cliente separata da staff/cassa', () => {
@@ -180,7 +259,7 @@ test('buildFalloPesanteCartLine: id composito solo-UI, baseId reale, birra inclu
 test('la cassa mappa il payload sul baseId (combo) e mette la birra inclusa in nota', () => {
   const cassa = readFileSync(join(__dirname, '../pages/CounterAssistedOrder.jsx'), 'utf8');
   // riusa l'helper condiviso neutro, MAI il modulo carrello cliente
-  assert.match(cassa, /import \{ buildFalloPesanteCartLine(, falloPesanteDrinkOptions)? \} from '\.\.\/lib\/kitchenPesiMassimi'/);
+  assert.match(cassa, /import \{[^}]*\bbuildFalloPesanteCartLine\b[^}]*\} from '\.\.\/lib\/kitchenPesiMassimi'/);
   // itemId del payload = baseId || id (per un combo è item-040/041/042, non l'id composito)
   assert.match(cassa, /itemId: l\.baseId \|\| l\.id/);
   // la birra scelta viaggia in nota con la stessa funzione del flusso cliente
@@ -202,7 +281,7 @@ test('CustomerKitchenMenu e cablato su load/save/reconcile', () => {
   assert.match(menuSrc, /import \{ loadCart, saveCart, clearCart, reconcileCartItems \} from '\.\.\/lib\/kitchenCart'/);
   assert.match(menuSrc, /\[restoredCart\] = useState\(\(\) => loadCart\(\)\)/);
   assert.match(menuSrc, /reconcileCartItems\(restoredCart\.items, menuItems, kitchenPesiMassimiCombos\)/);
-  assert.match(menuSrc, /saveCart\(\{ items: orderItems, note: customerNote, fulfillmentType \}/);
+  assert.match(menuSrc, /saveCart\(\{ items: orderItems, note: customerNote, fulfillmentType, pickupSlot \}/);
   // il salvataggio non deve partire prima del ripristino, o sovrascriverebbe lo snapshot
   assert.match(menuSrc, /if \(!cartRestored\) return;\s*\n\s*saveCart/);
 });

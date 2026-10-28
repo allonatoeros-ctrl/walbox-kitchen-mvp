@@ -389,3 +389,14 @@ test('buildPreparingTickets: item non nel catalogo -> allergensUnverified true, 
   assert.equal(tickets[0].allergensUnverified, true);
   assert.equal(tickets[0].items[0].itemId, 'item-ignoto');
 });
+
+test('buildPreparingTickets: RITIRO AL WALRUS espone l orario sul ticket, senza cambiare l ordine', () => {
+  const orders = [
+    order({ orderCode: 'W40', status: 'preparing', createdAt: '2026-10-28T11:00:00Z', pickupSlot: '13:30', items: [{ itemId: 'item-016', name: 'X', quantity: 1 }] }),
+    order({ orderCode: 'W41', status: 'preparing', createdAt: '2026-10-28T11:05:00Z', pickupSlot: '12:45', items: [{ itemId: 'item-016', name: 'X', quantity: 1 }] }),
+    order({ orderCode: 'W42', status: 'preparing', createdAt: '2026-10-28T11:06:00Z', items: [{ itemId: 'item-016', name: 'X', quantity: 1 }] }),
+  ];
+  const { tickets } = buildPreparingTickets(orders);
+  assert.deepEqual(tickets.map((t) => t.orderCode), ['W40', 'W41', 'W42']);
+  assert.deepEqual(tickets.map((t) => t.pickupSlot), ['13:30', '12:45', null]);
+});

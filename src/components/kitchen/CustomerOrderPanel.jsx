@@ -4,6 +4,7 @@ import { useOrderPaymentFlow } from '../../hooks/useOrderPaymentFlow';
 import OrderPaymentActions from './OrderPaymentActions';
 import { loadCart, saveCart } from '../../lib/kitchenCart';
 import { getOrderStatusLabel, buildRebuildCart, PAYMENT_ABANDONED_MESSAGE } from '../../lib/kitchenOnlineLane';
+import { formatPickupSentence } from '../../lib/kitchenPickup';
 
 const TIMELINE_STEPS = ['pending_counter_payment', 'received', 'preparing', 'ready', 'delivered'];
 
@@ -94,6 +95,15 @@ export default function CustomerOrderPanel({ order, isReturnTarget, onDismissAba
             <div className="ost-greeting" data-testid="ost-greeting">Ciao {order.nickname}! 🦭</div>
           )}
           <div className="ost-order-code-big" data-testid="ost-order-code-big">{order.orderCode || '-'}</div>
+          {/* RITIRO AL WALRUS (2026-10-28): l'orario scelto, ben in vista sotto il codice. */}
+          {formatPickupSentence(order.pickupSlot) && (
+            <div
+              data-testid="ost-pickup"
+              style={{ display: 'inline-block', margin: '2px 0 6px', padding: '2px 10px', borderRadius: 6, background: '#fff', color: '#111', fontFamily: "'Anton', sans-serif", fontSize: 20, letterSpacing: 1 }}
+            >
+              {formatPickupSentence(order.pickupSlot)}
+            </div>
+          )}
           <div className="ost-status-banner-label">
             {displayStatus === 'pending_counter_payment'
               ? 'IN ATTESA DI PAGAMENTO'

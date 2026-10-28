@@ -4,7 +4,12 @@ import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { isEveningServiceActive, buildIncludedBeersNote } from '../lib/kitchenServiceRules';
 import { falloPesanteBeerOptions } from '../lib/kitchenAllergens';
 import { isEventModeActive, filterEventMenuItems } from '../lib/kitchenEventMode';
-import { buildFalloPesanteCartLine, falloPesanteDrinkOptions } from '../lib/kitchenPesiMassimi';
+import {
+  buildFalloPesanteCartLine,
+  falloPesanteDrinkOptions,
+  falloPesanteNeedsSide,
+  falloPesanteVariant,
+} from '../lib/kitchenPesiMassimi';
 import { kitchenPesiMassimiCombos, FALLO_PESANTE_INCLUDED_SIDE_ID } from '../data/kitchenMockData';
 import { getStaffSession, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
 import './CounterAssistedOrder.css';
@@ -181,7 +186,8 @@ function CounterAssistedOrderView() {
   const itemCount = cart.reduce((sum, l) => sum + l.qty, 0);
 
   // Unica primitiva di aggiunta: vale per item singoli e per combo. `baseId` è ciò che finisce
-  // nel payload RPC (per un combo è item-040/041/042, mai l'id composito solo-UI).
+  // nel payload RPC (per un combo è la variante item-040/041/042 birra o item-060/061/062 bibita,
+  // mai l'id composito solo-UI).
   const addLine = (line) => {
     setError(null);
     setCart((prev) => {
@@ -209,12 +215,20 @@ function CounterAssistedOrderView() {
   const comboOpenItem = comboOpenId ? menuItems.find((i) => i.id === comboOpenId) ?? null : null;
   const comboOpenCombo = comboOpenItem ? kitchenPesiMassimiCombos[comboOpenItem.id] ?? null : null;
   const comboOpenBeerId = comboOpenItem ? comboBeerByItem[comboOpenItem.id] ?? null : null;
+  // Bevanda inclusa = birra o bibita (`includesBeerId` nella riga, nome campo invariato).
+  const comboOpenDrink = comboOpenBeerId
+    ? falloBeerOptions.find((b) => b.id === comboOpenBeerId)
+      ?? falloDrinkOptions.find((d) => d.id === comboOpenBeerId)
+      ?? null
+    : null;
+  // MENU OTTOBRE: prezzo per variante (birra/bibita) e patate solo per i MENU con `includesSide`
+  // (il Box Pulled Pork le ha gia' dentro).
+  const comboOpenVariant = comboOpenCombo ? falloPesanteVariant(comboOpenCombo, comboOpenDrink) : null;
+  const comboOpenSideMissing = falloPesanteNeedsSide(comboOpenCombo) && falloSideMissing;
 
   const addCombo = () => {
-    if (!comboOpenCombo || !comboOpenBeerId) return;
-    // Bevanda inclusa = birra o bibita (`includesBeerId` nella riga, nome campo invariato).
-    const beer = falloBeerOptions.find((b) => b.id === comboOpenBeerId)
-      ?? falloDrinkOptions.find((d) => d.id === comboOpenBeerId);
+    if (!comboOpenCombo || !comboOpenBeerId || comboOpenSideMissing) return;
+    const beer = comboOpenDrink;
     if (!beer) return;
     addLine(buildFalloPesanteCartLine(comboOpenCombo, beer));
     closeCombo();
@@ -259,7 +273,7 @@ function CounterAssistedOrderView() {
     // server conferma id + order_code — nessun ordine fantasma mostrato al banco.
     const result = await addOrder({
       nickname: ASSISTED_ORDER_NICKNAME,
-      // `baseId` = id reale di catalogo: per un FALLO PESANTE è item-040/041/042 (allowlist
+      // `baseId` = id reale di catalogo: per un FALLO PESANTE è item-040/041/042 o item-060/061/062 (allowlist
       // server/promo), mai l'id composito solo-UI. Per gli item singoli coincide con l'id.
       items: cart.map((l) => ({
         itemId: l.baseId || l.id,
@@ -353,7 +367,10 @@ function CounterAssistedOrderView() {
                   <span className="kca-combo-title">
                     {comboOpenItem.name.toUpperCase()} — {comboOpenCombo.subtitle}
                   </span>
-                  <span className="kca-combo-price">€ {comboOpenCombo.price.toFixed(2)}</span>
+                  <span className="kca-combo-price" data-testid="cassa-combo-prices">
+                    BIRRA € {comboOpenCombo.price.toFixed(2)}
+                    {comboOpenCombo.softDrink ? ` · BIBITA € ${comboOpenCombo.softDrink.price.toFixed(2)}` : ''}
+                  </span>
                   <button
                     type="button"
                     className="kca-combo-close"
@@ -363,10 +380,14 @@ function CounterAssistedOrderView() {
                     CHIUDI
                   </button>
                 </div>
-                {falloPesanteSide && (
-                  <div className="kca-combo-sub">
-                    INCLUDE {falloPesanteSide.name.toUpperCase()} + 1 BIRRA O BIBITA
-                  </div>
+                {falloPesanteNeedsSide(comboOpenCombo) ? (
+                  falloPesanteSide && (
+                    <div className="kca-combo-sub">
+                      INCLUDE {falloPesanteSide.name.toUpperCase()} + 1 BIRRA O BIBITA
+                    </div>
+                  )
+                ) : (
+                  <div className="kca-combo-sub">INCLUDE 1 BIRRA O BIBITA</div>
                 )}
                 {falloBeerOptions.length > 0 || falloDrinkOptions.length > 0 ? (
                   <>
@@ -421,13 +442,13 @@ function CounterAssistedOrderView() {
                   type="button"
                   className="kca-primary"
                   data-testid="cassa-combo-add"
-                  disabled={!comboOpenBeerId || falloSideMissing}
+                  disabled={!comboOpenBeerId || comboOpenSideMissing}
                   onClick={addCombo}
                 >
-                  {falloSideMissing
+                  {comboOpenSideMissing
                     ? 'CONTORNO NON DISPONIBILE'
                     : comboOpenBeerId
-                      ? `AGGIUNGI MENU · € ${comboOpenCombo.price.toFixed(2)}`
+                      ? `AGGIUNGI MENU · € ${comboOpenVariant.price.toFixed(2)}`
                       : 'SCEGLI DA BERE'}
                 </button>
               </div>
@@ -438,7 +459,8 @@ function CounterAssistedOrderView() {
                 const blocked = counterItemBlockReason(item);
                 // Nel tab EVENTO il MENU (combo con birra) non si vende: solo il panino singolo.
                 const combo = currentCategory === 'evento' ? null : kitchenPesiMassimiCombos[item.id] ?? null;
-                const menuBlocked = !!blocked || falloSideMissing || (falloBeerOptions.length === 0 && falloDrinkOptions.length === 0);
+                const sideMissing = falloPesanteNeedsSide(combo) && falloSideMissing;
+                const menuBlocked = !!blocked || sideMissing || (falloBeerOptions.length === 0 && falloDrinkOptions.length === 0);
                 return (
                   <div className="kca-cell" key={item.id}>
                     <button
@@ -464,13 +486,18 @@ function CounterAssistedOrderView() {
                         <span>
                           {blocked
                             ? 'MENU'
-                            : falloSideMissing
+                            : sideMissing
                               ? 'MENU · CONTORNO NON DISP.'
                               : menuBlocked
                                 ? 'MENU · NO BEVANDE'
                                 : 'MENU'}
                         </span>
-                        {!menuBlocked && <span>€ {combo.price.toFixed(2)}</span>}
+                        {!menuBlocked && (
+                          <span>
+                            € {combo.price.toFixed(2)}
+                            {combo.softDrink ? ` / ${combo.softDrink.price.toFixed(2)}` : ''}
+                          </span>
+                        )}
                       </button>
                     )}
                   </div>

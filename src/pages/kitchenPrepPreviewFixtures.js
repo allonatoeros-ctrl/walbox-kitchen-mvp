@@ -31,7 +31,7 @@ export function seedPrepPreviewOrders() {
     // ── PREPARING (12 ordini, 6 mostrati come ticket + 6 in overflow) ──────────────────────
     o('W41', 'preparing', 14, [item('item-009', 'Pulled Pork', 1), item('item-058', 'Patate al Forno', 1)]),
     o('W42', 'preparing', 13, [item('item-012', 'Crudo Vero', 2)], 'Senza cipolla'),
-    o('W43', 'preparing', 12, [item('item-040', 'Pulled Pork — Fallo Pesante', 1)]),
+    o('W43', 'preparing', 12, [item('item-040', 'Box Pulled Pork — Fallo Pesante', 1)]),
     o('W44', 'preparing', 11, [item('item-020', 'Cruda e Contenta', 1), item('item-051', 'Birra del Tricheco', 1)]),
     o('W45', 'preparing', 10, [item('item-058', 'Patate al Forno', 3)]),
     o('W46', 'preparing', 9, [item('item-016', 'Wraptor', 1), item('item-021', 'Dolce ma Cruda', 1)], 'Allergia dichiarata al glutine'),

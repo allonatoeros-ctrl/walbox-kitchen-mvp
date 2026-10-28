@@ -318,13 +318,16 @@ test('C11. Catalogo base invariato + 3 MENU FALLO PESANTE esposti nei Pesi Massi
   }
   expect(rendered).toBe(kitchenMenuItems.length);
 
-  // Pesi Massimi: i 3 Peso Massimo con combo hanno un controllo MENU dedicato.
+  // Pesi Massimi: MENU OTTOBRE (2026-10-28) il MENU Pulled Pork sta sul Box (item-018), con
+  // Pastrami e Brisket; il panino Pulled Pork (item-009) si vende solo singolo.
   await page.getByTestId('cassa-tab-bbq').click();
-  await expect(page.getByTestId('cassa-menu-item-009')).toBeVisible();
+  await expect(page.getByTestId('cassa-menu-item-018')).toBeVisible();
   await expect(page.getByTestId('cassa-menu-item-010')).toBeVisible();
   await expect(page.getByTestId('cassa-menu-item-011')).toBeVisible();
-  // Box Pulled Pork (bbq, senza combo) non ne ha uno.
-  await expect(page.getByTestId('cassa-menu-item-018')).toHaveCount(0);
+  await expect(page.getByTestId('cassa-menu-item-009')).toHaveCount(0);
+  // Due prezzi sul bottone MENU: birra / bibita.
+  await expect(page.getByTestId('cassa-menu-item-018')).toContainText('€ 15.90 / 13.90');
+  await expect(page.getByTestId('cassa-menu-item-010')).toContainText('€ 17.90 / 16.90');
 });
 
 test('C12. MENU FALLO PESANTE: birra obbligatoria, riga carrello e totale corretti', async ({ page }) => {
@@ -333,8 +336,12 @@ test('C12. MENU FALLO PESANTE: birra obbligatoria, riga carrello e totale corret
   await page.goto('/kitchen/cassa');
   await page.getByTestId('cassa-tab-bbq').click();
 
-  await page.getByTestId('cassa-menu-item-009').click();
+  await page.getByTestId('cassa-menu-item-018').click();
   await expect(page.getByTestId('cassa-combo-panel')).toBeVisible();
+  // Box: le patate sono gia dentro, il pannello non le promette a parte.
+  await expect(page.getByTestId('cassa-combo-panel')).toContainText('INCLUDE 1 BIRRA O BIBITA');
+  await expect(page.getByTestId('cassa-combo-panel')).not.toContainText('PATATE AL FORNO');
+  await expect(page.getByTestId('cassa-combo-prices')).toHaveText('BIRRA € 15.90 · BIBITA € 13.90');
   // Senza birra scelta il MENU non è aggiungibile.
   await expect(page.getByTestId('cassa-combo-add')).toBeDisabled();
   await page.getByTestId('cassa-combo-beer-item-051').click();
@@ -342,9 +349,9 @@ test('C12. MENU FALLO PESANTE: birra obbligatoria, riga carrello e totale corret
   await page.getByTestId('cassa-combo-add').click();
   await expect(page.getByTestId('cassa-combo-panel')).toHaveCount(0);
 
-  // Riga carrello del combo (id composito solo-UI) + totale €19,00 — prezzo dal catalogo combo.
+  // Riga carrello del combo (id composito solo-UI) + totale €15,90 — prezzo variante birra del Box.
   await expect(page.getByTestId('cassa-line-item-040::item-051')).toBeVisible();
-  await expect(page.getByTestId('cassa-total')).toHaveText('€ 19.00');
+  await expect(page.getByTestId('cassa-total')).toHaveText('€ 15.90');
   await expect(page.getByTestId('cassa-count')).toHaveText('1');
 });
 
@@ -354,11 +361,11 @@ test('C13. MENU: stesso Peso Massimo con birre diverse resta su due righe distin
   await page.goto('/kitchen/cassa');
   await page.getByTestId('cassa-tab-bbq').click();
 
-  await page.getByTestId('cassa-menu-item-009').click();
+  await page.getByTestId('cassa-menu-item-018').click();
   await page.getByTestId('cassa-combo-beer-item-051').click();
   await page.getByTestId('cassa-combo-add').click();
 
-  await page.getByTestId('cassa-menu-item-009').click();
+  await page.getByTestId('cassa-menu-item-018').click();
   await page.getByTestId('cassa-combo-beer-item-052').click();
   await page.getByTestId('cassa-combo-add').click();
 
@@ -367,25 +374,53 @@ test('C13. MENU: stesso Peso Massimo con birre diverse resta su due righe distin
   await expect(page.getByTestId('cassa-line-item-040::item-052')).toBeVisible();
 });
 
-test('C14. MENU con BIBITA (H4): acqua esclusa, stesso prezzo, riga carrello con la bibita', async ({ page }) => {
-  await mockAnonymousAuth(page);
+test('C14. MENU con BIBITA (H4 + MENU OTTOBRE): acqua esclusa, prezzo bibita, payload sulla variante bibita', async ({ page }) => {
+  const sent = await mockKitchenRpcs(page, { fulfillmentType: 'eat_here', total: 16.9 });
   await mockEmptyMenuAvailability(page);
   await page.goto('/kitchen/cassa');
   await page.getByTestId('cassa-tab-bbq').click();
 
-  await page.getByTestId('cassa-menu-item-009').click();
+  await page.getByTestId('cassa-menu-item-010').click();
   await expect(page.getByTestId('cassa-combo-add')).toBeDisabled();
-  // Le 5 bibite ammesse ci sono, l'acqua (item-038) no.
-  for (const id of ['item-046', 'item-047', 'item-048', 'item-049', 'item-050']) {
+  // Le 7 bibite ammesse ci sono, l'acqua (item-038) e le Schweppes tolte no.
+  for (const id of ['item-046', 'item-047', 'item-048', 'item-063', 'item-064', 'item-065', 'item-066']) {
     await expect(page.getByTestId(`cassa-combo-drink-${id}`)).toBeVisible();
   }
-  await expect(page.getByTestId('cassa-combo-drink-item-038')).toHaveCount(0);
+  for (const id of ['item-038', 'item-049', 'item-050']) {
+    await expect(page.getByTestId(`cassa-combo-drink-${id}`)).toHaveCount(0);
+  }
 
+  await page.getByTestId('cassa-combo-beer-item-051').click();
+  await expect(page.getByTestId('cassa-combo-add')).toHaveText('AGGIUNGI MENU · € 17.90');
   await page.getByTestId('cassa-combo-drink-item-047').click();
-  await expect(page.getByTestId('cassa-combo-add')).toBeEnabled();
+  await expect(page.getByTestId('cassa-combo-add')).toHaveText('AGGIUNGI MENU · € 16.90');
   await page.getByTestId('cassa-combo-add').click();
   await expect(page.getByTestId('cassa-combo-panel')).toHaveCount(0);
 
-  await expect(page.getByTestId('cassa-line-item-040::item-047')).toBeVisible();
-  await expect(page.getByTestId('cassa-total')).toHaveText('€ 19.00');
+  await expect(page.getByTestId('cassa-line-item-061::item-047')).toBeVisible();
+  await expect(page.getByTestId('cassa-total')).toHaveText('€ 16.90');
+
+  // Il server prezza per item_id: nel payload va la variante bibita, mai l'id composito.
+  await page.getByTestId('cassa-fulfillment-eat_here').click();
+  await page.getByTestId('cassa-create').click();
+  await expect(page.getByTestId('cassa-pay')).toBeVisible();
+  expect(sent.create.p_items).toEqual([expect.objectContaining({ item_id: 'item-061', quantity: 1 })]);
+  expect(sent.create.p_customer_note).toContain('BIBITA INCLUSA: PEPSI ZERO');
+});
+
+test('C15. MENU OTTOBRE: patate finite bloccano il MENU di Pastrami/Brisket, non quello del Box', async ({ page }) => {
+  await mockAnonymousAuth(page);
+  await mockEmptyMenuAvailability(page);
+  await page.addInitScript(() => {
+    localStorage.setItem('walbox_kitchen_menu_availability', JSON.stringify({ 'item-058': false }));
+  });
+  await page.goto('/kitchen/cassa');
+  await page.getByTestId('cassa-tab-bbq').click();
+
+  await expect(page.getByTestId('cassa-menu-item-010')).toBeDisabled();
+  await expect(page.getByTestId('cassa-menu-item-010')).toContainText('CONTORNO NON DISP.');
+  await expect(page.getByTestId('cassa-menu-item-018')).toBeEnabled();
+  await page.getByTestId('cassa-menu-item-018').click();
+  await page.getByTestId('cassa-combo-drink-item-064').click();
+  await expect(page.getByTestId('cassa-combo-add')).toHaveText('AGGIUNGI MENU · € 13.90');
 });

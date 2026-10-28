@@ -22,6 +22,11 @@
 // rimozione di Krombacher (correzione Eros, 2026-09-22) `falloPesanteBeerOptions()` filtra solo
 // le 6 bottiglie rimaste, quindi l'unione segue da sola.
 import { kitchenMenuItems, kitchenPesiMassimiCombos } from '../data/kitchenMockData.js';
+import {
+  falloPesanteNeedsSide,
+  findFalloPesanteCombo,
+  isFalloPesanteDrinkAllowed,
+} from './kitchenPesiMassimi.js';
 
 // Contorno incluso in ogni FALLO PESANTE (subtitle dei combo: "PANINO + BIRRA + PATATE AL FORNO").
 export const FALLO_PESANTE_SIDE_ITEM_ID = 'item-058';
@@ -40,9 +45,11 @@ export function falloPesanteBeerOptions() {
   );
 }
 
+// MENU OTTOBRE (2026-10-28): un MENU si trova sia dall'id variante birra (item-040/041/042) sia
+// da quello bibita (`softDrink.id`, item-060/061/062). `isSoftDrink` dice quale bevanda e' inclusa.
 function comboById(itemId) {
-  const entry = Object.entries(kitchenPesiMassimiCombos).find(([, combo]) => combo?.id === itemId);
-  return entry ? { baseItemId: entry[0], combo: entry[1] } : null;
+  const ref = findFalloPesanteCombo(kitchenPesiMassimiCombos, itemId);
+  return ref ? { ...ref, isSoftDrink: ref.combo.softDrink?.id === itemId } : null;
 }
 
 /**
@@ -62,15 +69,19 @@ export function resolveItemAllergens(itemId) {
 
   const comboRef = comboById(itemId);
   if (comboRef) {
-    const beers = falloPesanteBeerOptions();
+    // Bevande possibili: le birre per la variante birra, le bibite ammesse per la variante bibita.
+    const beers = comboRef.isSoftDrink
+      ? kitchenMenuItems.filter(isFalloPesanteDrinkAllowed)
+      : falloPesanteBeerOptions();
     if (beers.length === 0) return { allergens: [], known: false };
     // Un componente non risolvibile O non verificato rende l'intero combo non verificabile:
     // meglio dichiarare "non verificati" che pubblicare un'unione parziale come se fosse
     // completa. Si passa dal resolver, non da `.allergens` diretto, proprio per ereditare il
-    // flag allergensVerified dei componenti.
+    // flag allergensVerified dei componenti. Il contorno conta solo se il MENU lo include
+    // (`includesSide`: il Box Pulled Pork ha le patate gia' dentro la box).
     const components = [
       resolveItemAllergens(comboRef.baseItemId),
-      resolveItemAllergens(FALLO_PESANTE_SIDE_ITEM_ID),
+      ...(falloPesanteNeedsSide(comboRef.combo) ? [resolveItemAllergens(FALLO_PESANTE_SIDE_ITEM_ID)] : []),
       ...beers.map((b) => resolveItemAllergens(b.id)),
     ];
     if (components.some((c) => !c.known)) return { allergens: [], known: false };

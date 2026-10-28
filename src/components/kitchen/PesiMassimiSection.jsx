@@ -3,7 +3,21 @@ import { kitchenPesiMassimiCombos } from '../../data/kitchenMockData';
 import { isEveningServiceActive } from '../../lib/kitchenServiceRules';
 import PosterCard from './PosterCard';
 import { formatPrice } from '../../lib/kitchenPrice';
+import {
+  buildFalloPesanteCartLine,
+  falloPesanteNeedsSide,
+  falloPesanteVariant,
+} from '../../lib/kitchenPesiMassimi';
 import './PesiMassimiSection.css';
+
+/*
+ * MENU OTTOBRE (2026-10-28, decisione Eros) — due prezzi per MENU: con birra (`combo.price`) o con
+ * bibita (`combo.softDrink.price`). La riga MENU mostra entrambi; prezzo e CTA seguono la bevanda
+ * scelta (`falloPesanteVariant`), e la riga carrello la costruisce `buildFalloPesanteCartLine`
+ * (id/baseId/prezzo della variante giusta). Il menu Pulled Pork ora sta sul BOX (`includesSide:
+ * false`): niente patate a parte, quindi il vincolo "patate finite" vale solo con `includesSide`.
+ * Etichetta della scelta singola: `item.priceNote` ("SOLO BOX") o "SOLO PANINO".
+ */
 
 /**
  * Blocco PESI MASSIMI (categoria `bbq`) del menu cliente.
@@ -29,8 +43,8 @@ import './PesiMassimiSection.css';
  * nessun id hardcoded qui: le opzioni arrivano dalla prop `beerOptions`). Selettore a
  * pillole ripristinato (BEER SPRINT V1 Fase E, 2026-09-14): tap su una birra apre il
  * dettaglio in-place, la scelta si conferma con
- * "SCEGLI QUESTA BIRRA". Il prezzo del combo NON cambia in base alla birra scelta — resta
- * `combo.price` fisso — e la birra scelta va solo nel `name` della riga carrello, mentre
+ * "SCEGLI QUESTA BIRRA". Il prezzo del combo NON cambia in base a QUALE birra si sceglie (da
+ * MENU OTTOBRE cambia solo tra birra e bibita, vedi sopra) e la birra va nel `name` della riga carrello, mentre
  * `itemId` inviato all'ordine resta il vero id del combo (`combo.id`, es. `item-040`),
  * invariato per non rompere l'allowlist del redeem promo
  * (`kitchen_promo_pass_redeem_for_order`). Per distinguere le quantità quando lo stesso
@@ -164,8 +178,19 @@ export default function PesiMassimiSection({
           const previewBeer = beerOptions.find((b) => b.id === previewBeerByItem[item.id]) ?? null;
           const previewLocked =
             previewBeer?.availability === 'evening_only' && !isEveningServiceActive();
-          // Inclusi del combo: contorno (`side`, sempre) + birra a scelta (`beerOptions`, se presenti).
-          const sideMissing = !includedSide || includedSide.available === false || includedSide.price == null;
+          // Inclusi del combo: contorno (`side`, solo se `includesSide`: il Box ha gia' le patate) +
+          // bevanda a scelta (`beerOptions`/`drinkOptions`, se presenti).
+          const sideMissing = falloPesanteNeedsSide(combo)
+            && (!includedSide || includedSide.available === false || includedSide.price == null);
+          const soloLabel = item.priceNote ?? 'SOLO PANINO';
+          // Prezzo del MENU per la bevanda scelta; senza scelta si mostra "DA" il piu' basso.
+          const comboVariant = combo ? falloPesanteVariant(combo, chosenDrinkOrBeer) : null;
+          // Il prezzo "con bibita" si mostra solo se c'e' almeno una bibita ordinabile.
+          const softPrice = drinkOptions.length > 0 ? combo?.softDrink?.price ?? null : null;
+          const comboFromPrice = combo
+            ? (softPrice != null ? Math.min(combo.price, softPrice) : combo.price)
+            : null;
+          const comboHasTwoPrices = softPrice != null && softPrice !== combo?.price;
           const comboBlocked = soldOut || sideMissing;
           const beerNotChosen = hasDrinkChoice && !chosenDrinkOrBeer;
           // SCEGLI COME LO VUOI (2026-09-24): default SOLO PANINO, il MENU si sceglie.
@@ -190,7 +215,7 @@ export default function PesiMassimiSection({
                 >
                   <span className="pmx-radio" aria-hidden="true" />
                   <span className="pmx-opt-body">
-                    <span className="pmx-opt-name">SOLO PANINO</span>
+                    <span className="pmx-opt-name">{soloLabel}</span>
                     <span className="pmx-opt-price">{formatPrice(item.price, forceDecimals)}</span>
                   </span>
                 </button>
@@ -207,9 +232,20 @@ export default function PesiMassimiSection({
                   <span className="pmx-opt-body">
                     <span className="pmx-opt-name">MENU · FALLO PESANTE</span>
                     <span className="pmx-opt-sub" data-testid="fallo-pesante-includes">
-                      {sideMissing && !soldOut ? 'PATATE FINITE: SOLO PANINO' : combo.subtitle}
+                      {sideMissing && !soldOut ? `PATATE FINITE: ${soloLabel}` : combo.subtitle}
                     </span>
-                    <span className="pmx-opt-price">{formatPrice(combo.price, forceDecimals)}</span>
+                    {comboHasTwoPrices && !(sideMissing && !soldOut) && (
+                      <span className="pmx-opt-prices" data-testid="fallo-pesante-prices">
+                        <span className="pmx-opt-prices-row">CON BIRRA {formatPrice(combo.price, forceDecimals)}</span>
+                        <span className="pmx-opt-prices-sep" aria-hidden="true">{' · '}</span>
+                        <span className="pmx-opt-prices-row">CON BIBITA {formatPrice(softPrice, forceDecimals)}</span>
+                      </span>
+                    )}
+                    <span className="pmx-opt-price" data-testid="fallo-pesante-price">
+                      {chosenDrinkOrBeer || !comboHasTwoPrices
+                        ? formatPrice(comboVariant.price, forceDecimals)
+                        : <><span className="pmx-opt-from">DA </span>{formatPrice(comboFromPrice, forceDecimals)}</>}
+                    </span>
                   </span>
                 </button>
               </div>
@@ -224,7 +260,11 @@ export default function PesiMassimiSection({
                     </h4>
                     <span className="pmx-beer-badge">OBBLIGATORIO</span>
                   </div>
-                  <p className="pmx-beer-sub">Una birra o una bibita, il prezzo del menu non cambia</p>
+                  <p className="pmx-beer-sub">
+                    {comboHasTwoPrices
+                      ? `Con la birra ${formatPrice(combo.price, forceDecimals)}, con una bibita ${formatPrice(softPrice, forceDecimals)}`
+                      : 'Una birra o una bibita, scegli tu'}
+                  </p>
 
                   {chosenDrinkOrBeer && (
                     <div className="pm-beer-chosen">
@@ -386,14 +426,11 @@ export default function PesiMassimiSection({
                     if (comboBlocked || beerNotChosen) return;
                     // Dopo l'add compare il dock del sacco (e il toast): porta la CTA del MENU sopra.
                     pendingScrollRef.current = { id: item.id, kind: 'pick' };
-                    onAdd({
-                      id: chosenDrinkOrBeer ? `${combo.id}::${chosenDrinkOrBeer.id}` : combo.id,
-                      baseId: combo.id,
-                      name: chosenDrinkOrBeer ? `${combo.name} · ${chosenDrinkOrBeer.name}` : combo.name,
-                      price: combo.price,
-                      image: combo.image,
-                      includesBeerId: chosenDrinkOrBeer?.id,
-                    });
+                    // Riga carrello dalla lib condivisa (stessa della cassa e del reconcile):
+                    // variante birra/bibita → id, baseId e prezzo giusti per il server.
+                    onAdd(chosenDrinkOrBeer
+                      ? buildFalloPesanteCartLine(combo, chosenDrinkOrBeer)
+                      : { id: combo.id, baseId: combo.id, name: combo.name, price: combo.price, image: combo.image });
                   }}
                 >
                   {soldOut
@@ -402,7 +439,7 @@ export default function PesiMassimiSection({
                       ? 'NON DISPONIBILE'
                       : beerNotChosen
                         ? 'SCEGLI DA BERE PER CONTINUARE'
-                        : `AGGIUNGI IL MENU · ${formatPrice(combo.price, forceDecimals)}`}
+                        : `AGGIUNGI IL MENU · ${formatPrice(comboVariant.price, forceDecimals)}`}
                 </button>
                 </div>
               )}

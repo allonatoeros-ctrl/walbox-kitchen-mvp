@@ -8,6 +8,7 @@ import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
 import { useKitchenOrderHistory } from '../hooks/useKitchenOrderHistory';
 import { resolveOrderAllergens } from '../lib/kitchenAllergens';
 import { STAFF_DISAMBIGUATION_LABEL } from '../lib/kitchenStaffLabels';
+import { formatPickupBadge } from '../lib/kitchenPickup';
 import { getStaffSession, onAuthStateChange, isKitchenStaff, signOut } from '../lib/supabaseAuth';
 import { usePreviewKitchenOrders, usePreviewKitchenMenu } from './kitchenSoloPreviewFixtures';
 import { useKitchenAudio } from '../hooks/useKitchenAudio';
@@ -610,7 +611,12 @@ export function KitchenSoloServiceView({
                 </span>
               </span>
               <span className="kss-qcard-right">
-                {o.fulfillmentType && (
+                {/* RITIRO AL WALRUS: un takeaway con orario mostra l'orario al posto di VIA. */}
+                {formatPickupBadge(o.pickupSlot) ? (
+                  <span className="kss-qcard-tag kss-qcard-tag--pickup" data-testid={`fulfillment-tag-${o.orderCode}`}>
+                    {formatPickupBadge(o.pickupSlot)}
+                  </span>
+                ) : o.fulfillmentType && (
                   <span className="kss-qcard-tag" data-testid={`fulfillment-tag-${o.orderCode}`}>
                     {o.fulfillmentType === 'takeaway' ? 'VIA' : 'QUI'}
                   </span>
@@ -760,7 +766,11 @@ export function KitchenSoloServiceView({
                   <span className={`kss-status-pill kss-status-pill--${STATUS_PILL[focusOrder.status]?.cls ?? 'received'}`}>
                     {STATUS_PILL[focusOrder.status]?.label ?? focusOrder.status}
                   </span>
-                  {focusOrder.fulfillmentType && (
+                  {formatPickupBadge(focusOrder.pickupSlot) ? (
+                    <span className="kss-qcard-tag kss-qcard-tag--pickup" data-testid="focus-fulfillment">
+                      {formatPickupBadge(focusOrder.pickupSlot)}
+                    </span>
+                  ) : focusOrder.fulfillmentType && (
                     <span className="kss-qcard-tag" data-testid="focus-fulfillment">
                       {focusOrder.fulfillmentType === 'takeaway' ? 'VIA' : 'QUI'}
                     </span>

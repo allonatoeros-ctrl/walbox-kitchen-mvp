@@ -13,12 +13,16 @@
 // Cosa NON fa: non si fida dei prezzi salvati. Al ripristino ogni riga viene riconciliata col
 // catalogo corrente (vedi reconcileCartItems): nome e prezzo tornano dal catalogo, e cio' che non
 // e' piu' ordinabile viene scartato. Il totale e' sempre ricalcolato, mai lo snapshot salvato.
-import { buildFalloPesanteCartLine, isFalloPesanteDrinkAllowed } from './kitchenPesiMassimi.js';
+import { buildFalloPesanteCartLine, findFalloPesanteCombo, isFalloPesanteDrinkAllowed } from './kitchenPesiMassimi.js';
+import { PICKUP_FULFILLMENT, sanitizePickupSlot } from './kitchenPickup.js';
 
 export const CART_STORAGE_KEY = 'walbox_kitchen_cart_v1';
 
 const MAX_QTY = 99;
-const EMPTY = { items: [], note: '', fulfillmentType: null };
+const EMPTY = { items: [], note: '', fulfillmentType: null, pickupSlot: null };
+// Scelte di ritiro salvabili: 'pickup' (RITIRO AL WALRUS, 2026-10-28) e' il valore UI, al server
+// arriva takeaway + orario (vedi kitchenPickup.toServerFulfillment).
+const SAVED_FULFILLMENT = new Set(['eat_here', 'takeaway', PICKUP_FULFILLMENT]);
 
 function storageOr(storage) {
   if (storage) return storage;
@@ -37,19 +41,22 @@ function sanitizeLine(raw) {
   };
 }
 
-/** Legge il carrello grezzo. Non riconcilia: quello e' compito di reconcileCartItems. */
-export function loadCart(storage) {
+/** Legge il carrello grezzo. Non riconcilia: quello e' compito di reconcileCartItems.
+ *  Un orario di ritiro salvato ma ormai non piu' prenotabile (`now`, ora di Roma) torna null:
+ *  resta la scelta RITIRO, il cliente risceglie l'orario. Carrelli salvati prima del ritiro
+ *  (senza `pickupSlot`) si leggono come sempre. */
+export function loadCart(storage, { now = Date.now() } = {}) {
   const store = storageOr(storage);
   if (!store) return { ...EMPTY };
   try {
     const parsed = JSON.parse(store.getItem(CART_STORAGE_KEY) || 'null');
     if (!parsed || typeof parsed !== 'object') return { ...EMPTY };
+    const fulfillmentType = SAVED_FULFILLMENT.has(parsed.fulfillmentType) ? parsed.fulfillmentType : null;
     return {
       items: Array.isArray(parsed.items) ? parsed.items.map(sanitizeLine).filter(Boolean) : [],
       note: typeof parsed.note === 'string' ? parsed.note : '',
-      fulfillmentType: parsed.fulfillmentType === 'eat_here' || parsed.fulfillmentType === 'takeaway'
-        ? parsed.fulfillmentType
-        : null,
+      fulfillmentType,
+      pickupSlot: fulfillmentType === PICKUP_FULFILLMENT ? sanitizePickupSlot(parsed.pickupSlot, now) : null,
     };
   } catch {
     return { ...EMPTY };
@@ -58,7 +65,7 @@ export function loadCart(storage) {
 
 /** Salva solo l'essenziale: identita' riga, quantita', bevanda scelta (birra o bibita), nota e scelta di ritiro.
  *  Nome/prezzo/immagine NON si salvano: si ricavano sempre dal catalogo al ripristino. */
-export function saveCart({ items, note, fulfillmentType }, storage) {
+export function saveCart({ items, note, fulfillmentType, pickupSlot }, storage) {
   const store = storageOr(storage);
   if (!store) return;
   try {
@@ -72,6 +79,7 @@ export function saveCart({ items, note, fulfillmentType }, storage) {
       })),
       note: note ?? '',
       fulfillmentType: fulfillmentType ?? null,
+      pickupSlot: fulfillmentType === PICKUP_FULFILLMENT ? (pickupSlot ?? null) : null,
     }));
   } catch { /* storage pieno o non disponibile: il carrello resta comunque in memoria */ }
 }
@@ -94,18 +102,20 @@ function isOrderable(item) {
  */
 export function reconcileCartItems(savedItems, menuItems, combos) {
   const byId = new Map((menuItems ?? []).map((i) => [i.id, i]));
-  const comboById = new Map(Object.entries(combos ?? {}).map(([baseItemId, c]) => [c.id, { baseItemId, combo: c }]));
   const items = [];
   const dropped = [];
 
   for (const line of savedItems ?? []) {
-    const comboRef = comboById.get(line.baseId);
+    // MENU OTTOBRE: il combo si riconosce sia dall'id variante birra (item-040/041/042) sia da
+    // quello bibita (item-060/061/062). La riga viene RICOSTRUITA: variante, id e prezzo derivano
+    // dalla bevanda salvata, mai dal `baseId`/prezzo salvati (carrelli vecchi a 19/20 si riprezzano).
+    const comboRef = findFalloPesanteCombo(combos, line.baseId);
     if (comboRef) {
       // Un FALLO PESANTE vale solo con la sua bevanda (`includesBeerId` = birra o bibita): se non
-      // e' piu' servibile, o e' una bibita non ammessa (acqua), la riga cade, perche' il combo
-      // senza bevanda non e' un prodotto che esiste a menu.
+      // e' piu' servibile, o non e' una birra ne' una bibita ammessa (acqua, bibite tolte), la riga
+      // cade, perche' il combo senza bevanda non e' un prodotto che esiste a menu.
       const beer = line.includesBeerId ? byId.get(line.includesBeerId) : null;
-      const allowedDrink = !!beer && (beer.category !== 'bevande' || isFalloPesanteDrinkAllowed(beer));
+      const allowedDrink = !!beer && (beer.category === 'birre' || isFalloPesanteDrinkAllowed(beer));
       if (!beer || !isOrderable(beer) || !allowedDrink) { dropped.push(line.baseId); continue; }
       const base = byId.get(comboRef.baseItemId);
       if (!isOrderable(base)) { dropped.push(line.baseId); continue; }

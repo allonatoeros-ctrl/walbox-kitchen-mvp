@@ -12,7 +12,9 @@ import {
   clearClientRequestId,
   resolveCreateOutcome,
   onlineErrorMessage,
+  isPickupSlotError,
 } from '../lib/kitchenOnlineLane';
+import { toServerFulfillment } from '../lib/kitchenPickup';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
 import MenuHero from '../components/kitchen/MenuHero';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
@@ -27,7 +29,7 @@ import BevandeSection from '../components/kitchen/BevandeSection';
 import CustomerCheckout from '../components/kitchen/CustomerCheckout';
 import AnniversaryBanner from '../components/kitchen/AnniversaryBanner';
 import EventSideChip from '../components/kitchen/EventSideChip';
-import { checkoutMissing, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
+import { checkoutMissingAtSubmit, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
 import { falloPesanteDrinkOptions } from '../lib/kitchenPesiMassimi';
 import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, shouldSuggestEventSide, EVENT_CATEGORY, EVENT_CATEGORIES, EVENT_SIDE_ITEM_ID } from '../lib/kitchenEventMode';
@@ -138,7 +140,7 @@ function getCategorySubtitle(cat) {
   if (cat === 'tagliere') return 'SALUMI SERISSIMI · FORMAGGI DISCUTIBILI · PACE FATTA';
   if (cat === 'birre') return 'KEILER HELLES · LAND-PILS · KELLERBIER · WEISSE · DUNKEL WEISSE · LUPULUS';
   if (cat === 'contorni') return 'PATATE AL FORNO';
-  if (cat === 'bevande') return 'ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · SCHWEPPES LEMON · SCHWEPPES TONICA';
+  if (cat === 'bevande') return 'ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · FANTA · SPRITE · ESTATHÉ PESCA · ESTATHÉ LIMONE';
   return null;
 }
 
@@ -207,10 +209,8 @@ export default function CustomerKitchenMenu() {
   // Contatore monotono per l'id delle thumbnail di feedback add-to-cart (solo lato UI,
   // volatile: non persiste e non finisce mai nel payload ordine).
   const flyerSeqRef = useRef(0);
+  // Note cucina sempre aperte nel checkout (2026-10-28): niente piu' accordion da ricordare.
   const [customerNote, setCustomerNote] = useState(restoredCart.note);
-  // Se il sacco ripristinato porta con se' una nota, il pannello parte aperto: una nota salvata
-  // ma nascosta dietro un accordion chiuso, per il cliente, e' una nota persa.
-  const [notesOpen, setNotesOpen] = useState(Boolean(restoredCart.note));
   const [submitting, setSubmitting] = useState(false);
   // Checkout V2: nome, dove mangi, note e corsia di pagamento stanno in un solo schermo (vedi
   // CustomerCheckout). L'ordine nasce al tap su PAGO ORA / PAGO AL BANCO; se manca il nome o il
@@ -226,7 +226,10 @@ export default function CustomerKitchenMenu() {
   // Customer Checkout V1 (2026-09-13): unica scelta obbligatoria nel drawer, nessun default —
   // l'invio resta disabilitato finché il cliente non la sceglie esplicitamente. Il pagamento non
   // si sceglie più qui: vive sulla pagina pagamento dedicata (/kitchen/payment, follow-up UX 2026-09-18).
-  const [fulfillmentType, setFulfillmentType] = useState(restoredCart.fulfillmentType); // 'eat_here' | 'takeaway'
+  const [fulfillmentType, setFulfillmentType] = useState(restoredCart.fulfillmentType); // 'eat_here' | 'takeaway' | 'pickup'
+  // RITIRO AL WALRUS (2026-10-28): orario 'HH:MM' scelto nel checkout. loadCart scarta un orario
+  // salvato ormai passato; handleSubmit lo ricontrolla al momento dell'invio.
+  const [pickupSlot, setPickupSlot] = useState(restoredCart.pickupSlot ?? null);
 
   // Banner "hai un ordine attivo" (cleanup cliente, 2026-09-18): deve riflettere lo STATO reale
   // dell'ordine, non solo la presenza di una chiave locale — un cancelled/delivered non deve mai
@@ -258,8 +261,8 @@ export default function CustomerKitchenMenu() {
   // Un carrello svuotato a mano viene salvato vuoto: e' un'azione esplicita del cliente.
   useEffect(() => {
     if (!cartRestored) return;
-    saveCart({ items: orderItems, note: customerNote, fulfillmentType }, undefined);
-  }, [cartRestored, orderItems, customerNote, fulfillmentType]);
+    saveCart({ items: orderItems, note: customerNote, fulfillmentType, pickupSlot }, undefined);
+  }, [cartRestored, orderItems, customerNote, fulfillmentType, pickupSlot]);
 
   // Feedback add-to-cart: memorizza l'ultimo punto di tap (per l'animazione thumbnail)
   // e pulisce i timer al unmount. Nessuna dipendenza nuova, solo listener nativi.
@@ -488,7 +491,10 @@ export default function CustomerKitchenMenu() {
     }
     // Nome e "dove lo mangi" restano obbligatori, senza default silenziosi: se manca qualcosa
     // nessun ordine viene creato e il cliente viene portato sul primo campo mancante.
-    const missing = checkoutMissing({ name: customerName, fulfillmentType });
+    // Ritiro: l'orario deve essere ancora prenotabile adesso (ora di Roma), non solo al momento
+    // della scelta: uno scaduto nel frattempo si azzera e il cliente ne sceglie un altro.
+    const missing = checkoutMissingAtSubmit({ name: customerName, fulfillmentType, pickupSlot });
+    if (missing.includes('pickup_slot') && pickupSlot) setPickupSlot(null);
     if (missing.length > 0) {
       setOrderError(null);
       setCheckoutIssue((prev) => ({ field: missing[0], seq: (prev?.seq ?? 0) + 1 }));
@@ -510,7 +516,8 @@ export default function CustomerKitchenMenu() {
       total,
       note: noteParts.length > 0 ? noteParts.join(' \u00B7 ') : null,
       paidAt: null,
-      fulfillmentType,
+      // 'pickup' (UI) -> takeaway + pickupSlot: addOrder chiama la v3 solo con un orario.
+      ...toServerFulfillment(fulfillmentType, pickupSlot),
       // S5: la creazione passa dalla v2. Lo status (banco/online) lo decide e lo restituisce il
       // server; `clientRequestId` resta lo stesso per lo stesso carrello, così un retry dopo un
       // errore di rete non crea un secondo ordine.
@@ -526,6 +533,11 @@ export default function CustomerKitchenMenu() {
       // RPC alza 'kitchen_closed', il messaggio resta specifico invece del generico "riprova".
       // Carrello e client_request_id restano com'erano per il retry.
       setOrderError(onlineErrorMessage(result.error, 'Ordine non inviato — riprova'));
+      // Orario rifiutato dal server (passato o non valido): si azzera e si riporta il cliente lì.
+      if (isPickupSlotError(result.error)) {
+        setPickupSlot(null);
+        setCheckoutIssue((prev) => ({ field: 'pickup_slot', seq: (prev?.seq ?? 0) + 1 }));
+      }
       setSubmitting(false);
       submitLockRef.current = false;
       return;
@@ -579,7 +591,7 @@ export default function CustomerKitchenMenu() {
     if (!cartRestored || orderItems.length > 0) return;
     setCustomerNote((prev) => (prev ? '' : prev));
     setFulfillmentType((prev) => (prev ? null : prev));
-    setNotesOpen(false);
+    setPickupSlot((prev) => (prev ? null : prev));
   }, [cartRestored, orderItems.length]);
 
   // ── Main menu ─────────────────────────────────────────────────────────
@@ -904,10 +916,10 @@ export default function CustomerKitchenMenu() {
               onNameChange={setCustomerName}
               fulfillmentType={fulfillmentType}
               onFulfillmentChange={setFulfillmentType}
+              pickupSlot={pickupSlot}
+              onPickupSlotChange={setPickupSlot}
               note={customerNote}
               onNoteChange={setCustomerNote}
-              notesOpen={notesOpen}
-              onNotesOpenChange={setNotesOpen}
               submitting={submitting}
               kitchenOpen={kitchenOpen}
               total={total}

@@ -13,15 +13,15 @@ import './BevandeSection.css';
  * "Bibita analcolica gassata" sarebbe un click a vuoto. Tutto è visibile nello stato
  * unico della card.
  *
- * Immagini: le 6 foto reali sono in `public/assets/kitchen/menu/bevande/` (512×512
+ * Immagini: le foto reali sono in `public/assets/kitchen/menu/bevande/` (512×512
  * .webp, spec nel README della cartella) e `item.image` punta al path definitivo di
  * ciascuna. Sono scatti sui prodotti reali del locale: nessun hotlink a marchi terzi,
- * nessuna immagine generata. Il ramo placeholder "FOTO IN ARRIVO" resta comunque nel
- * render: è il fallback per una voce bevanda futura aggiunta prima della sua foto,
+ * nessuna immagine generata. Il ramo placeholder "FOTO IN ARRIVO" della PosterCard è
+ * il fallback per le voci senza foto (oggi Fanta, Sprite, Estathé Pesca e Limone),
  * così non si torna mai a un `<img>` rotto.
  *
- * Formato: renderizzato solo se `item.format` esiste. Per Pepsi Zero / Seven Up /
- * Schweppes il formato non è confermato da nessuna fonte e non viene inventato
+ * Formato: renderizzato solo se `item.format` esiste. Per Pepsi Zero / Seven Up / Fanta /
+ * Sprite / Estathé il formato non è confermato da nessuna fonte e non viene inventato
  * (stessa regola di Krombacher in BirreSection).
  *
  * `displayName` (solo Pepsi 33cl) evita di ripetere il formato nel titolo: il nome
@@ -29,14 +29,19 @@ import './BevandeSection.css';
  */
 
 // Ordine menu approvato (stesso di getCategorySubtitle in CustomerKitchenMenu.jsx):
-// ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · SCHWEPPES LEMON · SCHWEPPES TONICA.
+// ACQUA · PEPSI · PEPSI ZERO · SEVEN UP · FANTA · SPRITE · ESTATHÉ PESCA · ESTATHÉ LIMONE.
+// MENU OTTOBRE (2026-10-28): via Schweppes Lemon/Tonica (item-049/050), dentro Fanta, Sprite ed
+// Estathé. Le 4 nuove non hanno ancora la foto (`image: null`): la PosterCard mostra
+// "FOTO IN ARRIVO" nella stessa cornice.
 const BEVANDE_LIST_ORDER = [
   'item-038', // ACQUA
   'item-046', // PEPSI
   'item-047', // PEPSI ZERO
   'item-048', // SEVEN UP
-  'item-049', // SCHWEPPES LEMON
-  'item-050', // SCHWEPPES TONICA
+  'item-063', // FANTA
+  'item-064', // SPRITE
+  'item-065', // ESTATHÉ PESCA
+  'item-066', // ESTATHÉ LIMONE
 ];
 
 export default function BevandeSection({ items, onAdd, onRemove, qtyById }) {
