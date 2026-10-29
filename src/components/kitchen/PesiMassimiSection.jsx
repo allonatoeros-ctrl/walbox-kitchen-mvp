@@ -98,10 +98,20 @@ import './PesiMassimiSection.css';
 // Fase 3.4f: torna esattamente il ritaglio di HEAD f5ed050 (niente zoom).
 const OBJECT_POSITION_BY_ID = {
   'item-018': '75% 62%', // Box Pulled Pork: scatola a sinistra, panino a destra
+  // Pulled Pork, Pastrami, Brisket: il panino arriva al bordo destro della foto, così non si taglia.
+  'item-009': '100% 62%',
+  'item-010': '100% 62%',
+  'item-011': '100% 62%',
 };
 // Scheda compatta: riquadro stretto, il panino sta nella metà destra della foto quadrata (scatola Walrus a sinistra).
 const COMPACT_OBJECT_POSITION = '72% 62%';
 const COMPACT_PHOTO_ZOOM = 1.3;
+// Pulled Pork, Pastrami, Brisket: foto intera senza ingrandimento (con 1.3 il panino veniva tagliato).
+const PHOTO_ZOOM_BY_ID = {
+  'item-009': 1,
+  'item-010': 1,
+  'item-011': 1,
+};
 // H7: dopo l'aggiunta il pulsante mostra "AGGIUNTO ✓" ed e' spento per questo tempo (niente doppio tap = 2 menu).
 const ADDED_FLASH_MS = 1500;
 // Fase 3.4f: niente più scrim speciale per il Box (sacchetto bianco): con la sfumatura e l'ombra
@@ -505,7 +515,7 @@ export default function PesiMassimiSection({
               onAdd={onAdd}
               onRemove={onRemove}
               objectPosition={OBJECT_POSITION_BY_ID[item.id] ?? COMPACT_OBJECT_POSITION}
-              photoZoom={COMPACT_PHOTO_ZOOM}
+              photoZoom={PHOTO_ZOOM_BY_ID[item.id] ?? COMPACT_PHOTO_ZOOM}
               hideAdd={Boolean(combo)}
               compact
             >
