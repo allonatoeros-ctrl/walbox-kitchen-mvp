@@ -1054,7 +1054,7 @@ test('20. Birre ripristinate (2026-09-22): le 6 bottiglie visibili, nessun Kromb
   await expect(page.locator('.kitch-bottom-bar')).toContainText('6,00 €');
 });
 
-test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANINO, birra solo col MENU, CTA unica dinamica', async ({ page }) => {
+test('21. FALLO PESANTE (H7 fase 1): SCEGLI COME LO VUOI — un solo prezzo in alto, default SOLO PANINO, bibite poi birre, pulsante unico che segue la scelta', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
   await page.goto('/kitchen?table=12&nickname=Eros');
   await openCategoryList(page, 'PESI MASSIMI');
@@ -1064,39 +1064,55 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   const openCard = page.locator('.pm-list .pc-card', { hasText: 'Pastrami' });
 
   // Titolo + due opzioni esplicite; default SOLO PANINO selezionato.
-  await expect(openCard.locator('.pmx-title')).toHaveText('1 · SCEGLI COME LO VUOI');
+  await expect(openCard.locator('.pmx-title')).toHaveText('SCEGLI COME LO VUOI');
   const soloOption = openCard.getByTestId('choose-solo');
   const menuOption = openCard.getByTestId('choose-menu');
   await expect(soloOption).toHaveClass(/pmx-opt--on/);
   await expect(menuOption).not.toHaveClass(/pmx-opt--on/);
 
-  // Default SOLO PANINO: la CTA e' il "+" della scheda sul panino, selettore birra nascosto, nessuna CTA MENU.
+  // Un solo prezzo in alto (il panino) e NIENTE "+" che aggiunge prima della scelta.
+  await expect(openCard.locator('.pc-buy .pc-price')).toHaveText('14,50 €');
+  await expect(openCard.locator('.pc-buy .pc-cta')).toHaveCount(0);
+  await expect(openCard.locator('.pc-buy .pc-stepper')).toHaveCount(0);
+  // Le due scelte non ripetono il prezzo del panino e la parola COMBO non compare.
+  await expect(soloOption).toHaveText('SOLO PANINO');
+  await expect(openCard).not.toContainText(/COMBO/i);
+
+  // Default SOLO PANINO: UN solo pulsante d'acquisto in fondo, col prezzo del panino; selettore bevanda nascosto.
+  const soloCta = openCard.getByTestId('pmx-solo-cta');
+  await expect(soloCta).toBeEnabled();
+  await expect(soloCta).toHaveText('AGGIUNGI PANINO · 14,50 €');
   await expect(openCard.getByRole('button', { name: /^Aggiungi Pastrami/i })).toBeEnabled();
   await expect(openCard.locator('.pmx-beer')).toHaveCount(0);
   await expect(openCard.getByTestId('fallo-pesante-cta')).toHaveCount(0);
 
-  // Opzione MENU: contenuto combo reale e i DUE prezzi (birra / bibita), NIENTE differenza vs panino.
-  await expect(menuOption).toContainText('MENU · FALLO PESANTE');
-  const includes = openCard.getByTestId('fallo-pesante-includes');
-  await expect(includes).toContainText('PANINO');
-  await expect(includes).toContainText('DA BERE');
-  await expect(includes).toContainText('PATATE AL FORNO');
-  await expect(openCard.getByTestId('fallo-pesante-prices')).toHaveText('CON BIRRA 17,90 € · CON BIBITA 16,90 €');
-  // Senza bevanda scelta il prezzo grande e' il "DA" piu basso.
-  await expect(menuOption.locator('.pmx-opt-price')).toHaveText('DA 16,90 €');
-  await expect(menuOption).not.toContainText('rispetto al panino');
+  // Opzione MENU: nome unico, sottotitolo fisso, supplemento calcolato dai dati (16,90 − 14,50), niente prezzi finali.
+  await expect(menuOption).toContainText('FALLO PESANTE');
+  await expect(menuOption).not.toContainText('MENU · FALLO PESANTE');
+  await expect(openCard.getByTestId('fallo-pesante-includes')).toHaveText('MENU · PANINO + PATATE + DA BERE');
+  await expect(openCard.getByTestId('fallo-pesante-price')).toHaveText('+2,40 €');
+  await expect(openCard.getByTestId('fallo-pesante-prices')).toHaveCount(0);
+  await expect(menuOption).not.toContainText(/16,90|17,90|CON BIRRA|CON BIBITA/);
 
-  // Seleziono MENU: evidenziato, appare lo STEP 2 birra, CTA bloccata finché non si sceglie.
+  // Seleziono MENU: evidenziato, appare "SCEGLI DA BERE", pulsante spento finché non si sceglie.
   await menuOption.click();
   await expect(menuOption).toHaveClass(/pmx-opt--on/);
   await expect(soloOption).not.toHaveClass(/pmx-opt--on/);
-  await expect(openCard.getByTestId('fallo-pesante-beer-step')).toContainText('2 · COSA BEVI?');
-  await expect(openCard.locator('.pmx-beer-badge')).toHaveText('OBBLIGATORIO');
-  await expect(openCard.locator('.pmx-beer-sub')).toHaveText('Con la birra 17,90 €, con una bibita 16,90 €');
+  await expect(openCard.getByTestId('fallo-pesante-beer-step')).toHaveText('SCEGLI DA BERE');
+  await expect(openCard.locator('.pmx-beer-badge')).toHaveCount(0);
+  await expect(openCard.getByTestId('pmx-solo-cta')).toHaveCount(0);
+  // Prima le bibite (comprese), poi le birre col loro extra (17,90 − 16,90 = +1 €), calcolato dai dati.
+  const drinksLabel = openCard.getByTestId('fallo-pesante-drinks-label');
+  const beersLabel = openCard.getByTestId('fallo-pesante-beers-label');
+  await expect(drinksLabel).toHaveText('BIBITE · comprese');
+  await expect(beersLabel).toHaveText('BIRRE · +1 €');
+  const drinksY = (await drinksLabel.boundingBox()).y;
+  const beersY = (await beersLabel.boundingBox()).y;
+  expect(drinksY).toBeLessThan(beersY);
   const heavyCta = openCard.getByTestId('fallo-pesante-cta');
-  // Nessuna birra scelta: FALLO PESANTE resta disabilitato, nessun add silenzioso.
+  // Nessuna bevanda scelta: il pulsante resta spento, nessun add silenzioso.
   await expect(heavyCta).toBeDisabled();
-  await expect(heavyCta).toHaveText('SCEGLI DA BERE PER CONTINUARE');
+  await expect(heavyCta).toHaveText('SCEGLI DA BERE');
 
   // Solo le 6 bottiglie rimaste sono selezionabili: Krombacher (rimossa dal catalogo) non c'e'.
   await expect(openCard.locator('.pm-beer-pill')).toHaveCount(6);
@@ -1108,30 +1124,38 @@ test('21. FALLO PESANTE (2026-09-24): SCEGLI COME LO VUOI — default SOLO PANIN
   await expect(beerDetail.locator('.pm-beer-detail-name')).toHaveText('KEILER HELLES');
   await expect(beerDetail.locator('.pm-beer-detail-story')).toContainText('Morbida');
   await expect(beerDetail.locator('.pm-beer-detail-meta')).toContainText('50 CL');
-  await expect(beerDetail.locator('.pm-beer-detail-meta')).toContainText('INCLUSA NEL COMBO');
+  await expect(beerDetail.locator('.pm-beer-detail-meta')).toContainText('NEL MENU +1 €');
+  await expect(beerDetail.locator('.pm-beer-detail-meta')).not.toContainText(/COMBO/i);
   // Finché non si conferma, FALLO PESANTE resta disabilitato.
   await expect(heavyCta).toBeDisabled();
 
   await beerDetail.getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
   // Selezione finale esplicita, dettaglio richiuso.
-  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ KEILER HELLES SELEZIONATA');
+  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('DA BERE: KEILER HELLES');
   await expect(openCard.locator('.pm-beer-detail')).toHaveCount(0);
   await expect(heavyCta).toBeEnabled();
-  // Con la birra il MENU costa 17,90 (prezzo e CTA seguono la bevanda).
+  // Con la birra il MENU costa 17,90: il prezzo finale compare SOLO nel pulsante, non nella scelta.
   await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 17,90 €');
-  await expect(menuOption.locator('.pmx-opt-price')).toHaveText('17,90 €');
+  await expect(menuOption.locator('.pmx-opt-price')).toHaveText('+2,40 €');
+  await expect(openCard.locator('.pm-beer-chosen')).toHaveCount(1);
 
   // Tornando su SOLO PANINO il selettore birra sparisce e la CTA torna sul panino.
   await soloOption.click();
   await expect(openCard.locator('.pmx-beer')).toHaveCount(0);
   await expect(openCard.getByTestId('fallo-pesante-cta')).toHaveCount(0);
+  await expect(openCard.getByTestId('pmx-solo-cta')).toHaveText('AGGIUNGI PANINO · 14,50 €');
   await expect(openCard.getByRole('button', { name: /^Aggiungi Pastrami/i })).toBeEnabled();
 
   // Ripasso a MENU: la birra scelta è ricordata, CTA attiva.
   await menuOption.click();
-  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ KEILER HELLES SELEZIONATA');
+  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('DA BERE: KEILER HELLES');
   await expect(heavyCta).toBeEnabled();
   await heavyCta.click();
+  // Dopo l'aggiunta: "AGGIUNTO ✓" e pulsante spento ~1,5 s, poi torna "AGGIUNGI IL MENU · 17,90 €".
+  await expect(heavyCta).toHaveText('AGGIUNTO ✓');
+  await expect(heavyCta).toBeDisabled();
+  await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 17,90 €', { timeout: 4000 });
+  await expect(heavyCta).toBeEnabled();
 
   await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   // La riga carrello porta la birra inclusa: e' cio' che finisce sulla comanda (P0-2).
@@ -1150,11 +1174,15 @@ test('21a. FALLO PESANTE con BIBITA (H4 + MENU OTTOBRE): scelta diretta, prezzo 
   const heavyCta = openCard.getByTestId('fallo-pesante-cta');
   await expect(heavyCta).toBeDisabled();
 
-  // Birre invariate (6), sotto "SENZA ALCOL" le 7 bibite ammesse: l'acqua non c'e', Schweppes tolte.
+  // Birre invariate (6), sotto "BIBITE · comprese" le 7 bibite ammesse: l'acqua non c'e', Schweppes tolte.
   await expect(openCard.locator('.pm-beer-pills .pm-beer-pill')).toHaveCount(6);
-  await expect(openCard.getByTestId('fallo-pesante-drinks-label')).toHaveText('SENZA ALCOL');
+  await expect(openCard.getByTestId('fallo-pesante-drinks-label')).toHaveText('BIBITE · comprese');
+  await expect(openCard.getByTestId('fallo-pesante-beers-label')).toHaveText('BIRRE · +1 €');
   const drinks = openCard.locator('.pm-drink-pill');
   await expect(drinks).toHaveCount(7);
+  // Ogni pillola ha il suo riquadro foto (immagine o segnaposto): Fanta/Sprite/Estathe non hanno ancora il file, niente buco.
+  await expect(openCard.locator('.pm-drink-pill .pm-beer-pill-photo')).toHaveCount(7);
+  await expect(openCard.locator('.pm-drink-pill .pm-beer-pill-photo--empty')).toHaveCount(4);
   await expect(openCard.locator('.pm-drink-pill', { hasText: 'Schweppes' })).toHaveCount(0);
   await expect(openCard.locator('.pm-drink-pill', { hasText: 'Estathé Limone' })).toHaveCount(1);
   await expect(openCard.locator('.pm-drink-pill', { hasText: 'Acqua' })).toHaveCount(0);
@@ -1163,15 +1191,15 @@ test('21a. FALLO PESANTE con BIBITA (H4 + MENU OTTOBRE): scelta diretta, prezzo 
   // Tap su una bibita = scelta diretta: nessuna anteprima/"storia", CTA subito attiva, prezzo bibita.
   await openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
   await expect(openCard.locator('.pm-beer-detail')).toHaveCount(0);
-  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ PEPSI ZERO SELEZIONATA');
-  await expect(openCard.locator('.pmx-pick-beer')).toHaveText('DA BERE: PEPSI ZERO');
+  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('DA BERE: PEPSI ZERO');
+  await expect(openCard.locator('.pm-beer-chosen')).toHaveCount(1);
   await expect(heavyCta).toBeEnabled();
   await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 16,90 €');
 
   // Scegliere una birra dopo la bibita sostituisce la scelta (mai entrambe) e il prezzo torna 17,90.
   await openCard.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
   await openCard.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
-  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('✓ KEILER HELLES SELEZIONATA');
+  await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('DA BERE: KEILER HELLES');
   await expect(openCard.locator('.pm-drink-pill--on')).toHaveCount(0);
   await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 17,90 €');
 
@@ -1250,12 +1278,17 @@ test('23. MENU OTTOBRE: il MENU Pulled Pork sta sul Box (niente patate a parte),
   // Scelta SOLO BOX / MENU: la copy non parla di panino ne' di patate a parte.
   await expect(box.getByTestId('fallo-pesante-choose')).toBeVisible();
   await expect(box.getByTestId('choose-solo')).toContainText('SOLO BOX');
-  await expect(box.getByTestId('fallo-pesante-includes')).toHaveText('BOX CON PATATE + DA BERE');
+  await expect(box.getByTestId('fallo-pesante-includes')).toHaveText('MENU · BOX CON PATATE + DA BERE');
   await expect(box.getByTestId('fallo-pesante-choose')).not.toContainText(/PANINO|PATATE AL FORNO/);
-  await expect(box.getByTestId('fallo-pesante-prices')).toHaveText('CON BIRRA 15,90 € · CON BIBITA 13,90 €');
+  // Supplemento e extra birra calcolati dai dati: 13,90 − 11,50 = +2,40 €; birra 15,90 − 13,90 = +2 €.
+  await expect(box.getByTestId('fallo-pesante-price')).toHaveText('+2,40 €');
+  await expect(box.getByTestId('pmx-solo-cta')).toHaveText('AGGIUNGI BOX · 11,50 €');
+  // Box: allergeni non verificati → avviso al posto della lista (mai "nessun allergene").
+  await expect(box.getByTestId('allergens-unverified')).toHaveText('ALLERGENI DA CONFERMARE · CHIEDI AL BANCO');
 
   await box.getByTestId('choose-menu').click();
   const cta = box.getByTestId('fallo-pesante-cta');
+  await expect(box.getByTestId('fallo-pesante-beers-label')).toHaveText('BIRRE · +2 €');
   await box.locator('.pm-drink-pill', { hasText: 'Fanta' }).click();
   await expect(cta).toHaveText('AGGIUNGI IL MENU · 13,90 €');
   await cta.click();
@@ -1286,6 +1319,50 @@ test('23b. MENU OTTOBRE: patate finite → MENU di Pastrami/Brisket bloccati, ME
   await box.getByTestId('choose-menu').click();
   await box.locator('.pm-drink-pill', { hasText: 'Sprite' }).click();
   await expect(box.getByTestId('fallo-pesante-cta')).toBeEnabled();
+});
+
+test('23c. H7: pulsante unico anche per il solo panino — niente "+" in alto, doppio tap = 1 sola riga, "AGGIUNTO ✓" poi di nuovo attivo', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openCategoryList(page, 'PESI MASSIMI');
+
+  const pastrami = page.locator('.pm-list .pc-card', { hasText: 'Pastrami' });
+  // Nessun "+" / stepper in alto: l'unico modo di aggiungere e' il pulsante in fondo alla scelta.
+  await expect(pastrami.locator('.pc-buy .pc-cta')).toHaveCount(0);
+  const cta = pastrami.getByTestId('pmx-solo-cta');
+  await expect(cta).toHaveText('AGGIUNGI PANINO · 14,50 €');
+
+  // Doppio tap veloce: la seconda pressione trova il pulsante spento → una sola unita' nel sacco.
+  await cta.dblclick();
+  await expect(cta).toHaveText('AGGIUNTO ✓');
+  await expect(cta).toBeDisabled();
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('1 · Vai alla cassa');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('14,50 €');
+  await expect(pastrami.getByTestId('poster-card-qty')).toContainText('×1');
+
+  // Dopo ~1,5 s torna attivo e un nuovo tap aggiunge la seconda unita'.
+  await expect(cta).toHaveText('AGGIUNGI PANINO · 14,50 €', { timeout: 4000 });
+  await expect(cta).toBeEnabled();
+  await cta.click();
+  await expect(pastrami.getByTestId('poster-card-qty')).toContainText('×2');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('29,00 €');
+});
+
+test('23d. H7: doppio tap su AGGIUNGI IL MENU aggiunge un solo menu', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-09-14T15:00:00'));
+  await page.goto('/kitchen?table=12&nickname=Eros');
+  await openCategoryList(page, 'PESI MASSIMI');
+
+  const brisket = page.locator('.pm-list .pc-card', { hasText: 'Brisket' });
+  await brisket.getByTestId('choose-menu').click();
+  await expect(brisket.getByTestId('fallo-pesante-price')).toHaveText('+1,90 €');
+  await brisket.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
+  const cta = brisket.getByTestId('fallo-pesante-cta');
+  await expect(cta).toHaveText('AGGIUNGI IL MENU · 16,90 €');
+  await cta.dblclick();
+  await expect(cta).toHaveText('AGGIUNTO ✓');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('1 · Vai alla cassa');
+  await expect(page.locator('.kitch-bottom-bar')).toContainText('16,90 €');
 });
 
 test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun formato inventato', async ({ page }) => {

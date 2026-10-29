@@ -110,34 +110,14 @@
   overflow-wrap: anywhere;
 }
 
-/* MENU OTTOBRE: i due prezzi del MENU (con birra · con bibita), sotto il sottotitolo. */
-.pmx-opt-prices {
-  grid-column: 1;
-  margin-top: 4px;
-  font-family: var(--poster-font-body, 'Montserrat', system-ui, sans-serif);
-  font-weight: 700;
-  font-size: 13px;
-  line-height: 1.3;
-  letter-spacing: 0.04em;
-  color: var(--poster-yellow, #ffc83d);
-}
-/* Una riga per prezzo: a 390 px "CON BIRRA … · CON BIBITA …" andrebbe a capo a meta'. */
-.pmx-opt-prices-row { display: block; white-space: nowrap; }
-.pmx-opt-prices-sep { display: none; }
-/* "DA" davanti al prezzo piu' basso finche' la bevanda non e' scelta. */
-.pmx-opt-from {
-  font-size: 0.5em;
-  letter-spacing: 0.06em;
-  vertical-align: middle;
-}
-
+/* H7: supplemento del MENU ("+2,40 €") a destra, sulla stessa altezza del nome (non e' il prezzo finale). */
 .pmx-opt-price {
   grid-column: 2;
-  grid-row: 1 / span 3;
+  grid-row: 1 / span 2;
   align-self: center;
   font-family: var(--poster-font-display, 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif);
   font-weight: 400;
-  font-size: var(--poster-size-md, 40px);
+  font-size: 30px;
   line-height: 1;
   letter-spacing: 0.01em;
   white-space: nowrap;
@@ -149,13 +129,6 @@
   margin-top: 14px;
 }
 
-.pmx-beer-head {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
 .pmx-beer-title {
   margin: 0;
   font-family: inherit;
@@ -165,23 +138,6 @@
   letter-spacing: var(--poster-track-sm, 0.06em);
   text-transform: uppercase;
   color: var(--poster-yellow, #ffc83d);
-}
-
-.pmx-beer-badge {
-  padding: 2px 8px;
-  background: var(--poster-yellow, #ffc83d);
-  color: var(--poster-on-yellow, #140a05);
-  font-weight: 400;
-  font-size: var(--poster-size-sm, 20px);
-  line-height: 1.1;
-  letter-spacing: var(--poster-track-sm, 0.06em);
-}
-
-.pmx-beer-sub {
-  margin: 4px 0 8px;
-  font-family: var(--poster-font-body, 'Montserrat', system-ui, sans-serif);
-  font-size: 13px;
-  color: var(--poster-muted, #c9b39a);
 }
 
 .pm-beer-chosen {
@@ -273,13 +229,23 @@
 }
 
 .pm-beer-pill-photo {
+  flex: none;
   width: 24px;
   height: 24px;
   object-fit: contain;
 }
 
+/* Pillola senza foto (file non ancora caricato): segnaposto neutro della stessa misura, niente buco. */
+.pm-beer-pill-photo--empty {
+  flex: none;
+  display: inline-block;
+  box-sizing: border-box;
+  border: 1px dashed var(--poster-line, #3a2617);
+  background: rgba(247, 223, 181, 0.06);
+}
+
 .pm-drink-label {
-  margin: 12px 0 6px;
+  margin: 16px 0 6px;
   font-weight: 400;
   font-size: var(--poster-size-sm, 20px);
   line-height: 1.1;
@@ -436,14 +402,21 @@
 
 .pmx--off { opacity: 0.45; pointer-events: none; }
 
-/* Birra scelta, subito sopra la CTA del MENU */
+/* Bevanda scelta (una sola riga), subito sopra la CTA del MENU */
 .pmx-pick { margin-top: 12px; }
 .pmx-pick .pmx-menu-cta { margin-top: 0; }
-.pmx-pick-beer {
-  margin: 0 0 6px;
-  font-weight: 400;
-  font-size: var(--poster-size-sm, 20px);
-  line-height: 1.1;
-  letter-spacing: var(--poster-track-sm, 0.06em);
-  color: var(--poster-yellow, #ffc83d);
+
+/* H7: pulsante d'acquisto unico. "AGGIUNTO ✓": spento ma ben visibile (crema su scuro), non il grigio dei pulsanti bloccati. */
+.pmx-buy--done:disabled {
+  background: var(--poster-ink, #f7dfb5);
+  color: var(--poster-on-yellow, #140a05);
+  font-size: 32px;
+  cursor: default;
+}
+
+/* A 320 px "AGGIUNGI PANINO · 14,50 €" a 32 px andrebbe su 2 righe: un po' piu' piccolo resta su una. */
+@media (max-width: 359px) {
+  .pmx-menu-cta { font-size: 27px; }
+  .pmx-menu-cta:disabled,
+  .pmx-buy--done:disabled { font-size: 24px; }
 }

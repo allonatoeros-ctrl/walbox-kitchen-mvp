@@ -39,6 +39,12 @@ import './PosterCard.css';
  *  - photoFit    (opzionale, solo compact, default cover) "contain" per le foto verticali (bottiglie).
  *  - hideCta     (opzionale, default false) nasconde CTA/stepper della card: lo usa chi mette nei
  *                `children` una propria CTA (MENU). Default = nessun cambiamento.
+ *  - hideAdd     (opzionale, solo compact, default false) toglie il "+" / lo stepper dalla riga prezzo ma LASCIA il
+ *                prezzo (H7 fase 1: Pesi Massimi col MENU, dove l'unico pulsante d'acquisto sta nei `children` e
+ *                segue la scelta SOLO PANINO / MENU). Default = nessun cambiamento.
+ *
+ * Allergeni (H7 fase 1, solo UI): `item.allergensVerified === false` → al posto della riga allergeni compare
+ * "ALLERGENI DA CONFERMARE · CHIEDI AL BANCO" (la lista derivata non e' una garanzia). I dati non si toccano.
  *
  * Fallback: price null/vuoto → nessun prezzo accanto al nome, CTA spenta "PREZZO IN ARRIVO" (nessun
  * prezzo inventato); available === false → timbro ESAURITO sulla foto + prezzo spento + CTA spenta
@@ -110,6 +116,7 @@ export default function PosterCard({
   objectPosition = '50% 50%',
   children = null,
   hideCta = false,
+  hideAdd = false,
   compact = false,
   photoZoom = 1,
   displayName = null,
@@ -150,6 +157,8 @@ export default function PosterCard({
   const showPhoto = Boolean(item.image) && failedSrc !== item.image;
   const number = String(index + 1).padStart(2, '0');
   const allergens = Array.isArray(item.allergens) ? item.allergens : [];
+  // H7: lista non verificata → avviso al posto della lista (mai "nessun allergene" ne' una lista che sembra certa).
+  const allergensUnverified = item.allergensVerified === false;
 
   const handleAdd = () => {
     if (!canAdd) return;
@@ -218,11 +227,11 @@ export default function PosterCard({
               {noPrice ? (
                 <span className="pc-price pc-price--soon">PREZZO IN ARRIVO</span>
               ) : hideCta ? <span /> : (
-                // Con la CTA nascosta (Pesi Massimi: scelto il MENU) il prezzo della riga alta sarebbe quello del
-                // solo panino: la scelta sotto mostra già il prezzo giusto.
+                // Con la CTA nascosta (hideCta) niente prezzo; con hideAdd il prezzo resta (Pesi Massimi: e' il
+                // prezzo del panino, il prezzo finale compare solo nel pulsante d'acquisto sotto).
                 <span className="pc-price">{formatPrice(item.price)}</span>
               )}
-              {hideCta ? null : qty > 0 ? (
+              {hideCta || hideAdd ? null : qty > 0 ? (
                 <div ref={stepperRef} className="pc-stepper" role="group" aria-label={`Quantità nel sacco: ${item.name}`}>
                   <button
                     type="button"
@@ -265,9 +274,13 @@ export default function PosterCard({
             </div>
           </div>
         </div>
-        {(allergens.length > 0 || children) && (
+        {(allergens.length > 0 || allergensUnverified || children) && (
           <div className="pc-under">
-            {allergens.length > 0 && (
+            {allergensUnverified ? (
+              <p className="pc-allergens pc-allergens--unverified" data-testid="allergens-unverified">
+                ALLERGENI DA CONFERMARE · CHIEDI AL BANCO
+              </p>
+            ) : allergens.length > 0 && (
               <p className="pc-allergens">
                 Allergeni:{' '}
                 {allergens.map(allergenText).join(' · ')}
@@ -326,7 +339,11 @@ export default function PosterCard({
       <div className="pc-under">
         {item.description && !/standalone/i.test(item.description) && <p className="pc-quip">{item.description}</p>}
         {item.ingredients && <p className="pc-ingredients">{item.ingredients}</p>}
-        {allergens.length > 0 && (
+        {allergensUnverified ? (
+          <p className="pc-allergens pc-allergens--unverified" data-testid="allergens-unverified">
+            ALLERGENI DA CONFERMARE · CHIEDI AL BANCO
+          </p>
+        ) : allergens.length > 0 && (
           <p className="pc-allergens">
             Allergeni:{' '}
             {allergens.map(allergenText).join(' · ')}

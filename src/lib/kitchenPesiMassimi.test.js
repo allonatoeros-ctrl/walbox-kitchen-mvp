@@ -5,6 +5,9 @@ import { test } from 'node:test';
 import { kitchenMenuItems, kitchenPesiMassimiCombos } from '../data/kitchenMockData.js';
 import {
   buildFalloPesanteCartLine,
+  falloPesanteBeerExtra,
+  falloPesanteIncludesLabel,
+  falloPesanteMenuSupplement,
   falloPesanteNeedsSide,
   falloPesanteVariant,
   findFalloPesanteCombo,
@@ -81,4 +84,37 @@ test('bibite nuove a catalogo, Schweppes fuori', () => {
     assert.equal(b.price, 4);
     assert.equal(b.image, null, 'senza foto: la card mostra FOTO IN ARRIVO');
   }
+});
+
+test('falloPesanteMenuSupplement: calcolato dai dati (variante bibita meno prezzo panino)', () => {
+  const byId = (id) => item(id);
+  const sup = (id) => falloPesanteMenuSupplement(byId(id).price, kitchenPesiMassimiCombos[id]);
+  assert.equal(sup('item-010'), 2.4, 'Pastrami 16,90 − 14,50');
+  assert.equal(sup('item-011'), 1.9, 'Brisket 16,90 − 15,00');
+  assert.equal(sup('item-018'), 2.4, 'Box 13,90 − 11,50');
+});
+
+test('falloPesanteMenuSupplement: senza bibite ordinabili vale la variante birra; dati mancanti = null', () => {
+  const c = kitchenPesiMassimiCombos['item-010'];
+  assert.equal(falloPesanteMenuSupplement(14.5, c, false), 3.4, 'solo birra: 17,90 − 14,50');
+  assert.equal(falloPesanteMenuSupplement(14.5, { id: 'x', price: 17.9 }), 3.4, 'combo senza softDrink');
+  assert.equal(falloPesanteMenuSupplement(null, c), null);
+  assert.equal(falloPesanteMenuSupplement('', c), null);
+  assert.equal(falloPesanteMenuSupplement(14.5, null), null);
+});
+
+test('falloPesanteBeerExtra: birra meno bibita, 0 se non applicabile', () => {
+  assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos['item-010']), 1);
+  assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos['item-011']), 1);
+  assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos['item-018']), 2, 'Box 15,90 − 13,90');
+  assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos['item-010'], false), 0, 'niente bibite');
+  assert.equal(falloPesanteBeerExtra({ id: 'x', price: 10 }), 0, 'combo senza softDrink');
+  assert.equal(falloPesanteBeerExtra(null), 0);
+  assert.equal(falloPesanteBeerExtra({ id: 'x', price: 10, softDrink: { price: 12 } }), 0, 'mai negativo');
+});
+
+test('falloPesanteIncludesLabel: panino + patate per i panini, box con patate per il Box', () => {
+  assert.equal(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-010']), 'MENU · PANINO + PATATE + DA BERE');
+  assert.equal(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-018']), 'MENU · BOX CON PATATE + DA BERE');
+  assert.doesNotMatch(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-018']), /PANINO/);
 });

@@ -317,3 +317,48 @@ invariata). Panino un po' più piccolo, sempre fuori dal titolo, carta Walrus vi
 senza modifiche). `.mh-hero` fondo #121314 (= muro della foto, via il chiarore caldo che stonava); `.mh-photo` width 1.02w, right -0.3w, bottom -0.05w;
 maschere più lunghe e graduali (alto 0→24%, basso 84→100%, sinistra 0→34% a gradini); `.mh-shade` stesso colore del muro. 320/390/430 nessun overflow.
 **PROSSIMO:** Eros guarda e decide il commit (MenuHero.jsx/.css + webp + questo file).
+
+## H6 — Audit chiarezza del menu con 3 subagent (avviato 2026-10-29, sola lettura)
+Richiesta di Eros: "si capisce poco, soprattutto sul menu". Approvati da Eros 3 subagent paralleli, nessuna modifica al prodotto:
+1. `visual-reviewer` (Opus): "capisco in 5 secondi cosa ordino e quanto pago?" scheda per scheda, 390/430 → `ai-ops/reports/chiarezza-menu/1-visivo.md`
+2. agente generico (Sonnet): testi e struttura, cosa si ripete/togliere/riscrivere, testi proposti → `ai-ops/reports/chiarezza-menu/2-testi.md`
+3. `walbox-qa-serata` (Sonnet): tocchi per ordinare, blocchi, foto che non caricano → `ai-ops/reports/chiarezza-menu/3-tocchi.md`
+Visto da me a 375 (da verificare): prezzo ripetuto su Pesi Massimi (scheda + SOLO PANINO), riquadro MENU con 3 prezzi, nome "FALLO PESANTE"
+poco chiaro, foto Brisket/Garpez vuote durante lo scroll.
+**PROSSIMO:** unire i 3 report in un piano con max 3 direzioni (una consigliata), Eros sceglie, poi walbox-dev implementa.
+Modello/effort: sintesi Opus/medium; implementazione Sonnet/medium.
+**H6 risultati (2026-10-29):** 3 report in `ai-ops/reports/chiarezza-menu/` (1-visivo P0 0/P1 7/P2 7; 2-testi; 3-tocchi PASS con riserve). Verificati da me nel codice:
+il "+" della scheda Pesi Massimi aggiunge il solo panino prima della scelta (`PesiMassimiSection.jsx:455` onAdd diretto); la scheda compatta mostra la
+`description` solo se mancano gli ingredienti (`PosterCard.jsx:175-176`); Box Pulled Pork `allergens: []` + `allergensVerified:false`, il cliente non vede avvisi.
+Cause: (1) Pesi Massimi: "+" prima della scelta, 5-7 prezzi, 3 nomi (MENU/FALLO PESANTE/COMBO), SOLO PANINO sembra un pulsante, doppio tap = 2 menu;
+(2) nomi ironici senza "cosa è" (battuta mai mostrata), sottotitoli di sezione = elenco nomi; (3) orientamento: linguette 38px, 6 categorie fuori schermo,
+hamburger non apre l'elenco, CTA hero (foto Pulled Pork) porta a Panini; carrello: il MENU non dice "patate incluse"; footer cassa copre "Dove lo mangi?".
+Foto vuote Brisket/Garpez = lazy loading, non file mancanti.
+### Piano H7 (proposto, attesa Gate 1). Direzioni: A consigliata = "schede chiare" in 3 fasi; B = solo fase 1; C = scelta menu in pannello dal basso (più lavoro).
+- Fase 1 Pesi Massimi + sicurezza: un solo prezzo; il pulsante d'acquisto segue la scelta (SOLO PANINO / MENU), niente "+" che salta la scelta;
+  MENU come "+2,40 €" con "panino + patate + da bere"; bibite prima delle birre; prezzo finale solo nel pulsante; dopo l'aggiunta "AGGIUNTO ✓" e
+  blocco doppio tap; avviso "ALLERGENI DA CONFERMARE · CHIEDI AL BANCO" lato cliente quando `allergensVerified:false` (solo UI).
+  File: PesiMassimiSection.jsx/.css, PosterCard.jsx/.css, + e2e Pesi Massimi.
+- Fase 2 Testi: riga "cosa è" sotto i nomi ambigui (prop `meta` esistente, testi nel componente, non nei dati); sottotitoli di sezione "cosa sono + prezzo";
+  carrello: riga MENU "panino + patate + X". File: CustomerKitchenMenu.jsx, sezioni, carrello (da individuare), e2e.
+- Fase 3 Orientamento: linguette 44px, hamburger apre l'elenco categorie, CTA hero coerente con la foto, footer cassa che non copre "Dove lo mangi?".
+- Ogni fase: walbox-dev (Sonnet) implementa → lint + unit + build override + e2e pertinenti → visual-reviewer verifica → Eros guarda → commit separato.
+- Aree protette: nessuna (kitchenMockData.js NON toccato: rinominare il combo nei dati sarebbe area protetta).
+NEEDS_DECISION: nome del menu (A "MENU PESANTE" · B "FALLO PESANTE" + sottotitolo "MENU · panino + patate + da bere", consigliato · C "IL MENU COMPLETO");
+allergeni veri di Box Pulled Pork e Salumi serissimi; "SETI IMPLACABILI" è voluto o refuso?
+Modello/effort: implementazione Sonnet 5.5 / medium; verifica visiva Opus.
+**Gate 1 H7 (Eros, 2026-10-29): direzione A in 3 fasi, nome menu = "FALLO PESANTE" + sottotitolo "MENU · panino + patate + da bere".**
+Ancora aperti: allergeni veri Box Pulled Pork / Salumi serissimi; "SETI IMPLACABILI" voluto o refuso.
+Fase 1 delegata a walbox-dev (Sonnet), report atteso `ai-ops/reports/chiarezza-menu/fase1-dev.md`. Niente commit.
+Dopo la fase 1: verifica a campione + visual-reviewer, poi /clear e "riprendi da ai-ops/current/RESTYLING_HERO.md, fase 2 H7".
+**H7 fase 1 FATTA 2026-10-29 (NON committata).** Report `ai-ops/reports/chiarezza-menu/fase1-dev.md`, screenshot `shots-fase1/`. File: PesiMassimiSection.jsx/.css,
+PosterCard.jsx/.css, kitchenPesiMassimi.js (+test), e2e customer-kitchen-flow.spec.js. Verificato da me: unit 217/0/1 skip, diff solo sui file attesi,
+screenshot 390 Pastrami col menu ok. e2e: 26 pertinenti verdi; 5 rossi (14,15,36,49,52 annulla staff/SumUp) identici su HEAD pulito (dichiarato dall'agente).
+Da far notare/decidere: Garpez ora mostra solo "ALLERGENI DA CONFERMARE" (prima la lista derivata); Salumi serissimi e Patate al forno `allergens: []` senza avviso;
+stepper −/N/+ tolto sui Pesi Massimi col menu; ritocchi minori visti: "PEPSI ZERO SELEZIONATA" + "BEVANDA: PEPSI ZERO" ripetuti, Fanta/Sprite/Estathé senza foto.
+Commit proposto: `git add src/components/kitchen/PesiMassimiSection.jsx src/components/kitchen/PesiMassimiSection.css src/components/kitchen/PosterCard.jsx src/components/kitchen/PosterCard.css src/lib/kitchenPesiMassimi.js src/lib/kitchenPesiMassimi.test.js tests/e2e/customer-kitchen-flow.spec.js ai-ops/current/RESTYLING_HERO.md` + `git commit -m "feat: scheda Pesi Massimi chiara (un prezzo, scelta FALLO PESANTE, bibite prima, avviso allergeni da confermare)"`
+**PROSSIMO:** Eros guarda e decide il commit; poi /clear e "riprendi da ai-ops/current/RESTYLING_HERO.md, fase 2 H7" (testi: riga "cosa è", sottotitoli, carrello).
+**Ritocchi fase 1 FATTI 2026-10-29 (NON committati):** una sola riga "DA BERE: X" sopra il pulsante; pillole senza foto con segnaposto neutro 24×24.
+Foto mancanti = file inesistenti: Fanta/Sprite/Estathé Pesca/Limone (item-063..066) hanno `image: null` in kitchenMockData.js (protetto). Quando Eros ha le foto:
+.webp 512×512 in `public/assets/kitchen/menu/bevande/bevanda_<nome>.webp` + `image:` nei dati (serve OK area protetta). Verificato da me: screenshot 390 ok, foto
+assenti in cartella. Commit proposto invariato (stessi 7 file + questo). **PROSSIMO:** Eros approva il commit, poi /clear e "riprendi da ai-ops/current/RESTYLING_HERO.md, fase 2 H7".

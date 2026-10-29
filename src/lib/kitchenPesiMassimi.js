@@ -74,3 +74,34 @@ export function buildFalloPesanteCartLine(combo, beer, qty = 1) {
     includesBeerId: beer.id,
   };
 }
+
+// ── Scheda chiara (H7 fase 1, 2026-10-29) ────────────────────────────────────────────────────
+// Solo presentazione: supplementi e testi calcolati dai dati, mai scritti a mano. Non cambiano
+// ne' la riga carrello ne' cosa va al server (quelli restano `buildFalloPesanteCartLine`).
+
+const roundCents = (n) => Math.round(n * 100) / 100;
+
+/** Supplemento del MENU rispetto al solo panino: variante piu' economica ordinabile (bibita se
+ *  ce n'e' almeno una, altrimenti birra) meno il prezzo del panino. null se manca un prezzo. */
+export function falloPesanteMenuSupplement(basePrice, combo, hasSoftDrinks = true) {
+  if (!combo || basePrice == null || basePrice === '') return null;
+  const base = Number(basePrice);
+  const soft = hasSoftDrinks ? combo.softDrink?.price : null;
+  const cheapest = soft != null ? Math.min(combo.price, soft) : combo.price;
+  if (!Number.isFinite(base) || !Number.isFinite(cheapest)) return null;
+  return roundCents(cheapest - base);
+}
+
+/** Extra della birra rispetto alla bibita nel MENU (prezzo birra − prezzo bibita). 0 se il MENU
+ *  non ha la variante bibita o se non ci sono bibite ordinabili (la birra e' l'unica scelta). */
+export function falloPesanteBeerExtra(combo, hasSoftDrinks = true) {
+  if (!combo || !hasSoftDrinks || combo.softDrink?.price == null) return 0;
+  return Math.max(0, roundCents(combo.price - combo.softDrink.price));
+}
+
+/** Sottotitolo fisso della scelta MENU: cosa contiene. Il Box ha gia' le patate dentro. */
+export function falloPesanteIncludesLabel(combo) {
+  return falloPesanteNeedsSide(combo)
+    ? 'MENU · PANINO + PATATE + DA BERE'
+    : 'MENU · BOX CON PATATE + DA BERE';
+}

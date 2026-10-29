@@ -240,6 +240,14 @@
   color: var(--poster-yellow, #ffc83d);
 }
 
+/* H7: allergeni non verificati → avviso evidente (oro pieno, testo scuro) al posto della lista. */
+.pc-allergens--unverified {
+  display: inline-block;
+  padding: 3px 8px;
+  background: var(--poster-yellow, #ffc83d);
+  color: var(--poster-on-yellow, #140a05);
+}
+
 /* Aria tra i blocchi: solo tra quelli presenti (un blocco mancante non lascia buchi). */
 .pc-under > p + p {
   margin-top: 16px;

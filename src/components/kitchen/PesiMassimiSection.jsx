@@ -5,18 +5,28 @@ import PosterCard from './PosterCard';
 import { formatPrice } from '../../lib/kitchenPrice';
 import {
   buildFalloPesanteCartLine,
+  falloPesanteBeerExtra,
+  falloPesanteIncludesLabel,
+  falloPesanteMenuSupplement,
   falloPesanteNeedsSide,
   falloPesanteVariant,
 } from '../../lib/kitchenPesiMassimi';
 import './PesiMassimiSection.css';
 
 /*
+ * H7 fase 1 (2026-10-29, "menu chiaro"): per i Pesi Massimi CON menu la riga prezzo della scheda mostra solo il
+ * prezzo del panino (nessun "+" che aggiunge prima della scelta: `hideAdd`). Sotto, due scelte che sembrano scelte,
+ * non pulsanti: "SOLO PANINO" (senza prezzo) e "FALLO PESANTE" (sottotitolo fisso + supplemento "+X €" calcolato dai
+ * dati). Col menu: "SCEGLI DA BERE" con prima le bibite (comprese) poi le birre (+Y €). UN solo pulsante d'acquisto in
+ * fondo che segue la scelta ("AGGIUNGI PANINO · X" / "AGGIUNGI IL MENU · X"); dopo l'add "AGGIUNTO ✓" ~1,5 s e
+ * spento. La riga carrello e la nota "BIRRA/BIBITA INCLUSA" sono identiche a prima (stessi payload, stessi helper).
+ * Senza menu (Pulled Pork panino, Garpez, o `hideCombo`) la scheda resta quella di prima, col "+" / stepper.
+ *
  * MENU OTTOBRE (2026-10-28, decisione Eros) — due prezzi per MENU: con birra (`combo.price`) o con
- * bibita (`combo.softDrink.price`). La riga MENU mostra entrambi; prezzo e CTA seguono la bevanda
- * scelta (`falloPesanteVariant`), e la riga carrello la costruisce `buildFalloPesanteCartLine`
- * (id/baseId/prezzo della variante giusta). Il menu Pulled Pork ora sta sul BOX (`includesSide:
- * false`): niente patate a parte, quindi il vincolo "patate finite" vale solo con `includesSide`.
- * Etichetta della scelta singola: `item.priceNote` ("SOLO BOX") o "SOLO PANINO".
+ * bibita (`combo.softDrink.price`). Prezzo e pulsante seguono la bevanda scelta (`falloPesanteVariant`), e la riga
+ * carrello la costruisce `buildFalloPesanteCartLine` (id/baseId/prezzo della variante giusta). Il menu Pulled Pork
+ * ora sta sul BOX (`includesSide: false`): niente patate a parte, quindi il vincolo "patate finite" vale solo con
+ * `includesSide`. Etichetta della scelta singola: `item.priceNote` ("SOLO BOX") o "SOLO PANINO".
  */
 
 /**
@@ -92,6 +102,8 @@ const OBJECT_POSITION_BY_ID = {
 // Scheda compatta: riquadro stretto, il panino sta nella metà destra della foto quadrata (scatola Walrus a sinistra).
 const COMPACT_OBJECT_POSITION = '72% 62%';
 const COMPACT_PHOTO_ZOOM = 1.3;
+// H7: dopo l'aggiunta il pulsante mostra "AGGIUNTO ✓" ed e' spento per questo tempo (niente doppio tap = 2 menu).
+const ADDED_FLASH_MS = 1500;
 // Fase 3.4f: niente più scrim speciale per il Box (sacchetto bianco): con la sfumatura e l'ombra
 // del testo della PosterCard il nome sta già sopra 4,5:1 (misurato), quindi via il wrapper scuro.
 
@@ -151,6 +163,25 @@ export default function PesiMassimiSection({
   const pendingScrollRef = useRef(null);
   const detailRefs = useRef({});
   const pickRefs = useRef({});
+  // H7: "AGGIUNTO ✓" per scheda. Il lock in ref blocca il doppio tap anche prima del re-render.
+  const [justAddedByItem, setJustAddedByItem] = useState({});
+  const addLockRef = useRef({});
+  const addTimersRef = useRef({});
+
+  useEffect(() => {
+    const timers = addTimersRef.current;
+    return () => { Object.values(timers).forEach(clearTimeout); };
+  }, []);
+
+  const flashAdded = (id) => {
+    addLockRef.current[id] = true;
+    setJustAddedByItem((prev) => ({ ...prev, [id]: true }));
+    clearTimeout(addTimersRef.current[id]);
+    addTimersRef.current[id] = setTimeout(() => {
+      addLockRef.current[id] = false;
+      setJustAddedByItem((prev) => ({ ...prev, [id]: false }));
+    }, ADDED_FLASH_MS);
+  };
 
   useEffect(() => {
     const p = pendingScrollRef.current;
@@ -183,14 +214,18 @@ export default function PesiMassimiSection({
           const sideMissing = falloPesanteNeedsSide(combo)
             && (!includedSide || includedSide.available === false || includedSide.price == null);
           const soloLabel = item.priceNote ?? 'SOLO PANINO';
-          // Prezzo del MENU per la bevanda scelta; senza scelta si mostra "DA" il piu' basso.
+          // "SOLO PANINO" → "PANINO", "SOLO BOX" → "BOX" (testo del pulsante d'acquisto).
+          const soloNoun = soloLabel.replace(/^SOLO\s+/i, '');
+          // Prezzo del MENU per la bevanda scelta (variante birra/bibita).
           const comboVariant = combo ? falloPesanteVariant(combo, chosenDrinkOrBeer) : null;
-          // Il prezzo "con bibita" si mostra solo se c'e' almeno una bibita ordinabile.
-          const softPrice = drinkOptions.length > 0 ? combo?.softDrink?.price ?? null : null;
-          const comboFromPrice = combo
-            ? (softPrice != null ? Math.min(combo.price, softPrice) : combo.price)
-            : null;
-          const comboHasTwoPrices = softPrice != null && softPrice !== combo?.price;
+          // Supplemento ed extra birra: calcolati dai dati (kitchenPesiMassimi.js), mai scritti a mano.
+          // Le bibite contano solo se c'e' almeno una bibita ordinabile.
+          const hasSoftDrinks = drinkOptions.length > 0;
+          const menuSupplement = combo ? falloPesanteMenuSupplement(item.price, combo, hasSoftDrinks) : null;
+          const beerExtra = combo ? falloPesanteBeerExtra(combo, hasSoftDrinks) : 0;
+          const noPrice = item.price == null || item.price === '';
+          const canAddSolo = !soldOut && !noPrice;
+          const isJustAdded = Boolean(justAddedByItem[item.id]);
           const comboBlocked = soldOut || sideMissing;
           const beerNotChosen = hasDrinkChoice && !chosenDrinkOrBeer;
           // SCEGLI COME LO VUOI (2026-09-24): default SOLO PANINO, il MENU si sceglie.
@@ -198,7 +233,7 @@ export default function PesiMassimiSection({
 
           const choiceBlock = combo ? (
             <div className={`pmx${soldOut ? ' pmx--off' : ''}`}>
-              <p className="pmx-title">1 · SCEGLI COME LO VUOI</p>
+              <p className="pmx-title">SCEGLI COME LO VUOI</p>
               <div
                 className="pmx-choose"
                 data-testid="fallo-pesante-choose"
@@ -216,7 +251,6 @@ export default function PesiMassimiSection({
                   <span className="pmx-radio" aria-hidden="true" />
                   <span className="pmx-opt-body">
                     <span className="pmx-opt-name">{soloLabel}</span>
-                    <span className="pmx-opt-price">{formatPrice(item.price, forceDecimals)}</span>
                   </span>
                 </button>
 
@@ -230,97 +264,99 @@ export default function PesiMassimiSection({
                 >
                   <span className="pmx-radio" aria-hidden="true" />
                   <span className="pmx-opt-body">
-                    <span className="pmx-opt-name">MENU · FALLO PESANTE</span>
+                    <span className="pmx-opt-name">FALLO PESANTE</span>
                     <span className="pmx-opt-sub" data-testid="fallo-pesante-includes">
-                      {sideMissing && !soldOut ? `PATATE FINITE: ${soloLabel}` : combo.subtitle}
+                      {sideMissing && !soldOut ? `PATATE FINITE: ${soloLabel}` : falloPesanteIncludesLabel(combo)}
                     </span>
-                    {comboHasTwoPrices && !(sideMissing && !soldOut) && (
-                      <span className="pmx-opt-prices" data-testid="fallo-pesante-prices">
-                        <span className="pmx-opt-prices-row">CON BIRRA {formatPrice(combo.price, forceDecimals)}</span>
-                        <span className="pmx-opt-prices-sep" aria-hidden="true">{' · '}</span>
-                        <span className="pmx-opt-prices-row">CON BIBITA {formatPrice(softPrice, forceDecimals)}</span>
+                    {menuSupplement != null && menuSupplement > 0 && !(sideMissing && !soldOut) && (
+                      <span className="pmx-opt-price" data-testid="fallo-pesante-price">
+                        +{formatPrice(menuSupplement, forceDecimals)}
                       </span>
                     )}
-                    <span className="pmx-opt-price" data-testid="fallo-pesante-price">
-                      {chosenDrinkOrBeer || !comboHasTwoPrices
-                        ? formatPrice(comboVariant.price, forceDecimals)
-                        : <><span className="pmx-opt-from">DA </span>{formatPrice(comboFromPrice, forceDecimals)}</>}
-                    </span>
                   </span>
                 </button>
               </div>
 
-              {/* Il selettore "COSA BEVI?" esiste SOLO quando il MENU è selezionato: con
-                  SOLO PANINO resta nascosto (non disabilitato). */}
+              {/* Il selettore "SCEGLI DA BERE" esiste SOLO quando il MENU è selezionato: con
+                  SOLO PANINO resta nascosto (non disabilitato). Prima le bibite (comprese), poi le birre (+Y). */}
               {isMenuChoice && !comboBlocked && hasDrinkChoice && (
-                <div className="pmx-beer" role="group" aria-label="Scegli cosa bere">
-                  <div className="pmx-beer-head">
-                    <h4 className="pmx-beer-title" data-testid="fallo-pesante-beer-step">
-                      2 · COSA BEVI?
-                    </h4>
-                    <span className="pmx-beer-badge">OBBLIGATORIO</span>
-                  </div>
-                  <p className="pmx-beer-sub">
-                    {comboHasTwoPrices
-                      ? `Con la birra ${formatPrice(combo.price, forceDecimals)}, con una bibita ${formatPrice(softPrice, forceDecimals)}`
-                      : 'Una birra o una bibita, scegli tu'}
-                  </p>
+                <div className="pmx-beer" role="group" aria-label="Scegli da bere">
+                  <h4 className="pmx-beer-title" data-testid="fallo-pesante-beer-step">
+                    SCEGLI DA BERE
+                  </h4>
 
-                  {chosenDrinkOrBeer && (
-                    <div className="pm-beer-chosen">
-                      {chosenDrinkOrBeer.image && (
-                        <img className="pm-beer-chosen-photo" src={chosenDrinkOrBeer.image} alt="" />
-                      )}
-                      <span className="pm-beer-chosen-name" data-testid="fallo-pesante-beer-chosen">
-                        ✓ {chosenDrinkOrBeer.name.toUpperCase()} SELEZIONATA
-                      </span>
-                      {chosenBeer && (
-                        <button
-                          type="button"
-                          className="pm-beer-chosen-change"
-                          onClick={() => {
-                            pendingScrollRef.current = { id: item.id, kind: 'detail' };
-                            setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: chosenBeer.id }));
-                          }}
-                        >
-                          CAMBIA
-                        </button>
-                      )}
-                    </div>
+                  {drinkOptions.length > 0 && (
+                    <>
+                      <p className="pm-drink-label" data-testid="fallo-pesante-drinks-label">BIBITE · comprese</p>
+                      <div className="pm-beer-pills pm-drink-pills" data-testid="fallo-pesante-drinks">
+                        {drinkOptions.map((drink) => {
+                          const isSelected = selectedBeerByItem[item.id] === drink.id;
+                          return (
+                            <button
+                              key={drink.id}
+                              type="button"
+                              className={`pm-drink-pill${isSelected ? ' pm-drink-pill--on' : ''}`}
+                              aria-pressed={isSelected}
+                              data-testid={`fallo-pesante-drink-${drink.id}`}
+                              onClick={() => {
+                                // Scelta diretta: niente anteprima. Chiude l'eventuale dettaglio birra aperto.
+                                pendingScrollRef.current = { id: item.id, kind: 'pick' };
+                                setSelectedBeerByItem((prev) => ({ ...prev, [item.id]: drink.id }));
+                                setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: null }));
+                              }}
+                            >
+                              {drink.image ? (
+                                <img className="pm-beer-pill-photo" src={drink.image} alt="" />
+                              ) : (
+                                <span className="pm-beer-pill-photo pm-beer-pill-photo--empty" aria-hidden="true" />
+                              )}
+                              <span className="pm-beer-pill-name">{drink.name.toUpperCase()}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
 
                   {beerOptions.length > 0 && (
-                  <div className="pm-beer-pills">
-                    {beerOptions.map((beer) => {
-                      const beerLocked = beer.availability === 'evening_only' && !isEveningServiceActive();
-                      const isSelected = selectedBeerByItem[item.id] === beer.id;
-                      const isPreview = previewBeer?.id === beer.id;
-                      return (
-                        <button
-                          key={beer.id}
-                          type="button"
-                          className={`pm-beer-pill${isSelected ? ' pm-beer-pill--on' : ''}${isPreview ? ' pm-beer-pill--preview' : ''}`}
-                          disabled={beerLocked}
-                          aria-expanded={isPreview}
-                          onClick={() => {
-                            if (previewBeerByItem[item.id] !== beer.id) {
-                              pendingScrollRef.current = { id: item.id, kind: 'detail' };
-                            }
-                            setPreviewBeerByItem((prev) => ({
-                              ...prev,
-                              [item.id]: prev[item.id] === beer.id ? null : beer.id,
-                            }));
-                          }}
-                        >
-                          {beer.image && (
-                            <img className="pm-beer-pill-photo" src={beer.image} alt="" />
-                          )}
-                          <span className="pm-beer-pill-name">{beerNameNodes(beer.name)}</span>
-                          {beerLocked && <span className="pm-beer-pill-lock"> · SOLO LA SERA</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
+                    <>
+                      <p className="pm-drink-label" data-testid="fallo-pesante-beers-label">
+                        {beerExtra > 0 ? `BIRRE · +${formatPrice(beerExtra, forceDecimals)}` : 'BIRRE · comprese'}
+                      </p>
+                      <div className="pm-beer-pills">
+                        {beerOptions.map((beer) => {
+                          const beerLocked = beer.availability === 'evening_only' && !isEveningServiceActive();
+                          const isSelected = selectedBeerByItem[item.id] === beer.id;
+                          const isPreview = previewBeer?.id === beer.id;
+                          return (
+                            <button
+                              key={beer.id}
+                              type="button"
+                              className={`pm-beer-pill${isSelected ? ' pm-beer-pill--on' : ''}${isPreview ? ' pm-beer-pill--preview' : ''}`}
+                              disabled={beerLocked}
+                              aria-expanded={isPreview}
+                              onClick={() => {
+                                if (previewBeerByItem[item.id] !== beer.id) {
+                                  pendingScrollRef.current = { id: item.id, kind: 'detail' };
+                                }
+                                setPreviewBeerByItem((prev) => ({
+                                  ...prev,
+                                  [item.id]: prev[item.id] === beer.id ? null : beer.id,
+                                }));
+                              }}
+                            >
+                              {beer.image ? (
+                                <img className="pm-beer-pill-photo" src={beer.image} alt="" />
+                              ) : (
+                                <span className="pm-beer-pill-photo pm-beer-pill-photo--empty" aria-hidden="true" />
+                              )}
+                              <span className="pm-beer-pill-name">{beerNameNodes(beer.name)}</span>
+                              {beerLocked && <span className="pm-beer-pill-lock"> · SOLO LA SERA</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
 
                   {previewBeer && (
@@ -345,11 +381,11 @@ export default function PesiMassimiSection({
                             {previewBeer.tasteSignals.slice(0, 2).join(' · ')}
                           </p>
                         )}
-                        {/* Il prezzo di listino della birra e' stato rimosso (2026-09-16,
-                            decisione Eros): dentro il combo la birra e' inclusa. */}
-                        <p className="pm-beer-detail-meta">
+                        {/* Il prezzo di listino della birra e' stato rimosso (2026-09-16, decisione Eros):
+                            nel MENU conta solo l'extra rispetto alla bibita (H7, calcolato dai dati). */}
+                        <p className="pm-beer-detail-meta" data-testid="beer-detail-meta">
                           {previewBeer.format ? `${previewBeer.format.toUpperCase()} · ` : ''}
-                          INCLUSA NEL COMBO
+                          {beerExtra > 0 ? `NEL MENU +${formatPrice(beerExtra, forceDecimals)}` : 'COMPRESA NEL MENU'}
                         </p>
                         <div className="pm-beer-detail-actions">
                           <button
@@ -375,74 +411,88 @@ export default function PesiMassimiSection({
                       </div>
                     </div>
                   )}
-
-                  {drinkOptions.length > 0 && (
-                    <>
-                      <p className="pm-drink-label" data-testid="fallo-pesante-drinks-label">SENZA ALCOL</p>
-                      <div className="pm-beer-pills pm-drink-pills" data-testid="fallo-pesante-drinks">
-                        {drinkOptions.map((drink) => {
-                          const isSelected = selectedBeerByItem[item.id] === drink.id;
-                          return (
-                            <button
-                              key={drink.id}
-                              type="button"
-                              className={`pm-drink-pill${isSelected ? ' pm-drink-pill--on' : ''}`}
-                              aria-pressed={isSelected}
-                              data-testid={`fallo-pesante-drink-${drink.id}`}
-                              onClick={() => {
-                                // Scelta diretta: niente anteprima. Chiude l'eventuale dettaglio birra aperto.
-                                pendingScrollRef.current = { id: item.id, kind: 'pick' };
-                                setSelectedBeerByItem((prev) => ({ ...prev, [item.id]: drink.id }));
-                                setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: null }));
-                              }}
-                            >
-                              {drink.image && (
-                                <img className="pm-beer-pill-photo" src={drink.image} alt="" />
-                              )}
-                              <span className="pm-beer-pill-name">{drink.name.toUpperCase()}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
                 </div>
               )}
 
-              {/* CTA del MENU (con SOLO PANINO la CTA è quella della PosterCard). */}
-              {isMenuChoice && (
-                <div className="pmx-pick" ref={(el) => { pickRefs.current[item.id] = el; }}>
-                  {chosenDrinkOrBeer && (
-                    <p className="pmx-pick-beer">
-                      {chosenBeer ? 'BIRRA' : 'DA BERE'}: {chosenDrinkOrBeer.name.toUpperCase()}
-                    </p>
-                  )}
-                <button
-                  type="button"
-                  className="pc-cta pmx-menu-cta"
-                  disabled={comboBlocked || beerNotChosen}
-                  data-testid="fallo-pesante-cta"
-                  onClick={() => {
-                    if (comboBlocked || beerNotChosen) return;
-                    // Dopo l'add compare il dock del sacco (e il toast): porta la CTA del MENU sopra.
-                    pendingScrollRef.current = { id: item.id, kind: 'pick' };
-                    // Riga carrello dalla lib condivisa (stessa della cassa e del reconcile):
-                    // variante birra/bibita → id, baseId e prezzo giusti per il server.
-                    onAdd(chosenDrinkOrBeer
-                      ? buildFalloPesanteCartLine(combo, chosenDrinkOrBeer)
-                      : { id: combo.id, baseId: combo.id, name: combo.name, price: combo.price, image: combo.image });
-                  }}
-                >
-                  {soldOut
-                    ? 'ESAURITO'
-                    : sideMissing
-                      ? 'NON DISPONIBILE'
-                      : beerNotChosen
-                        ? 'SCEGLI DA BERE PER CONTINUARE'
-                        : `AGGIUNGI IL MENU · ${formatPrice(comboVariant.price, forceDecimals)}`}
-                </button>
-                </div>
-              )}
+              {/* UN solo pulsante d'acquisto, in fondo, che segue la scelta. Il prezzo finale compare solo qui.
+                  Dopo l'add: "AGGIUNTO ✓" ~1,5 s e disabilitato (niente doppio tap = 2 menu). */}
+              <div className="pmx-pick" ref={(el) => { pickRefs.current[item.id] = el; }}>
+                {isMenuChoice && chosenDrinkOrBeer && (
+                  <div className="pm-beer-chosen">
+                    {chosenDrinkOrBeer.image && (
+                      <img className="pm-beer-chosen-photo" src={chosenDrinkOrBeer.image} alt="" />
+                    )}
+                    <span className="pm-beer-chosen-name" data-testid="fallo-pesante-beer-chosen">
+                      DA BERE: {chosenDrinkOrBeer.name.toUpperCase()}
+                    </span>
+                    {chosenBeer && (
+                      <button
+                        type="button"
+                        className="pm-beer-chosen-change"
+                        onClick={() => {
+                          pendingScrollRef.current = { id: item.id, kind: 'detail' };
+                          setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: chosenBeer.id }));
+                        }}
+                      >
+                        CAMBIA
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {isMenuChoice ? (
+                  <button
+                    type="button"
+                    className={`pc-cta pmx-menu-cta pmx-buy${isJustAdded ? ' pmx-buy--done' : ''}`}
+                    disabled={comboBlocked || beerNotChosen || isJustAdded}
+                    data-testid="fallo-pesante-cta"
+                    onClick={() => {
+                      if (comboBlocked || beerNotChosen || addLockRef.current[item.id]) return;
+                      // Dopo l'add compare il dock del sacco (e il toast): porta il pulsante sopra.
+                      pendingScrollRef.current = { id: item.id, kind: 'pick' };
+                      flashAdded(item.id);
+                      // Riga carrello dalla lib condivisa (stessa della cassa e del reconcile):
+                      // variante birra/bibita → id, baseId e prezzo giusti per il server.
+                      onAdd(chosenDrinkOrBeer
+                        ? buildFalloPesanteCartLine(combo, chosenDrinkOrBeer)
+                        : { id: combo.id, baseId: combo.id, name: combo.name, price: combo.price, image: combo.image });
+                    }}
+                  >
+                    {isJustAdded
+                      ? 'AGGIUNTO ✓'
+                      : soldOut
+                        ? 'ESAURITO'
+                        : beerNotChosen
+                          ? 'SCEGLI DA BERE'
+                          : `AGGIUNGI IL MENU · ${formatPrice(comboVariant.price, forceDecimals)}`}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`pc-cta pmx-menu-cta pmx-buy${isJustAdded ? ' pmx-buy--done' : ''}`}
+                    disabled={!canAddSolo || isJustAdded}
+                    data-testid="pmx-solo-cta"
+                    aria-label={canAddSolo
+                      ? `Aggiungi ${item.name}, ${soloNoun.toLowerCase()} · ${formatPrice(item.price, forceDecimals)}`
+                      : undefined}
+                    onClick={() => {
+                      if (!canAddSolo || addLockRef.current[item.id]) return;
+                      pendingScrollRef.current = { id: item.id, kind: 'pick' };
+                      flashAdded(item.id);
+                      // Stesso payload che mandava il "+" della PosterCard: la riga ordine non cambia.
+                      onAdd({ id: item.id, name: item.name, price: item.price, image: item.image });
+                    }}
+                  >
+                    {isJustAdded
+                      ? 'AGGIUNTO ✓'
+                      : soldOut
+                        ? 'ESAURITO'
+                        : noPrice
+                          ? 'PREZZO IN ARRIVO'
+                          : `AGGIUNGI ${soloNoun} · ${formatPrice(item.price, forceDecimals)}`}
+                  </button>
+                )}
+              </div>
             </div>
           ) : null;
 
@@ -456,7 +506,7 @@ export default function PesiMassimiSection({
               onRemove={onRemove}
               objectPosition={OBJECT_POSITION_BY_ID[item.id] ?? COMPACT_OBJECT_POSITION}
               photoZoom={COMPACT_PHOTO_ZOOM}
-              hideCta={isMenuChoice}
+              hideAdd={Boolean(combo)}
               compact
             >
               {choiceBlock}
