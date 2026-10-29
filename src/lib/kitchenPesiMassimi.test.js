@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { kitchenMenuItems, kitchenPesiMassimiCombos } from '../data/kitchenMockData.js';
 import {
   buildFalloPesanteCartLine,
+  falloPesanteCartDisplay,
   falloPesanteBeerExtra,
   falloPesanteIncludesLabel,
   falloPesanteMenuSupplement,
@@ -117,4 +118,36 @@ test('falloPesanteIncludesLabel: panino + patate per i panini, box con patate pe
   assert.equal(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-010']), 'MENU · PANINO + PATATE + DA BERE');
   assert.equal(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-018']), 'MENU · BOX CON PATATE + DA BERE');
   assert.doesNotMatch(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-018']), /PANINO/);
+});
+
+test('falloPesanteCartDisplay: riga MENU leggibile a schermo (birra, bibita, Box), name carrello invariato', () => {
+  const combos = kitchenPesiMassimiCombos;
+  const beerLine = buildFalloPesanteCartLine(combos['item-010'], BEER);
+  assert.deepEqual(falloPesanteCartDisplay(beerLine, combos, kitchenMenuItems), {
+    title: 'Pastrami — FALLO PESANTE',
+    detail: 'MENU · PANINO + PATATE + KEILER HELLES',
+  });
+  const softLine = buildFalloPesanteCartLine(combos['item-010'], PEPSI);
+  assert.deepEqual(falloPesanteCartDisplay(softLine, combos, kitchenMenuItems), {
+    title: 'Pastrami — FALLO PESANTE',
+    detail: 'MENU · PANINO + PATATE + PEPSI 33CL',
+  });
+  const boxLine = buildFalloPesanteCartLine(combos['item-018'], BEER);
+  assert.deepEqual(falloPesanteCartDisplay(boxLine, combos, kitchenMenuItems), {
+    title: 'Box Pulled Pork — FALLO PESANTE',
+    detail: 'MENU · BOX CON PATATE + KEILER HELLES',
+  });
+  assert.match(softLine.name, /Menu Bibita/, 'il nome della riga carrello non cambia');
+});
+
+test('falloPesanteCartDisplay: riga normale o dati mancanti = null (si mostra line.name)', () => {
+  const combos = kitchenPesiMassimiCombos;
+  const plain = { id: 'item-010', baseId: 'item-010', name: 'Pastrami', price: 14.5, qty: 1 };
+  assert.equal(falloPesanteCartDisplay(plain, combos, kitchenMenuItems), null);
+  assert.equal(falloPesanteCartDisplay(null, combos, kitchenMenuItems), null);
+  const line = buildFalloPesanteCartLine(combos['item-010'], BEER);
+  assert.equal(falloPesanteCartDisplay({ ...line, includesBeerId: 'item-inesistente' }, combos, kitchenMenuItems), null, 'bevanda non trovata');
+  assert.equal(falloPesanteCartDisplay(line, combos, kitchenMenuItems.filter((i) => i.id !== 'item-010')), null, 'panino base non trovato');
+  assert.equal(falloPesanteCartDisplay(line, {}, kitchenMenuItems), null, 'nessun combo');
+  assert.equal(falloPesanteCartDisplay(line, combos, undefined), null, 'catalogo non caricato');
 });

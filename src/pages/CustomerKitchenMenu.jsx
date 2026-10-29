@@ -31,7 +31,7 @@ import AnniversaryBanner from '../components/kitchen/AnniversaryBanner';
 import EventSideChip from '../components/kitchen/EventSideChip';
 import { checkoutMissingAtSubmit, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
-import { falloPesanteDrinkOptions } from '../lib/kitchenPesiMassimi';
+import { falloPesanteDrinkOptions, falloPesanteCartDisplay } from '../lib/kitchenPesiMassimi';
 import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, shouldSuggestEventSide, EVENT_CATEGORY, EVENT_CATEGORIES, EVENT_SIDE_ITEM_ID } from '../lib/kitchenEventMode';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
 import { formatPrice } from '../lib/kitchenPrice';
@@ -132,16 +132,30 @@ function getPosterTitle(cat) {
 }
 
 function getCategorySubtitle(cat) {
-  if (cat === 'bbq') return 'Affumicato, esagerato, senza scuse. Roba da mangiare con le mani.';
+  if (cat === 'bbq') return 'Panini carichi e il Box senza pane. Roba da mangiare con le mani.';
   if (cat === 'panini') return 'Sette panini, nessuno timido. Scegli con la pancia.';
-  if (cat === 'cicchetti') return 'MORTAZZA · LARDO & NOCI · SCAMORZA & CIPOLLE · CIAPPI VEG';
-  if (cat === 'insalatone') return 'CAESAR · SALMON · VEGGY';
-  if (cat === 'tartare') return 'CRUDA E CONTENTA · DOLCE MA CRUDA';
-  if (cat === 'tagliere') return 'SALUMI SERISSIMI · FORMAGGI DISCUTIBILI · PACE FATTA';
-  if (cat === 'birre') return 'KEILER HELLES · LAND-PILS · KELLERBIER · WEISSE · DUNKEL WEISSE · LUPULUS';
-  if (cat === 'contorni') return 'PATATE AL FORNO';
-  if (cat === 'bevande') return 'ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · FANTA · SPRITE · ESTATHÉ PESCA · ESTATHÉ LIMONE';
+  if (cat === 'cicchetti') return 'Assaggi su pane, uno tira l\'altro.';
+  if (cat === 'insalatone') return 'Insalate grandi, per chi vuole il verde.';
+  if (cat === 'tartare') return 'Carne cruda condita.';
+  if (cat === 'tagliere') return 'Salumi, formaggi o tutti e due, da mettere in mezzo al tavolo.';
+  if (cat === 'birre') return 'Birre in bottiglia.';
+  if (cat === 'contorni') return 'Nel MENU dei Pesi Massimi le patate ci sono già.';
+  if (cat === 'bevande') return 'Acqua e bibite. Nel MENU dei Pesi Massimi una bibita è compresa.';
   return null;
+}
+
+// H7 fase 2: fascia prezzo della categoria, calcolata dai prodotti visibili. Solo se ci sono almeno
+// due prezzi validi e diversi (con un prezzo unico c'e' il timbro "TUTTI X €"); altrimenti ''.
+function priceRangeLabel(items, forceDecimals = false) {
+  const cents = (items ?? [])
+    .map((i) => i.price)
+    .filter((pr) => pr != null && pr !== '' && Number.isFinite(Number(pr)))
+    .map((pr) => Math.round(Number(pr) * 100));
+  if (cents.length < 2) return '';
+  const min = Math.min(...cents);
+  const max = Math.max(...cents);
+  if (min === max) return '';
+  return `Da ${formatPrice(min / 100, forceDecimals)} a ${formatPrice(max / 100, forceDecimals)}.`;
 }
 
 // Stesso pattern SPA-navigate di CustomerOrderStatus.jsx (pushState + popstate sintetico, letto
@@ -444,7 +458,8 @@ export default function CustomerKitchenMenu() {
   // aggiunge al sacco e fa partire il feedback visivo.
   const addItem = (item) => {
     pushCartItem(item);
-    setAddedToast({ name: item.name });
+    // Riga MENU: a schermo "Pastrami — FALLO PESANTE" (il nome della riga carrello non cambia).
+    setAddedToast({ name: falloPesanteCartDisplay(item, kitchenPesiMassimiCombos, menuItems)?.title ?? item.name });
     setCartPulse(true);
     spawnFlyer(item);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -708,12 +723,15 @@ export default function CustomerKitchenMenu() {
         const [line1, line2] = getPosterTitle(activeCategory);
         // Panini: il numero nella battuta del mockup ("Sette panini...") segue i panini realmente a menu.
         const NUM_WORDS = ['Zero', 'Un', 'Due', 'Tre', 'Quattro', 'Cinque', 'Sei', 'Sette', 'Otto', 'Nove', 'Dieci'];
-        const sub = activeCategory === 'panini' && NUM_WORDS[visibleItems.length] && visibleItems.length > 1
+        const baseSub = activeCategory === 'panini' && NUM_WORDS[visibleItems.length] && visibleItems.length > 1
           ? `${NUM_WORDS[visibleItems.length]} panini, nessuno timido. Scegli con la pancia.`
           : getCategorySubtitle(activeCategory);
         const prices = visibleItems.map((i) => i.price);
         const uniquePrice = visibleItems.length >= 2
           && prices.every((pr) => pr != null && pr !== '' && pr === prices[0]);
+        // Fascia prezzo in coda al sottotitolo (non col timbro "TUTTI x €"; Pesi Massimi: stessi decimali delle schede).
+        const range = baseSub && !uniquePrice ? priceRangeLabel(visibleItems, activeCategory === 'bbq') : '';
+        const sub = range ? `${baseSub} ${range}` : baseSub;
         return (
           <header className={`kp-head${uniquePrice ? ' kp-head--stamp' : ''}`}>
             {!kitchenOpen && <div className="kp-kicker">The Walrus · Cucina chiusa</div>}
@@ -853,7 +871,9 @@ export default function CustomerKitchenMenu() {
           </div>
           <div className="kitch-drawer-body">
             <div className="kitch-drawer-items-list">
-              {orderItems.map((o) => (
+              {orderItems.map((o) => {
+                const menuLine = falloPesanteCartDisplay(o, kitchenPesiMassimiCombos, menuItems);
+                return (
                 <div key={o.id} className="kitch-drawer-row">
                   <div className="kitch-drawer-row-img">
                     {o.image ? (
@@ -867,7 +887,8 @@ export default function CustomerKitchenMenu() {
                     )}
                   </div>
                   <div className="kitch-drawer-row-content">
-                    <div className="kitch-drawer-row-name">{o.name.toUpperCase()}</div>
+                    <div className="kitch-drawer-row-name">{(menuLine ? menuLine.title : o.name).toUpperCase()}</div>
+                    {menuLine && <div className="kitch-drawer-row-detail">{menuLine.detail}</div>}
                   </div>
                   <div className="kitch-drawer-row-price">{formatPrice(o.price, true)}</div>
                   <div className="kitch-drawer-row-controls">
@@ -883,7 +904,8 @@ export default function CustomerKitchenMenu() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* AUTO-SELLING V1 — suggerimento birra contestuale (BEER SPRINT V1 §5/§7-D).

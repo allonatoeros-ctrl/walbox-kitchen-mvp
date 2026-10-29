@@ -1159,8 +1159,10 @@ test('21. FALLO PESANTE (H7 fase 1): SCEGLI COME LO VUOI — un solo prezzo in a
 
   await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   // La riga carrello porta la birra inclusa: e' cio' che finisce sulla comanda (P0-2).
-  const row = page.locator('.kitch-drawer-row', { hasText: 'PASTRAMI — FALLO PESANTE · KEILER HELLES' });
-  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PASTRAMI — FALLO PESANTE · KEILER HELLES');
+  // H7 fase 2: a schermo titolo + dettaglio leggibile (il nome della riga carrello non cambia).
+  const row = page.locator('.kitch-drawer-row', { hasText: 'MENU · PANINO + PATATE + KEILER HELLES' });
+  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('PASTRAMI — FALLO PESANTE');
+  await expect(row.locator('.kitch-drawer-row-detail')).toHaveText('MENU · PANINO + PATATE + KEILER HELLES');
   await expect(row.locator('.kitch-drawer-row-price')).toHaveText('17,90 €');
 });
 
@@ -1207,8 +1209,9 @@ test('21a. FALLO PESANTE con BIBITA (H4 + MENU OTTOBRE): scelta diretta, prezzo 
   await openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
   await heavyCta.click();
   await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
-  const row = page.locator('.kitch-drawer-row', { hasText: 'BRISKET — MENU BIBITA · PEPSI ZERO' });
-  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('BRISKET — MENU BIBITA · PEPSI ZERO');
+  const row = page.locator('.kitch-drawer-row', { hasText: 'MENU · PANINO + PATATE + PEPSI ZERO' });
+  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('BRISKET — FALLO PESANTE');
+  await expect(row.locator('.kitch-drawer-row-detail')).toHaveText('MENU · PANINO + PATATE + PEPSI ZERO');
   await expect(row.locator('.kitch-drawer-row-price')).toHaveText('16,90 €');
 });
 
@@ -1293,7 +1296,8 @@ test('23. MENU OTTOBRE: il MENU Pulled Pork sta sul Box (niente patate a parte),
   await expect(cta).toHaveText('AGGIUNGI IL MENU · 13,90 €');
   await cta.click();
   await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
-  const row = page.locator('.kitch-drawer-row', { hasText: 'BOX PULLED PORK — MENU BIBITA · FANTA' });
+  const row = page.locator('.kitch-drawer-row', { hasText: 'MENU · BOX CON PATATE + FANTA' });
+  await expect(row.locator('.kitch-drawer-row-name')).toHaveText('BOX PULLED PORK — FALLO PESANTE');
   await expect(row.locator('.kitch-drawer-row-price')).toHaveText('13,90 €');
 
   // Il panino Pulled Pork resta vendibile da solo, senza scelta MENU.

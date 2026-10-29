@@ -105,3 +105,22 @@ export function falloPesanteIncludesLabel(combo) {
     ? 'MENU · PANINO + PATATE + DA BERE'
     : 'MENU · BOX CON PATATE + DA BERE';
 }
+
+/** Riga carrello MENU come testo a schermo (sacco e toast), senza cambiare `line.name` ne' cio' che
+ *  va al server. Ritorna `{ title, detail }` o null se la riga non e' un MENU o manca un dato
+ *  (combo, panino base, bevanda): in quel caso il chiamante mostra `line.name` come prima.
+ *  `line` = riga carrello (`baseId` = id variante, `includesBeerId` = bevanda scelta). */
+export function falloPesanteCartDisplay(line, combos, menuItems) {
+  if (!line?.baseId || !line?.includesBeerId) return null;
+  const found = findFalloPesanteCombo(combos, line.baseId);
+  if (!found) return null;
+  const items = menuItems ?? [];
+  const base = items.find((i) => i.id === found.baseItemId);
+  const drink = items.find((i) => i.id === line.includesBeerId);
+  if (!base?.name || !drink?.name) return null;
+  const what = falloPesanteNeedsSide(found.combo) ? 'PANINO + PATATE' : 'BOX CON PATATE';
+  return {
+    title: `${base.name} — FALLO PESANTE`,
+    detail: `MENU · ${what} + ${drink.name}`.toUpperCase(),
+  };
+}

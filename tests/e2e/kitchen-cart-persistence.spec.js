@@ -63,7 +63,7 @@ test('refresh: il MENU con BIBITA resta nel sacco sulla sua variante, a prezzo b
 
   await expect(page.locator('.kitch-bottom-bar')).toContainText('16,90 €');
   await openCart(page);
-  await expect(page.locator('.kitch-drawer')).toContainText('PASTRAMI — MENU BIBITA');
+  await expect(page.locator('.kitch-drawer')).toContainText('PASTRAMI — FALLO PESANTE');
   await expect(page.locator('.kitch-drawer')).toContainText('PEPSI ZERO');
   const saved = await page.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), CART_KEY);
   expect(saved.items[0].baseId).toBe('item-061');

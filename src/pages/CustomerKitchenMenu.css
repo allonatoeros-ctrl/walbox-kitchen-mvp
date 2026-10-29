@@ -346,6 +346,18 @@
   overflow-wrap: break-word;
 }
 
+/* H7 fase 2: dettaglio della riga MENU ("MENU · PANINO + PATATE + X"), piccolo e attenuato, va a capo. */
+.kitch-drawer-row-detail {
+  margin-top: 4px;
+  font-family: var(--poster-font-body);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: var(--poster-muted);
+  overflow-wrap: anywhere;
+}
+
 .kitch-drawer-row-price {
   grid-area: price;
   font-family: var(--poster-font-display);

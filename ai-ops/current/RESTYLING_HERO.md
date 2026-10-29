@@ -362,3 +362,45 @@ Commit proposto: `git add src/components/kitchen/PesiMassimiSection.jsx src/comp
 Foto mancanti = file inesistenti: Fanta/Sprite/Estathé Pesca/Limone (item-063..066) hanno `image: null` in kitchenMockData.js (protetto). Quando Eros ha le foto:
 .webp 512×512 in `public/assets/kitchen/menu/bevande/bevanda_<nome>.webp` + `image:` nei dati (serve OK area protetta). Verificato da me: screenshot 390 ok, foto
 assenti in cartella. Commit proposto invariato (stessi 7 file + questo). **PROSSIMO:** Eros approva il commit, poi /clear e "riprendi da ai-ops/current/RESTYLING_HERO.md, fase 2 H7".
+
+## H7 fase 2 — Testi (avviata 2026-10-29, Gate 1 = direzione A già approvata; fase 1 committata in 58c0391)
+Nota: questo lavoro ora vive in `walbox-kitchen-release` sul branch `feat/restyling-hero` (la sezione "Dove" in cima è storica).
+Piano (solo testi a schermo, niente dati protetti, `name` delle righe carrello invariato):
+1. Riga "cosa è" (prop `meta` di PosterCard) via mappa `META_BY_ID` nel componente: Pesi Massimi (5) e Panini (7), Tagliere solo Pace Fatta.
+   Cicchetti/Insalatone/Tartare senza meta (ingredienti + sottotitolo bastano). Testi solo da fatti nei dati.
+2. Sottotitoli di sezione = "cosa sono" + fascia prezzo calcolata da `visibleItems` (niente prezzo se c'è il timbro "TUTTI X €"
+   o un solo prodotto). Corretto "CIAPPI VEG". Titolo "SETI IMPLACABILI" invariato (decisione aperta).
+3. Sacco (drawer) e toast: riga MENU mostrata come "PASTRAMI — FALLO PESANTE" + sotto "MENU · PANINO + PATATE + PEPSI ZERO"
+   (Box: "MENU · BOX CON PATATE + X"), helper puro in `kitchenPesiMassimi.js` con test; `o.name` resta com'è (localStorage/server).
+File: CustomerKitchenMenu.jsx/.css, PesiMassimiSection.jsx, PaniniSection.jsx, TagliereSection.jsx, kitchenPesiMassimi.js(+test), e2e customer-kitchen-flow.
+Fuori scope (segnalare): staff/cucina/status vedono ancora "Menu Bibita"; riga "Il MENU del Pulled Pork è nel Box"; bollino Garpez.
+Modello/effort: walbox-dev Sonnet/medium; verifica a campione Opus. Report atteso `ai-ops/reports/chiarezza-menu/fase2-dev.md`. Niente commit.
+**H7 fase 2 FATTA 2026-10-29 (NON committata).** Report `ai-ops/reports/chiarezza-menu/fase2-dev.md`, screenshot `shots-fase2/`.
+Verificato da me: diff solo sui 10 file attesi (+ `kitchenMenuCopy.test.js`: guard regex `item-05\d`→`item-05[0-8]` per far passare item-059 Garpez nella mappa META, ok);
+unit lib 219/0/1 skip; screenshot sacco 390 "PASTRAMI — FALLO PESANTE / MENU · PANINO + PATATE + PEPSI ZERO". Dichiarato dall'agente: build ok, eslint 0 nuovi,
+e2e 94 pass / 5 rossi = i noti 14,15,36,49,52; tests/unit 4 fail identici su HEAD; nessun overflow 320/390/430.
+Da decidere: fascia prezzo Pesi Massimi con decimali ("Da 11,50 € a 15,00 €"), altre senza. **DA FARE A MANO (Eros):** cancellare il file vuoto
+`src/pages/__head_tmp.jsx` creato per errore dall'agente (divieto rm per Claude). Fuori scope: staff/cucina/stato ordine vedono ancora "Menu Bibita".
+Commit proposto: `git add src/components/kitchen/PaniniSection.jsx src/components/kitchen/PesiMassimiSection.jsx src/components/kitchen/TagliereSection.jsx src/lib/kitchenMenuCopy.test.js src/lib/kitchenPesiMassimi.js src/lib/kitchenPesiMassimi.test.js src/pages/CustomerKitchenMenu.css src/pages/CustomerKitchenMenu.jsx tests/e2e/customer-kitchen-flow.spec.js tests/e2e/kitchen-cart-persistence.spec.js ai-ops/current/RESTYLING_HERO.md` + `git commit -m "feat: menu più chiaro (riga cosa è sotto i nomi, sottotitoli con prezzi, MENU leggibile nel sacco)"`
+**PROSSIMO:** Eros approva il commit, poi /clear e "riprendi da ai-ops/current/RESTYLING_HERO.md, fase 3 H7" (orientamento: linguette 44px, hamburger, CTA hero, footer cassa).
+**Ritocco fase 2 (2026-10-29, Eros: "togli questa cosa del panino, non mi piace"):** tolte le righe meta "PANINO · ..." da Pesi Massimi e Panini (PaniniSection.jsx e PesiMassimiSection.jsx tornati identici a HEAD; guard `kitchenMenuCopy.test.js` tornato a `item-05\d`, quindi fuori dal commit). Tolta anche la meta di Pace Fatta (TagliereSection.jsx = HEAD): nessuna riga "cosa è" rimasta. Verificato: eslint 0, unit 219/0/1. Commit proposto ora: `git add src/lib/kitchenPesiMassimi.js src/lib/kitchenPesiMassimi.test.js src/pages/CustomerKitchenMenu.css src/pages/CustomerKitchenMenu.jsx tests/e2e/customer-kitchen-flow.spec.js tests/e2e/kitchen-cart-persistence.spec.js ai-ops/current/RESTYLING_HERO.md` + `git commit -m "feat: menu più chiaro (sottotitoli con prezzi, MENU leggibile nel sacco)"`
+
+## H7 fase 3 — Orientamento (piano 2026-10-29, Gate 1 = direzione A già approvata)
+Stato repo alla ripresa: la **fase 2 NON è committata** (HEAD = 58c0391 fase 1). La fase 3 tocca gli stessi
+`CustomerKitchenMenu.jsx/.css`: prima si committa la fase 2 (comando sopra, serve OK di Eros), poi si parte.
+Audit (verificato nel codice): linguette `.kp-chip` alte 38px (area tocco già 44 con `::after`); hamburger
+(`CustomerKitchenMenu.jsx` testata `kh-brand-btn--menu`) fa solo scroll alle linguette; CTA hero "SCOPRI I NOSTRI
+PANINI" → linguetta Panini ma la foto è il Pulled Pork (Pesi Massimi); footer cassa `cx-footer` sticky ~227px
+(titolo + totale 46px + stato + 2 pulsanti pagamento impilati da 56px) copre metà di "DOVE LO MANGI?".
+Piano:
+1. Linguette: `.kp-chip` height/min-height 44px (CustomerKitchenMenu.css). Niente sfumatura (scelta mockup B).
+2. Hamburger apre un pannello "CATEGORIE" con le 9 linguette a griglia (2 colonne, ≥44px); tocco = `selectCategoryTab`
+   + scroll al menu; chiude con ×, tocco fuori, Esc, back non toccato. Solo CustomerKitchenMenu.jsx/.css, nessun file nuovo.
+3. CTA hero: porta a Pesi Massimi (`'bbq'`) e testo "SCOPRI I PESI MASSIMI" (MenuHero.jsx + commento). Scelta consigliata
+   applicata in automatico; se Eros preferisce altro testo, è una riga.
+4. Footer cassa più basso: i 2 pulsanti PAGO ORA / PAGO AL BANCO affiancati (2 colonne), totale 46→36px, margini ridotti.
+   Solo CustomerCheckout.css (+ eventuale classe), nessuna logica di pagamento, `data-testid` invariati. Obiettivo ≤150px a 390.
+File: CustomerKitchenMenu.jsx/.css, MenuHero.jsx, CustomerCheckout.css, e2e pertinenti (hero CTA, hamburger).
+Verifica: lint, unit lib, build override, e2e customer-kitchen-flow + cart-persistence, screenshot 320/390/430
+(linguette, pannello categorie, hero, cassa con "DOVE LO MANGI?" visibile). Aree protette: nessuna. Niente commit.
+Modello/effort: walbox-dev Sonnet/medium; verifica a campione Opus.
