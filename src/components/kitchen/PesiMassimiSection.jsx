@@ -114,6 +114,14 @@ const PHOTO_ZOOM_BY_ID = {
   'item-011': 1,
   'item-059': 1,
 };
+// Foto ingrandita (doppio tocco): ogni Peso Massimo ha la sua frase, mai la stessa del vicino.
+const ZOOM_QUOTE_BY_ID = {
+  'item-009': 'GUARDALO BENE. POI MANGIALO.', // Pulled Pork
+  'item-010': 'SÌ, È GRANDE COSÌ DAVVERO.', // Pastrami
+  'item-011': 'NON LECCARE LO SCHERMO.', // Brisket
+  'item-059': 'QUESTO NON SI DIVIDE CON NESSUNO.', // Garpez
+  'item-018': 'PESO MASSIMO. FAME ZERO.', // Box Pulled Pork
+};
 // H7: dopo l'aggiunta il pulsante mostra "AGGIUNTO ✓" ed e' spento per questo tempo (niente doppio tap = 2 menu).
 const ADDED_FLASH_MS = 1500;
 // Fase 3.4f: niente più scrim speciale per il Box (sacchetto bianco): con la sfumatura e l'ombra
@@ -518,6 +526,7 @@ export default function PesiMassimiSection({
               onRemove={onRemove}
               objectPosition={OBJECT_POSITION_BY_ID[item.id] ?? COMPACT_OBJECT_POSITION}
               photoZoom={PHOTO_ZOOM_BY_ID[item.id] ?? COMPACT_PHOTO_ZOOM}
+              zoomQuote={ZOOM_QUOTE_BY_ID[item.id]}
               hideAdd={Boolean(combo)}
               compact
             >

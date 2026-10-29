@@ -556,3 +556,92 @@
   width: 100%;
   height: calc(100% - 16px);
 }
+
+/* ── Zoom foto a doppio tocco (solo compact): finestra sopra il menu, non a tutta pagina ──
+   Montata su <body> (fuori da .kitch-page): i token --poster-* qui non arrivano, quindi valori di riserva. */
+.pc-card--compact .pc-shot--zoomable {
+  cursor: zoom-in;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pc-card--compact .pc-shot--zoomable:focus-visible {
+  outline: 3px solid #ffc83d;
+  outline-offset: -3px;
+}
+
+.pc-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(10, 5, 3, 0.82);
+  cursor: zoom-out;
+  animation: pc-zoom-fade 180ms ease-out;
+}
+
+.pc-zoom-box {
+  position: relative;
+  width: min(92vw, 440px);
+  margin: 0;
+  border: 2px solid #ffc83d;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1b0f09;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  animation: pc-zoom-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.pc-zoom-photo {
+  display: block;
+  width: 100%;
+  max-height: 68vh;
+  object-fit: contain;
+  background: #2a1a10;
+}
+
+.pc-zoom-quote {
+  margin: 0;
+  padding: 14px 16px 16px;
+  font-family: 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: #ffc83d;
+  transform: rotate(-1.5deg);
+}
+
+.pc-zoom-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: #ffc83d;
+  color: #140a05;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes pc-zoom-fade {
+  from { opacity: 0; }
+}
+
+/* Il panino "si apre": parte piccolo e schiacciato, rimbalza e si assesta. */
+@keyframes pc-zoom-pop {
+  0% { opacity: 0; transform: scale(0.55, 0.35); }
+  60% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-zoom,
+  .pc-zoom-box {
+    animation: none;
+  }
+}

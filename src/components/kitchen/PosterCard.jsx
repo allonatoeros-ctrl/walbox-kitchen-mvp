@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ALLERGEN_LABEL } from './AllergenBadges';
 import { formatPrice } from '../../lib/kitchenPrice';
 import './PosterCard.css';
@@ -42,6 +43,11 @@ import './PosterCard.css';
  *  - hideAdd     (opzionale, solo compact, default false) toglie il "+" / lo stepper dalla riga prezzo ma LASCIA il
  *                prezzo (H7 fase 1: Pesi Massimi col MENU, dove l'unico pulsante d'acquisto sta nei `children` e
  *                segue la scelta SOLO PANINO / MENU). Default = nessun cambiamento.
+ *  - zoomQuote   (opzionale, solo compact) frase Walrus sotto la foto ingrandita; assente = una delle
+ *                ZOOM_QUOTES a rotazione per `index`.
+ *
+ * Zoom foto (solo compact): doppio tocco sulla foto (o Invio/Spazio da tastiera) apre una finestra sopra il menu
+ * con la foto intera e la frase. Si chiude con un tocco ovunque, la X, Esc o il tasto Indietro del telefono.
  *
  * Allergeni (H7 fase 1, solo UI): `item.allergensVerified === false` → al posto della riga allergeni compare
  * "ALLERGENI DA CONFERMARE · CHIEDI AL BANCO" (la lista derivata non e' una garanzia). I dati non si toccano.
@@ -50,6 +56,43 @@ import './PosterCard.css';
  * prezzo inventato); available === false → timbro ESAURITO sulla foto + prezzo spento + CTA spenta
  * "ESAURITO"; foto assente o rotta → riquadro "FOTO IN ARRIVO" (stessa cornice, niente salti).
  */
+
+// Frasi della foto ingrandita (scelte da Eros), a rotazione per posizione nella lista.
+const ZOOM_QUOTES = [
+  'GUARDALO BENE. POI MANGIALO.',
+  'SÌ, È GRANDE COSÌ DAVVERO.',
+  'NON LECCARE LO SCHERMO.',
+];
+// Due tocchi entro questo tempo = doppio tocco (iOS non manda `dblclick` affidabile con touch-action: manipulation).
+const DOUBLE_TAP_MS = 350;
+
+// Finestra con la foto ingrandita, montata su <body> per stare sopra dock, toast e linguette.
+function PhotoZoom({ src, name, quote, onClose }) {
+  const closeRef = useRef(null);
+
+  useEffect(() => {
+    closeRef.current?.focus({ preventScroll: true });
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="pc-zoom" role="dialog" aria-modal="true" aria-label={`Foto: ${name}`} onClick={onClose}>
+      <figure className="pc-zoom-box">
+        <img className="pc-zoom-photo" src={src} alt={name} />
+        <figcaption className="pc-zoom-quote">{quote}</figcaption>
+        <button ref={closeRef} type="button" className="pc-zoom-close" aria-label="Chiudi la foto">✕</button>
+      </figure>
+    </div>,
+    document.body,
+  );
+}
 
 // Etichetta allergene senza emoji iniziale (le emoji sono solo nei badge gialli di AllergenBadges).
 function allergenText(key) {
@@ -123,9 +166,41 @@ export default function PosterCard({
   meta = null,
   lockedLabel = null,
   photoFit = 'cover',
+  zoomQuote = null,
 }) {
   // Salva l'URL che ha fallito (non un booleano): se cambia `item.image` la foto riprova da sola.
   const [failedSrc, setFailedSrc] = useState(null);
+  const [zoomOpen, setZoomOpen] = useState(false);
+  const lastTapRef = useRef(0);
+  const shotRef = useRef(null);
+
+  // Indietro del telefono chiude lo zoom: all'apertura una voce di cronologia sulla stessa URL, che conserva lo
+  // stato del router (idx/key) così il router non vede un cambio pagina.
+  useEffect(() => {
+    if (!zoomOpen) return undefined;
+    window.history.pushState({ ...window.history.state, pcZoom: true }, '');
+    const onPop = () => setZoomOpen(false);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [zoomOpen]);
+
+  const openZoom = () => setZoomOpen(true);
+  const closeZoom = useCallback(() => {
+    // Chiusura da tocco/X/Esc: toglie la voce aggiunta; il popstate chiude la finestra.
+    if (window.history.state?.pcZoom) window.history.back();
+    else setZoomOpen(false);
+    shotRef.current?.focus({ preventScroll: true });
+  }, []);
+
+  const handleShotTap = () => {
+    const now = Date.now();
+    if (now - lastTapRef.current < DOUBLE_TAP_MS) {
+      lastTapRef.current = 0;
+      openZoom();
+    } else {
+      lastTapRef.current = now;
+    }
+  };
 
   // Azione utente in attesa di essere applicata dopo il render (focus + scroll sopra il dock).
   const pendingRef = useRef(null);
@@ -189,7 +264,19 @@ export default function PosterCard({
         data-testid="poster-card"
       >
         <div className="pc-row">
-          <div className={`pc-shot${photoFit === 'contain' ? ' pc-shot--contain' : ''}`}>
+          <div
+            ref={shotRef}
+            className={`pc-shot${photoFit === 'contain' ? ' pc-shot--contain' : ''}${showPhoto ? ' pc-shot--zoomable' : ''}`}
+            {...(showPhoto && {
+              role: 'button',
+              tabIndex: 0,
+              'aria-label': `Ingrandisci la foto: ${item.name} (doppio tocco)`,
+              onClick: handleShotTap,
+              onKeyDown: (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openZoom(); }
+              },
+            })}
+          >
             {showPhoto ? (
               <img
                 className="pc-photo"
@@ -288,6 +375,14 @@ export default function PosterCard({
             )}
             {children}
           </div>
+        )}
+        {zoomOpen && showPhoto && (
+          <PhotoZoom
+            src={item.image}
+            name={displayName ?? item.name}
+            quote={zoomQuote ?? ZOOM_QUOTES[index % ZOOM_QUOTES.length]}
+            onClose={closeZoom}
+          />
         )}
       </article>
     );
