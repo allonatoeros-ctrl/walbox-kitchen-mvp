@@ -329,6 +329,39 @@ export default function CustomerKitchenMenu() {
     scrollToMenuStart();
   };
 
+  // H7 fase 3: l'hamburger apre un pannello con tutte le categorie (griglia a 2 colonne). Non e' una
+  // vista della history: niente pushState, il back del telefono resta quello di prima. Si chiude con
+  // x, tocco sullo sfondo, Esc o scegliendo una categoria; alla chiusura il focus torna all'hamburger.
+  const [catsOpen, setCatsOpen] = useState(false);
+  const catsBtnRef = useRef(null);
+  const catsPanelRef = useRef(null);
+  const closeCats = () => {
+    setCatsOpen(false);
+    catsBtnRef.current?.focus({ preventScroll: true });
+  };
+  useEffect(() => {
+    if (!catsOpen) return undefined;
+    const panel = catsPanelRef.current;
+    (panel?.querySelector('.kc-cat.is-active') || panel?.querySelector('button'))?.focus({ preventScroll: true });
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setCatsOpen(false);
+        catsBtnRef.current?.focus({ preventScroll: true });
+        return;
+      }
+      if (e.key !== 'Tab' || !panel) return;
+      // il focus resta dentro al pannello (dialog modale)
+      const btns = panel.querySelectorAll('button');
+      if (!btns.length) return;
+      const first = btns[0];
+      const last = btns[btns.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [catsOpen]);
+
   // Il listener popstate vive per tutta la vita del componente ma deve leggere
   // lo stato corrente, non quello catturato al mount.
   const cartOpenRef = useRef(cartOpen);
@@ -653,17 +686,17 @@ export default function CustomerKitchenMenu() {
         </button>
       )}
 
-      {/* Testata (restyling hero): logo originale al centro, menu a sinistra (porta alle linguette),
+      {/* Testata (restyling hero): logo originale al centro, menu a sinistra (apre il pannello CATEGORIE),
           carrello a destra con il numero dei pezzi (apre lo stesso sacco del dock in basso). */}
       <header className="kh-brand">
         <button
           type="button"
+          ref={catsBtnRef}
           className="kh-brand-btn kh-brand-btn--menu"
-          aria-label="Vai alle categorie del menu"
-          onClick={() => {
-            scrollToMenuStart('smooth');
-            document.querySelector('.kp-chip.is-active')?.focus({ preventScroll: true });
-          }}
+          aria-label="Apri le categorie del menu"
+          aria-expanded={catsOpen}
+          aria-controls="kh-cats-panel"
+          onClick={() => setCatsOpen(true)}
         >
           <svg viewBox="0 0 28 24" width="28" height="24" aria-hidden="true">
             <path d="M1 3h26M1 12h26M1 21h26" stroke="currentColor" strokeWidth="2.6" strokeLinecap="square" fill="none" />
@@ -690,7 +723,50 @@ export default function CustomerKitchenMenu() {
         </button>
       </header>
 
-      <MenuHero onDiscover={() => { selectCategoryTab('panini'); scrollToMenuStart('smooth'); }} />
+      {/* Pannello CATEGORIE (hamburger): sopra testata e linguette sticky, sotto il sacco. */}
+      {catsOpen && (
+        <div
+          className="kc-backdrop"
+          onClick={(e) => { if (e.target === e.currentTarget) closeCats(); }}
+        >
+          <div
+            id="kh-cats-panel"
+            ref={catsPanelRef}
+            className="kc-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Categorie del menu"
+            data-testid="categories-panel"
+          >
+            <div className="kc-head">
+              <span className="kc-title">CATEGORIE</span>
+              <button type="button" className="kc-close" aria-label="Chiudi le categorie" onClick={closeCats}>×</button>
+            </div>
+            <div className="kc-grid">
+              {CATEGORIES.map((cat) => {
+                const isActive = activeCategory === cat.key;
+                return (
+                  <button
+                    key={cat.key}
+                    type="button"
+                    className={`kc-cat${isActive ? ' is-active' : ''}`}
+                    aria-current={isActive ? 'true' : undefined}
+                    onClick={() => {
+                      selectCategoryTab(cat.key);
+                      scrollToMenuStart('smooth');
+                      closeCats();
+                    }}
+                  >
+                    {cat.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <MenuHero onDiscover={() => { selectCategoryTab('bbq'); scrollToMenuStart('smooth'); }} />
       <div ref={menuStartRef} aria-hidden="true" />
       {eventMode && <AnniversaryBanner />}
       {exitHint && (

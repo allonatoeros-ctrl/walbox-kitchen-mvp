@@ -75,8 +75,9 @@ async function openCategoryList(page, categoryName) {
 
 // Gli 8 panini V2 hanno `price: null` (PREZZO IN ARRIVO, CTA disabilitata): l'unica
 // categoria con prodotti ordinabili è PESI MASSIMI.
+// H7 fase 3: la CTA della hero si chiama "SCOPRI I PESI MASSIMI": la linguetta si cerca col nome esatto.
 async function addFirstOrderableItem(page) {
-  await page.getByRole('button', { name: /PESI MASSIMI/i }).click();
+  await page.getByRole('button', { name: /^PESI MASSIMI$/i }).click();
   // Restyling hero: le schede sono sempre aperte; con SOLO PANINO (default) la CTA e' il "+" giallo
   // della scheda compatta (aria-label "Aggiungi <nome>").
   await page.locator('.pm-list .pc-cta:not(.pmx-menu-cta)').first().click();
@@ -250,7 +251,7 @@ test('2. /kitchen is reachable directly as the native entry point, no Jukebox br
   await page.goto('/kitchen');
   await expect(page.getByRole('button', { name: /PESI MASSIMI/i }).first()).toBeVisible();
   await openFullMenu(page);
-  await expect(page.getByRole('button', { name: /PESI MASSIMI/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^PESI MASSIMI$/i })).toBeVisible();
 });
 
 // SOLO SERVICE CONSOLIDATION GAP FIX (2026-09-07): /kitchen/entry (CustomerKitchenEntry.jsx) è un
@@ -388,7 +389,7 @@ test('3j. Cucina chiusa: banner visibile, menu navigabile, invio ordine bloccato
   // Il menu resta navigabile: si può entrare nel menu completo e vedere le categorie, il banner
   // resta visibile (sticky, su tutte le view — non solo sulla Home).
   await openFullMenu(page);
-  await expect(page.getByRole('button', { name: /PESI MASSIMI/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^PESI MASSIMI$/i })).toBeVisible();
   await expect(page.getByTestId('kitchen-closed-banner')).toBeVisible();
 
   await addFirstOrderableItem(page);
@@ -563,6 +564,33 @@ test('3g. Regression: normal category with available items shows no empty/sold-o
   await expect(page.locator('.pc-card').first()).toBeVisible();
 });
 
+// H7 fase 3: l'hamburger apre il pannello CATEGORIE; tocco su BIRRE = linguetta Birre attiva + pannello chiuso.
+test('3g2. Hamburger: apre il pannello CATEGORIE, BIRRE attiva la linguetta e chiude il pannello', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/kitchen?nickname=Eros');
+  await openFullMenu(page);
+
+  const hamburger = page.getByRole('button', { name: /Apri le categorie del menu/i });
+  await expect(hamburger).toHaveAttribute('aria-expanded', 'false');
+  await hamburger.click();
+  const panel = page.getByRole('dialog', { name: 'Categorie del menu' });
+  await expect(panel).toBeVisible();
+  await expect(hamburger).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel.getByRole('button')).toHaveCount(10); // 9 categorie + chiudi
+
+  await panel.getByRole('button', { name: 'BIRRE', exact: true }).click();
+  await expect(panel).toHaveCount(0);
+  await expect(page.locator('.kp-chip.is-active')).toHaveText('BIRRE');
+  await expect(hamburger).toBeFocused();
+
+  // Esc chiude senza cambiare categoria
+  await hamburger.click();
+  await expect(panel).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(panel).toHaveCount(0);
+  await expect(page.locator('.kp-chip.is-active')).toHaveText('BIRRE');
+});
+
 // ── Touch target sizes (mobile) ────────────────────────────────────
 
 const TOUCH_TARGET_VIEWPORTS = [
@@ -576,7 +604,7 @@ for (const viewport of TOUCH_TARGET_VIEWPORTS) {
     await page.setViewportSize(viewport);
     await page.goto('/kitchen?table=12&nickname=Eros');
     await openFullMenu(page);
-    await page.getByRole('button', { name: /PESI MASSIMI/i }).click();
+    await page.getByRole('button', { name: /^PESI MASSIMI$/i }).click();
 
     // "+" della scheda compatta: tondo almeno 40x40
     const addBtn = page.locator('.pm-list .pc-cta:not(.pmx-menu-cta)').first();

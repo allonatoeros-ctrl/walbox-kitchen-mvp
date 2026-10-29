@@ -404,3 +404,23 @@ File: CustomerKitchenMenu.jsx/.css, MenuHero.jsx, CustomerCheckout.css, e2e pert
 Verifica: lint, unit lib, build override, e2e customer-kitchen-flow + cart-persistence, screenshot 320/390/430
 (linguette, pannello categorie, hero, cassa con "DOVE LO MANGI?" visibile). Aree protette: nessuna. Niente commit.
 Modello/effort: walbox-dev Sonnet/medium; verifica a campione Opus.
+Fase 2 committata in `7d546bd` (OK di Eros 2026-10-29).
+**H7 fase 3 FATTA 2026-10-29 (NON committata), esito PARZIALE.** Report `ai-ops/reports/chiarezza-menu/fase3-dev.md`, screenshot `shots-fase3/`.
+Verificato da me: diff solo sui 5 file attesi (CustomerCheckout.jsx non toccato), unit lib 213/0/1 skip, screenshot 390 pannello
+categorie e cassa ok. Dichiarato dall'agente: lint 116 errori = HEAD, build ok, e2e 86 pass / 5 rossi noti (14,15,36,49,52) + nuovo test
+hamburger→BIRRE verde; altre spec 24 pass / 1 rosso C7 (coda staff /kitchen/solo, non confrontato con HEAD); linguette 44px; footer 148px
+(era ~227); nessun overflow 320/390/430.
+Resta: a 390x844 "RITIRO AL WALRUS" coperta 28px dal footer (titolo visibile, sottotitolo no); a 430 sta tutto. Per chiuderlo va
+compattato il blocco sopra il footer (CustomerCheckout). Selettori e2e `/PESI MASSIMI/i` → `/^PESI MASSIMI$/i` (la CTA hero li rendeva
+ambigui); stessa riga da sistemare in `tests/e2e-real/kitchen-real-order.spec.js:32` (non toccata, fuori lista).
+Commit proposto: `git add src/components/kitchen/CustomerCheckout.css src/components/kitchen/MenuHero.jsx src/pages/CustomerKitchenMenu.css src/pages/CustomerKitchenMenu.jsx tests/e2e/customer-kitchen-flow.spec.js ai-ops/current/RESTYLING_HERO.md` + `git commit -m "feat: orientamento menu (linguette 44px, pannello categorie dal menu, hero verso i Pesi Massimi, cassa più bassa)"`
+**PROSSIMO:** Eros guarda e approva il commit della fase 3.
+**Ritocco fase 3 (Eros 2026-10-29: "prima sistema Ritiro"):** compattare il blocco sopra il footer della cassa (solo CSS in
+CustomerCheckout.css) finché RITIRO AL WALRUS con sottotitolo si vede tutta a 390x844 col sacco da 1 prodotto; niente logica/testi/testid.
+Delegato a walbox-dev (stesso agente della fase 3). Riga e2e-real:32 non toccata (non richiesta).
+**Ritocco Ritiro FATTO 2026-10-29 (NON committato), PASS.** Solo CustomerCheckout.css (spazi sezioni nome/dove, input 48px, opzioni 52px).
+Verificato da me: screenshot 390 `shots-fase3/390-3-cassa-ritocco.png` RITIRO AL WALRUS intera sopra il footer; file modificati = i 5 attesi.
+Dichiarato dall'agente: margine 26px a 390x844, 105px a 430; lint = HEAD, build ok, e2e 86 pass / 5 rossi noti. Note: a 320x844 RITIRO resta
+sotto il footer (testi a capo); riga riservata all'errore del nome ridotta 22→8px (piccolo salto se compare l'errore).
+Commit proposto invariato (vedi sopra). **PROSSIMO:** Eros approva il commit della fase 3, poi /clear.
+**Fase 3 + ritocco COMMITTATI 2026-10-29 (OK di Eros, no push).** PROSSIMO: riga e2e-real `kitchen-real-order.spec.js:32` (`/PESI MASSIMI/i` → `/^PESI MASSIMI$/i`) da approvare; poi Eros decide il prossimo lavoro.

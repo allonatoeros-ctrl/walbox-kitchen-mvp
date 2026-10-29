@@ -540,6 +540,96 @@
   line-height: 1;
 }
 
+/* ── Pannello CATEGORIE (hamburger, H7 fase 3) ──
+   Sopra testata, banner e linguette sticky (z 5-90), sotto il sacco (200/300). Stesse variabili --poster-*. */
+.kc-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.72);
+}
+.kc-panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  max-height: 100%;
+  margin-inline: auto;
+  overflow-y: auto;
+  padding: 0 16px 16px;
+  background: var(--poster-bg);
+  color: var(--poster-ink);
+  border-bottom: var(--poster-rule);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+.kc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  border-bottom: 1px solid var(--poster-line);
+  margin-bottom: 12px;
+}
+.kc-title {
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--poster-ink);
+}
+.kc-close {
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0 -10px 0 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--poster-ink);
+  font-family: var(--poster-font-display);
+  font-size: 40px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.kc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.kc-cat {
+  min-height: 52px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--poster-line);
+  border-radius: 6px;
+  background: var(--poster-panel);
+  color: var(--poster-ink);
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
+  text-transform: uppercase;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* attiva = giallo come .kp-chip.is-active */
+.kc-cat.is-active {
+  background: var(--poster-yellow);
+  border-color: var(--poster-yellow);
+  color: var(--poster-on-yellow);
+}
+/* l'ultima categoria, se sola sulla riga, occupa tutta la riga (9 voci = 4 righe + 1) */
+.kc-cat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.kc-close:focus-visible,
+.kc-cat:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
+.kc-cat.is-active:focus-visible { outline-color: var(--poster-ink); }
+
 /* Avviso "tocca ancora indietro" (guard tasto indietro con sacco pieno). */
 .kh-exit-hint {
   position: fixed;
@@ -588,8 +678,8 @@
 .kp-chip {
   position: relative;
   flex: none;
-  height: 38px;
-  min-height: 38px;
+  height: 44px;
+  min-height: 44px;
   padding: 0 14px;
   display: flex;
   align-items: center;
@@ -616,8 +706,8 @@
   background: var(--poster-yellow);
   border-color: var(--poster-yellow);
 }
-/* Chip 38 px come il mockup, ma area di tocco 44 px (>= 44 richiesto): estensione invisibile. */
-.kp-chip::after { content: ''; position: absolute; inset: -3px 0; }
+/* H7 fase 3: chip alti 44 px veri (prima 38 + estensione invisibile). L'estensione e' tolta: con i chip
+   attaccati e 8 px di padding sopra/sotto non serve piu' e non puo' rubare tocchi alla barra. */
 .kp-chip:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
 
 /* ── Testata categoria da manifesto (mockup .poster-head) ── */
