@@ -102,8 +102,8 @@ export function falloPesanteBeerExtra(combo, hasSoftDrinks = true) {
 /** Sottotitolo fisso della scelta MENU: cosa contiene. Il Box ha gia' le patate dentro. */
 export function falloPesanteIncludesLabel(combo) {
   return falloPesanteNeedsSide(combo)
-    ? 'MENU · PANINO + PATATE + DA BERE'
-    : 'MENU · BOX CON PATATE + DA BERE';
+    ? 'Panino + patate + da bere'
+    : 'Box con patate + da bere';
 }
 
 /** Riga carrello MENU come testo a schermo (sacco e toast), senza cambiare `line.name` ne' cio' che

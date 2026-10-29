@@ -115,9 +115,9 @@ test('falloPesanteBeerExtra: birra meno bibita, 0 se non applicabile', () => {
 });
 
 test('falloPesanteIncludesLabel: panino + patate per i panini, box con patate per il Box', () => {
-  assert.equal(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-010']), 'MENU · PANINO + PATATE + DA BERE');
-  assert.equal(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-018']), 'MENU · BOX CON PATATE + DA BERE');
-  assert.doesNotMatch(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-018']), /PANINO/);
+  assert.equal(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-010']), 'Panino + patate + da bere');
+  assert.equal(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-018']), 'Box con patate + da bere');
+  assert.doesNotMatch(falloPesanteIncludesLabel(kitchenPesiMassimiCombos['item-018']), /panino/i);
 });
 
 test('falloPesanteCartDisplay: riga MENU leggibile a schermo (birra, bibita, Box), name carrello invariato', () => {

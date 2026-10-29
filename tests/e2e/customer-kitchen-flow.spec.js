@@ -1117,7 +1117,7 @@ test('21. FALLO PESANTE (H7 fase 1): SCEGLI COME LO VUOI — un solo prezzo in a
   // Opzione MENU: nome unico, sottotitolo fisso, supplemento calcolato dai dati (16,90 − 14,50), niente prezzi finali.
   await expect(menuOption).toContainText('FALLO PESANTE');
   await expect(menuOption).not.toContainText('MENU · FALLO PESANTE');
-  await expect(openCard.getByTestId('fallo-pesante-includes')).toHaveText('MENU · PANINO + PATATE + DA BERE');
+  await expect(openCard.getByTestId('fallo-pesante-includes')).toHaveText('Panino + patate + da bere');
   await expect(openCard.getByTestId('fallo-pesante-price')).toHaveText('+2,40 €');
   await expect(openCard.getByTestId('fallo-pesante-prices')).toHaveCount(0);
   await expect(menuOption).not.toContainText(/16,90|17,90|CON BIRRA|CON BIBITA/);
@@ -1309,7 +1309,7 @@ test('23. MENU OTTOBRE: il MENU Pulled Pork sta sul Box (niente patate a parte),
   // Scelta SOLO BOX / MENU: la copy non parla di panino ne' di patate a parte.
   await expect(box.getByTestId('fallo-pesante-choose')).toBeVisible();
   await expect(box.getByTestId('choose-solo')).toContainText('SOLO BOX');
-  await expect(box.getByTestId('fallo-pesante-includes')).toHaveText('MENU · BOX CON PATATE + DA BERE');
+  await expect(box.getByTestId('fallo-pesante-includes')).toHaveText('Box con patate + da bere');
   await expect(box.getByTestId('fallo-pesante-choose')).not.toContainText(/PANINO|PATATE AL FORNO/);
   // Supplemento e extra birra calcolati dai dati: 13,90 − 11,50 = +2,40 €; birra 15,90 − 13,90 = +2 €.
   await expect(box.getByTestId('fallo-pesante-price')).toHaveText('+2,40 €');

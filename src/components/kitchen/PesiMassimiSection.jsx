@@ -284,8 +284,14 @@ export default function PesiMassimiSection({
                 >
                   <span className="pmx-radio" aria-hidden="true" />
                   <span className="pmx-opt-body">
-                    <span className="pmx-opt-name">FALLO PESANTE</span>
-                    <span className="pmx-opt-sub" data-testid="fallo-pesante-includes">
+                    <span className="pmx-opt-name">
+                      FALLO PESANTE <span className="pmx-opt-tag">MENU</span>
+                    </span>
+                    {/* Cosa c'e' nel menu: testo leggero; l'avviso patate finite resta in stile poster. */}
+                    <span
+                      className={`pmx-opt-sub${sideMissing && !soldOut ? '' : ' pmx-opt-sub--light'}`}
+                      data-testid="fallo-pesante-includes"
+                    >
                       {sideMissing && !soldOut ? `PATATE FINITE: ${soloLabel}` : falloPesanteIncludesLabel(combo)}
                     </span>
                     {menuSupplement != null && menuSupplement > 0 && !(sideMissing && !soldOut) && (
