@@ -10,8 +10,8 @@
   margin-inline: auto;
   height: calc(var(--mh-w) * 0.98);
   overflow: hidden;
-  /* giro 5b (N-09): chiarore caldo in basso a sinistra, dove nel riferimento corre la carta sotto la CTA */
-  background: radial-gradient(ellipse 75% 38% at 16% 100%, rgba(74, 50, 32, 0.6) 0%, transparent 72%), #0b0705;
+  /* H5: stesso nero-grigio del muro della foto, così i bordi sfumati non lasciano un alone di colore diverso */
+  background: #121314;
   isolation: isolate;
 }
 
@@ -21,14 +21,19 @@
 .mh-photo {
   position: absolute;
   z-index: 0;
-  right: calc(var(--mh-w) * -0.42);
-  bottom: calc(var(--mh-w) * -0.06);
-  width: calc(var(--mh-w) * 1.1);
+  right: calc(var(--mh-w) * -0.3);
+  bottom: calc(var(--mh-w) * -0.05);
+  width: calc(var(--mh-w) * 1.02);
   height: auto;
-  aspect-ratio: 1080 / 1058;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%), linear-gradient(to right, transparent 0%, #000 22%);
+  aspect-ratio: 1080 / 991;
+  /* H5: dissolvenze lunghe e graduali (alto, sinistra, basso verso la barra categorie): nessun bordo netto */
+  -webkit-mask-image:
+    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 10%, #000 24%, #000 84%, rgba(0, 0, 0, 0.5) 93%, transparent 100%),
+    linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.25) 10%, rgba(0, 0, 0, 0.75) 22%, #000 34%);
   -webkit-mask-composite: source-in;
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 14%), linear-gradient(to right, transparent 0%, #000 22%);
+  mask-image:
+    linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.5) 10%, #000 24%, #000 84%, rgba(0, 0, 0, 0.5) 93%, transparent 100%),
+    linear-gradient(to right, transparent 0%, rgba(0, 0, 0, 0.25) 10%, rgba(0, 0, 0, 0.75) 22%, #000 34%);
   mask-composite: intersect;
 }
 
@@ -38,7 +43,7 @@
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  background: radial-gradient(ellipse 62% 70% at 6% 24%, rgba(8, 5, 3, 0.88) 0%, rgba(8, 5, 3, 0.55) 55%, transparent 100%);
+  background: radial-gradient(ellipse 62% 70% at 6% 24%, rgba(18, 19, 20, 0.85) 0%, rgba(18, 19, 20, 0.5) 55%, transparent 100%);
 }
 
 .mh-copy {

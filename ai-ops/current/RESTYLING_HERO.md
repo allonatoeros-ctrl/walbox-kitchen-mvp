@@ -297,3 +297,23 @@ Richiesta di Eros: via dado, nomi veloci e saluto "Piacere, X! 🦭" dal checkou
 File: `CustomerCheckout.jsx/.css`, e2e 37c riscritto in `tests/e2e/customer-kitchen-flow.spec.js`. Verificato: unit 213 pass/0 fail/1 skip, eslint 0 su CustomerCheckout.jsx, e2e 37/37b/37c verdi, controllo a video 375 (nessun dado/chip/saluto).
 `NICKNAME_SUGGESTIONS`/`pickNickname` in `kitchenCheckout.js` ora senza usi in UI (lasciati, decisione di Eros se toglierli).
 Commit proposto: `git add src/components/kitchen/CustomerCheckout.jsx src/components/kitchen/CustomerCheckout.css tests/e2e/customer-kitchen-flow.spec.js ai-ops/current/RESTYLING_HERO.md` + `git commit -m "feat: checkout senza gamification sul nome (via dado, nomi veloci e saluto)"`
+
+## H5 — Nuova foto hero (pulled pork con fumo) — FATTO 2026-10-29 (NON committato)
+Richiesta di Eros: sostituire la foto della hero con quella nuova (1536×1024, carta Walrus, fumo, logo scritto in alto a sinistra).
+Ritaglio senza AI: `cwebp -crop 420 0 1116 1024 -resize 1080 0 -q 80` (via il logo scritto nella foto: faceva doppione con quello della testata
+e cadeva sotto il titolo) → NUOVO `public/assets/kitchen/menu/hero/hero-pulled-pork-fumo.webp` (1080×991, 111 KB). `MenuHero.jsx`: src/height/commento.
+`MenuHero.css` `.mh-photo` (ritoccato dopo "prende troppo": panino più piccolo, crosta fuori dal titolo, carta visibile): right -0.24w, bottom -0.1w, width 1w, aspect-ratio 1080/991 (maschere invariate). Il vecchio `hero-pulled-pork.webp`
+resta nel repo non più usato (decisione di Eros se toglierlo).
+Verifiche: eslint MenuHero 0 errori; anteprima 320/390/430: nessun overflow (scrollWidth = viewport), fumo visibile, CTA non copre il ripieno.
+Limite: col panino largo quasi quanto la foto, la crosta in alto a sinistra va sotto il titolo e la carta Walrus in basso resta tagliata (la hero è alta ~0,98w).
+NON fatto: e2e, visual-reviewer, commit. **PROSSIMO:** Eros guarda l'anteprima (http://127.0.0.1:5174/kitchen) e decide: ritocchi oppure commit (MenuHero.jsx/.css + nuovo webp + questo file).
+**H5b (2026-10-29, "ragiona da graphic designer", NON committato):** provate 5 composizioni a 390, scelta: hero alta 1.1w (era 0.98w, +~47px a 390),
+`.mh-photo` width 1.04w, right -0.17w, bottom -0.05w, maschera anche in basso (90%→100%) per far entrare la carta nella barra categorie.
+Risultato: titolo nel muro scuro, fumo che sale accanto al titolo, panino quasi intero che esce un po' a destra, carta Walrus in basso; CTA tocca solo
+il bordo sinistro del panino. 320/430: nessun overflow. **PROSSIMO:** Eros guarda e decide commit (MenuHero.jsx/.css + webp + questo file).
+**H5c (2026-10-29, Eros: "hero più bassa", NON committato):** hero di nuovo 0.98w; `.mh-photo` width 0.94w, right -0.2w, bottom -0.05w (maschera in basso
+invariata). Panino un po' più piccolo, sempre fuori dal titolo, carta Walrus visibile. **PROSSIMO:** Eros decide il commit (MenuHero.jsx/.css + webp + questo file).
+**H5d (2026-10-29, Eros: "panino a destra e rifai le sfumature", NON committato):** scartata la prova "foto a tutto campo" (troppo aperta, subagente fermato
+senza modifiche). `.mh-hero` fondo #121314 (= muro della foto, via il chiarore caldo che stonava); `.mh-photo` width 1.02w, right -0.3w, bottom -0.05w;
+maschere più lunghe e graduali (alto 0→24%, basso 84→100%, sinistra 0→34% a gradini); `.mh-shade` stesso colore del muro. 320/390/430 nessun overflow.
+**PROSSIMO:** Eros guarda e decide il commit (MenuHero.jsx/.css + webp + questo file).
