@@ -102,6 +102,7 @@ const OBJECT_POSITION_BY_ID = {
   'item-009': '100% 62%',
   'item-010': '100% 62%',
   'item-011': '100% 62%',
+  'item-059': '100% 62%', // Garpez: stessa foto con scatola a sinistra
 };
 // Scheda compatta: riquadro stretto, il panino sta nella metà destra della foto quadrata (scatola Walrus a sinistra).
 const COMPACT_OBJECT_POSITION = '72% 62%';
@@ -111,6 +112,7 @@ const PHOTO_ZOOM_BY_ID = {
   'item-009': 1,
   'item-010': 1,
   'item-011': 1,
+  'item-059': 1,
 };
 // H7: dopo l'aggiunta il pulsante mostra "AGGIUNTO ✓" ed e' spento per questo tempo (niente doppio tap = 2 menu).
 const ADDED_FLASH_MS = 1500;
