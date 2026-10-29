@@ -9,9 +9,11 @@ Storia completa (H1 → H7 fase 3, audit, brief di Eros copiato esatto): `docs/c
   (origin fermo a `24f87f2`), 61 commit avanti a `main`. Nessun deploy.
 - **Fatto:** hero, testata, schede compatte, sacco nero/giallo, foto pulled pork, H7 fasi 1-3 (Pesi Massimi chiari,
   testi, orientamento + ritocco Ritiro). Tutto committato in locale con OK di Eros.
-- **Prossimo passo:** aggiornare `tests/e2e-real/kitchen-real-order.spec.js` al menu nuovo. Non basta la riga 32:
-  il test cerca ancora "ENTRA NEL MENU" (home tolta), `.pm-card-closed` e "AGGIUNGI SOLO PANINO" (spariti). Solo
-  codice del test; esecuzione solo su Supabase LOCALE (skill `e2e-real-local`), mai DB reale. Aspetta l'OK di Eros.
+- **Prossimo passo:** `tests/e2e-real/kitchen-real-order.spec.js` AGGIORNATO (2026-10-29, non committato): tolto
+  "ENTRA NEL MENU", scheda Pesi Massimi via `.pm-list .pc-cta:not(.pmx-menu-cta)`, "VAI ALLA CASSA" (selettori presi
+  dai test mockati). ESEGUITO su Supabase LOCALE: **PASS** 1/1 (ordine A01, 13,90 €, 1 riga). Manca solo il
+  commit (OK di Eros): `git add tests/e2e-real/kitchen-real-order.spec.js ai-ops/current/RESTYLING_HERO.md` +
+  `test: e2e-real ordine allineato al menu nuovo`.
 - **Dopo:** Eros decide push del branch / merge su `main` / anteprima (Vercel Preview = controllare prima le env:
   rischio DB e pagamenti reali; alternativa sicura `hero-telefono` http://192.168.1.51:5182/kitchen).
 - **Da fare a mano (Eros):** cancellare il file vuoto `src/pages/__head_tmp.jsx` (divieto `rm` per Claude).
