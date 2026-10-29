@@ -20,9 +20,28 @@ Storia completa (H1 → H7 fase 3, audit, brief di Eros copiato esatto): `docs/c
 - **Fuori da questo lavoro (non committare qui):** modifiche a `.claude/*`, `ai-ops/current/RESTYLING_MENU.md`,
   `package-lock.json`, `.claude/hooks/`, `.claude/launch.json`, `ai-ops/current/AUDIT_V2_BRIEF.md`.
 
+## Task in corso: allergeni (2026-10-29, approvato da Eros)
+Obiettivo: ricavare dagli ingredienti i 14 allergeni UE per TUTTE le voci (cibo + bevande), ricontrollando anche
+quelle già compilate; i probabili si mettono (segnati "dedotto" nella bozza). Passi: bozza in
+`ai-ops/reports/allergeni-bozza.md` → aggiornare solo gli array `allergens` in `src/data/kitchenMockData.js`
+(area protetta, OK di Eros) → unit test + lint → Eros fa controllare la bozza al cuoco → commit.
+Niente DB (gli allergeni stanno solo nel file). L'avviso "allergeni da confermare" in UI resta.
+Modello/effort: subagent Sonnet medium; review qui.
+Esito fase 1 (PARZIALE, non committato): 11 voci aggiornate in `kitchenMockData.js` (diff rivisto: solo array
+`allergens`), test lib/api 219/0 come prima, lint invariato (121 preesistenti). Bozza: `ai-ops/reports/allergeni-bozza.md`.
+BLOCCATE dai test (valori bloccati nei test, non toccati): Pulled Pork 009 (+glutine, senape), Pastrami 010 e
+Brisket 011 (+glutine), Box Pulled Pork 018 (glutine, latte, uova, senape), Salumi 043 (frutta_secca, latte).
+Manca anche la chiave 'solfiti' (serve `AllergenBadges.jsx`). Serve l'OK di Eros per modificare test + badge.
+Esito fase 2 (PASS, OK Eros, NON committato): sbloccate 009/010/011/018/043, solfiti aggiunti (010, 011, 059 dedotti) +
+badge `🍷 Solfiti`. Test aggiornati solo nelle attese (`kitchenAllergens.test.js`, `kitchenPrepAggregation.test.js`).
+lib/api 219/0, lint 121 invariato, build ok. Rosso in tests/unit `kitchen-analytics-service-night-selector`
+(useKitchenPayments.js, non toccato: preesistente dedotto) e `sumup-refund-reliability` (preesistente verificato).
+018/043 restano `allergensVerified: false` (staff vede NON VERIFICATI) finché il cuoco conferma la bozza.
+Prossimo: commit (4 file src + questo file) con OK di Eros → cuoco controlla `ai-ops/reports/allergeni-bozza.md`.
+
 ## Decisioni aperte (NEEDS_DECISION, di Eros)
 1. Allergeni veri di Box Pulled Pork e Salumi serissimi (oggi `allergens: []`; dati = area protetta).
-2. "SETI IMPLACABILI": voluto o refuso?
+2. ~~"SETI IMPLACABILI": voluto o refuso?~~ CHIUSA 2026-10-29: è un nome voluto, confermato da Eros.
 3. Fascia prezzo Pesi Massimi con decimali ("Da 11,50 € a 15,00 €"), le altre senza.
 4. Foto mancanti Fanta/Sprite/Estathé (item-063..066, `image: null` in `kitchenMockData.js`, protetto).
 5. Dal giro 5, da riconfermare: N-11 prezzo unitario nel sacco, N-13 dock rosso, N-03 ingredienti tagliati,

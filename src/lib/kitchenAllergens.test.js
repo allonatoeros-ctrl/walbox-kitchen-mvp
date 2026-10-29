@@ -25,7 +25,7 @@ const byId = (id) => kitchenMenuItems.find((i) => i.id === id);
 const sorted = (a) => [...a].sort();
 
 test('item normale: passa attraverso gli allergeni dichiarati, known = true', () => {
-  assert.deepEqual(resolveItemAllergens('item-009'), { allergens: ['uova', 'latte'], known: true });
+  assert.deepEqual(resolveItemAllergens('item-009'), { allergens: ['uova', 'latte', 'glutine', 'senape'], known: true });
   // Un array vuoto dichiarato resta vuoto MA known: e' "nessun allergene", non "non lo so".
   assert.deepEqual(resolveItemAllergens(FALLO_PESANTE_SIDE_ITEM_ID), { allergens: [], known: true });
 });
@@ -90,8 +90,12 @@ test('il glutine della birra inclusa arriva su ogni variante birra verificata', 
   for (const v of variants().filter((x) => verifiedBase(x) && x.id === x.combo.id)) {
     assert.ok(resolveItemAllergens(v.id).allergens.includes('glutine'), `${v.id} senza glutine`);
   }
-  // La variante bibita non eredita il glutine delle birre (Pastrami/Brisket non lo dichiarano).
-  assert.ok(!resolveItemAllergens('item-061').allergens.includes('glutine'));
+  // La variante bibita eredita gli allergeni del piatto base (Pastrami: glutine dal pane, 2026-10-29).
+  const pastrami = byId('item-010').allergens;
+  assert.ok(pastrami.includes('glutine'));
+  for (const a of pastrami) {
+    assert.ok(resolveItemAllergens('item-061').allergens.includes(a), `item-061 non eredita '${a}' dal Pastrami`);
+  }
 });
 
 test('ordine: unione fra righe + elenco delle righe non verificate', () => {
@@ -156,14 +160,22 @@ test('item-018 e item-043 NON sono piu presentati come "nessun allergene"', () =
   for (const id of PRUDENTIAL_UNVERIFIED) {
     const res = resolveItemAllergens(id);
     assert.equal(res.known, false, `${id} risulta ancora verificato`);
-    assert.deepEqual(res.allergens, [], `${id} espone allergeni: non devono essere inventati`);
+    // Il resolver NON pubblica come verificati i valori dedotti: ritorna [] + known false.
+    assert.deepEqual(res.allergens, [], `${id} espone allergeni dedotti come se fossero verificati`);
   }
 });
 
-test('nessun allergene inventato: i dati restano allergens: [] e portano solo il flag', () => {
+// 2026-10-29 (approvazione Eros): array compilati con allergeni DEDOTTI dagli ingredienti, ma il flag
+// allergensVerified: false resta: la UI staff continua a mostrare ALLERGENI NON VERIFICATI.
+const DEDUCED = {
+  'item-018': ['glutine', 'latte', 'uova', 'senape'],
+  'item-043': ['frutta_secca', 'latte'],
+};
+
+test('allergeni dedotti compilati nei dati e sempre accompagnati dal flag allergensVerified: false', () => {
   for (const id of PRUDENTIAL_UNVERIFIED) {
     const item = byId(id);
-    assert.deepEqual(item.allergens, [], `${id}: allergens deve restare vuoto`);
+    assert.deepEqual(sorted(item.allergens), sorted(DEDUCED[id]), `${id}: allergeni dedotti attesi`);
     assert.equal(item.allergensVerified, false, `${id}: manca allergensVerified: false`);
   }
 });

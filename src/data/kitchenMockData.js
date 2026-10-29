@@ -24,7 +24,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_carne_cruda.webp',
     available: true,
     ingredients: 'Carne cruda, rucola, senape in grani, raspadura, olio e limone.',
-    allergens: ['senape'],
+    allergens: ['glutine', 'latte', 'senape'],
   },
   {
     id: 'item-013',
@@ -37,7 +37,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_orto_cattivo.webp',
     available: true,
     ingredients: 'Pomodoro, zucchine e melanzane grigliate, maionese al basilico, stracciatella.',
-    allergens: ['latte', 'uova'],
+    allergens: ['glutine', 'latte', 'uova'],
   },
   {
     id: 'item-014',
@@ -50,7 +50,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_crudo.webp',
     available: true,
     ingredients: 'Crudo, pomodoro, songino e maionese.',
-    allergens: ['uova'],
+    allergens: ['glutine', 'uova'],
   },
   {
     id: 'item-015',
@@ -63,7 +63,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_speck.webp',
     available: true,
     ingredients: 'Speck, boscaiola, taleggio, zucchine.',
-    allergens: ['latte'],
+    allergens: ['glutine', 'latte'],
   },
   {
     id: 'item-016',
@@ -76,7 +76,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/chicken_wrap.webp',
     available: true,
     ingredients: 'Piadina, pollo, bacon, lattuga, raspadura, salsa Caesar.',
-    allergens: ['glutine', 'latte', 'uova'],
+    allergens: ['glutine', 'latte', 'uova', 'pesce', 'senape'],
   },
   {
     id: 'item-017',
@@ -89,7 +89,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_mortazza_piatto.webp',
     available: true,
     ingredients: 'Mortadella, pesto di pistacchi, stracciatella e pomodoro confit.',
-    allergens: ['latte', 'frutta_secca'],
+    allergens: ['glutine', 'latte', 'frutta_secca'],
   },
   {
     id: 'item-032',
@@ -102,7 +102,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_porchetta.webp',
     available: true,
     ingredients: 'Porchetta, peperoni, melanzane, scamorza, salsa BBQ.',
-    allergens: ['latte'],
+    allergens: ['glutine', 'latte'],
   },
   // BIRRE — BEER SPRINT V1 (2026-09-14, ai-ops/current/BEER_SPRINT_V1.md §2/§3).
   // Dati confermati (prezzo/formato): 6 bottiglie, tutte disponibili tutto il giorno
@@ -237,7 +237,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-pulled-pork-special.webp',
     available: true,
     ingredients: 'Carne · coleslaw · anelli di cipolla · salsa cheddar · maionese al pepe',
-    allergens: ['uova', 'latte'],
+    allergens: ['uova', 'latte', 'glutine', 'senape'],
   },
   {
     id: 'item-010',
@@ -250,7 +250,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-pastrami-special.webp',
     available: true,
     ingredients: 'Carne · cetriolo sott’aceto · cheddar · honey mustard',
-    allergens: ['latte', 'senape'],
+    allergens: ['latte', 'senape', 'glutine', 'solfiti'],
   },
   {
     id: 'item-011',
@@ -263,7 +263,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-brisket-special.webp',
     available: true,
     ingredients: 'Brisket · provola affumicata · coleslaw · cetrioli sott’aceto · salsa BBQ',
-    allergens: ['latte', 'uova'],
+    allergens: ['latte', 'uova', 'glutine', 'solfiti'],
   },
   // ANNIVERSARIO 15 ANNI (2026-10-13, decisione Eros) — panino speciale della serata.
   // Il tag `anniversario` e' l'unico aggancio per il badge a tema in PesiMassimiSection:
@@ -284,7 +284,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-garpez-special.webp',
     available: true,
     ingredients: 'Stinco cotto nella birra Petrus Red Aged, con cheddar, cipolla caramellata, cetriolini sott’aceto, insalata di cavolo cappuccio, maionese e senape al miele.',
-    allergens: ['glutine', 'latte', 'senape', 'uova'],
+    allergens: ['glutine', 'latte', 'senape', 'uova', 'solfiti'],
     allergensVerified: false,
   },
   // BOX (standalone speciale, categoria bbq). Dal 2026-10-28 ha il MENU (item-040/060 in
@@ -306,13 +306,12 @@ export const kitchenMenuItems = [
     detailCtaLabel: 'VEDI IL BOX',
     priceNote: 'SOLO BOX',
     ingredients: 'Pulled pork senza pane · patate al forno · anelli di cipolla · salsa coleslaw · salsa cheddar · maionese al pepe',
-    // Fix prudenziale allergeni (2026-09-16, pre-apertura 18/09). `allergens: []` NON e' una
-    // dichiarazione affidabile qui: gli ingredienti includono salsa cheddar e maionese, gli
-    // stessi di item-009 (Pulled Pork) che dichiara ['uova', 'latte']. Non inventiamo quei due
-    // valori al posto di Eros, ma non li presentiamo nemmeno come "nessun allergene": con
-    // `allergensVerified: false` la UI staff mostra ALLERGENI NON VERIFICATI.
-    // Rimuovere questo flag (e scrivere gli allergeni reali) quando Eros conferma ricetta/etichetta.
-    allergens: [],
+    // Allergeni compilati 2026-10-29 (approvazione Eros): DEDOTTI dagli ingredienti, non da
+    // etichette. Certi: latte e uova (salsa cheddar e maionese, come item-009). Dedotti: glutine
+    // (anelli di cipolla impanati), senape (maionese/salse). `allergensVerified: false` mantiene
+    // l'avviso ALLERGENI NON VERIFICATI nella UI staff (il resolver non li pubblica come
+    // verificati): togliere il flag quando Eros conferma ricetta/etichetta.
+    allergens: ['glutine', 'latte', 'uova', 'senape'],
     allergensVerified: false,
   },
   // TARTARE
@@ -358,7 +357,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/cicchetti/cicchetto_mortazza.webp',
     available: true,
     ingredients: 'Pane, mortadella, stracciatella, pomodoro confit.',
-    allergens: ['glutine', 'latte'],
+    allergens: ['glutine', 'latte', 'frutta_secca'],
   },
   {
     id: 'item-035',
@@ -411,7 +410,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/insalatone/insalatona_caesar.webp',
     available: true,
     ingredients: 'Lattughino, pollo, bacon, raspadura, crostini di pane, salsa Caesar.',
-    allergens: ['glutine', 'latte'],
+    allergens: ['glutine', 'latte', 'uova', 'pesce', 'senape'],
   },
   {
     id: 'item-025',
@@ -437,7 +436,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/insalatone/insalatona_veggy.webp',
     available: true,
     ingredients: 'Songino, lattughino, pomodoro, zucchine, melanzane, tofu, teriyaki.',
-    allergens: ['soia'],
+    allergens: ['soia', 'glutine'],
   },
   {
     id: 'item-038',
@@ -470,13 +469,11 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/tagliere/tagliere_salumi_serissimi.webp',
     available: true,
     ingredients: 'Crudo, lardo, mortadella, speck.',
-    // Fix prudenziale allergeni (2026-09-16, pre-apertura 18/09). Il tagliere contiene
-    // mortadella, che in questo stesso menu e' dichiarata con allergeni da entrambe le altre
-    // voci che la usano (item-017 ['latte', 'frutta_secca'], item-034 ['glutine', 'latte']):
-    // `allergens: []` qui e' incoerente col catalogo, non una dichiarazione di assenza.
-    // Nessun allergene inventato: si dichiara "non verificato" finche' Eros non conferma
-    // ricetta/etichetta dei salumi effettivamente serviti.
-    allergens: [],
+    // Allergeni compilati 2026-10-29 (approvazione Eros): DEDOTTI, non da etichette. La
+    // mortadella e' dichiarata con latte/frutta secca nelle altre voci (item-017, item-034,
+    // item-045): frutta_secca (pistacchio) e latte qui. Restano da confermare con l'etichetta
+    // dei salumi serviti: `allergensVerified: false` mantiene l'avviso ALLERGENI NON VERIFICATI.
+    allergens: ['frutta_secca', 'latte'],
     allergensVerified: false,
   },
   {
@@ -503,7 +500,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/tagliere/tagliere_pace_fatta.webp',
     available: true,
     ingredients: 'Crudo, lardo, mortadella, speck, taleggio, pecorino, scamorza, raspadura, stracciatella, servito con miele e marmellata di cipolle.',
-    allergens: ['latte'],
+    allergens: ['latte', 'frutta_secca'],
   },
   // BEVANDE — categoria esposta in MENU_CATEGORIES; voci senza prezzo restano non
   // ordinabili (PREZZO IN ARRIVO), nessun prezzo/marca inventati.

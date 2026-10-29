@@ -15,6 +15,7 @@ export const ALLERGEN_LABEL = {
   crostacei:    '🦐 Crostacei',
   sedano:       '🌿 Sedano',
   sesamo:       '🔸 Sesamo',
+  solfiti:      '🍷 Solfiti',
 };
 
 export default function AllergenBadges({ allergens }) {

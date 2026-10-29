@@ -82,13 +82,13 @@ test('nota cliente non vuota finisce in attention.notes e marca la riga come fla
 });
 
 test('allergene dichiarato su un item noto compare in attention.allergens, raggruppato per allergene', () => {
-  // item-009 nel catalogo reale ha allergens: ['uova', 'latte'] (vedi kitchenAllergens.test.js)
+  // item-009 nel catalogo reale ha allergens: ['uova', 'latte', 'glutine', 'senape'] (vedi kitchenAllergens.test.js)
   const orders = [
     order({ orderCode: 'W14', status: 'preparing', items: [{ itemId: 'item-009', name: 'Pastrami', quantity: 1 }] }),
   ];
   const board = aggregatePrepBoard(orders);
   const byAllergen = Object.fromEntries(board.attention.allergens.map((a) => [a.allergen, a.orderCodes]));
-  assert.deepEqual(byAllergen, { latte: ['W14'], uova: ['W14'] });
+  assert.deepEqual(byAllergen, { latte: ['W14'], uova: ['W14'], glutine: ['W14'], senape: ['W14'] });
 });
 
 test('due ordini con lo stesso allergene finiscono nella stessa riga (una riga per allergene, non per ordine)', () => {
@@ -98,7 +98,7 @@ test('due ordini con lo stesso allergene finiscono nella stessa riga (una riga p
   ];
   const board = aggregatePrepBoard(orders);
   // 2 ordini, stesso item -> stesso set di allergeni: latte/uova devono avere UNA riga ciascuno con 2 codici, non 2 righe.
-  assert.equal(board.attention.allergens.length, 2);
+  assert.equal(board.attention.allergens.length, 4);
   const latte = board.attention.allergens.find((a) => a.allergen === 'latte');
   assert.deepEqual(latte.orderCodes, ['W14', 'W20']);
 });
@@ -372,7 +372,7 @@ test('buildPreparingTickets: allergeni e nota esposti sul ticket', () => {
     }),
   ];
   const { tickets } = buildPreparingTickets(orders);
-  assert.deepEqual(tickets[0].allergens.sort(), ['latte', 'uova']);
+  assert.deepEqual(tickets[0].allergens.sort(), ['glutine', 'latte', 'senape', 'uova']);
   assert.equal(tickets[0].allergensUnverified, false);
   assert.equal(tickets[0].note, 'Senza cipolla');
 });
