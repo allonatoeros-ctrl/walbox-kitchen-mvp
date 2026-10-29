@@ -593,6 +593,17 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+/* gruppi del pannello (APERITIVO, LEGGERO, FAME VERA, DA BERE): titolo piccolo sopra la griglia */
+.kc-group + .kc-group { margin-top: 18px; }
+.kc-group-title {
+  margin: 0 0 8px;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--poster-yellow);
+}
 .kc-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -624,7 +635,7 @@
   border-color: var(--poster-yellow);
   color: var(--poster-on-yellow);
 }
-/* l'ultima categoria, se sola sulla riga, occupa tutta la riga (9 voci = 4 righe + 1) */
+/* l'ultima voce del gruppo, se sola sulla riga, occupa tutta la riga */
 .kc-cat:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .kc-close:focus-visible,
 .kc-cat:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }

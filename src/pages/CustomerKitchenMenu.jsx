@@ -59,6 +59,17 @@ const MENU_CATEGORIES = [
   { key: 'bevande', label: 'BEVANDE' },
 ];
 
+// Gruppi del SOLO pannello CATEGORIE (hamburger), 2026-10-29 decisione Eros: le categorie restano
+// quelle di MENU_CATEGORIES (dati, linguette, cassa e TV invariati), qui cambia solo come sono
+// raccolte. `label` su una voce = scorciatoia verso una categoria con un altro nome (Cicchetto Veg
+// apre Cicchetti). Le categorie non presenti (modalità evento) spariscono, e con loro i gruppi vuoti.
+const MENU_GROUPS = [
+  { label: 'APERITIVO', entries: [{ key: 'tagliere' }, { key: 'cicchetti' }] },
+  { label: 'LEGGERO', entries: [{ key: 'insalatone' }, { key: 'cicchetti', label: 'CICCHETTO VEG' }] },
+  { label: 'FAME VERA', entries: [{ key: 'bbq' }, { key: 'tartare' }, { key: 'panini' }, { key: 'contorni' }] },
+  { label: 'DA BERE', entries: [{ key: 'birre' }, { key: 'bevande' }] },
+];
+
 // Item presenti a catalogo ma nascosti al SOLO menu cliente. Non vengono rimossi da
 // `kitchenMenuItems`: restano ordinabili dalla cassa staff (`/kitchen/cassa`) e restano nel
 // catalogo server, quindi nessun ordine storico e nessuna riga `kitchen_menu_items` cambia.
@@ -742,26 +753,38 @@ export default function CustomerKitchenMenu() {
               <span className="kc-title">CATEGORIE</span>
               <button type="button" className="kc-close" aria-label="Chiudi le categorie" onClick={closeCats}>×</button>
             </div>
-            <div className="kc-grid">
-              {CATEGORIES.map((cat) => {
-                const isActive = activeCategory === cat.key;
-                return (
-                  <button
-                    key={cat.key}
-                    type="button"
-                    className={`kc-cat${isActive ? ' is-active' : ''}`}
-                    aria-current={isActive ? 'true' : undefined}
-                    onClick={() => {
-                      selectCategoryTab(cat.key);
-                      scrollToMenuStart('smooth');
-                      closeCats();
-                    }}
-                  >
-                    {cat.label}
-                  </button>
-                );
-              })}
-            </div>
+            {MENU_GROUPS.map((group) => {
+              const entries = group.entries
+                .map((e) => ({ ...e, cat: CATEGORIES.find((c) => c.key === e.key) }))
+                .filter((e) => e.cat);
+              if (entries.length === 0) return null;
+              return (
+                <section key={group.label} className="kc-group" aria-label={group.label}>
+                  <h3 className="kc-group-title">{group.label}</h3>
+                  <div className="kc-grid">
+                    {entries.map((e) => {
+                      // La scorciatoia (Cicchetto Veg) non si accende: resta gialla solo la categoria vera.
+                      const isActive = !e.label && activeCategory === e.key;
+                      return (
+                        <button
+                          key={e.label || e.key}
+                          type="button"
+                          className={`kc-cat${isActive ? ' is-active' : ''}`}
+                          aria-current={isActive ? 'true' : undefined}
+                          onClick={() => {
+                            selectCategoryTab(e.key);
+                            scrollToMenuStart('smooth');
+                            closeCats();
+                          }}
+                        >
+                          {e.label || e.cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         </div>
       )}
