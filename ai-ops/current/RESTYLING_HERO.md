@@ -5,22 +5,21 @@ Storia completa (H1 → H7 fase 3, audit, brief di Eros copiato esatto): `docs/c
 (copia identica del 2026-10-29). Le sezioni dello storico si leggono solo se servono, per titolo (`grep -n '^## '`).
 
 ## ORA (2026-10-29)
-- **Dove:** cartella `walbox-kitchen-release`, branch `feat/restyling-hero`, HEAD `4d80b92`. 4 commit non pushati
-  (origin fermo a `24f87f2`), 61 commit avanti a `main`. Nessun deploy.
+- **Dove:** cartella `walbox-kitchen-release`, branch `feat/restyling-hero`, HEAD `b6698ca`. 7 commit non pushati,
+  64 commit avanti a `main`. Nessun push, nessun deploy (Eros 2026-10-29: "no deploy").
 - **Fatto:** hero, testata, schede compatte, sacco nero/giallo, foto pulled pork, H7 fasi 1-3 (Pesi Massimi chiari,
-  testi, orientamento + ritocco Ritiro). Tutto committato in locale con OK di Eros.
-- **Prossimo passo:** `tests/e2e-real/kitchen-real-order.spec.js` AGGIORNATO (2026-10-29, non committato): tolto
-  "ENTRA NEL MENU", scheda Pesi Massimi via `.pm-list .pc-cta:not(.pmx-menu-cta)`, "VAI ALLA CASSA" (selettori presi
-  dai test mockati). ESEGUITO su Supabase LOCALE: **PASS** 1/1 (ordine A01, 13,90 €, 1 riga). Manca solo il
-  commit (OK di Eros): `git add tests/e2e-real/kitchen-real-order.spec.js ai-ops/current/RESTYLING_HERO.md` +
-  `test: e2e-real ordine allineato al menu nuovo`.
-- **Dopo:** Eros decide push del branch / merge su `main` / anteprima (Vercel Preview = controllare prima le env:
-  rischio DB e pagamenti reali; alternativa sicura `hero-telefono` http://192.168.1.51:5182/kitchen).
+  testi, orientamento + ritocco Ritiro), e2e-real ordine allineato (`9a8766d`, PASS su Supabase locale), allergeni
+  dedotti su tutto il menu + badge solfiti (`b6698ca`). Tutto committato in locale con OK di Eros.
+- **Prossimo passo:** il cuoco controlla `ai-ops/reports/allergeni-bozza.md` (018/043 restano `allergensVerified:
+  false` finché non conferma). Codice: niente in sospeso.
+- **Dopo:** Eros decide push del branch / merge su `main` / anteprima. Attenzione: un push del branch può far
+  partire un Vercel Preview (= deploy di anteprima, controllare prima le env: rischio DB e pagamenti reali).
+  Alternativa sicura: `hero-telefono` http://192.168.1.51:5182/kitchen.
 - **Da fare a mano (Eros):** cancellare il file vuoto `src/pages/__head_tmp.jsx` (divieto `rm` per Claude).
 - **Fuori da questo lavoro (non committare qui):** modifiche a `.claude/*`, `ai-ops/current/RESTYLING_MENU.md`,
   `package-lock.json`, `.claude/hooks/`, `.claude/launch.json`, `ai-ops/current/AUDIT_V2_BRIEF.md`.
 
-## Task in corso: allergeni (2026-10-29, approvato da Eros)
+## Task chiuso: allergeni (2026-10-29, committato `b6698ca`)
 Obiettivo: ricavare dagli ingredienti i 14 allergeni UE per TUTTE le voci (cibo + bevande), ricontrollando anche
 quelle già compilate; i probabili si mettono (segnati "dedotto" nella bozza). Passi: bozza in
 `ai-ops/reports/allergeni-bozza.md` → aggiornare solo gli array `allergens` in `src/data/kitchenMockData.js`
@@ -37,7 +36,7 @@ badge `🍷 Solfiti`. Test aggiornati solo nelle attese (`kitchenAllergens.test.
 lib/api 219/0, lint 121 invariato, build ok. Rosso in tests/unit `kitchen-analytics-service-night-selector`
 (useKitchenPayments.js, non toccato: preesistente dedotto) e `sumup-refund-reliability` (preesistente verificato).
 018/043 restano `allergensVerified: false` (staff vede NON VERIFICATI) finché il cuoco conferma la bozza.
-Prossimo: commit (4 file src + questo file) con OK di Eros → cuoco controlla `ai-ops/reports/allergeni-bozza.md`.
+Commit fatto (`b6698ca`). Resta: il cuoco controlla `ai-ops/reports/allergeni-bozza.md`.
 
 ## Decisioni aperte (NEEDS_DECISION, di Eros)
 1. Allergeni veri di Box Pulled Pork e Salumi serissimi (oggi `allergens: []`; dati = area protetta).
@@ -55,4 +54,4 @@ Fuori scope noto: staff/cucina/stato ordine vedono ancora "Menu Bibita".
   (senza chiavi il lancio è INVALIDO). Rossi noti e preesistenti (staff/SumUp, non del restyling): 14, 15, 36, 49, 52, C7.
 - Report: `ai-ops/reports/chiarezza-menu/` (fasi H7), `ai-ops/reports/visual/restyling-hero/` (verdetti visivi).
 
-Modello/effort: prossimo passo (test e2e-real) → subagent Sonnet medium; review del diff qui su Opus medium.
+Modello/effort: nessun lavoro di codice in sospeso; decisioni (push/merge) qui su Opus medium.
