@@ -2,12 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CUSTOMER_NAME_MAX,
   KITCHEN_NOTE_MAX,
-  NICKNAME_QUICK_PICKS,
   appendNotePrefix,
   checkoutMissing,
   isValidCustomerName,
   normalizeCustomerName,
-  pickNickname,
 } from '../../lib/kitchenCheckout';
 import {
   PICKUP_FULFILLMENT,
@@ -79,7 +77,6 @@ export default function CustomerCheckout({
   const nameBlockRef = useRef(null);
   const fulfillmentRef = useRef(null);
   const pickupRef = useRef(null);
-  const [rolling, setRolling] = useState(false);
   // "Adesso" per le fasce di ritiro (ora di Roma calcolata in kitchenPickup), aggiornato di continuo.
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -121,12 +118,6 @@ export default function CustomerCheckout({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue]);
 
-  const rollName = () => {
-    onNameChange(pickNickname(customerName));
-    setRolling(true);
-    window.setTimeout(() => setRolling(false), 450);
-  };
-
   const addNotePrefix = (prefix) => {
     onNoteChange(appendNotePrefix(note, prefix));
     window.requestAnimationFrame(() => {
@@ -160,43 +151,10 @@ export default function CustomerCheckout({
             aria-invalid={showNameError || undefined}
             data-testid="customer-name-input"
           />
-          <button
-            type="button"
-            className={`cx-dice${rolling ? ' cx-dice--rolling' : ''}`}
-            onClick={rollName}
-            disabled={submitting}
-            aria-label="Scegli un nome a sorpresa"
-            data-testid="customer-name-dice"
-          >
-            <svg className="cx-dice-icon" viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" focusable="false">
-              <rect x="3.5" y="3.5" width="17" height="17" rx="3" fill="none" stroke="currentColor" strokeWidth="2" />
-              <circle cx="8.5" cy="8.5" r="1.4" fill="currentColor" />
-              <circle cx="15.5" cy="8.5" r="1.4" fill="currentColor" />
-              <circle cx="12" cy="12" r="1.4" fill="currentColor" />
-              <circle cx="8.5" cy="15.5" r="1.4" fill="currentColor" />
-              <circle cx="15.5" cy="15.5" r="1.4" fill="currentColor" />
-            </svg>
-          </button>
-        </div>
-        <div className="cx-chips" role="group" aria-label="Nomi veloci">
-          {NICKNAME_QUICK_PICKS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              className="cx-chip"
-              onClick={() => onNameChange(n)}
-              disabled={submitting}
-              data-testid="customer-name-chip"
-            >
-              {n}
-            </button>
-          ))}
         </div>
         <div id="cx-name-status" aria-live="polite" className="cx-name-status">
           {showNameError ? (
             <span className="cx-error" role="alert" data-testid="customer-name-error">{MISSING_TEXT.name}</span>
-          ) : nameValid ? (
-            <span className="cx-hello" data-testid="customer-name-hello">Piacere, {name}! 🦭</span>
           ) : null}
         </div>
       </div>

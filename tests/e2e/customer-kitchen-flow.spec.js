@@ -1858,9 +1858,9 @@ test('37b. Tap su una corsia senza nome: nessun ordine, messaggio e focus sul no
   expect(sent.calls.length).toBe(0);
 });
 
-// Il nome è il protagonista ma resta veloce: chip e dado riempiono il campo con un nome valido,
+// Il nome è il protagonista ma resta semplice (niente dado, nomi veloci o saluto): si scrive nel campo
 // e quel nome è quello che arriva sulla comanda (p_nickname).
-test('37c. Nome veloce: chip e dado compilano il campo; il nome scelto parte nell\'ordine', async ({ page }) => {
+test('37c. Nome: solo il campo (niente dado, chip o saluto); il nome scritto parte nell\'ordine', async ({ page }) => {
   const sent = await mockCreateOrderRpc(page, { fulfillmentType: 'takeaway', orderCode: 'P03' });
   await page.goto('/kitchen');
   await openFullMenu(page);
@@ -1869,20 +1869,17 @@ test('37c. Nome veloce: chip e dado compilano il campo; il nome scelto parte nel
 
   const input = page.getByTestId('customer-name-input');
   await expect(input).toHaveValue('');
-  await page.getByTestId('customer-name-chip').first().click();
-  await expect(input).toHaveValue('Baffo');
-  await expect(page.getByTestId('customer-name-hello')).toContainText('Baffo');
+  await expect(page.getByTestId('customer-name-dice')).toHaveCount(0);
+  await expect(page.getByTestId('customer-name-chip')).toHaveCount(0);
 
-  await page.getByTestId('customer-name-dice').click();
-  const rolled = await input.inputValue();
-  expect(rolled.length).toBeGreaterThanOrEqual(2);
-  expect(rolled).not.toBe('Baffo');
+  await input.fill('Marco');
+  await expect(page.getByTestId('customer-name-hello')).toHaveCount(0);
 
   await chooseFulfillment(page, 'takeaway');
   await expect(page.getByTestId('checkout-status')).toContainText(/Tricheco approva/i);
   await choosePayLane(page, 'counter');
   await expect(page).toHaveURL(/\/kitchen\/status/);
-  expect(sent.body.p_nickname).toBe(rolled);
+  expect(sent.body.p_nickname).toBe('Marco');
 });
 
 test('38. Pagina pagamento non mostra jukebox, timeline di stato o lista ordini', async ({ page }) => {

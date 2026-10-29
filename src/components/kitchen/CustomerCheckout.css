@@ -107,28 +107,6 @@
   border-color: var(--cx-error);
 }
 
-.cx-dice {
-  flex: 0 0 56px;
-  min-height: 56px;
-  border: 0;
-  border-radius: 12px;
-  background: var(--poster-yellow);
-  color: var(--poster-on-yellow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.cx-dice:active {
-  transform: scale(0.96);
-}
-
-.cx-dice--rolling .cx-dice-icon {
-  animation: cx-roll 0.45s ease-out;
-}
-
 .cx-chips {
   display: flex;
   flex-wrap: wrap;
@@ -164,15 +142,6 @@
   margin-top: 8px;
 }
 
-.cx-hello {
-  display: inline-block;
-  font-family: var(--poster-font-display);
-  font-size: 20px;
-  letter-spacing: var(--poster-track-sm);
-  color: var(--poster-yellow);
-  animation: cx-pop 0.3s ease-out;
-}
-
 /* ── 2. Dove lo mangi ────────────────────────────── */
 .cx-where {
   display: grid;
@@ -198,7 +167,6 @@
 .cx-where-btn:focus-visible,
 .cx-pay:focus-visible,
 .cx-chip:focus-visible,
-.cx-dice:focus-visible,
 .cx-note-input:focus-visible {
   outline: 3px solid var(--poster-ink);
   outline-offset: 2px;
@@ -530,12 +498,6 @@
 }
 
 /* ── Microinterazioni (disattivate con prefers-reduced-motion) ── */
-@keyframes cx-roll {
-  0%   { transform: rotate(0) scale(1); }
-  50%  { transform: rotate(200deg) scale(1.25); }
-  100% { transform: rotate(360deg) scale(1); }
-}
-
 @keyframes cx-pop {
   0%   { transform: scale(0.92); opacity: 0.4; }
   60%  { transform: scale(1.04); opacity: 1; }
@@ -553,8 +515,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cx-dice--rolling .cx-dice-icon,
-  .cx-hello,
   .cx-status--ready,
   .cx-shake {
     animation: none;

@@ -291,3 +291,9 @@ dei 3 combo in `src/data/kitchenMockData.js`. Esecuzione delegata a subagent wal
 I 6 e2e rossi (14, 15, 36, 49, 52 flow + C7 cassa) sono annulla staff / SumUp / coda: non toccano codice cambiato (dedotto, non
 confrontato con baseline). Da fare: Eros cancella a mano `tests/e2e/zz-dbg.spec.js`; decisione allergeni bibite nel combo
 (`kitchenAllergens.js`, fuori scope). **PROSSIMO:** Eros prova a telefono e decide il commit (esclusi `.claude/*` e zz-dbg), niente push.
+
+## Nome senza gamification — FATTO 2026-10-29 (NON committato)
+Richiesta di Eros: via dado, nomi veloci e saluto "Piacere, X! 🦭" dal checkout. Resta il campo nome con controllo (2 caratteri) e la riga di stato ("il Tricheco approva", invariata).
+File: `CustomerCheckout.jsx/.css`, e2e 37c riscritto in `tests/e2e/customer-kitchen-flow.spec.js`. Verificato: unit 213 pass/0 fail/1 skip, eslint 0 su CustomerCheckout.jsx, e2e 37/37b/37c verdi, controllo a video 375 (nessun dado/chip/saluto).
+`NICKNAME_SUGGESTIONS`/`pickNickname` in `kitchenCheckout.js` ora senza usi in UI (lasciati, decisione di Eros se toglierli).
+Commit proposto: `git add src/components/kitchen/CustomerCheckout.jsx src/components/kitchen/CustomerCheckout.css tests/e2e/customer-kitchen-flow.spec.js ai-ops/current/RESTYLING_HERO.md` + `git commit -m "feat: checkout senza gamification sul nome (via dado, nomi veloci e saluto)"`
