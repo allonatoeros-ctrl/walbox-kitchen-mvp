@@ -306,6 +306,8 @@
   padding: 3px 6px;
 }
 .kss-qcard-tag--sync-error { color: var(--kss-red); border-color: var(--kss-red); }
+/* RITIRO AL WALRUS con orario: pieno giallo, deve saltare all'occhio nella coda. */
+.kss-qcard-tag.kss-qcard-tag--pickup { color: #111; background: var(--kss-yellow); border-color: var(--kss-yellow); font-size: 12px; }
 .kss-qcard--late .kss-qcard-min { color: var(--kss-red); }
 .kss-queue-empty {
   padding: 26px 12px;

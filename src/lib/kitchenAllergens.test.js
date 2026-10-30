@@ -12,6 +12,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { kitchenMenuItems, kitchenPesiMassimiCombos } from '../data/kitchenMockData.js';
+import { falloPesanteNeedsSide, isFalloPesanteDrinkAllowed } from './kitchenPesiMassimi.js';
 import {
   resolveItemAllergens,
   resolveOrderAllergens,
@@ -24,7 +25,7 @@ const byId = (id) => kitchenMenuItems.find((i) => i.id === id);
 const sorted = (a) => [...a].sort();
 
 test('item normale: passa attraverso gli allergeni dichiarati, known = true', () => {
-  assert.deepEqual(resolveItemAllergens('item-009'), { allergens: ['uova', 'latte'], known: true });
+  assert.deepEqual(resolveItemAllergens('item-009'), { allergens: ['uova', 'latte', 'glutine', 'senape'], known: true });
   // Un array vuoto dichiarato resta vuoto MA known: e' "nessun allergene", non "non lo so".
   assert.deepEqual(resolveItemAllergens(FALLO_PESANTE_SIDE_ITEM_ID), { allergens: [], known: true });
 });
@@ -38,44 +39,69 @@ test('itemId fuori catalogo: known = false, MAI confuso con "nessun allergene"',
   assert.notEqual(empty.known, unknown.known, 'i due casi devono restare distinguibili');
 });
 
+// MENU OTTOBRE (2026-10-28): ogni MENU ha due varianti (birra `combo.id`, bibita `combo.softDrink.id`);
+// il contorno conta solo con `includesSide` (il Box ha le patate dentro). Il MENU del Box eredita
+// "non verificato" dalla box (item-018, allergensVerified: false).
+const drinks = () => kitchenMenuItems.filter(isFalloPesanteDrinkAllowed);
+const variants = () => Object.entries(kitchenPesiMassimiCombos).flatMap(([baseItemId, combo]) => [
+  { baseItemId, combo, id: combo.id, drinkOptions: falloPesanteBeerOptions() },
+  { baseItemId, combo, id: combo.softDrink.id, drinkOptions: drinks() },
+]);
+const verifiedBase = (v) => byId(v.baseItemId).allergensVerified !== false;
+
 test('ogni combo FALLO PESANTE e l unione derivata dei suoi componenti dichiarati', () => {
-  const beers = falloPesanteBeerOptions();
-  assert.ok(beers.length >= 6, 'catalogo birre del combo inatteso');
+  assert.ok(falloPesanteBeerOptions().length >= 6, 'catalogo birre del combo inatteso');
+  assert.ok(drinks().length >= 4, 'catalogo bibite del combo inatteso');
   const side = byId(FALLO_PESANTE_SIDE_ITEM_ID);
-  for (const [baseItemId, combo] of Object.entries(kitchenPesiMassimiCombos)) {
-    const base = byId(baseItemId);
+  for (const v of variants()) {
+    const got = resolveItemAllergens(v.id);
+    if (!verifiedBase(v)) {
+      assert.deepEqual(got, { allergens: [], known: false }, `${v.id}: base non verificata`);
+      continue;
+    }
     const want = new Set([
-      ...(base.allergens ?? []),
-      ...(side.allergens ?? []),
-      ...beers.flatMap((b) => b.allergens ?? []),
+      ...(byId(v.baseItemId).allergens ?? []),
+      ...(falloPesanteNeedsSide(v.combo) ? side.allergens ?? [] : []),
+      ...v.drinkOptions.flatMap((b) => b.allergens ?? []),
     ]);
-    const got = resolveItemAllergens(combo.id);
-    assert.equal(got.known, true, `${combo.id} deve essere risolvibile`);
-    assert.deepEqual(sorted(got.allergens), sorted([...want]), `unione errata per ${combo.id}`);
+    assert.equal(got.known, true, `${v.id} deve essere risolvibile`);
+    assert.deepEqual(sorted(got.allergens), sorted([...want]), `unione errata per ${v.id}`);
+  }
+});
+
+test('MENU del Box Pulled Pork (birra e bibita): ALLERGENI NON VERIFICATI come la box', () => {
+  for (const id of ['item-040', 'item-060']) {
+    assert.deepEqual(resolveItemAllergens(id), { allergens: [], known: false }, id);
   }
 });
 
 test('nessun combo dichiara MENO allergeni del panino che potenzia (lettura prudente)', () => {
-  for (const [baseItemId, combo] of Object.entries(kitchenPesiMassimiCombos)) {
-    const base = new Set(byId(baseItemId).allergens ?? []);
-    const comboSet = new Set(resolveItemAllergens(combo.id).allergens);
-    for (const a of base) assert.ok(comboSet.has(a), `${combo.id} perde '${a}' rispetto a ${baseItemId}`);
+  for (const v of variants().filter(verifiedBase)) {
+    const base = new Set(byId(v.baseItemId).allergens ?? []);
+    const comboSet = new Set(resolveItemAllergens(v.id).allergens);
+    for (const a of base) assert.ok(comboSet.has(a), `${v.id} perde '${a}' rispetto a ${v.baseItemId}`);
   }
 });
 
-test('il glutine della birra inclusa arriva su tutti e 3 i combo', () => {
+test('il glutine della birra inclusa arriva su ogni variante birra verificata', () => {
   // Non hardcodato: viene dalle birre selezionabili, che dichiarano tutte glutine.
   const beerAllergens = new Set(falloPesanteBeerOptions().flatMap((b) => b.allergens ?? []));
   assert.ok(beerAllergens.has('glutine'));
-  for (const combo of Object.values(kitchenPesiMassimiCombos)) {
-    assert.ok(resolveItemAllergens(combo.id).allergens.includes('glutine'), `${combo.id} senza glutine`);
+  for (const v of variants().filter((x) => verifiedBase(x) && x.id === x.combo.id)) {
+    assert.ok(resolveItemAllergens(v.id).allergens.includes('glutine'), `${v.id} senza glutine`);
+  }
+  // La variante bibita eredita gli allergeni del piatto base (Pastrami: glutine dal pane, 2026-10-29).
+  const pastrami = byId('item-010').allergens;
+  assert.ok(pastrami.includes('glutine'));
+  for (const a of pastrami) {
+    assert.ok(resolveItemAllergens('item-061').allergens.includes(a), `item-061 non eredita '${a}' dal Pastrami`);
   }
 });
 
 test('ordine: unione fra righe + elenco delle righe non verificate', () => {
   const info = resolveOrderAllergens({
     items: [
-      { itemId: 'item-040', name: 'Pulled Pork — Fallo Pesante', quantity: 1 },
+      { itemId: 'item-042', name: 'Brisket — Fallo Pesante', quantity: 1 },
       { itemId: 'item-025', name: 'Salmon', quantity: 1 },
       { itemId: 'item-999', name: 'Roba Ignota', quantity: 1 },
     ],
@@ -134,14 +160,22 @@ test('item-018 e item-043 NON sono piu presentati come "nessun allergene"', () =
   for (const id of PRUDENTIAL_UNVERIFIED) {
     const res = resolveItemAllergens(id);
     assert.equal(res.known, false, `${id} risulta ancora verificato`);
-    assert.deepEqual(res.allergens, [], `${id} espone allergeni: non devono essere inventati`);
+    // Il resolver NON pubblica come verificati i valori dedotti: ritorna [] + known false.
+    assert.deepEqual(res.allergens, [], `${id} espone allergeni dedotti come se fossero verificati`);
   }
 });
 
-test('nessun allergene inventato: i dati restano allergens: [] e portano solo il flag', () => {
+// 2026-10-29 (approvazione Eros): array compilati con allergeni DEDOTTI dagli ingredienti, ma il flag
+// allergensVerified: false resta: la UI staff continua a mostrare ALLERGENI NON VERIFICATI.
+const DEDUCED = {
+  'item-018': ['glutine', 'latte', 'uova', 'senape'],
+  'item-043': ['frutta_secca', 'latte'],
+};
+
+test('allergeni dedotti compilati nei dati e sempre accompagnati dal flag allergensVerified: false', () => {
   for (const id of PRUDENTIAL_UNVERIFIED) {
     const item = byId(id);
-    assert.deepEqual(item.allergens, [], `${id}: allergens deve restare vuoto`);
+    assert.deepEqual(sorted(item.allergens), sorted(DEDUCED[id]), `${id}: allergeni dedotti attesi`);
     assert.equal(item.allergensVerified, false, `${id}: manca allergensVerified: false`);
   }
 });
@@ -172,9 +206,9 @@ test('il flag e opt-in: ogni altra voce con allergens vuoto resta "nessun allerg
   const emptyOthers = kitchenMenuItems.filter(
     (i) => (i.allergens ?? []).length === 0 && !PRUDENTIAL_UNVERIFIED.includes(i.id),
   );
-  // acqua, 5 bibite, patate al forno: assenza reale, coerente con le loro liste ingredienti.
+  // acqua, 7 bibite, patate al forno: assenza reale, coerente con le loro liste ingredienti.
   assert.deepEqual(sorted(emptyOthers.map((i) => i.id)),
-    ['item-038', 'item-046', 'item-047', 'item-048', 'item-049', 'item-050', 'item-058']);
+    ['item-038', 'item-046', 'item-047', 'item-048', 'item-058', 'item-063', 'item-064', 'item-065', 'item-066']);
   for (const i of emptyOthers) {
     assert.equal(resolveItemAllergens(i.id).known, true, `${i.id} non deve diventare non verificato`);
   }
@@ -182,8 +216,8 @@ test('il flag e opt-in: ogni altra voce con allergens vuoto resta "nessun allerg
 
 test('item-058 resta verificato: e componente dei combo, un flag qui li renderebbe tutti opachi', () => {
   assert.equal(resolveItemAllergens(FALLO_PESANTE_SIDE_ITEM_ID).known, true);
-  for (const combo of Object.values(kitchenPesiMassimiCombos)) {
-    assert.equal(resolveItemAllergens(combo.id).known, true, `${combo.id} non deve diventare opaco`);
+  for (const v of variants().filter(verifiedBase)) {
+    assert.equal(resolveItemAllergens(v.id).known, true, `${v.id} non deve diventare opaco`);
   }
 });
 

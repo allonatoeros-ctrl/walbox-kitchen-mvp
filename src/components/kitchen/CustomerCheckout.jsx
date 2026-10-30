@@ -2,40 +2,58 @@ import { useEffect, useRef, useState } from 'react';
 import {
   CUSTOMER_NAME_MAX,
   KITCHEN_NOTE_MAX,
-  NICKNAME_QUICK_PICKS,
   appendNotePrefix,
   checkoutMissing,
   isValidCustomerName,
   normalizeCustomerName,
-  pickNickname,
 } from '../../lib/kitchenCheckout';
+import {
+  PICKUP_FULFILLMENT,
+  PICKUP_WINDOWS,
+  bookablePickupSlotGroups,
+  isPickupSlotBookable,
+} from '../../lib/kitchenPickup';
 import './CustomerCheckout.css';
 
 // Checkout cliente in un solo schermo (Customer Experience V2), dentro il drawer del sacco:
-//   1. nome (protagonista) → 2. dove lo mangi → 3. note cucina (opzionali) → 4. come paghi.
+//   1. nome (protagonista) → 2. dove lo mangi (qui / via / ritiro con orario) → 3. note cucina
+//   (opzionali, sempre aperte) → 4. come paghi.
 // Il tap su "COME PAGHI?" crea l'ordine (S5): niente più CONFERMA → nome → pagamento in tre step.
 // Puramente presentazionale: validazione finale e creazione ordine restano in
 // CustomerKitchenMenu.handleSubmit; qui solo UI, focus sul campo mancante e microcopy.
 
+// RITIRO AL WALRUS (2026-10-28): valore UI 'pickup'; al server va takeaway + orario
+// (kitchenPickup.toServerFulfillment, in CustomerKitchenMenu.handleSubmit).
 const FULFILLMENT_OPTIONS = [
-  { value: 'eat_here', label: 'MANGIO QUI', sub: 'ti chiamiamo', emoji: '🍽️' },
-  { value: 'takeaway', label: 'PORTO VIA', sub: 'impacchettiamo', emoji: '🥡' },
+  { value: 'eat_here', label: 'MANGIO QUI', sub: 'ti chiamiamo' },
+  { value: 'takeaway', label: 'PORTO VIA', sub: 'impacchettiamo' },
+  { value: PICKUP_FULFILLMENT, label: 'RITIRO AL WALRUS', sub: "scegli l'orario, passi e lo prendi" },
 ];
 
+// Le fasce si ricalcolano ogni 30 secondi: un checkout lasciato aperto non propone orari scaduti.
+const PICKUP_CLOCK_MS = 30000;
+
 const PAY_OPTIONS = [
-  { value: 'online', label: 'PAGO ORA', sub: 'dal telefono, va dritto in cucina', emoji: '💳' },
-  { value: 'counter', label: 'PAGO AL BANCO', sub: 'ti diamo un codice, paghi in cassa', emoji: '🧾' },
+  { value: 'online', label: 'PAGO ORA', sub: 'dal telefono, va dritto in cucina' },
+  { value: 'counter', label: 'PAGO AL BANCO', sub: 'ti diamo un codice, paghi in cassa' },
 ];
 
 const MISSING_TEXT = {
   name: 'Scrivi il tuo nome (almeno 2 caratteri)',
   fulfillment: 'Dicci se mangi qui o porti via',
+  pickup_slot: 'Scegli a che ora passi a ritirare',
 };
 
 function readyText(missing, name) {
   if (missing.length === 0) return `${name}, il Tricheco approva: si parte! 🦭`;
-  if (missing.length === 2) return 'Due dritte e si parte: il tuo nome e dove lo mangi.';
-  return missing[0] === 'name' ? 'Quasi! Ti manca solo il nome.' : 'Quasi! Ti manca solo: qui o via?';
+  if (missing.length === 2) {
+    return missing[1] === 'pickup_slot'
+      ? "Due dritte e si parte: il tuo nome e l'orario del ritiro."
+      : 'Due dritte e si parte: il tuo nome e dove lo mangi.';
+  }
+  if (missing[0] === 'name') return 'Quasi! Ti manca solo il nome.';
+  if (missing[0] === 'pickup_slot') return "Quasi! Ti manca solo l'orario del ritiro.";
+  return 'Quasi! Ti manca solo: qui o via?';
 }
 
 export default function CustomerCheckout({
@@ -43,10 +61,10 @@ export default function CustomerCheckout({
   onNameChange,
   fulfillmentType,
   onFulfillmentChange,
+  pickupSlot,
+  onPickupSlotChange,
   note,
   onNoteChange,
-  notesOpen,
-  onNotesOpenChange,
   submitting,
   kitchenOpen,
   total,
@@ -58,13 +76,23 @@ export default function CustomerCheckout({
   const noteRef = useRef(null);
   const nameBlockRef = useRef(null);
   const fulfillmentRef = useRef(null);
-  const [rolling, setRolling] = useState(false);
+  const pickupRef = useRef(null);
+  // "Adesso" per le fasce di ritiro (ora di Roma calcolata in kitchenPickup), aggiornato di continuo.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), PICKUP_CLOCK_MS);
+    return () => window.clearInterval(id);
+  }, []);
+  const pickupGroups = bookablePickupSlotGroups(now);
+  const pickupAvailable = pickupGroups.some((g) => g.slots.length > 0);
+  const isPickup = fulfillmentType === PICKUP_FULFILLMENT;
+  const slotOk = isPickup && isPickupSlotBookable(pickupSlot, now);
   // Un `issue` già presente quando il drawer si riapre è vecchio: non va riproposto.
   const [initialSeq] = useState(issue?.seq ?? 0);
   const liveIssue = issue && issue.seq !== initialSeq ? issue : null;
 
   const name = normalizeCustomerName(customerName);
-  const missing = checkoutMissing({ name: customerName, fulfillmentType });
+  const missing = checkoutMissing({ name: customerName, fulfillmentType, pickupSlot, now });
   const ready = missing.length === 0;
   const nameValid = isValidCustomerName(customerName);
   const showNameError = liveIssue?.field === 'name' && !nameValid;
@@ -73,8 +101,11 @@ export default function CustomerCheckout({
   // scuote (classe tolta a fine animazione, solo DOM: nessuno stato React).
   useEffect(() => {
     if (!liveIssue) return;
-    const block = liveIssue.field === 'name' ? nameBlockRef.current : fulfillmentRef.current;
-    const target = liveIssue.field === 'name' ? nameRef.current : fulfillmentRef.current?.querySelector('button');
+    const blocks = { name: nameBlockRef.current, fulfillment: fulfillmentRef.current, pickup_slot: pickupRef.current ?? fulfillmentRef.current };
+    const block = blocks[liveIssue.field] ?? fulfillmentRef.current;
+    const target = liveIssue.field === 'name'
+      ? nameRef.current
+      : block?.querySelector('button:not([disabled])');
     if (target) {
       target.scrollIntoView?.({ block: 'center', behavior: 'smooth' });
       target.focus({ preventScroll: true });
@@ -86,12 +117,6 @@ export default function CustomerCheckout({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue]);
-
-  const rollName = () => {
-    onNameChange(pickNickname(customerName));
-    setRolling(true);
-    window.setTimeout(() => setRolling(false), 450);
-  };
 
   const addNotePrefix = (prefix) => {
     onNoteChange(appendNotePrefix(note, prefix));
@@ -126,36 +151,10 @@ export default function CustomerCheckout({
             aria-invalid={showNameError || undefined}
             data-testid="customer-name-input"
           />
-          <button
-            type="button"
-            className={`cx-dice${rolling ? ' cx-dice--rolling' : ''}`}
-            onClick={rollName}
-            disabled={submitting}
-            aria-label="Scegli un nome a sorpresa"
-            data-testid="customer-name-dice"
-          >
-            <span aria-hidden="true">🎲</span>
-          </button>
-        </div>
-        <div className="cx-chips" role="group" aria-label="Nomi veloci">
-          {NICKNAME_QUICK_PICKS.map((n) => (
-            <button
-              key={n}
-              type="button"
-              className="cx-chip"
-              onClick={() => onNameChange(n)}
-              disabled={submitting}
-              data-testid="customer-name-chip"
-            >
-              {n}
-            </button>
-          ))}
         </div>
         <div id="cx-name-status" aria-live="polite" className="cx-name-status">
           {showNameError ? (
             <span className="cx-error" role="alert" data-testid="customer-name-error">{MISSING_TEXT.name}</span>
-          ) : nameValid ? (
-            <span className="cx-hello" data-testid="customer-name-hello">Piacere, {name}! 🦭</span>
           ) : null}
         </div>
       </div>
@@ -169,74 +168,111 @@ export default function CustomerCheckout({
       >
         <div className="cx-title" id="cx-where-label">DOVE LO MANGI?</div>
         <div className="cx-where" role="group" aria-labelledby="cx-where-label">
-          {FULFILLMENT_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              data-testid={`fulfillment-${opt.value}`}
-              aria-pressed={fulfillmentType === opt.value}
-              onClick={() => onFulfillmentChange(opt.value)}
-              disabled={submitting}
-              className={`cx-where-btn${fulfillmentType === opt.value ? ' cx-where-btn--on' : ''}`}
-            >
-              <span className="cx-where-emoji" aria-hidden="true">{opt.emoji}</span>
-              <span className="cx-where-text">
-                <span className="cx-where-title">{opt.label}</span>
-                <span className="cx-where-sub">{opt.sub}</span>
-              </span>
-            </button>
-          ))}
+          {FULFILLMENT_OPTIONS.map((opt) => {
+            const pickupOpt = opt.value === PICKUP_FULFILLMENT;
+            // Ritiro senza fasce rimaste oggi: spento, ma resta visibile con la spiegazione sotto.
+            const off = pickupOpt && !pickupAvailable;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                data-testid={`fulfillment-${opt.value}`}
+                aria-pressed={fulfillmentType === opt.value}
+                onClick={() => onFulfillmentChange(opt.value)}
+                disabled={submitting || off}
+                aria-describedby={off ? 'cx-pickup-off' : undefined}
+                className={`cx-where-btn${pickupOpt ? ' cx-where-btn--wide' : ''}${fulfillmentType === opt.value ? ' cx-where-btn--on' : ''}`}
+              >
+                <span className="cx-where-text">
+                  <span className="cx-where-title">{opt.label}</span>
+                  <span className="cx-where-sub">{off ? 'per oggi le fasce sono finite' : opt.sub}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
+        {!pickupAvailable && (
+          <p className="cx-pickup-off" id="cx-pickup-off" data-testid="pickup-unavailable">
+            Ritiro con orario: oggi le fasce sono finite (pranzo {PICKUP_WINDOWS[0].start}–{PICKUP_WINDOWS[0].end},
+            sera {PICKUP_WINDOWS[1].start}–{PICKUP_WINDOWS[1].end}). Scegli PORTO VIA o MANGIO QUI.
+          </p>
+        )}
         {liveIssue?.field === 'fulfillment' && !fulfillmentType && (
           <span className="cx-error" role="alert" data-testid="fulfillment-error">{MISSING_TEXT.fulfillment}</span>
         )}
-      </div>
 
-      {/* 3 — NOTE CUCINA: opzionali, sempre raggiungibili. Una nota già scritta resta visibile. */}
-      <div className="cx-block cx-notes">
-        <button
-          type="button"
-          className={`cx-notes-toggle${notesOpen ? ' cx-notes-toggle--open' : ''}`}
-          aria-expanded={notesOpen}
-          aria-controls="cx-notes-panel"
-          onClick={() => onNotesOpenChange(!notesOpen)}
-          data-testid="kitchen-note-toggle"
-        >
-          <span className="cx-notes-icon" aria-hidden="true">{notesOpen ? '−' : '+'}</span>
-          <span className="cx-notes-name">NOTE PER LA CUCINA</span>
-          <span className="cx-notes-hint">
-            {note.trim() ? '✓ scritta' : 'allergie, senza…'}
-          </span>
-        </button>
-        {notesOpen && (
-          <div id="cx-notes-panel" className="cx-notes-panel">
-            <div className="cx-chips" role="group" aria-label="Scorciatoie note">
-              <button type="button" className="cx-chip cx-chip--warn" onClick={() => addNotePrefix('ALLERGIA: ')} data-testid="note-chip-allergy">
-                <span aria-hidden="true">⚠️</span> ALLERGIA
-              </button>
-              <button type="button" className="cx-chip" onClick={() => addNotePrefix('SENZA ')} data-testid="note-chip-senza">
-                <span aria-hidden="true">🚫</span> SENZA…
-              </button>
-            </div>
-            <label className="cx-sr-only" htmlFor="kitchen-note-input">Note per la cucina</label>
-            <textarea
-              id="kitchen-note-input"
-              ref={noteRef}
-              className="cx-note-input"
-              value={note}
-              onChange={(e) => onNoteChange(e.target.value)}
-              placeholder="Es. allergia al glutine, senza cipolla, ben cotto…"
-              maxLength={KITCHEN_NOTE_MAX}
-              rows={3}
-              aria-describedby="cx-note-help"
-              data-testid="kitchen-note-input"
-            />
-            <div className="cx-note-foot">
-              <span id="cx-note-help">La cucina la legge sulla comanda.</span>
-              <span>{note.length}/{KITCHEN_NOTE_MAX}</span>
-            </div>
+        {/* 2b — ORARIO DEL RITIRO: solo le fasce ancora prenotabili (anticipo minimo in kitchenPickup). */}
+        {isPickup && (
+          <div
+            className="cx-pickup"
+            ref={pickupRef}
+            data-testid="pickup-slots"
+            onAnimationEnd={(e) => e.currentTarget.classList.remove('cx-shake')}
+          >
+            <div className="cx-pickup-title" id="cx-pickup-label">A CHE ORA PASSI?</div>
+            {pickupAvailable ? (
+              pickupGroups.filter((g) => g.slots.length > 0).map((g) => (
+                <div key={g.id} className="cx-pickup-group" role="group" aria-label={`Ritiro ${g.label.toLowerCase()}`}>
+                  <div className="cx-pickup-group-name">{g.label}</div>
+                  <div className="cx-pickup-grid">
+                    {g.slots.map((slot) => (
+                      <button
+                        key={slot}
+                        type="button"
+                        className={`cx-slot${slotOk && pickupSlot === slot ? ' cx-slot--on' : ''}`}
+                        aria-pressed={slotOk && pickupSlot === slot}
+                        onClick={() => onPickupSlotChange(slot)}
+                        disabled={submitting}
+                        data-testid={`pickup-slot-${slot.replace(':', '')}`}
+                      >
+                        {slot}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="cx-pickup-off" data-testid="pickup-none-left">
+                Per oggi le fasce di ritiro sono finite. Scegli PORTO VIA o MANGIO QUI.
+              </p>
+            )}
+            {slotOk ? (
+              <div className="cx-pickup-ok" data-testid="pickup-slot-chosen">Ritiro alle {pickupSlot}: te lo teniamo pronto.</div>
+            ) : liveIssue?.field === 'pickup_slot' ? (
+              <span className="cx-error" role="alert" data-testid="pickup-slot-error">{MISSING_TEXT.pickup_slot}</span>
+            ) : null}
           </div>
         )}
+      </div>
+
+      {/* 3 — NOTE CUCINA: sempre aperte e in vista (2026-10-28), allergie prima di tutto. */}
+      <div className="cx-block cx-notes" data-testid="kitchen-notes">
+        <label className="cx-title cx-notes-title" htmlFor="kitchen-note-input">NOTE PER LA CUCINA</label>
+        <p className="cx-help cx-notes-help">Allergie, intolleranze, «senza cipolla»: scrivilo qui, il cuoco lo legge sulla comanda.</p>
+        <div className="cx-chips cx-notes-chips" role="group" aria-label="Scorciatoie note">
+          <button type="button" className="cx-chip cx-chip--warn" onClick={() => addNotePrefix('ALLERGIA: ')} data-testid="note-chip-allergy">
+            ⚠ ALLERGIA
+          </button>
+          <button type="button" className="cx-chip" onClick={() => addNotePrefix('SENZA ')} data-testid="note-chip-senza">
+            SENZA…
+          </button>
+        </div>
+        <textarea
+          id="kitchen-note-input"
+          ref={noteRef}
+          className="cx-note-input"
+          value={note}
+          onChange={(e) => onNoteChange(e.target.value)}
+          placeholder="Es. allergia al glutine, senza cipolla, ben cotto…"
+          maxLength={KITCHEN_NOTE_MAX}
+          rows={3}
+          aria-describedby="cx-note-help"
+          data-testid="kitchen-note-input"
+        />
+        <div className="cx-note-foot">
+          <span id="cx-note-help">La cucina la legge sulla comanda.</span>
+          <span>{note.length}/{KITCHEN_NOTE_MAX}</span>
+        </div>
       </div>
 
       {/* 4 — TOTALE + COME PAGHI: sempre agganciati in basso, il tap su una corsia invia l'ordine. */}
@@ -250,7 +286,7 @@ export default function CustomerCheckout({
           <div data-testid="pay-lane-step" role="group" aria-labelledby="cx-pay-label">
             <div className="cx-pay-head">
               <span className="cx-title" id="cx-pay-label">COME PAGHI?</span>
-              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>€{total.toFixed(2).replace('.', ',')}</span>
+              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>{total.toFixed(2).replace('.', ',')}&nbsp;€</span>
             </div>
             <div
               key={ready ? 'ready' : 'idle'}
@@ -272,7 +308,6 @@ export default function CustomerCheckout({
                   disabled={submitting}
                   aria-describedby="cx-pay-status"
                 >
-                  <span className="cx-pay-emoji" aria-hidden="true">{opt.emoji}</span>
                   <span className="cx-pay-text">
                     <span className="cx-pay-title">{opt.label}</span>
                     <span className="cx-pay-sub">{opt.sub}</span>
@@ -287,7 +322,7 @@ export default function CustomerCheckout({
           <>
             <div className="cx-pay-head">
               <span className="cx-title">COME PAGHI?</span>
-              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>€{total.toFixed(2).replace('.', ',')}</span>
+              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>{total.toFixed(2).replace('.', ',')}&nbsp;€</span>
             </div>
             <button
               type="button"

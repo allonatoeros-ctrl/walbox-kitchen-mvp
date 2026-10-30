@@ -48,6 +48,19 @@ test('checkoutMissing: nome prima, poi dove lo mangia', () => {
   assert.deepEqual(checkoutMissing({ name: 'Marco', fulfillmentType: 'takeaway' }), []);
 });
 
+test('checkoutMissing: RITIRO AL WALRUS senza orario (o con orario scaduto) = manca l orario', () => {
+  // 28/10/2026 ore 12:30 a Roma (UTC+1).
+  const now = Date.UTC(2026, 9, 28, 11, 30);
+  assert.deepEqual(checkoutMissing({ name: 'Marco', fulfillmentType: 'pickup', pickupSlot: null }), ['pickup_slot']);
+  assert.deepEqual(checkoutMissing({ name: '', fulfillmentType: 'pickup' }), ['name', 'pickup_slot']);
+  assert.deepEqual(checkoutMissing({ name: 'Marco', fulfillmentType: 'pickup', pickupSlot: '13:10' }), ['pickup_slot']);
+  assert.deepEqual(checkoutMissing({ name: 'Marco', fulfillmentType: 'pickup', pickupSlot: '13:15' }), []);
+  assert.deepEqual(checkoutMissing({ name: 'Marco', fulfillmentType: 'pickup', pickupSlot: '13:00', now }), []);
+  assert.deepEqual(checkoutMissing({ name: 'Marco', fulfillmentType: 'pickup', pickupSlot: '12:30', now }), ['pickup_slot']);
+  // PORTO VIA non chiede mai un orario, anche se ne resta uno in memoria.
+  assert.deepEqual(checkoutMissing({ name: 'Marco', fulfillmentType: 'takeaway', pickupSlot: null, now }), []);
+});
+
 test('appendNotePrefix: nota vuota, nota esistente, prefisso già presente, limite', () => {
   assert.equal(appendNotePrefix('', 'ALLERGIA: '), 'ALLERGIA: ');
   assert.equal(appendNotePrefix('ben cotto', 'ALLERGIA: '), 'ben cotto · ALLERGIA: ');

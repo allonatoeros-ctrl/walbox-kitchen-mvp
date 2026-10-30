@@ -19,6 +19,7 @@ import {
   readHiddenOrderIds,
   hideOrderId,
   buildRebuildCart,
+  isPickupSlotError,
 } from './kitchenOnlineLane.js';
 
 function fakeStorage(initial = {}) {
@@ -236,4 +237,38 @@ test('buildRebuildCart: con carrello gia pieno somma le quantita e tiene nota/ri
   assert.equal(cart.note, 'senza sale');
   assert.equal(cart.fulfillmentType, 'eat_here');
   assert.deepEqual(buildRebuildCart(order, { items: [], note: '', fulfillmentType: null }).items.length, 2);
+});
+
+test('RITIRO AL WALRUS: l orario entra nell impronta solo se c e (impronte vecchie invariate)', () => {
+  const t = { items: [{ itemId: 'x', quantity: 1 }], fulfillmentType: 'takeaway', note: '' };
+  assert.equal(cartFingerprint(t), cartFingerprint({ ...t, pickupSlot: null }));
+  assert.equal(cartFingerprint(t), JSON.stringify([['x:1'], 'takeaway', '']));
+  assert.notEqual(cartFingerprint(t), cartFingerprint({ ...t, pickupSlot: '13:15' }), 'PORTO VIA != ritiro');
+  assert.notEqual(cartFingerprint({ ...t, pickupSlot: '13:15' }), cartFingerprint({ ...t, pickupSlot: '13:30' }), 'cambio orario = id nuovo');
+  const s = fakeStorage();
+  const memory = {};
+  let n = 0;
+  const gen = () => `id-${++n}`;
+  const a = getOrCreateClientRequestId(cartFingerprint({ ...t, pickupSlot: '13:15' }), { storage: s, generateId: gen, memory });
+  const b = getOrCreateClientRequestId(cartFingerprint({ ...t, pickupSlot: '13:30' }), { storage: s, generateId: gen, memory });
+  assert.notEqual(a, b);
+});
+
+test('RITIRO AL WALRUS: errori orario dalla RPC v3 in messaggi cliente chiari', () => {
+  const past = { message: 'pickup_slot_in_past' };
+  const invalid = new Error('invalid_pickup_slot');
+  assert.match(onlineErrorMessage(past), /già passato/);
+  assert.match(onlineErrorMessage(invalid), /non valido/);
+  assert.equal(isPickupSlotError(past), true);
+  assert.equal(isPickupSlotError(invalid), true);
+  assert.equal(isPickupSlotError({ message: 'kitchen_closed' }), false);
+  assert.equal(isPickupSlotError(null), false);
+});
+
+test('RITIRO AL WALRUS: RIFAI L ORDINE riporta ritiro e orario (loadCart scarta quello scaduto)', () => {
+  const order = { fulfillmentType: 'takeaway', pickupSlot: '19:30', items: [{ itemId: 'a', quantity: 1 }] };
+  const cart = buildRebuildCart(order);
+  assert.equal(cart.fulfillmentType, 'pickup');
+  assert.equal(cart.pickupSlot, '19:30');
+  assert.equal(buildRebuildCart({ ...order, pickupSlot: null }).fulfillmentType, 'takeaway');
 });

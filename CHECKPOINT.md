@@ -1,5 +1,5 @@
 # CHECKPOINT — Walbox Kitchen
-Aggiornato: 2026-10-13 (checkout V2 in produzione). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
+Aggiornato: 2026-10-30 (restyling hero/menu cliente, PR #6 aperta). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
 
 Regole di questo file: solo stato corrente. Niente cronologia (va nell'archivio), niente regole stabili
 (vanno in `ai-ops/knowledge/MEMORY.md`), un solo NEXT STEP. Lavoro in corso multi-fase: il file di stato
@@ -8,8 +8,16 @@ indicato nel NEXT STEP (oggi `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`).
 ## FASE
 - Kitchen Recovery (piano `ai-ops/current/KITCHEN_RECOVERY_PLAN.md`): riordino linea, onboarding, poi
   "Pagamento app separato" (S2…S7).
-- Branch `kitchen-clean-baseline-v2-phase-a` (worktree `walbox-kitchen-release`): linea Kitchen più completa.
-  `main` pushato fino a `661df75` (2026-10-13): HEAD = `origin/main`.
+- **Working copy (2026-10-24):** `walbox-kitchen-release` è l'unica cartella operativa (repo git normale).
+  Branch `feat/restyling-menu`, creato da `origin/main` = `f5bfd74` (verificato 2026-10-24), non pushato.
+  `.claude/settings.json` (hook guard), `.claude/hooks/`, `.claude/launch.json` e `ai-ops/current/RESTYLING_MENU.md`
+  sono non committati (scelta di Eros: `.claude/*` fuori dai commit).
+- **Festa 15 anni passata (16/10):** modalità evento spenta in `main` (`f5bfd74`), Garpez resta nel menu PESI MASSIMI;
+  tab EVENTO nella cassa. Migration catalogo `item-059` (Garpez) `c000295` in `main`: stato remoto non verificato.
+- **Non in `main`:** il branch `feat/anniversario-15-anni` ha 2 commit locali non pushati e la pulizia repo Phase 4
+  (`b084970`, `56245b1`, `2af89fb`, `2810688`, `3c034a6`: codice morto, asset non usati, docs legacy, README, ESLint).
+  Decisione di Eros su push/merge: aperta.
+- Il resto di questa sezione (Kitchen Recovery, checkout V2, DB) è dello stato del 2026-10-13, non riverificato.
 - **Checkout V2 in produzione dal 2026-10-13** (merge `d1fe37e` di `claude/customer-experience-v2`):
   nome, dove lo mangi, note cucina e corsia di pagamento su una schermata sola, al posto del flusso a tre
   passaggi; rimosso il codice promo dal carrello. Collaudo con baseline in
@@ -60,8 +68,7 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-**Anniversario 15 anni** — Fase 0 chiusa (checkout V2 collaudato, merge e push fatti). Prossima: **Fase 1,
-item GARPEZ** in `src/data/kitchenMockData.js` (area protetta §5): ingredienti e allergeni sono decisi
-(`['glutine','latte','senape']`, `allergensVerified: false`), manca la foto della Fase 2 per il campo
-`image` — serve lo scatto su green screen da Eros. Poi modalità evento (Fase 3) e animazione (Fase 4).
-Stato dettagliato: `ai-ops/current/ANNIVERSARIO_15_ANNI.md`.
+**Merge della PR #6 (`feat/restyling-hero` → `main`) = deploy produzione, decide Eros.** Branch pushato e allineato
+(2026-10-30), 59 commit avanti a `main`. Prima: guardare la Preview Vercel (env Preview con DB/pagamenti reali: non
+pagare) e far controllare al cuoco `ai-ops/reports/allergeni-bozza.md`. Stato dettagliato (blocco `## ORA`):
+`ai-ops/current/RESTYLING_HERO.md`.

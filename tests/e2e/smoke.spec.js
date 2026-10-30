@@ -10,5 +10,5 @@ test.beforeEach(async ({ page }) => {
 test('smoke: root entry point loads the Kitchen home', async ({ page }) => {
   await page.goto('/');
   await expect(page).toHaveURL(/\/kitchen$/);
-  await expect(page.getByRole('button', { name: /ENTRA NEL MENU/i })).toBeVisible({ timeout: 10000 });
+  await expect(page.getByRole('button', { name: /PESI MASSIMI/i }).first()).toBeVisible({ timeout: 10000 });
 });

@@ -14,12 +14,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC = join(__dirname, '..');
 const read = (rel) => readFileSync(join(SRC, rel), 'utf8');
 
-function ruleBody(css, selector) {
-  const i = css.indexOf(selector + ' {');
-  assert.ok(i > -1, `selettore mancante: ${selector}`);
-  return css.slice(i, css.indexOf('}', i));
-}
-
 function allSourceFiles(dir = SRC, acc = []) {
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, e.name);
@@ -31,19 +25,13 @@ function allSourceFiles(dir = SRC, acc = []) {
 
 // ── 2. IMMAGINI BIRRA ────────────────────────────────────────────────────────
 test('ogni frame immagine birra usa contain: con cover di una bottiglia 1:2 se ne vedeva meta', () => {
-  const br = read('components/kitchen/BirreSection.css');
-  for (const sel of ['.br-card-photo', '.br-card-body-photo']) {
-    const body = ruleBody(br, sel);
-    assert.match(body, /object-fit:\s*contain/, `${sel} deve essere contain`);
-    assert.match(body, /object-position:\s*center/, `${sel} deve essere centrato`);
-  }
-});
-
-test('i frame birra sono piu piccoli di prima (card compatte su telefono)', () => {
-  const br = read('components/kitchen/BirreSection.css');
-  assert.match(ruleBody(br, '.br-card-photo-wrap'), /width:\s*72px/);       // era 96
-  assert.match(ruleBody(br, '.br-card-photo'), /max-height:\s*132px/);      // era 192 pieni
-  assert.match(ruleBody(br, '.br-card-body-photo-wrap'), /height:\s*168px/); // era 220
+  // Restyling hero: le birre sono schede `PosterCard`; il contain arriva dalla prop `photoFit`.
+  const birre = read('components/kitchen/BirreSection.jsx');
+  assert.match(birre, /photoFit="contain"/, 'BirreSection deve chiedere photoFit="contain"');
+  assert.doesNotMatch(birre, /objectPosition=/, 'le bottiglie restano centrate (default 50% 50%)');
+  const card = read('components/kitchen/PosterCard.jsx');
+  assert.match(card, /objectPosition = '50% 50%'/, 'PosterCard centra la foto di default');
+  assert.match(card, /objectFit: photoFit/, 'PosterCard deve applicare photoFit alla foto');
 });
 
 test('tutte e 6 le birre hanno un asset: nessuna cade sul placeholder', () => {
@@ -74,8 +62,10 @@ test('il combo mostra il selettore birra (pillole, dettaglio, conferma)', () => 
 });
 
 test('il sottotitolo del combo dice esattamente cosa c\'e dentro', () => {
+  // MENU OTTOBRE (2026-10-28): il MENU Pulled Pork sta sul Box, che ha gia' le patate dentro.
   for (const c of Object.values(kitchenPesiMassimiCombos)) {
-    assert.equal(c.subtitle, 'PANINO + BIRRA + PATATE AL FORNO', `${c.id} ha il sottotitolo sbagliato`);
+    const want = c.includesSide === false ? 'BOX CON PATATE + DA BERE' : 'PANINO + DA BERE + PATATE AL FORNO';
+    assert.equal(c.subtitle, want, `${c.id} ha il sottotitolo sbagliato`);
   }
 });
 

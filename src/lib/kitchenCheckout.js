@@ -1,5 +1,6 @@
 // Regole pure del checkout cliente (Customer Experience V2): nome, nickname a sorpresa, note cucina.
 // Nessun accesso a rete/storage: tutto testabile in `kitchenCheckout.test.js`.
+import { PICKUP_FULFILLMENT, isPickupSlotBookable, isValidPickupSlot } from './kitchenPickup.js';
 
 export const GUEST_NICKNAME = 'Ospite Walrus';
 export const CUSTOMER_NAME_MAX = 24;
@@ -42,11 +43,23 @@ export function pickNickname(current, random = Math.random) {
 }
 
 // Cosa manca per poter inviare l'ordine, nell'ordine in cui lo mostriamo al cliente.
-export function checkoutMissing({ name, fulfillmentType }) {
+// RITIRO AL WALRUS (2026-10-28): con la scelta 'pickup' serve anche un orario ancora prenotabile
+// (`now` iniettabile; senza `now` basta che la fascia esista). Un orario scaduto mentre il cliente
+// era sul checkout conta come mancante: si torna a sceglierlo invece di farlo rifiutare dal server.
+export function checkoutMissing({ name, fulfillmentType, pickupSlot, now }) {
   const missing = [];
   if (!isValidCustomerName(name)) missing.push('name');
   if (!fulfillmentType) missing.push('fulfillment');
+  if (fulfillmentType === PICKUP_FULFILLMENT) {
+    const ok = now == null ? isValidPickupSlot(pickupSlot) : isPickupSlotBookable(pickupSlot, now);
+    if (!ok) missing.push('pickup_slot');
+  }
   return missing;
+}
+
+// Stesso controllo all'istante dell'invio (orologio reale): usato da handleSubmit.
+export function checkoutMissingAtSubmit(fields) {
+  return checkoutMissing({ ...fields, now: Date.now() });
 }
 
 // Prefissi rapidi per le note cucina ("ALLERGIA: ", "SENZA "). Si accodano al testo già scritto,

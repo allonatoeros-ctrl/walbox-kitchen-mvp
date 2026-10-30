@@ -24,7 +24,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_carne_cruda.webp',
     available: true,
     ingredients: 'Carne cruda, rucola, senape in grani, raspadura, olio e limone.',
-    allergens: ['senape'],
+    allergens: ['glutine', 'latte', 'senape'],
   },
   {
     id: 'item-013',
@@ -37,7 +37,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_orto_cattivo.webp',
     available: true,
     ingredients: 'Pomodoro, zucchine e melanzane grigliate, maionese al basilico, stracciatella.',
-    allergens: ['latte', 'uova'],
+    allergens: ['glutine', 'latte', 'uova'],
   },
   {
     id: 'item-014',
@@ -50,7 +50,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_crudo.webp',
     available: true,
     ingredients: 'Crudo, pomodoro, songino e maionese.',
-    allergens: ['uova'],
+    allergens: ['glutine', 'uova'],
   },
   {
     id: 'item-015',
@@ -63,7 +63,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_speck.webp',
     available: true,
     ingredients: 'Speck, boscaiola, taleggio, zucchine.',
-    allergens: ['latte'],
+    allergens: ['glutine', 'latte'],
   },
   {
     id: 'item-016',
@@ -76,7 +76,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/chicken_wrap.webp',
     available: true,
     ingredients: 'Piadina, pollo, bacon, lattuga, raspadura, salsa Caesar.',
-    allergens: ['glutine', 'latte', 'uova'],
+    allergens: ['glutine', 'latte', 'uova', 'pesce', 'senape'],
   },
   {
     id: 'item-017',
@@ -89,7 +89,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_mortazza_piatto.webp',
     available: true,
     ingredients: 'Mortadella, pesto di pistacchi, stracciatella e pomodoro confit.',
-    allergens: ['latte', 'frutta_secca'],
+    allergens: ['glutine', 'latte', 'frutta_secca'],
   },
   {
     id: 'item-032',
@@ -102,7 +102,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/panini/panino_porchetta.webp',
     available: true,
     ingredients: 'Porchetta, peperoni, melanzane, scamorza, salsa BBQ.',
-    allergens: ['latte'],
+    allergens: ['glutine', 'latte'],
   },
   // BIRRE — BEER SPRINT V1 (2026-09-14, ai-ops/current/BEER_SPRINT_V1.md §2/§3).
   // Dati confermati (prezzo/formato): 6 bottiglie, tutte disponibili tutto il giorno
@@ -237,7 +237,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-pulled-pork-special.webp',
     available: true,
     ingredients: 'Carne · coleslaw · anelli di cipolla · salsa cheddar · maionese al pepe',
-    allergens: ['uova', 'latte'],
+    allergens: ['uova', 'latte', 'glutine', 'senape'],
   },
   {
     id: 'item-010',
@@ -250,7 +250,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-pastrami-special.webp',
     available: true,
     ingredients: 'Carne · cetriolo sott’aceto · cheddar · honey mustard',
-    allergens: ['latte', 'senape'],
+    allergens: ['latte', 'senape', 'glutine', 'solfiti'],
   },
   {
     id: 'item-011',
@@ -263,7 +263,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-brisket-special.webp',
     available: true,
     ingredients: 'Brisket · provola affumicata · coleslaw · cetrioli sott’aceto · salsa BBQ',
-    allergens: ['latte', 'uova'],
+    allergens: ['latte', 'uova', 'glutine', 'solfiti'],
   },
   // ANNIVERSARIO 15 ANNI (2026-10-13, decisione Eros) — panino speciale della serata.
   // Il tag `anniversario` e' l'unico aggancio per il badge a tema in PesiMassimiSection:
@@ -284,10 +284,11 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/photo-garpez-special.webp',
     available: true,
     ingredients: 'Stinco cotto nella birra Petrus Red Aged, con cheddar, cipolla caramellata, cetriolini sott’aceto, insalata di cavolo cappuccio, maionese e senape al miele.',
-    allergens: ['glutine', 'latte', 'senape', 'uova'],
+    allergens: ['glutine', 'latte', 'senape', 'uova', 'solfiti'],
     allergensVerified: false,
   },
-  // BOX (standalone speciale, categoria bbq — no FALLO PESANTE: nessuna entry in kitchenPesiMassimiCombos)
+  // BOX (standalone speciale, categoria bbq). Dal 2026-10-28 ha il MENU (item-040/060 in
+  // kitchenPesiMassimiCombos): box + da bere, le patate sono gia' nella box.
   // MENU POLISH SPRINT (2026-09-16, decisione Eros): resta dentro PESI MASSIMI ma non va
   // MAI chiamato panino. `detailCtaLabel`/`priceNote` sono override di copy opzionali letti
   // da PesiMassimiSection.jsx: assenti sugli altri item bbq → fallback "VEDI IL PANINO" /
@@ -300,18 +301,17 @@ export const kitchenMenuItems = [
     price: 11.5,
     points: null,
     tags: ['v2'],
-    image: '/assets/kitchen/menu/box/box-pulled-pork.png',
+    image: '/assets/kitchen/menu/box/box-pulled-pork.webp',
     available: true,
     detailCtaLabel: 'VEDI IL BOX',
     priceNote: 'SOLO BOX',
     ingredients: 'Pulled pork senza pane · patate al forno · anelli di cipolla · salsa coleslaw · salsa cheddar · maionese al pepe',
-    // Fix prudenziale allergeni (2026-09-16, pre-apertura 18/09). `allergens: []` NON e' una
-    // dichiarazione affidabile qui: gli ingredienti includono salsa cheddar e maionese, gli
-    // stessi di item-009 (Pulled Pork) che dichiara ['uova', 'latte']. Non inventiamo quei due
-    // valori al posto di Eros, ma non li presentiamo nemmeno come "nessun allergene": con
-    // `allergensVerified: false` la UI staff mostra ALLERGENI NON VERIFICATI.
-    // Rimuovere questo flag (e scrivere gli allergeni reali) quando Eros conferma ricetta/etichetta.
-    allergens: [],
+    // Allergeni compilati 2026-10-29 (approvazione Eros): DEDOTTI dagli ingredienti, non da
+    // etichette. Certi: latte e uova (salsa cheddar e maionese, come item-009). Dedotti: glutine
+    // (anelli di cipolla impanati), senape (maionese/salse). `allergensVerified: false` mantiene
+    // l'avviso ALLERGENI NON VERIFICATI nella UI staff (il resolver non li pubblica come
+    // verificati): togliere il flag quando Eros conferma ricetta/etichetta.
+    allergens: ['glutine', 'latte', 'uova', 'senape'],
     allergensVerified: false,
   },
   // TARTARE
@@ -357,7 +357,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/cicchetti/cicchetto_mortazza.webp',
     available: true,
     ingredients: 'Pane, mortadella, stracciatella, pomodoro confit.',
-    allergens: ['glutine', 'latte'],
+    allergens: ['glutine', 'latte', 'frutta_secca'],
   },
   {
     id: 'item-035',
@@ -410,7 +410,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/insalatone/insalatona_caesar.webp',
     available: true,
     ingredients: 'Lattughino, pollo, bacon, raspadura, crostini di pane, salsa Caesar.',
-    allergens: ['glutine', 'latte'],
+    allergens: ['glutine', 'latte', 'uova', 'pesce', 'senape'],
   },
   {
     id: 'item-025',
@@ -436,7 +436,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/insalatone/insalatona_veggy.webp',
     available: true,
     ingredients: 'Songino, lattughino, pomodoro, zucchine, melanzane, tofu, teriyaki.',
-    allergens: ['soia'],
+    allergens: ['soia', 'glutine'],
   },
   {
     id: 'item-038',
@@ -446,7 +446,7 @@ export const kitchenMenuItems = [
     price: 1.0,
     points: null,
     tags: ['drink'],
-    image: '/assets/kitchen/menu/bevande/bevanda_acqua.webp',
+    image: '/assets/kitchen/menu/bevande/item-038-acqua.webp',
     format: '0,5 L',
     available: true,
     ingredients: 'Acqua.',
@@ -469,13 +469,11 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/tagliere/tagliere_salumi_serissimi.webp',
     available: true,
     ingredients: 'Crudo, lardo, mortadella, speck.',
-    // Fix prudenziale allergeni (2026-09-16, pre-apertura 18/09). Il tagliere contiene
-    // mortadella, che in questo stesso menu e' dichiarata con allergeni da entrambe le altre
-    // voci che la usano (item-017 ['latte', 'frutta_secca'], item-034 ['glutine', 'latte']):
-    // `allergens: []` qui e' incoerente col catalogo, non una dichiarazione di assenza.
-    // Nessun allergene inventato: si dichiara "non verificato" finche' Eros non conferma
-    // ricetta/etichetta dei salumi effettivamente serviti.
-    allergens: [],
+    // Allergeni compilati 2026-10-29 (approvazione Eros): DEDOTTI, non da etichette. La
+    // mortadella e' dichiarata con latte/frutta secca nelle altre voci (item-017, item-034,
+    // item-045): frutta_secca (pistacchio) e latte qui. Restano da confermare con l'etichetta
+    // dei salumi serviti: `allergensVerified: false` mantiene l'avviso ALLERGENI NON VERIFICATI.
+    allergens: ['frutta_secca', 'latte'],
     allergensVerified: false,
   },
   {
@@ -502,7 +500,7 @@ export const kitchenMenuItems = [
     image: '/assets/kitchen/menu/tagliere/tagliere_pace_fatta.webp',
     available: true,
     ingredients: 'Crudo, lardo, mortadella, speck, taleggio, pecorino, scamorza, raspadura, stracciatella, servito con miele e marmellata di cipolle.',
-    allergens: ['latte'],
+    allergens: ['latte', 'frutta_secca'],
   },
   // BEVANDE — categoria esposta in MENU_CATEGORIES; voci senza prezzo restano non
   // ordinabili (PREZZO IN ARRIVO), nessun prezzo/marca inventati.
@@ -532,7 +530,7 @@ export const kitchenMenuItems = [
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: '/assets/kitchen/menu/bevande/bevanda_pepsi.webp',
+    image: '/assets/kitchen/menu/bevande/item-046-pepsi.webp',
     format: '33 cl',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
@@ -546,7 +544,7 @@ export const kitchenMenuItems = [
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: '/assets/kitchen/menu/bevande/bevanda_pepsi_zero.webp',
+    image: '/assets/kitchen/menu/bevande/item-047-pepsi-zero.webp',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
@@ -559,35 +557,65 @@ export const kitchenMenuItems = [
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: '/assets/kitchen/menu/bevande/bevanda_seven_up.webp',
+    image: '/assets/kitchen/menu/bevande/item-048-seven-up.webp',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
   },
+  // MENU OTTOBRE (2026-10-28, decisione Eros): via Schweppes Lemon/Tonica (item-049/050, tolte
+  // anche dal catalogo server), dentro Fanta, Sprite, Estathé Pesca e Limone in lattina a €4.
+  // Foto consegnate 2026-10-30. Formato non
+  // confermato: nessun `format`, stessa regola delle altre bibite.
   {
-    id: 'item-049',
-    name: 'Schweppes Lemon',
+    id: 'item-063',
+    name: 'Fanta',
     category: 'bevande',
     description: 'Bibita analcolica gassata.',
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: '/assets/kitchen/menu/bevande/bevanda_schweppes_lemon.webp',
+    image: '/assets/kitchen/menu/bevande/item-063-fanta.webp',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
     allergens: [],
   },
   {
-    id: 'item-050',
-    name: 'Schweppes Tonica',
+    id: 'item-064',
+    name: 'Sprite',
     category: 'bevande',
     description: 'Bibita analcolica gassata.',
     price: 4.0,
     points: null,
     tags: ['drink'],
-    image: '/assets/kitchen/menu/bevande/bevanda_schweppes_tonica.webp',
+    image: '/assets/kitchen/menu/bevande/item-064-sprite.webp',
     available: true,
     ingredients: 'Bibita analcolica gassata.',
+    allergens: [],
+  },
+  {
+    id: 'item-065',
+    name: 'Estathé Pesca',
+    category: 'bevande',
+    description: 'Tè freddo alla pesca, in lattina.',
+    price: 4.0,
+    points: null,
+    tags: ['drink'],
+    image: '/assets/kitchen/menu/bevande/item-065-estathe-pesca.webp',
+    available: true,
+    ingredients: 'Tè freddo alla pesca, in lattina.',
+    allergens: [],
+  },
+  {
+    id: 'item-066',
+    name: 'Estathé Limone',
+    category: 'bevande',
+    description: 'Tè freddo al limone, in lattina.',
+    price: 4.0,
+    points: null,
+    tags: ['drink'],
+    image: '/assets/kitchen/menu/bevande/item-066-estathe-limone.webp',
+    available: true,
+    ingredients: 'Tè freddo al limone, in lattina.',
     allergens: [],
   },
   // CONTORNI — MENU CLEANUP + PRICE SPRINT (2026-09-15, prezzo confermato da Eros).
@@ -625,29 +653,41 @@ export const kitchenMenuItems = [
 // rimaste (item-051→056, Krombacher esclusa). Le birre selezionabili si leggono da
 // `falloPesanteBeerOptions()` (kitchenAllergens.js), filtro per tag `birre-v1`, non per id
 // fisso: seguono da sole se il catalogo birre cambia.
+//
+// MENU OTTOBRE (2026-10-28, decisione Eros): due prezzi per menu, con birra o con bibita.
+// La variante birra resta sull'id storico (`id`/`price`), la variante bibita ha un id di
+// catalogo proprio (`softDrink.id`/`softDrink.price`) perche' il server prezza per item_id.
+// Il menu Pulled Pork ora e' sul BOX (item-018, patate gia' dentro la box): niente contorno
+// a parte (`includesSide: false`). Il panino Pulled Pork (item-009) resta vendibile da solo.
 export const FALLO_PESANTE_INCLUDED_SIDE_ID = 'item-058';
 
 export const kitchenPesiMassimiCombos = {
-  'item-009': {
+  'item-018': {
     id: 'item-040',
-    name: 'Pulled Pork — Fallo Pesante',
-    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
-    price: 19.0,
-    image: '/assets/kitchen/photo-pulled-pork-special.webp',
+    name: 'Box Pulled Pork — Fallo Pesante',
+    subtitle: 'BOX CON PATATE + DA BERE',
+    price: 15.9,
+    image: '/assets/kitchen/menu/box/box-pulled-pork.webp',
+    includesSide: false,
+    softDrink: { id: 'item-060', name: 'Box Pulled Pork — Menu Bibita', price: 13.9 },
   },
   'item-010': {
     id: 'item-041',
     name: 'Pastrami — Fallo Pesante',
-    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
-    price: 20.0,
+    subtitle: 'PANINO + DA BERE + PATATE AL FORNO',
+    price: 17.9,
     image: '/assets/kitchen/photo-pastrami-special.webp',
+    includesSide: true,
+    softDrink: { id: 'item-061', name: 'Pastrami — Menu Bibita', price: 16.9 },
   },
   'item-011': {
     id: 'item-042',
     name: 'Brisket — Fallo Pesante',
-    subtitle: 'PANINO + BIRRA + PATATE AL FORNO',
-    price: 20.0,
+    subtitle: 'PANINO + DA BERE + PATATE AL FORNO',
+    price: 17.9,
     image: '/assets/kitchen/photo-brisket-special.webp',
+    includesSide: true,
+    softDrink: { id: 'item-062', name: 'Brisket — Menu Bibita', price: 16.9 },
   },
 };
 

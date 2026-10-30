@@ -28,11 +28,10 @@ test('REAL local order: create via UI, scrive kitchen_orders + kitchen_order_ite
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.goto(`/kitchen?table=12&nickname=${nick}`);
-  await page.getByRole('button', { name: /ENTRA NEL MENU/i }).click();
-  await page.getByRole('button', { name: /PESI MASSIMI/i }).click();
-  await page.locator('.pm-card-closed').first().click();
-  await page.getByRole('button', { name: /AGGIUNGI SOLO PANINO/i }).first().click();
-  await page.getByRole('button', { name: /VAI ALL'ORDINE/i }).click();
+  // Restyling hero: /kitchen apre direttamente il menu; schede sempre aperte, SOLO PANINO e' il default.
+  await page.getByRole('button', { name: /^PESI MASSIMI$/i }).click();
+  await page.locator('.pm-list .pc-cta:not(.pmx-menu-cta)').first().click();
+  await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
   await page.getByTestId('fulfillment-takeaway').click();
   // Checkout V2: nome + corsia sullo stesso schermo, l'ordine parte al tap sulla corsia.
   await page.getByTestId('customer-name-input').fill(nick);

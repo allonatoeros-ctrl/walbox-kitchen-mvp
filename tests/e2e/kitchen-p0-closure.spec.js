@@ -26,11 +26,12 @@ const minutesAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
 test.describe('P0-3 — allergeni combo e item non verificati sulla focus card staff', () => {
 
   test('ordine FALLO PESANTE: unione allergeni panino + birra, non piu "nessun allergene"', async ({ page }) => {
-    // item-040 = combo su item-009 (uova, latte); la birra inclusa porta glutine.
+    // item-042 = MENU Brisket (item-011: latte, uova); la birra inclusa porta glutine.
+    // (MENU OTTOBRE: item-040 ora e' il MENU del Box, che resta ALLERGENI NON VERIFICATI come la box.)
     await seed(page, [{
       id: 'p0-combo', orderCode: 'A90', nickname: 'Combo',
-      items: [{ itemId: 'item-040', name: 'Pulled Pork — Fallo Pesante', quantity: 1, price: 19 }],
-      total: 19, status: 'received', paymentStatus: 'paid',
+      items: [{ itemId: 'item-042', name: 'Brisket — Fallo Pesante', quantity: 1, price: 17.9 }],
+      total: 17.9, status: 'received', paymentStatus: 'paid',
       createdAt: minutesAgo(3), note: '🍺 BIRRA INCLUSA: KEILER WEISSE',
     }]);
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -48,8 +49,8 @@ test.describe('P0-3 — allergeni combo e item non verificati sulla focus card s
   test('P0-2: la birra scelta e leggibile dalla cucina sulla comanda in focus', async ({ page }) => {
     await seed(page, [{
       id: 'p0-note', orderCode: 'A91', nickname: 'Combo',
-      items: [{ itemId: 'item-040', name: 'Pulled Pork — Fallo Pesante', quantity: 1, price: 19 }],
-      total: 19, status: 'received', paymentStatus: 'paid',
+      items: [{ itemId: 'item-042', name: 'Brisket — Fallo Pesante', quantity: 1, price: 17.9 }],
+      total: 17.9, status: 'received', paymentStatus: 'paid',
       createdAt: minutesAgo(3), note: '🍺 BIRRA INCLUSA: KEILER WEISSE · senza cipolla',
     }]);
     await page.setViewportSize({ width: 1280, height: 900 });
@@ -152,7 +153,7 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
       const beers = data.kitchenMenuItems.filter(
         (i) => i.category === 'birre' && i.tags?.includes('birre-v1'),
       );
-      const combo = data.kitchenPesiMassimiCombos['item-009'];
+      const combo = data.kitchenPesiMassimiCombos['item-010'];
       return beers.map((beer) => ({
         beerName: beer.name,
         note: rules.buildIncludedBeersNote(
@@ -181,28 +182,28 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     await page.goto('/kitchen?nickname=Eros');
     // HOME -> CATEGORIE -> PESI MASSIMI (stessa navigazione di openCategoryList in
     // customer-kitchen-flow.spec.js: la lista si apre solo dalla tile della categoria).
-    await page.getByRole('button', { name: /ENTRA NEL MENU/i }).click();
     await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
 
-    // Apre la prima card (accordion): l'upsell FALLO PESANTE e' interattivo solo da aperta.
-    await page.locator('.pm-card-closed').first().click();
-    const card = page.locator('.pm-card--open').first();
+    // Restyling hero: le schede sono sempre aperte, l'upsell FALLO PESANTE e' subito interattivo.
+    // MENU OTTOBRE (2026-10-28): il panino Pulled Pork non ha piu il MENU, si usa il Pastrami.
+    const card = page.locator('.pm-list .pc-card', { hasText: 'Pastrami' });
     // SCEGLI COME LO VUOI (2026-09-24): default SOLO PANINO, il combo si attiva col MENU.
     await card.getByTestId('choose-menu').click();
-    const heavy = card.locator('.pm-btn-heavy');
+    const heavy = card.getByTestId('fallo-pesante-cta');
     await expect(heavy).toBeVisible();
 
     // Krombacher rimossa dal catalogo (2026-09-22): non compare tra le pillole selezionabili.
+    await card.getByTestId('fallo-pesante-group-beers').click();
     await expect(card.locator('.pm-beer-pill', { hasText: 'Krombacher' })).toHaveCount(0);
 
     // Nessuna birra scelta: il combo resta disabilitato.
     await expect(heavy).toBeDisabled();
 
-    await card.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
+    await card.locator('.pm-beer-pill', { hasText: 'Helles' }).click();
     await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
 
     await expect(heavy).toBeEnabled();
-    await expect(heavy).toHaveText('AGGIUNGI IL MENU · €19');
+    await expect(heavy).toHaveText('AGGIUNGI IL MENU · 17,90 €');
     await heavy.scrollIntoViewIfNeeded();
     await heavy.click();
 

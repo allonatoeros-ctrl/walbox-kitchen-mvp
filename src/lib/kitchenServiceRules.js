@@ -10,7 +10,7 @@ export function isEveningServiceActive(date = new Date()) {
   return date.getHours() >= EVENING_SERVICE_START_HOUR;
 }
 
-// P0-2 (2026-09-16) — la birra scelta in FALLO PESANTE deve arrivare in cucina.
+// P0-2 (2026-09-16) — la birra (o, dal 2026-10-27, la bibita) scelta in FALLO PESANTE deve arrivare in cucina.
 //
 // Il payload per-item della RPC e' chiuso: `kitchen_customer_create_order` proietta
 // `jsonb_to_recordset(p_items) AS line(item_id text, quantity integer)` e riscrive `name`/`price`
@@ -26,21 +26,29 @@ export function isEveningServiceActive(date = new Date()) {
 // Il nome della birra e' risolto da `includesBeerId` sul catalogo, MAI ricavato dal nome della
 // riga carrello: nessun parsing fragile.
 export const INCLUDED_BEER_NOTE_PREFIX = 'BIRRA INCLUSA';
+// H4 (2026-10-27): il MENU puo' avere una bibita al posto della birra, stesso canale (`customer_note`).
+// Il tipo si decide dalla `category` della voce di catalogo (`bevande` = bibita, il resto = birra).
+export const INCLUDED_DRINK_NOTE_PREFIX = 'BIBITA INCLUSA';
 
 export function buildIncludedBeersNote(orderItems, menuItems) {
   const comboLines = (orderItems ?? []).filter((o) => o.includesBeerId);
   if (comboLines.length === 0) return '';
-  // Piu' combo con la stessa birra nello stesso carrello vanno sommati, non ripetuti.
+  // Piu' combo con la stessa bevanda nello stesso carrello vanno sommati, non ripetuti.
   const byBeer = new Map();
   comboLines.forEach((line) => {
     byBeer.set(line.includesBeerId, (byBeer.get(line.includesBeerId) ?? 0) + (line.qty ?? 1));
   });
-  const parts = [...byBeer.entries()].map(([beerId, qty]) => {
+  const beerParts = [];
+  const drinkParts = [];
+  [...byBeer.entries()].forEach(([beerId, qty]) => {
     const beer = (menuItems ?? []).find((m) => m.id === beerId);
     const label = (beer?.name ?? beerId).toUpperCase();
-    return qty > 1 ? `${qty}x ${label}` : label;
+    (beer?.category === 'bevande' ? drinkParts : beerParts).push(qty > 1 ? `${qty}x ${label}` : label);
   });
-  return `\u{1F37A} ${INCLUDED_BEER_NOTE_PREFIX}: ${parts.join(' \u00B7 ')}`;
+  const sections = [];
+  if (beerParts.length > 0) sections.push(`\u{1F37A} ${INCLUDED_BEER_NOTE_PREFIX}: ${beerParts.join(' \u00B7 ')}`);
+  if (drinkParts.length > 0) sections.push(`\u{1F964} ${INCLUDED_DRINK_NOTE_PREFIX}: ${drinkParts.join(' \u00B7 ')}`);
+  return sections.join(' \u00B7 ');
 }
 
 // ============================================================================
@@ -408,7 +416,8 @@ export const NON_MAPPED_CATEGORY = 'non mappato';
 
 // Mapping esplicito per item che non possono essere risolti su `kitchenMenuItems`:
 // - item-040/041/042 sono i tre combo FALLO PESANTE, che vivono in `kitchenPesiMassimiCombos`
-//   (mai nel catalogo standalone) e appartengono ai Pesi Massimi (`bbq`);
+//   (mai nel catalogo standalone) e appartengono ai Pesi Massimi (`bbq`); dal MENU OTTOBRE
+//   (2026-10-28) lo stesso vale per le varianti con bibita item-060/061/062 (`softDrink`);
 // - item-057 (Krombacher Pils) è stato rimosso dal catalogo cliente ma gli ordini storici
 //   restano `birre`.
 // `kitchenMenuItems` resta il lookup principale per tutto il resto; questa tabella copre solo
@@ -417,7 +426,13 @@ const CATEGORY_BY_ITEM_ID = {
   'item-040': 'bbq',
   'item-041': 'bbq',
   'item-042': 'bbq',
+  'item-060': 'bbq',
+  'item-061': 'bbq',
+  'item-062': 'bbq',
   'item-057': 'birre',
+  // Schweppes Lemon/Tonica: tolte dal catalogo il 2026-10-28, gli ordini storici restano `bevande`.
+  'item-049': 'bevande',
+  'item-050': 'bevande',
 };
 
 export function computeTopProductsAndCategories(orders, night, menuItems = [], topN = 5) {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useKitchenOrders } from '../hooks/useKitchenOrders';
 import { selectTvOrders } from '../lib/kitchenServiceRules';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
+import { formatPickupBadge } from '../lib/kitchenPickup';
 import './KitchenTvScreen.css';
 
 const getDisplayName = (order) => {
@@ -96,6 +97,7 @@ const KitchenTvScreen = () => {
                 <div key={order.id} className={`ready-ticket ${isJustReady(order) ? 'just-ready' : ''}`}>
                   <div className="ticket-header">
                     <span className="ticket-code">{order.orderCode}</span>
+                    {formatPickupBadge(order.pickupSlot) && <span className="tv-pickup-tag">{formatPickupBadge(order.pickupSlot)}</span>}
                     {isJustReady(order) && <span className="badge-just-ready">APPENA FATTO</span>}
                   </div>
                   <div className="ticket-body">
@@ -127,6 +129,7 @@ const KitchenTvScreen = () => {
                     <span className="cooking-name">{getDisplayName(order)}</span>
                   </div>
                   <div className="cooking-row-right">
+                    {formatPickupBadge(order.pickupSlot) && <span className="tv-pickup-tag">{formatPickupBadge(order.pickupSlot)}</span>}
                     <span className="status-label" style={{ backgroundColor: kitchenOrderStatuses[order.status]?.color || '#444' }}>
                       {kitchenOrderStatuses[order.status]?.label || order.status}
                     </span>

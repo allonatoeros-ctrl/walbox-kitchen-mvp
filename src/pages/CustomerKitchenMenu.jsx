@@ -12,8 +12,11 @@ import {
   clearClientRequestId,
   resolveCreateOutcome,
   onlineErrorMessage,
+  isPickupSlotError,
 } from '../lib/kitchenOnlineLane';
+import { toServerFulfillment } from '../lib/kitchenPickup';
 import KitchenCategoryTabs from '../components/kitchen/KitchenCategoryTabs';
+import MenuHero from '../components/kitchen/MenuHero';
 import PesiMassimiSection from '../components/kitchen/PesiMassimiSection';
 import PaniniSection from '../components/kitchen/PaniniSection';
 import CicchettiSection from '../components/kitchen/CicchettiSection';
@@ -21,102 +24,19 @@ import InsalatoneSection from '../components/kitchen/InsalatoneSection';
 import TartareSection from '../components/kitchen/TartareSection';
 import BirreSection from '../components/kitchen/BirreSection';
 import TagliereSection from '../components/kitchen/TagliereSection';
+import PosterCard from '../components/kitchen/PosterCard';
 import BevandeSection from '../components/kitchen/BevandeSection';
-import AllergenBadges from '../components/kitchen/AllergenBadges';
 import CustomerCheckout from '../components/kitchen/CustomerCheckout';
 import AnniversaryBanner from '../components/kitchen/AnniversaryBanner';
-import GarpezHero from '../components/kitchen/GarpezHero';
 import EventSideChip from '../components/kitchen/EventSideChip';
-import { checkoutMissing, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
+import { checkoutMissingAtSubmit, isValidCustomerName, normalizeCustomerName } from '../lib/kitchenCheckout';
 import { buildIncludedBeersNote, isEveningServiceActive } from '../lib/kitchenServiceRules';
+import { falloPesanteDrinkOptions, falloPesanteCartDisplay } from '../lib/kitchenPesiMassimi';
 import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, shouldSuggestEventSide, EVENT_CATEGORY, EVENT_CATEGORIES, EVENT_SIDE_ITEM_ID } from '../lib/kitchenEventMode';
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
+import { formatPrice } from '../lib/kitchenPrice';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
 import './CustomerKitchenMenu.css';
-
-// Flat SVG icons — matching the reference flat icon style (using currentColor for dynamic fill)
-const CATEGORY_SVGS = {
-  panini: (
-    <svg width="38" height="30" viewBox="0 0 38 30" fill="none">
-      <path d="M4,10 C4,5.5 10,2 19,2 C28,2 34,5.5 34,10 H4 Z M12.5,6.5 L13,5.5 L13.5,6.5 L13,7 Z M18.5,5 L19,4 L19.5,5 L19,5.5 Z M24.5,6.5 L25,5.5 L25.5,6.5 L25,7 Z" fill="currentColor" fillRule="evenodd" />
-      <path d="M2,13.5 H36 V15.5 C36,17 33,17.5 31,17.5 C29,17.5 28,16 26,16 C24,16 23,17.5 21,17.5 C19,17.5 18,16 16,16 C14,16 13,17.5 11,17.5 C9,17.5 8,16 6,16 C4,16 2,16.5 2,15 Z" fill="currentColor" />
-      <rect x="4" y="20" width="30" height="4" rx="2" fill="currentColor" />
-      <path d="M4,26 C4,25 6,25 19,25 C32,25 34,25 34,26 V27 C34,28.5 29,30 19,30 C9,30 4,28.5 4,27 Z" fill="currentColor" />
-    </svg>
-  ),
-  patatine: (
-    <svg width="30" height="36" viewBox="0 0 30 36" fill="none">
-      <rect x="6" y="5" width="4" height="13" rx="1.5" transform="rotate(-10 8 11.5)" fill="currentColor" />
-      <rect x="11" y="2" width="4.5" height="16" rx="2" fill="currentColor" />
-      <rect x="16" y="4" width="4.5" height="14" rx="2" transform="rotate(5 18.25 11)" fill="currentColor" />
-      <rect x="21" y="7" width="4" height="11" rx="1.5" transform="rotate(15 23 12.5)" fill="currentColor" />
-      <path d="M5,15 C9,18 21,18 25,15 L22.5,33 C22.2,34.5 21,35 15,35 C9,35 7.8,34.5 7.5,33 Z M15,21.5 A3.5,3.5 0 1,0 15,28.5 A3.5,3.5 0 1,0 15,21.5 Z" fill="currentColor" fillRule="evenodd" />
-    </svg>
-  ),
-  birre: (
-    <svg width="22" height="36" viewBox="0 0 22 36" fill="none">
-      <rect x="9" y="1" width="4" height="2" rx="0.5" fill="currentColor" />
-      <path d="M9.5,3 H12.5 V11 C12.5,11.5 13,12 17,15 V33 C17,34.5 15.5,35 11,35 C6.5,35 5,34.5 5,33 V15 C9,12 9.5,11.5 9.5,11 Z M7,19 V26 H15 V19 Z M9.5,6 V7.5 H12.5 V6 Z" fill="currentColor" fillRule="evenodd" />
-    </svg>
-  ),
-  combo: (
-    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-      <path d="M18 2 C19.5 9 24.5 12 34 13 C25.5 17 26 23.5 28 33 C20 28 16 28 8 33 C10 23.5 10.5 17 2 13 C11.5 12 16.5 9 18 2 Z" fill="currentColor" />
-    </svg>
-  ),
-  bbq: (
-    <svg width="38" height="20" viewBox="0 0 38 20" fill="none">
-      <rect x="1" y="4" width="6" height="12" rx="2" fill="currentColor" />
-      <rect x="0" y="7" width="3" height="6" rx="1" fill="currentColor" />
-      <rect x="31" y="4" width="6" height="12" rx="2" fill="currentColor" />
-      <rect x="35" y="7" width="3" height="6" rx="1" fill="currentColor" />
-      <rect x="7" y="9" width="24" height="2" fill="currentColor" />
-    </svg>
-  ),
-  cicchetti: (
-    <svg width="14" height="36" viewBox="0 0 14 36" fill="none">
-      <rect x="6" y="1" width="2" height="33" rx="1" fill="currentColor" />
-      <circle cx="7" cy="10" r="5.5" fill="currentColor" />
-      <circle cx="7" cy="21" r="5.5" fill="currentColor" />
-      <path d="M3.5,32 H10.5 L7,36 Z" fill="currentColor" />
-    </svg>
-  ),
-  insalatone: (
-    <svg width="36" height="30" viewBox="0 0 36 30" fill="none">
-      <path d="M2,14 H34 C34,22.5 27,28.5 18,28.5 C9,28.5 2,22.5 2,14 Z" fill="currentColor" />
-      <path d="M4,14 C4,8 10,4 18,4 C26,4 32,8 32,14 Z" fill="currentColor" opacity="0.4" />
-      <path d="M18,4 C20.5,7 20.5,10 17,12.5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" />
-    </svg>
-  ),
-  tartare: (
-    <svg width="34" height="30" viewBox="0 0 34 30" fill="none">
-      <ellipse cx="17" cy="19" rx="15" ry="8.5" fill="currentColor" />
-      <ellipse cx="17" cy="15.5" rx="11" ry="5.5" fill="currentColor" opacity="0.5" />
-      <circle cx="17" cy="9.5" r="3" fill="currentColor" />
-    </svg>
-  ),
-};
-
-// Icona categoria TAGLIERI (fallback coerente, nessun asset fotografico generato):
-// tagliere + 3 fette — 1 sola tab cliente, raggruppa i 3 taglieri (decisione Eros 2026-09-10).
-CATEGORY_SVGS.tagliere = (
-  <svg width="36" height="26" viewBox="0 0 36 26" fill="none">
-    <rect x="1" y="3" width="34" height="20" rx="7" fill="currentColor" />
-    <circle cx="10" cy="13" r="3.2" fill="currentColor" opacity="0.45" />
-    <circle cx="18" cy="10" r="3.2" fill="currentColor" opacity="0.45" />
-    <circle cx="26" cy="14" r="3.2" fill="currentColor" opacity="0.45" />
-  </svg>
-);
-// Icona categoria CONTORNI (2026-09-19): riusa l'icona `patatine` già disegnata — stesso
-// mondo (fritto/contorno), nessun asset nuovo generato. `patatine` non è più una categoria
-// di navigazione (vedi MENU_CATEGORIES), quindi l'icona non è condivisa con nulla di attivo.
-CATEGORY_SVGS.contorni = CATEGORY_SVGS.patatine;
-CATEGORY_SVGS.bevande = (
-  <svg width="24" height="34" viewBox="0 0 24 34" fill="none">
-    <path d="M4,8 L20,8 L18,32 C17.8,33 17,33.5 12,33.5 C7,33.5 6.2,33 6,32 Z" fill="currentColor" />
-    <rect x="13" y="1" width="2.4" height="12" rx="1.2" transform="rotate(12 14.2 7)" fill="currentColor" />
-  </svg>
-);
 
 // Categorie del menu completo — Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED, Page 4
 // (`MENU — CATEGORIE` 166:2). PATATINE / COMBO non sono più navigazione primaria:
@@ -124,25 +44,30 @@ CATEGORY_SVGS.bevande = (
 // (BEER SPRINT V1, 2026-09-14, decisione Eros: posizionata prima di BEVANDE, nessun
 // frame Figma dedicato per questa voce di nav).
 const MENU_CATEGORIES = [
-  { key: 'panini', label: 'PANINI', icon: CATEGORY_SVGS.panini },
-  { key: 'bbq', label: 'PESI MASSIMI', icon: CATEGORY_SVGS.bbq },
-  { key: 'cicchetti', label: 'CICCHETTI', icon: CATEGORY_SVGS.cicchetti },
-  { key: 'insalatone', label: 'INSALATONE', icon: CATEGORY_SVGS.insalatone },
-  { key: 'tartare', label: 'TARTARE', icon: CATEGORY_SVGS.tartare },
-  { key: 'tagliere', label: 'TAGLIERI', icon: CATEGORY_SVGS.tagliere },
+  { key: 'bbq', label: 'PESI MASSIMI' },
+  { key: 'panini', label: 'PANINI' },
+  { key: 'cicchetti', label: 'CICCHETTI' },
+  { key: 'insalatone', label: 'INSALATONE' },
+  { key: 'tartare', label: 'TARTARE' },
+  { key: 'tagliere', label: 'TAGLIERI' },
   // CONTORNI esposta come categoria cliente (2026-09-19, decisione Eros): oggi contiene la
   // sola Patate al Forno (`item-058`, €5), che è anche il contorno incluso nel FALLO PESANTE.
   // Nessuna sezione dedicata: cade sulla card generica in fondo a questo file, come le
   // categorie senza componente proprio.
-  { key: 'contorni', label: 'CONTORNI', icon: CATEGORY_SVGS.contorni },
-  { key: 'birre', label: 'BIRRE', icon: CATEGORY_SVGS.birre },
-  { key: 'bevande', label: 'BEVANDE', icon: CATEGORY_SVGS.bevande },
+  { key: 'contorni', label: 'CONTORNI' },
+  { key: 'birre', label: 'BIRRE' },
+  { key: 'bevande', label: 'BEVANDE' },
 ];
 
-// Panini in evidenza sulla Home (Figma 140:2 / 140:12). `photoBg` = PHOTO BG del frame.
-const HOME_FEATURED = [
-  { id: 'item-014', photoBg: '#fdf7f1' }, // 146:2
-  { id: 'item-017', photoBg: '#f9f0e8' }, // 146:3
+// Gruppi del SOLO pannello CATEGORIE (hamburger), 2026-10-29 decisione Eros: le categorie restano
+// quelle di MENU_CATEGORIES (dati, linguette, cassa e TV invariati), qui cambia solo come sono
+// raccolte. `label` su una voce = scorciatoia verso una categoria con un altro nome (Cicchetto Veg
+// apre Cicchetti). Le categorie non presenti (modalità evento) spariscono, e con loro i gruppi vuoti.
+const MENU_GROUPS = [
+  { label: 'APERITIVO', entries: [{ key: 'tagliere' }, { key: 'cicchetti' }] },
+  { label: 'LEGGERO', entries: [{ key: 'insalatone' }, { key: 'cicchetti', label: 'CICCHETTO VEG' }] },
+  { label: 'FAME VERA', entries: [{ key: 'bbq' }, { key: 'tartare' }, { key: 'panini' }, { key: 'contorni' }] },
+  { label: 'DA BERE', entries: [{ key: 'birre' }, { key: 'bevande' }] },
 ];
 
 // Item presenti a catalogo ma nascosti al SOLO menu cliente. Non vengono rimossi da
@@ -164,7 +89,8 @@ const CUSTOMER_HIDDEN_ITEM_IDS = [];
 const BEER_PAIRING_CATEGORY_PRIORITY = ['panini', 'bbq', 'cicchetti', 'tagliere', 'insalatone', 'tartare'];
 
 // Nessun suggerimento se il sacco ha già una birra (standalone o già inclusa in
-// un FALLO PESANTE via `includesBeerId`), se nessuna categoria food nel sacco ha
+// un FALLO PESANTE via `includesBeerId`, che da H4 vale anche per una bibita: con un menu già
+// completo di bevanda non si propone una birra in più), se nessuna categoria food nel sacco ha
 // un pairing configurato, o se la birra consigliata non è ordinabile (prezzo non
 // confermato / esaurita) — mai un CTA morto, mai un doppione della birra già presa.
 //
@@ -205,29 +131,42 @@ function drawerIcon(name) {
   return '🍔';
 }
 
-function getCategoryTitle(cat) {
-  if (cat === 'panini') return <>I PANINI DA <span style={{ color: 'var(--k-orange)' }}>SPACCO</span></>;
-  if (cat === 'patatine') return <>FRITTO <span style={{ color: 'var(--k-orange)' }}>TERAPEUTICO</span></>;
-  if (cat === 'birre') return <>SETI <span style={{ color: 'var(--k-orange)' }}>IMPLACABILI</span></>;
-  if (cat === 'combo') return <>COMBO <span style={{ color: 'var(--k-orange)' }}>LETALI</span></>;
-  if (cat === 'bbq') return <>PESI <span style={{ color: 'var(--k-orange)' }}>MASSIMI</span></>;
-  if (cat === 'tagliere') return <>TAGLI<span style={{ color: 'var(--k-orange)' }}>ERI</span></>;
-  if (cat === 'bevande') return <>BEVANDE</>;
-  if (cat === 'contorni') return <>CON<span style={{ color: 'var(--k-orange)' }}>TORNI</span></>;
-  return cat.toUpperCase();
+// Titolo da manifesto su 2 righe (riga 2 gialla). Solo copy già presente nell'app (vecchi titoli);
+// dove non c'è una seconda riga approvata resta una riga sola: niente testi inventati.
+function getPosterTitle(cat) {
+  if (cat === 'panini') return ['PANINI', 'DA SPACCO'];
+  if (cat === 'patatine') return ['FRITTO', 'TERAPEUTICO'];
+  if (cat === 'birre') return ['SETI', 'IMPLACABILI'];
+  if (cat === 'combo') return ['COMBO', 'LETALI'];
+  if (cat === 'bbq') return ['PESI', 'MASSIMI'];
+  return [(MENU_CATEGORIES.find((c) => c.key === cat)?.label || String(cat)).toUpperCase(), null];
 }
 
 function getCategorySubtitle(cat) {
-  if (cat === 'bbq') return 'Affumicato, esagerato, senza scuse. Roba da mangiare con le mani.';
-  if (cat === 'panini') return 'Quelli seri. Almeno loro.';
-  if (cat === 'cicchetti') return 'MORTAZZA · LARDO & NOCI · SCAMORZA & CIPOLLE · CIAPPI VEG';
-  if (cat === 'insalatone') return 'CAESAR · SALMON · VEGGY';
-  if (cat === 'tartare') return 'CRUDA E CONTENTA · DOLCE MA CRUDA';
-  if (cat === 'tagliere') return 'SALUMI SERISSIMI · FORMAGGI DISCUTIBILI · PACE FATTA';
-  if (cat === 'birre') return 'KEILER HELLES · LAND-PILS · KELLERBIER · WEISSE · DUNKEL WEISSE · LUPULUS';
-  if (cat === 'contorni') return 'PATATE AL FORNO';
-  if (cat === 'bevande') return 'ACQUA · PEPSI 33CL · PEPSI ZERO · SEVEN UP · SCHWEPPES LEMON · SCHWEPPES TONICA';
+  if (cat === 'bbq') return 'Panini carichi e il Box senza pane. Roba da mangiare con le mani.';
+  if (cat === 'panini') return 'Sette panini, nessuno timido. Scegli con la pancia.';
+  if (cat === 'cicchetti') return 'Assaggi su pane, uno tira l\'altro.';
+  if (cat === 'insalatone') return 'Insalate grandi, per chi vuole il verde.';
+  if (cat === 'tartare') return 'Carne cruda condita.';
+  if (cat === 'tagliere') return 'Salumi, formaggi o tutti e due, da mettere in mezzo al tavolo.';
+  if (cat === 'birre') return 'Birre in bottiglia.';
+  if (cat === 'contorni') return 'Nel MENU dei Pesi Massimi le patate ci sono già.';
+  if (cat === 'bevande') return 'Acqua e bibite. Nel MENU dei Pesi Massimi una bibita è compresa.';
   return null;
+}
+
+// H7 fase 2: fascia prezzo della categoria, calcolata dai prodotti visibili. Solo se ci sono almeno
+// due prezzi validi e diversi (con un prezzo unico c'e' il timbro "TUTTI X €"); altrimenti ''.
+function priceRangeLabel(items, forceDecimals = false) {
+  const cents = (items ?? [])
+    .map((i) => i.price)
+    .filter((pr) => pr != null && pr !== '' && Number.isFinite(Number(pr)))
+    .map((pr) => Math.round(Number(pr) * 100));
+  if (cents.length < 2) return '';
+  const min = Math.min(...cents);
+  const max = Math.max(...cents);
+  if (min === max) return '';
+  return `Da ${formatPrice(min / 100, forceDecimals)} a ${formatPrice(max / 100, forceDecimals)}.`;
 }
 
 // Stesso pattern SPA-navigate di CustomerOrderStatus.jsx (pushState + popstate sintetico, letto
@@ -271,8 +210,8 @@ export default function CustomerKitchenMenu() {
   const menuItems = useMemo(() => (eventMode ? catalogItems : excludeEventOnlyItems(catalogItems)), [eventMode, catalogItems]);
   const CATEGORIES = eventMode ? MENU_CATEGORIES.filter((c) => EVENT_CATEGORIES.includes(c.key)) : MENU_CATEGORIES;
 
-  const [view, setView] = useState('home');
-  const [activeCategory, setActiveCategory] = useState(eventMode ? EVENT_CATEGORY : 'panini');
+  // Si apre su PESI MASSIMI (`bbq`); in evento resta la categoria evento.
+  const [activeCategory, setActiveCategory] = useState(eventMode ? EVENT_CATEGORY : 'bbq');
   // IL SACCO sopravvive a refresh, back/forward e riapertura pagina (2026-09-16). Si parte dallo
   // snapshot salvato: righe, quantita', birra scelta del FALLO PESANTE, nota e scelta di ritiro.
   // Nome/prezzo NON vengono dallo snapshot, li rimette il catalogo (vedi l'effect di riconciliazione).
@@ -295,10 +234,8 @@ export default function CustomerKitchenMenu() {
   // Contatore monotono per l'id delle thumbnail di feedback add-to-cart (solo lato UI,
   // volatile: non persiste e non finisce mai nel payload ordine).
   const flyerSeqRef = useRef(0);
+  // Note cucina sempre aperte nel checkout (2026-10-28): niente piu' accordion da ricordare.
   const [customerNote, setCustomerNote] = useState(restoredCart.note);
-  // Se il sacco ripristinato porta con se' una nota, il pannello parte aperto: una nota salvata
-  // ma nascosta dietro un accordion chiuso, per il cliente, e' una nota persa.
-  const [notesOpen, setNotesOpen] = useState(Boolean(restoredCart.note));
   const [submitting, setSubmitting] = useState(false);
   // Checkout V2: nome, dove mangi, note e corsia di pagamento stanno in un solo schermo (vedi
   // CustomerCheckout). L'ordine nasce al tap su PAGO ORA / PAGO AL BANCO; se manca il nome o il
@@ -314,7 +251,10 @@ export default function CustomerKitchenMenu() {
   // Customer Checkout V1 (2026-09-13): unica scelta obbligatoria nel drawer, nessun default —
   // l'invio resta disabilitato finché il cliente non la sceglie esplicitamente. Il pagamento non
   // si sceglie più qui: vive sulla pagina pagamento dedicata (/kitchen/payment, follow-up UX 2026-09-18).
-  const [fulfillmentType, setFulfillmentType] = useState(restoredCart.fulfillmentType); // 'eat_here' | 'takeaway'
+  const [fulfillmentType, setFulfillmentType] = useState(restoredCart.fulfillmentType); // 'eat_here' | 'takeaway' | 'pickup'
+  // RITIRO AL WALRUS (2026-10-28): orario 'HH:MM' scelto nel checkout. loadCart scarta un orario
+  // salvato ormai passato; handleSubmit lo ricontrolla al momento dell'invio.
+  const [pickupSlot, setPickupSlot] = useState(restoredCart.pickupSlot ?? null);
 
   // Banner "hai un ordine attivo" (cleanup cliente, 2026-09-18): deve riflettere lo STATO reale
   // dell'ordine, non solo la presenza di una chiave locale — un cancelled/delivered non deve mai
@@ -346,8 +286,8 @@ export default function CustomerKitchenMenu() {
   // Un carrello svuotato a mano viene salvato vuoto: e' un'azione esplicita del cliente.
   useEffect(() => {
     if (!cartRestored) return;
-    saveCart({ items: orderItems, note: customerNote, fulfillmentType }, undefined);
-  }, [cartRestored, orderItems, customerNote, fulfillmentType]);
+    saveCart({ items: orderItems, note: customerNote, fulfillmentType, pickupSlot }, undefined);
+  }, [cartRestored, orderItems, customerNote, fulfillmentType, pickupSlot]);
 
   // Feedback add-to-cart: memorizza l'ultimo punto di tap (per l'animazione thumbnail)
   // e pulisce i timer al unmount. Nessuna dipendenza nuova, solo listener nativi.
@@ -368,7 +308,6 @@ export default function CustomerKitchenMenu() {
   const visibleItems = customerItems.filter((i) => i.category === activeCategory);
 
   const pesiMassimiItems = customerItems.filter((i) => i.category === 'bbq');
-  const garpezFeatured = eventMode ? pesiMassimiItems.find((i) => i.tags?.includes('anniversario')) ?? null : null;
   // Evento: l'Orto Cattivo (unico item `panini` del menu evento) sta coi classici, dopo i Pesi Massimi.
   const eventVegPanini = eventMode ? customerItems.filter((i) => i.category === 'panini') : [];
   const eventSandwiches = [...pesiMassimiItems, ...eventVegPanini];
@@ -381,104 +320,148 @@ export default function CustomerKitchenMenu() {
   const falloPesanteBeerOptions = menuItems.filter(
     (i) => i.category === 'birre' && i.tags?.includes('birre-v1'),
   );
-  const featuredItems = HOME_FEATURED
-    .map(({ id, photoBg }) => {
-      const item = customerItems.find((i) => i.id === id);
-      return item ? { ...item, photoBg } : null;
-    })
-    .filter(Boolean);
-
-  // Back navigation locale (HOME → CATEGORIE → LISTA): ogni avanzamento pusha
-  // una history entry con { view } sullo stesso pathname /kitchen; il back
-  // browser/gesture e i back-button UI leggono/consumano la stessa history
-  // (vedi popstate listener sotto), senza toccare il router in App.jsx.
-  const openMenu = (category) => {
-    setActiveCategory(category);
-    setView('menu');
-    window.history.pushState({ view: 'menu', category }, '', '/kitchen');
-    window.scrollTo({ top: 0 });
+  // Bibite ammesse nel MENU al posto della birra (H4): categoria `bevande` ordinabili, acqua esclusa
+  // (regola nella lib, nessun id qui).
+  const falloPesanteDrinkChoices = falloPesanteDrinkOptions(menuItems);
+  // Navigazione (Fase 3.4): niente home, la pagina e' sempre il menu con le linguette. Le linguette
+  // NON aggiungono voci di history (replaceState): il tasto indietro del telefono non deve
+  // attraversare le categorie. Cambio linguetta = pagina in alto, cosi' la prima locandina si vede
+  // sotto le chip sticky. replaceState tiene `history.state.category` allineato per il reload.
+  // Restyling hero: la hero sta in cima, quindi "in alto" non e' piu' la pagina intera ma l'inizio del
+  // menu (sotto la hero, dove stanno le linguette). Se il cliente e' gia' piu' in alto, non si sposta.
+  const menuStartRef = useRef(null);
+  const scrollToMenuStart = (behavior = 'auto') => {
+    const top = menuStartRef.current ? menuStartRef.current.getBoundingClientRect().top + window.scrollY : 0;
+    if (window.scrollY > top || behavior === 'smooth') window.scrollTo({ top, behavior });
   };
-
-  const enterMenu = () => {
-    setView('categories');
-    window.history.pushState({ view: 'categories' }, '', '/kitchen');
-    window.scrollTo({ top: 0 });
-  };
-
-  // Cambio categoria dalla tab strip: è navigazione laterale dentro la stessa
-  // vista `menu`, non un livello più profondo, quindi NON pusha una entry (il
-  // back resterebbe intrappolato a rifare le categorie una per una). Serve però
-  // un `replaceState`: senza, `history.state.category` restava fermo alla
-  // categoria di ingresso e al reload veniva ripristinata quella sbagliata.
   const selectCategoryTab = (category) => {
     setActiveCategory(category);
     window.history.replaceState({ view: 'menu', category }, '', '/kitchen');
+    scrollToMenuStart();
   };
+
+  // H7 fase 3: l'hamburger apre un pannello con tutte le categorie (griglia a 2 colonne). Non e' una
+  // vista della history: niente pushState, il back del telefono resta quello di prima. Si chiude con
+  // x, tocco sullo sfondo, Esc o scegliendo una categoria; alla chiusura il focus torna all'hamburger.
+  const [catsOpen, setCatsOpen] = useState(false);
+  const catsBtnRef = useRef(null);
+  const catsPanelRef = useRef(null);
+  const closeCats = () => {
+    setCatsOpen(false);
+    catsBtnRef.current?.focus({ preventScroll: true });
+  };
+  useEffect(() => {
+    if (!catsOpen) return undefined;
+    const panel = catsPanelRef.current;
+    (panel?.querySelector('.kc-cat.is-active') || panel?.querySelector('button'))?.focus({ preventScroll: true });
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setCatsOpen(false);
+        catsBtnRef.current?.focus({ preventScroll: true });
+        return;
+      }
+      if (e.key !== 'Tab' || !panel) return;
+      // il focus resta dentro al pannello (dialog modale)
+      const btns = panel.querySelectorAll('button');
+      if (!btns.length) return;
+      const first = btns[0];
+      const last = btns[btns.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [catsOpen]);
 
   // Il listener popstate vive per tutta la vita del componente ma deve leggere
   // lo stato corrente, non quello catturato al mount.
-  const viewRef = useRef(view);
   const cartOpenRef = useRef(cartOpen);
   const activeCategoryRef = useRef(activeCategory);
-  viewRef.current = view;
+  const cartCountRef = useRef(0);
+  const exitArmedRef = useRef(false);
+  const exitTimerRef = useRef(null);
+  const [exitHint, setExitHint] = useState(false);
   cartOpenRef.current = cartOpen;
   activeCategoryRef.current = activeCategory;
+  cartCountRef.current = orderItems.length;
+
+  // Sacco: salva lo scroll all'apertura e lo rimette alla chiusura. Il back reale del telefono
+  // riporta la pagina in cima (hero): cosi' il cliente resta dove era. Il secondo scrollTo (rAF)
+  // copre il browser che ripristina lo scroll dell'entry DOPO l'evento popstate.
+  const cartScrollYRef = useRef(null);
+  useEffect(() => {
+    if (cartOpen) {
+      cartScrollYRef.current = window.scrollY;
+      return undefined;
+    }
+    const y = cartScrollYRef.current;
+    if (y == null) return undefined;
+    cartScrollYRef.current = null;
+    window.scrollTo({ top: y });
+    const raf = window.requestAnimationFrame(() => window.scrollTo({ top: y }));
+    return () => window.cancelAnimationFrame(raf);
+  }, [cartOpen]);
 
   useEffect(() => {
     if (window.location.pathname !== '/kitchen') return undefined;
 
-    // Al rientro su /kitchen (back dal browser, o ritorno da /kitchen/status) il
-    // browser ripristina la entry con il suo { view } e il componente si rimonta:
-    // va ADOTTATO, non sovrascritto, altrimenti si torna alla schermata sbagliata
-    // e il back successivo sembra andare avanti invece che indietro.
+    // Stack voluto: [entry radice, entry menu]. Il primo "indietro" dal menu cade sulla radice:
+    // se il sacco non e' vuoto lo intercettiamo (guard leggero, vedi handlePopState).
+    // Al rientro su /kitchen (back da /kitchen/status) l'entry ripristinata e' quella del menu
+    // (non radice): va adottata, non duplicata. Vecchie entry { view: 'home'|'categories' } -> menu.
     const restored = window.history.state;
-    if (restored?.view) {
-      setView(restored.view);
-      if (restored.category) setActiveCategory(restored.category);
+    if (restored?.view && !restored.root) {
+      if (restored.category && CATEGORIES.some((c) => c.key === restored.category)) {
+        setActiveCategory(restored.category);
+      }
+      window.history.replaceState({ view: 'menu', category: restored.category }, '', '/kitchen');
     } else {
-      window.history.replaceState({ view: 'home' }, '', '/kitchen');
+      window.history.replaceState({ view: 'menu', root: true }, '', '/kitchen');
+      window.history.pushState({ view: 'menu', category: activeCategoryRef.current }, '', '/kitchen');
     }
-
-    // Ogni back deve ripristinare anche la categoria della entry, altrimenti si
-    // torna sì alla LISTA ma su una categoria diversa da quella che si stava
-    // guardando.
-    const restoreEntry = (state) => {
-      setView(state?.view || 'home');
-      if (state?.category) setActiveCategory(state.category);
-      window.scrollTo({ top: 0 });
-    };
 
     const handlePopState = (event) => {
       if (window.location.pathname !== '/kitchen') return;
 
       // Con il drawer aperto il back lo chiude e basta (gesture standard per una
-      // bottom sheet): rimettiamo la entry appena consumata così la schermata
+      // bottom sheet): rimettiamo la entry appena consumata cosi' la schermata
       // sotto non si muove.
       if (cartOpenRef.current) {
         setCartOpen(false);
-        window.history.pushState(
-          { view: viewRef.current, category: activeCategoryRef.current },
-          '',
-          '/kitchen',
-        );
+        window.history.pushState({ view: 'menu', category: activeCategoryRef.current }, '', '/kitchen');
         return;
       }
 
-      restoreEntry(event.state);
+      const state = event.state;
+      if (state?.root) {
+        // Sacco non vuoto: il primo indietro non esce, avvisa; il secondo (entro 3s) esce davvero.
+        if (cartCountRef.current > 0 && !exitArmedRef.current) {
+          exitArmedRef.current = true;
+          setExitHint(true);
+          window.history.pushState({ view: 'menu', category: activeCategoryRef.current }, '', '/kitchen');
+          clearTimeout(exitTimerRef.current);
+          exitTimerRef.current = setTimeout(() => {
+            exitArmedRef.current = false;
+            setExitHint(false);
+          }, 3000);
+          return;
+        }
+        // Sacco vuoto o secondo indietro: l'entry radice e' solo un cuscinetto, si esce davvero.
+        window.history.back();
+        return;
+      }
+      if (state?.category && CATEGORIES.some((c) => c.key === state.category)) {
+        setActiveCategory(state.category);
+      }
+      window.scrollTo({ top: 0 });
     };
     window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      clearTimeout(exitTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Righe MENU — CATEGORIE (Figma 166:2): conteggio e foto reali dai dati menu,
-  // nessun valore inventato — foto = primo item con `image` in quella categoria.
-  const categoryRows = CATEGORIES.map((cat) => {
-    const items = eventMode && cat.key === EVENT_CATEGORY ? eventSandwiches : customerItems.filter((i) => i.category === cat.key);
-    const photo = items.find((i) => i.image)?.image || null;
-    return { ...cat, count: items.length, photo };
-  });
-
-
 
   // `baseId`: id reale da inviare a Supabase (`itemId`, vedi handleSubmit). Per la
   // maggior parte dei prodotti coincide con `id`; FALLO PESANTE con birra scelta
@@ -519,7 +502,8 @@ export default function CustomerKitchenMenu() {
   // aggiunge al sacco e fa partire il feedback visivo.
   const addItem = (item) => {
     pushCartItem(item);
-    setAddedToast({ name: item.name });
+    // Riga MENU: a schermo "Pastrami — FALLO PESANTE" (il nome della riga carrello non cambia).
+    setAddedToast({ name: falloPesanteCartDisplay(item, kitchenPesiMassimiCombos, menuItems)?.title ?? item.name });
     setCartPulse(true);
     spawnFlyer(item);
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -538,6 +522,9 @@ export default function CustomerKitchenMenu() {
   };
 
   const removeAllOfItem = (id) => setOrderItems((prev) => prev.filter((o) => o.id !== id));
+
+  // Quantità per id nel sacco (stepper − N + delle locandine; carrello ripristinato da localStorage incluso).
+  const qtyById = useMemo(() => Object.fromEntries(orderItems.map((o) => [o.id, o.qty])), [orderItems]);
 
   const total = orderItems.reduce((sum, o) => sum + o.price * o.qty, 0);
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
@@ -563,7 +550,10 @@ export default function CustomerKitchenMenu() {
     }
     // Nome e "dove lo mangi" restano obbligatori, senza default silenziosi: se manca qualcosa
     // nessun ordine viene creato e il cliente viene portato sul primo campo mancante.
-    const missing = checkoutMissing({ name: customerName, fulfillmentType });
+    // Ritiro: l'orario deve essere ancora prenotabile adesso (ora di Roma), non solo al momento
+    // della scelta: uno scaduto nel frattempo si azzera e il cliente ne sceglie un altro.
+    const missing = checkoutMissingAtSubmit({ name: customerName, fulfillmentType, pickupSlot });
+    if (missing.includes('pickup_slot') && pickupSlot) setPickupSlot(null);
     if (missing.length > 0) {
       setOrderError(null);
       setCheckoutIssue((prev) => ({ field: missing[0], seq: (prev?.seq ?? 0) + 1 }));
@@ -585,7 +575,8 @@ export default function CustomerKitchenMenu() {
       total,
       note: noteParts.length > 0 ? noteParts.join(' \u00B7 ') : null,
       paidAt: null,
-      fulfillmentType,
+      // 'pickup' (UI) -> takeaway + pickupSlot: addOrder chiama la v3 solo con un orario.
+      ...toServerFulfillment(fulfillmentType, pickupSlot),
       // S5: la creazione passa dalla v2. Lo status (banco/online) lo decide e lo restituisce il
       // server; `clientRequestId` resta lo stesso per lo stesso carrello, così un retry dopo un
       // errore di rete non crea un secondo ordine.
@@ -601,6 +592,11 @@ export default function CustomerKitchenMenu() {
       // RPC alza 'kitchen_closed', il messaggio resta specifico invece del generico "riprova".
       // Carrello e client_request_id restano com'erano per il retry.
       setOrderError(onlineErrorMessage(result.error, 'Ordine non inviato — riprova'));
+      // Orario rifiutato dal server (passato o non valido): si azzera e si riporta il cliente lì.
+      if (isPickupSlotError(result.error)) {
+        setPickupSlot(null);
+        setCheckoutIssue((prev) => ({ field: 'pickup_slot', seq: (prev?.seq ?? 0) + 1 }));
+      }
       setSubmitting(false);
       submitLockRef.current = false;
       return;
@@ -654,7 +650,7 @@ export default function CustomerKitchenMenu() {
     if (!cartRestored || orderItems.length > 0) return;
     setCustomerNote((prev) => (prev ? '' : prev));
     setFulfillmentType((prev) => (prev ? null : prev));
-    setNotesOpen(false);
+    setPickupSlot((prev) => (prev ? null : prev));
   }, [cartRestored, orderItems.length]);
 
   // ── Main menu ─────────────────────────────────────────────────────────
@@ -662,14 +658,7 @@ export default function CustomerKitchenMenu() {
   // 2026-09-13): dopo l'invio si va sulla pagina pagamento dedicata (vedi handleSubmit,
   // follow-up UX 2026-09-18), che copre codice + bivio pagamento senza duplicarli in-page.
   return (
-    <div className="kitch-page">
-      <style>{`
-        /* Card svg icons: dark color on cream background */
-        .kitch-card-img svg {
-          color: #1c1a14 !important;
-        }
-      `}</style>
-
+    <div className="kitch-page kitch-page--poster">
       {/* KITCHEN_OPEN_CLOSE_V1: banner cucina chiusa — sempre visibile, su tutte le view, il menu
           resta comunque navigabile. Zero interazione: informa soltanto, il blocco vero è sulla
           CTA di invio (vedi CONFERMA ORDINE) e sulla RPC server-side. */}
@@ -708,151 +697,107 @@ export default function CustomerKitchenMenu() {
         </button>
       )}
 
-      {/* Header — Figma 111:59 (banner) + 111:63 cornice + 111:60/61/62 claim + 111:64 rule.
-          Il banner ha il vecchio claim stampato: 111:60 lo copre, 111:62 scrive quello nuovo. */}
-      <header className="kh-header">
+      {/* Testata (restyling hero): logo originale al centro, menu a sinistra (apre il pannello CATEGORIE),
+          carrello a destra con il numero dei pezzi (apre lo stesso sacco del dock in basso). */}
+      <header className="kh-brand">
+        <button
+          type="button"
+          ref={catsBtnRef}
+          className="kh-brand-btn kh-brand-btn--menu"
+          aria-label="Apri le categorie del menu"
+          aria-expanded={catsOpen}
+          aria-controls="kh-cats-panel"
+          onClick={() => setCatsOpen(true)}
+        >
+          <svg viewBox="0 0 28 24" width="28" height="24" aria-hidden="true">
+            <path d="M1 3h26M1 12h26M1 21h26" stroke="currentColor" strokeWidth="2.6" strokeLinecap="square" fill="none" />
+          </svg>
+        </button>
         <img
-          src="/assets/kitchen/01_header_walrus_kitchen.webp"
-          alt="Walrus Kitchen"
-          className="kh-header-img"
+          src="/assets/kitchen/walrus-pub-logo-nero.webp"
+          alt="The Walrus Pub · Food & Drink"
+          width="1120"
+          height="155"
+          className="kh-brand-img"
         />
-        <span className="kh-header-frame" aria-hidden="true" />
-        <span className="kh-header-claim-cover" aria-hidden="true" />
-        <span className="kh-header-claim-rule" aria-hidden="true" />
-        <p className="kh-header-claim">PANINI SERI. PERSONALITÀ DISCUTIBILE.</p>
-        <span className="kh-header-baseline" aria-hidden="true" />
+        <button
+          type="button"
+          className="kh-brand-btn kh-brand-btn--cart"
+          aria-label={itemCount > 0 ? `Apri il sacco: ${itemCount} nel sacco` : 'Il sacco è vuoto'}
+          disabled={itemCount === 0}
+          onClick={() => setCartOpen(true)}
+        >
+          <svg viewBox="0 0 32 28" width="30" height="26" aria-hidden="true">
+            <path d="M1 2h5l3.2 15h15.6L28 7H8M12 24.2a1.6 1.6 0 1 0 0-.01M23 24.2a1.6 1.6 0 1 0 0-.01" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+          </svg>
+          {itemCount > 0 && <span className="kh-brand-badge" aria-hidden="true">{itemCount}</span>}
+        </button>
       </header>
 
-      {/* ── HOME (Figma 111:58 — Walrus Kitchen Home V3.4 PHOTO MENU) ── */}
-      {view === 'home' && (
-        <>
-          {eventMode && <AnniversaryBanner />}
-
-          {!(eventMode && garpezFeatured) && (
-            <div className="kh-intro">
-              <p className="kh-intro-title">OGGI TI FACCIAMO VENIRE FAME.</p>
-              <p className="kh-intro-sub">{eventMode ? 'Quindici anni di Walrus. Quattro Pesi Massimi.' : 'Pesi Massimi, panini seri e il resto della faccenda.'}</p>
+      {/* Pannello CATEGORIE (hamburger): sopra testata e linguette sticky, sotto il sacco. */}
+      {catsOpen && (
+        <div
+          className="kc-backdrop"
+          onClick={(e) => { if (e.target === e.currentTarget) closeCats(); }}
+        >
+          <div
+            id="kh-cats-panel"
+            ref={catsPanelRef}
+            className="kc-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Categorie del menu"
+            data-testid="categories-panel"
+          >
+            <div className="kc-head">
+              <span className="kc-title">CATEGORIE</span>
+              <button type="button" className="kc-close" aria-label="Chiudi le categorie" onClick={closeCats}>×</button>
             </div>
-          )}
-
-          {/* Evento: un solo eroe (GARPEZ) + classici compatti. Altrimenti hero PESI MASSIMI approvata (128:2). */}
-          {eventMode && garpezFeatured ? (
-            <GarpezHero
-              featured={garpezFeatured}
-              others={eventSandwiches.filter((i) => i.id !== garpezFeatured.id)}
-              onAdd={addItem}
-            />
-          ) : pesiMassimiItems.length > 0 && (
-            <PesiMassimiSection
-              items={pesiMassimiItems}
-              heroOnly
-              onHeroCta={() => openMenu('bbq')}
-            />
-          )}
-
-          {!eventMode && (<>
-          <div className="kh-section-head">
-            <h2 className="kh-section-title">I PANINI DA SPACCO</h2>
-            <p className="kh-section-sub">Quelli seri. Almeno loro.</p>
-          </div>
-
-          <div className="kh-featured-list">
-            {featuredItems.map((item) => {
-              const soldOut = item.available === false;
-              const noPrice = item.price == null;
+            {MENU_GROUPS.map((group) => {
+              const entries = group.entries
+                .map((e) => ({ ...e, cat: CATEGORIES.find((c) => c.key === e.key) }))
+                .filter((e) => e.cat);
+              if (entries.length === 0) return null;
               return (
-                <article key={item.id} className="kh-card">
-                  <div className="kh-card-photo" style={{ background: item.photoBg }}>
-                    {item.image && <img src={item.image} alt={item.name} />}
+                <section key={group.label} className="kc-group" aria-label={group.label}>
+                  <h3 className="kc-group-title">{group.label}</h3>
+                  <div className="kc-grid">
+                    {entries.map((e) => {
+                      // La scorciatoia (Cicchetto Veg) non si accende: resta gialla solo la categoria vera.
+                      const isActive = !e.label && activeCategory === e.key;
+                      return (
+                        <button
+                          key={e.label || e.key}
+                          type="button"
+                          className={`kc-cat${isActive ? ' is-active' : ''}`}
+                          aria-current={isActive ? 'true' : undefined}
+                          onClick={() => {
+                            selectCategoryTab(e.key);
+                            scrollToMenuStart('smooth');
+                            closeCats();
+                          }}
+                        >
+                          {e.label || e.cat.label}
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="kh-card-accent" />
-                  <h3 className="kh-card-name">{item.name.toUpperCase()}</h3>
-                  <p className="kh-card-ingredients">{item.ingredients}</p>
-                  <p className="kh-card-desc">{item.description}</p>
-                  <div className="kh-card-rule" />
-                  <span className="kh-card-price">
-                    {noPrice ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2).replace('.', ',')}`}
-                  </span>
-                  <button
-                    type="button"
-                    className="kh-btn-want"
-                    disabled={soldOut || noPrice}
-                    onClick={() => addItem(item)}
-                  >
-                    {soldOut ? 'ESAURITO' : 'AGGIUNGI AL SACCO'}
-                  </button>
-                </article>
+                </section>
               );
             })}
-          </div>
-
-          <button type="button" className="kh-cta-outline" onClick={() => openMenu('panini')}>
-            VEDI TUTTI I PANINI →
-          </button>
-          </>)}
-
-          {!(eventMode && garpezFeatured) && (
-          <div className="kh-menu-block">
-            <p className="kh-menu-block-title">ADESSO ENTRA NEL MENU.</p>
-            <p className="kh-menu-block-sub">{eventMode ? 'Pesi Massimi · Contorni' : 'Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande'}</p>
-            <button type="button" className="kh-btn-menu" onClick={enterMenu}>
-              ENTRA NEL MENU →
-            </button>
-          </div>
-          )}
-        </>
-      )}
-
-      {/* ── MENU — CATEGORIE (Figma 166:2) ── */}
-      {view === 'categories' && (
-        <div className="kh-cat-screen">
-          <div className="kh-cat-topbar">
-            <button
-              type="button"
-              className="kh-cat-back"
-              onClick={() => window.history.back()}
-            >
-              ← INDIETRO
-            </button>
-            <span className="kh-cat-topbar-label">MENU</span>
-          </div>
-
-          <h2 className="kh-cat-title">IL MENU</h2>
-          <p className="kh-cat-subtitle">{eventMode ? 'Pesi Massimi · Contorni' : 'Panini · Pesi Massimi · Cicchetti · Insalatone · Tartare · Taglieri · Birre · Bevande'}</p>
-
-          <div className="kh-cat-list">
-            {categoryRows.map((cat) => (
-              <button
-                key={cat.key}
-                type="button"
-                className="kh-cat-row"
-                onClick={() => openMenu(cat.key)}
-              >
-                <div className={`kh-cat-photo${cat.key === 'bbq' ? ' kh-cat-photo--dark' : ''}`}>
-                  {cat.photo && <img src={cat.photo} alt="" />}
-                </div>
-                <div className="kh-cat-accent" />
-                <div className="kh-cat-text">
-                  <span className="kh-cat-name">{cat.label}</span>
-                  <span className="kh-cat-count">{cat.count} {cat.count === 1 ? 'VOCE' : 'VOCI'}</span>
-                </div>
-                <span className="kh-cat-arrow" aria-hidden="true">→</span>
-              </button>
-            ))}
           </div>
         </div>
       )}
 
-      {/* ── MENU COMPLETO ── */}
-      {view === 'menu' && (
-      <>
-      <div className="kh-menu-topbar">
-        <button type="button" className="kh-btn-back" onClick={() => window.history.back()}>
-          ← INDIETRO
-        </button>
-        <span className="kh-menu-topbar-label">{CATEGORIES.find((c) => c.key === activeCategory)?.label || 'MENU'}</span>
-      </div>
+      <MenuHero onDiscover={() => { selectCategoryTab('bbq'); scrollToMenuStart('smooth'); }} />
+      <div ref={menuStartRef} aria-hidden="true" />
+      {eventMode && <AnniversaryBanner />}
+      {exitHint && (
+        <div className="kh-exit-hint" role="status">Hai un ordine in corso. Tocca ancora indietro per uscire.</div>
+      )}
 
+      {/* ── MENU COMPLETO ── */}
+      <>
       {/* Promo hero card */}
       {activeCategory !== 'bbq' && kitchenCategoryPromos[activeCategory] ? (
         <div className="kitch-promo-wrapper">
@@ -871,15 +816,38 @@ export default function CustomerKitchenMenu() {
         onSelect={selectCategoryTab}
       />
 
-      {/* Section title */}
-      {activeCategory !== 'bbq' && (
-        <>
-          <div className="kitch-section-title">{getCategoryTitle(activeCategory)}</div>
-          {getCategorySubtitle(activeCategory) && (
-            <div className="kitch-section-subtitle">{getCategorySubtitle(activeCategory)}</div>
-          )}
-        </>
-      )}
+      {/* Testata categoria da manifesto (mockup B): kicker, titolo Anton su 2 righe, sottotitolo,
+          timbro "TUTTI x €" dove il prezzo è unico. Vale anche per PESI MASSIMI (Fase 3.4b). */}
+      {(() => {
+        const [line1, line2] = getPosterTitle(activeCategory);
+        // Panini: il numero nella battuta del mockup ("Sette panini...") segue i panini realmente a menu.
+        const NUM_WORDS = ['Zero', 'Un', 'Due', 'Tre', 'Quattro', 'Cinque', 'Sei', 'Sette', 'Otto', 'Nove', 'Dieci'];
+        const baseSub = activeCategory === 'panini' && NUM_WORDS[visibleItems.length] && visibleItems.length > 1
+          ? `${NUM_WORDS[visibleItems.length]} panini, nessuno timido. Scegli con la pancia.`
+          : getCategorySubtitle(activeCategory);
+        const prices = visibleItems.map((i) => i.price);
+        const uniquePrice = visibleItems.length >= 2
+          && prices.every((pr) => pr != null && pr !== '' && pr === prices[0]);
+        // Fascia prezzo in coda al sottotitolo (non col timbro "TUTTI x €"; Pesi Massimi: stessi decimali delle schede).
+        const range = baseSub && !uniquePrice ? priceRangeLabel(visibleItems, activeCategory === 'bbq') : '';
+        const sub = range ? `${baseSub} ${range}` : baseSub;
+        return (
+          <header className={`kp-head${uniquePrice ? ' kp-head--stamp' : ''}`}>
+            {!kitchenOpen && <div className="kp-kicker">The Walrus · Cucina chiusa</div>}
+            <h1 className="kp-title">
+              {line1}
+              {line2 && ' '}
+              {line2 && <em>{line2}</em>}
+            </h1>
+            {sub && <p className="kp-sub">{sub}</p>}
+            {uniquePrice && (
+              <div className="kp-stamp" aria-label={`Tutti ${formatPrice(prices[0])}`}>
+                <span aria-hidden="true">Tutti<br />{formatPrice(prices[0])}</span>
+              </div>
+            )}
+          </header>
+        );
+      })()}
 
       {/* Menu items */}
       {activeCategory === 'bbq' && visibleItems.length > 0 && (
@@ -890,28 +858,31 @@ export default function CustomerKitchenMenu() {
           featuredTag={eventMode ? 'anniversario' : null}
           includedSide={falloPesanteSide}
           beerOptions={falloPesanteBeerOptions}
+          drinkOptions={falloPesanteDrinkChoices}
+          onRemove={removeItem}
+          qtyById={qtyById}
         />
       )}
       {activeCategory === 'panini' && visibleItems.length > 0 && (
-        <PaniniSection items={visibleItems} onAdd={addItem} />
+        <PaniniSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'cicchetti' && visibleItems.length > 0 && (
-        <CicchettiSection items={visibleItems} onAdd={addItem} />
+        <CicchettiSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'insalatone' && visibleItems.length > 0 && (
-        <InsalatoneSection items={visibleItems} onAdd={addItem} />
+        <InsalatoneSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'tartare' && visibleItems.length > 0 && (
-        <TartareSection items={visibleItems} onAdd={addItem} />
+        <TartareSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'birre' && visibleItems.length > 0 && (
-        <BirreSection items={visibleItems} onAdd={addItem} />
+        <BirreSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'tagliere' && visibleItems.length > 0 && (
-        <TagliereSection items={visibleItems} onAdd={addItem} />
+        <TagliereSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {activeCategory === 'bevande' && visibleItems.length > 0 && (
-        <BevandeSection items={visibleItems} onAdd={addItem} />
+        <BevandeSection items={visibleItems} onAdd={addItem} onRemove={removeItem} qtyById={qtyById} />
       )}
       {visibleItems.length === 0 && (
         <div className="kitch-menu-empty">NESSUN PRODOTTO DISPONIBILE IN QUESTA CATEGORIA</div>
@@ -920,53 +891,21 @@ export default function CustomerKitchenMenu() {
         <div className="kitch-menu-soldout-banner">AL MOMENTO È TUTTO ESAURITO</div>
       )}
       {activeCategory !== 'bbq' && activeCategory !== 'panini' && activeCategory !== 'cicchetti' && activeCategory !== 'insalatone' && activeCategory !== 'tartare' && activeCategory !== 'birre' && activeCategory !== 'tagliere' && activeCategory !== 'bevande' && (
-      <div className="kitch-menu-list">
-        {visibleItems.map((item) => (
-          <div key={item.id} className="kitch-card" style={item.available === false ? { opacity: 0.6 } : undefined}>
-            <div className="kitch-card-img" style={{ overflow: 'hidden', position: 'relative' }}>
-              {item.available === false && (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(14,12,8,0.55)',
-                  zIndex: 2,
-                }}>
-                  <span style={{
-                    fontSize: '13px', fontWeight: 900, letterSpacing: '0.12em',
-                    color: '#f5ead8', background: 'rgba(180,40,20,0.85)',
-                    padding: '4px 10px', borderRadius: '6px',
-                  }}>ESAURITO</span>
-                </div>
-              )}
-              {item.image
-                ? <img src={item.image} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : (CATEGORY_SVGS[item.category] ?? CATEGORY_SVGS.panini)}
-            </div>
-            <div className="kitch-card-content">
-              <div className="kitch-card-header">
-                <div className="kitch-card-name">{item.name.toUpperCase()}</div>
-                <span className="kitch-card-icon">🦭</span>
-              </div>
-              <div className="kitch-card-desc">{item.description}</div>
-              <AllergenBadges allergens={item.allergens} />
-              <div className="kitch-card-footer">
-                <div className={`kitch-card-price${item.price == null ? ' kitch-card-price--soon' : ''}`}>
-                  {item.price == null ? 'PREZZO IN ARRIVO' : `€${item.price.toFixed(2).replace('.', ',')}`}
-                </div>
-                <button
-                  className="kitch-btn-lo-voglio"
-                  onClick={() => addItem(item)}
-                  disabled={item.available === false || item.price == null}
-                  style={item.available === false || item.price == null ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}
-                >{item.available === false ? 'ESAURITO' : 'AGGIUNGI AL SACCO'}</button>
-              </div>
-            </div>
-          </div>
+      <div className="ct-list">
+        {visibleItems.map((item, index) => (
+          <PosterCard
+            key={item.id}
+            item={item}
+            index={index}
+            qty={qtyById?.[item.id] ?? 0}
+            onAdd={addItem}
+            onRemove={removeItem}
+            compact
+          />
         ))}
       </div>
       )}
       </>
-      )}
 
       {/* Feedback add-to-cart: toast breve + thumbnail che vola verso il sacco. */}
       {addedToast && (
@@ -1002,33 +941,16 @@ export default function CustomerKitchenMenu() {
                 onDismiss={() => setSideChipDismissed(true)}
               />
             )}
-            <div className={`kitch-bottom-card kitch-bottom-card--filled${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
-              <div
-                className="kitch-bottom-left"
-                onClick={() => setCartOpen(true)}
-                role="button"
-                aria-label="Apri carrello"
-              >
-                <div className="kitch-cart-icon-wrap" ref={cartIconRef}>
-                  <svg className="kitch-cart-svg" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M5 7h2.5l3.8 14.5h12.4l3-10.5H10.5" stroke="#e8ddb8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                    <circle cx="13.5" cy="27" r="2" fill="#e8ddb8"/>
-                    <circle cx="23" cy="27" r="2" fill="#e8ddb8"/>
-                  </svg>
-                  <div className="kitch-cart-badge">{itemCount}</div>
-                </div>
-                <div className="kitch-bottom-text-wrap">
-                  <div className="kitch-bottom-title">IL TUO SACCO</div>
-                  <div className="kitch-bottom-total">
-                    {`${itemCount} ${itemCount === 1 ? 'articolo' : 'articoli'} · €${total.toFixed(2).replace('.', ',')}`}
-                  </div>
-                </div>
-              </div>
+            {/* Dock "biglietto da bancone" (mockup B): una sola barra rossa a bordo tratteggiato.
+                Stessa azione di prima (apre il sacco); solo markup/aspetto cambiano. */}
+            <div className={`kitch-bottom-card kb-wrap${cartPulse ? ' kitch-bottom-card--pulse' : ''}`}>
               <button
-                className="kitch-btn-vai"
+                type="button"
+                className="kitch-btn-vai kb-ticket"
                 onClick={() => setCartOpen(true)}
               >
-                VAI ALL'ORDINE
+                <span ref={cartIconRef}>{itemCount} · Vai alla cassa</span>
+                <span>{`${total.toFixed(2).replace('.', ',')} €`}</span>
               </button>
             </div>
           </div>
@@ -1048,7 +970,9 @@ export default function CustomerKitchenMenu() {
           </div>
           <div className="kitch-drawer-body">
             <div className="kitch-drawer-items-list">
-              {orderItems.map((o) => (
+              {orderItems.map((o) => {
+                const menuLine = falloPesanteCartDisplay(o, kitchenPesiMassimiCombos, menuItems);
+                return (
                 <div key={o.id} className="kitch-drawer-row">
                   <div className="kitch-drawer-row-img">
                     {o.image ? (
@@ -1062,17 +986,25 @@ export default function CustomerKitchenMenu() {
                     )}
                   </div>
                   <div className="kitch-drawer-row-content">
-                    <div className="kitch-drawer-row-name">{o.name.toUpperCase()}</div>
-                    <div className="kitch-drawer-row-price">€{o.price.toFixed(2).replace('.', ',')}</div>
+                    <div className="kitch-drawer-row-name">{(menuLine ? menuLine.title : o.name).toUpperCase()}</div>
+                    {menuLine && <div className="kitch-drawer-row-detail">{menuLine.detail}</div>}
                   </div>
+                  <div className="kitch-drawer-row-price">{formatPrice(o.price, true)}</div>
                   <div className="kitch-drawer-row-controls">
-                    <button className="kitch-qty-btn" onClick={() => removeItem(o.id)} aria-label={`Togli uno: ${o.name}`}>−</button>
-                    <span className="kitch-qty-num">{o.qty}</span>
-                    <button className="kitch-qty-btn" onClick={() => addItem(o)} aria-label={`Aggiungi uno: ${o.name}`}>+</button>
-                    <button className="kitch-trash-btn" onClick={() => removeAllOfItem(o.id)} aria-label={`Rimuovi dal sacco: ${o.name}`}>🗑️</button>
+                    <div className="kitch-qty-pill">
+                      <button className="kitch-qty-btn" onClick={() => removeItem(o.id)} aria-label={`Togli uno: ${o.name}`}>−</button>
+                      <span className="kitch-qty-num">{o.qty}</span>
+                      <button className="kitch-qty-btn" onClick={() => addItem(o)} aria-label={`Aggiungi uno: ${o.name}`}>+</button>
+                    </div>
+                    <button className="kitch-trash-btn" onClick={() => removeAllOfItem(o.id)} aria-label={`Rimuovi dal sacco: ${o.name}`}>
+                      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false">
+                        <path d="M4 7h16M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="square" strokeLinejoin="miter" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* AUTO-SELLING V1 — suggerimento birra contestuale (BEER SPRINT V1 §5/§7-D).
@@ -1093,7 +1025,7 @@ export default function CustomerKitchenMenu() {
                   onClick={() => addItem(recommendedBeer)}
                   data-testid="beer-pairing-add"
                 >
-                  +€{recommendedBeer.price.toFixed(2).replace('.', ',')}
+                  +{formatPrice(recommendedBeer.price, true)}
                 </button>
               </div>
             )}
@@ -1105,10 +1037,10 @@ export default function CustomerKitchenMenu() {
               onNameChange={setCustomerName}
               fulfillmentType={fulfillmentType}
               onFulfillmentChange={setFulfillmentType}
+              pickupSlot={pickupSlot}
+              onPickupSlotChange={setPickupSlot}
               note={customerNote}
               onNoteChange={setCustomerNote}
-              notesOpen={notesOpen}
-              onNotesOpenChange={setNotesOpen}
               submitting={submitting}
               kitchenOpen={kitchenOpen}
               total={total}

@@ -1,3 +1,4 @@
+import { formatPrice } from '../../lib/kitchenPrice';
 import './EventSideChip.css';
 
 /**
@@ -6,11 +7,6 @@ import './EventSideChip.css';
  * barra del sacco, non copre totale né "VAI ALL'ORDINE", non va chiuso per forza.
  * Quando mostrarlo lo decide il menu (`shouldSuggestEventSide`); qui solo la resa.
  */
-function formatPrice(value) {
-  if (value == null) return '';
-  return Number.isInteger(value) ? `${value} €` : `${value.toFixed(2).replace('.', ',')} €`;
-}
-
 export default function EventSideChip({ item, onAdd, onDismiss }) {
   if (!item) return null;
   return (

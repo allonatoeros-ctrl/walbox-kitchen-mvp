@@ -20,326 +20,39 @@
   color: var(--k-text);
   font-family: var(--k-font-body);
   overflow-x: hidden;
-}
 
-/* ── Header ─────────────────────────────────────── */
-.kitch-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px 16px 16px;
-  background: #000;
-  margin-bottom: -10px;
-}
-
-/* Yellow box logo — matches reference */
-.kitch-header-logo-box {
-  width: 60px;
-  height: 60px;
-  background: var(--k-yellow);
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.kitch-header-logo-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.kitch-header-text {
-  display: flex;
-  flex-direction: column;
-}
-
-.kitch-header-title {
-  font-family: var(--k-font-display);
-  font-size: 34px;
-  line-height: 0.95;
-  color: #fff;
-  letter-spacing: 1px;
-}
-
-.kitch-header-sub {
-  font-family: 'Barlow Condensed', 'Oswald', sans-serif;
-  font-size: 14px;
-  font-weight: 900;
-  color: #c8960a;
-  margin-top: 6px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  line-height: 1.1;
-}
-
-/* ── Hero headline ────────────────────────────────── */
-.kitch-hero-headline {
-  font-family: var(--k-font-display);
-  font-size: 28px;
-  line-height: 1.05;
-  color: var(--k-cream);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  padding: 16px 16px 4px;
-  text-align: center;
+  /* Token "poster da pub" (restyling Fase 3, direzione B): solo menu cliente, i --k-* globali
+     dello staff restano. Valori dal mockup ai-ops/reports/mockup-restyling/B-poster-da-pub.html. */
+  --poster-bg:     #120806;
+  --poster-panel:  #1b0f09;
+  --poster-line:   #3a2617;
+  --poster-ink:    #f7dfb5;
+  --poster-muted:  #c9b39a;
+  --poster-yellow: #ffc83d;
+  --poster-brick:  #b8472f;
+  --poster-on-yellow: #140a05;
+  /* Fase 3.4c: font del logo "THE WALRUS PUB" (League Gothic, un solo peso 400: niente grassetto
+     sintetico, nelle regole che lo usano font-weight resta 400). Fallback condensati simili. */
+  --poster-font-display: 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif;
+  --poster-font-label:   'League Gothic', 'Oswald', 'Arial Narrow', sans-serif;
+  --poster-font-body:    'Montserrat', system-ui, sans-serif;
+  /* 3 misure fisse: xl = titolo categoria, md = nome prodotto E prezzo, sm = etichette/linguette/kicker. */
+  --poster-size-xl: 72px;
+  --poster-size-md: 40px;
+  --poster-size-sm: 20px;
+  --poster-track-sm: 0.06em;
+  /* Riga oro sottile, come quella sotto il logo. */
+  --poster-rule-color: rgba(255, 200, 61, 0.8);
+  --poster-rule: 1px solid var(--poster-rule-color);
+  /* K1: h1-h6 e button globali (index.css) leggono --font-display, che KitchenTvScreen.css
+     ridefinisce su :root in Bebas Neue. Il menu dichiara il suo, la TV non si tocca. */
+  --font-display: var(--poster-font-display);
 }
 
 /* ── Promo hero card ─────────────────────────────── */
 .kitch-promo-wrapper {
   position: relative;
   margin: 10px 10px 0;
-}
-
-.kitch-promo-badge {
-  position: absolute;
-  top: -20px;
-  right: 20px;
-  background: var(--k-yellow);
-  color: var(--k-bg);
-  border-radius: 50%;
-  width: 86px;
-  height: 86px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  font-family: var(--k-font-display);
-  font-size: 14px;
-  font-weight: 900;
-  line-height: 1.15;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.35);
-  z-index: 10;
-}
-
-.kitch-promo-card {
-  background: #f6deb5;
-  border-radius: 28px;
-  padding: 20px 16px 20px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  position: relative;
-  gap: 12px;
-  margin-bottom: -12px;
-}
-
-.kitch-promo-text {
-  display: flex;
-  flex-direction: column;
-  z-index: 2;
-}
-
-.kitch-promo-label {
-  font-family: var(--k-font-display);
-  font-size: 26px;
-  color: #150a06;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.kitch-promo-name {
-  font-family: var(--k-font-display);
-  font-size: 32px;
-  color: var(--k-orange);
-  line-height: 0.95;
-  text-transform: uppercase;
-}
-
-.kitch-promo-desc {
-  font-family: var(--k-font-body);
-  font-size: 12px;
-  color: #5c4738;
-  font-weight: 800;
-  margin-top: 10px;
-  line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-}
-
-.kitch-promo-price-pill {
-  background: var(--k-orange);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 20px;
-  border-radius: 9999px;
-  margin-top: 14px;
-  align-self: flex-start;
-}
-
-.kitch-promo-price-pill span {
-  font-family: var(--k-font-display);
-  color: #fff;
-  font-size: 22px;
-  line-height: 1;
-}
-
-.kitch-promo-img {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  margin-left: 12px;
-}
-
-/* ── Category tabs ───────────────────────────────── */
-/* A 390px i 5 tab non entrano: 5×68 + gap + padding fa ~412px, e la strip non
-   portava mai il tab attivo in vista — con TARTARE attiva il cerchio arancione
-   restava tagliato sul bordo destro. Non si risolve stringendo il gap: le
-   etichette lunghe ("CICCHETTI" 67px, "INSALATONE" 79px) sono più larghe dei
-   68px del tab, quindi sotto ~16px di gap si toccano e si leggono come una
-   parola sola. Gap e padding restano quelli approvati: è il tab attivo a
-   essere portato in vista via `scrollIntoView` (KitchenCategoryTabs.jsx,
-   solo se non già interamente visibile), con `scroll-padding-inline` che
-   evita di incollarlo al bordo. */
-.kitch-tabs-wrap {
-  position: relative;
-}
-
-.kitch-tabs {
-  display: flex;
-  justify-content: flex-start;
-  gap: 13px;
-  scroll-padding-inline: 12px;
-  padding: 18px 12px 12px;
-  background: var(--k-bg);
-  overflow-x: auto;
-  scroll-snap-type: x proximity;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-  margin-bottom: 0;
-}
-
-.kitch-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-/* Edge fade dinamico (BUILD CATEGORY NAV DISCOVERABILITY V1, decisione Eros,
-   Option A): segnala che la strip continua oltre il bordo, visibile solo sul
-   lato dove c'è overflow residuo reale (JS in KitchenCategoryTabs.jsx tramite
-   `.is-visible`). Non tocca width/gap/padding dei tab. */
-.kitch-tabs-fade {
-  position: absolute;
-  top: 18px;
-  bottom: 0;
-  width: 28px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity .15s ease;
-  z-index: 1;
-}
-
-.kitch-tabs-fade--left {
-  left: 0;
-  background: linear-gradient(to right, var(--k-bg), transparent);
-}
-
-.kitch-tabs-fade--right {
-  right: 0;
-  background: linear-gradient(to left, var(--k-bg), transparent);
-}
-
-.kitch-tabs-fade.is-visible {
-  opacity: 1;
-}
-
-.kitch-tab {
-  width: 68px;
-  background: transparent;
-  border: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  padding: 0;
-  scroll-snap-align: center;
-  flex: 0 0 auto;
-}
-
-.kitch-tab-circle {
-  width: 68px;
-  height: 68px;
-  border-radius: 34px;
-  border-width: 2px;
-  border-style: solid;
-  border-color: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--k-surface);
-  color: var(--k-text-muted);
-  box-shadow: none;
-  transition: background-color .15s ease, border-color .15s ease, box-shadow .15s ease, color .15s ease;
-}
-
-.kitch-tab-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.kitch-tab.is-active .kitch-tab-circle {
-  background: var(--k-orange);
-  border-color: var(--k-yellow);
-  color: var(--k-cream);
-  box-shadow: 0 8px 20px rgba(240, 90, 36, 0.35);
-}
-
-.kitch-tab-label {
-  font-family: var(--k-font-display);
-  font-size: 11px;
-  line-height: 1.15;
-  text-align: center;
-  font-weight: 700;
-  min-height: 26px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  color: var(--k-text-muted);
-  transition: color .15s ease;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-}
-
-.kitch-tab.is-active .kitch-tab-label {
-  color: var(--k-cream);
-}
-
-/* ── Section title ───────────────────────────────── */
-.kitch-section-title {
-  font-family: var(--k-font-display);
-  font-size: 26px;
-  font-weight: 900;
-  color: #c8960a;
-  padding: 4px 10px 0;
-  letter-spacing: 1.04px;
-  text-transform: uppercase;
-}
-
-/* ── Section subtitle (narrative, per-category) ──── */
-/* Era l'unico Montserrat nel chrome del menu (tutto il resto è Bungee o Barlow
-   Condensed) e a 390px andava a 2 righe, orfanando l'ultima voce dopo il "·".
-   Figma 164:9 SECTION SUB è una riga singola. */
-.kitch-section-subtitle {
-  font-family: 'Barlow Condensed', 'Oswald', sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(245,234,216,0.7);
-  padding: 4px 12px 0;
-  line-height: 1.4;
-}
-
-/* ── Menu item cards ─────────────────────────────── */
-.kitch-menu-list {
-  padding: 14px 10px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
 }
 
 .kitch-menu-empty {
@@ -372,144 +85,6 @@
   text-transform: uppercase;
 }
 
-.kitch-card {
-  display: flex;
-  gap: 0;
-  padding: 0;
-  border-radius: 14px;
-  background: #e8ddb8;
-  min-height: 148px;
-  height: auto;
-  overflow: hidden;
-  box-shadow: 0px 3px 12px 0px rgba(0,0,0,0.55);
-}
-
-.kitch-card--bbq {
-  background: #efe2c2;
-  border: 1.5px solid #8b1e1e;
-  box-shadow: 0px 3px 14px 0px rgba(139,30,30,0.35);
-}
-
-.kitch-card--bbq .kitch-card-price {
-  color: #8b1e1e;
-}
-
-.kitch-card--bbq .kitch-btn-lo-voglio {
-  background: #8b1e1e;
-}
-
-.kitch-card-img {
-  width: 148px;
-  min-height: 148px;
-  height: auto;
-  align-self: stretch;
-  background: #c4a86a;
-  border-radius: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  border: none;
-  overflow: hidden;
-}
-
-.kitch-card-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: 12px 12px 12px 12px;
-  min-width: 0;
-}
-
-.kitch-card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.kitch-card-name {
-  font-family: var(--k-font-display);
-  font-size: 16px;
-  font-weight: 800;
-  color: #1c1a14;
-  letter-spacing: 0.64px;
-  line-height: 1.1;
-  text-transform: uppercase;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.kitch-card-icon {
-  font-size: 14px;
-  opacity: 0.8;
-  flex-shrink: 0;
-  margin-left: 4px;
-}
-
-.kitch-card-desc {
-  font-size: 12px;
-  color: #5c4738;
-  margin-top: 4px;
-  line-height: 1.3;
-  margin-bottom: 8px;
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-}
-
-.kitch-card-footer {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: auto;
-  padding-top: 10px;
-  gap: 8px;
-}
-
-.kitch-card-price {
-  font-family: var(--k-font-display);
-  font-size: 20px;
-  font-weight: 800;
-  color: #c84020;
-}
-
-/* Prezzo non ancora definito: nessun prezzo inventato, label compatta */
-.kitch-card-price.kitch-card-price--soon {
-  font-size: 12px;
-  line-height: 1.15;
-  letter-spacing: 0.5px;
-  max-width: 46%;
-}
-
-.kitch-btn-lo-voglio {
-  flex-shrink: 0;
-  background: #c84020;
-  color: #fff;
-  font-family: var(--k-font-display);
-  font-weight: 900;
-  border: none;
-  border-radius: 10px;
-  padding: 11px 12px;
-  min-height: 38px;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  text-transform: uppercase;
-  transition: var(--k-transition);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-}
-
-.kitch-btn-lo-voglio:hover {
-  background: #a83318;
-}
-
 /* ── Bottom cart bar ─────────────────────────────── */
 .kitch-bottom-spacer {
   height: 96px;
@@ -523,10 +98,9 @@
   /* Allineata alla colonna da 480px di .kitch-page (vedi commento lì). */
   max-width: 480px;
   margin-inline: auto;
-  background: linear-gradient(to top, #0e0c08 70%, transparent);
+  padding: 12px 16px max(20px, env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--poster-bg) 70%, transparent);
   border-top: none;
-  padding: 10px 10px;
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
   z-index: 100;
 }
 
@@ -542,70 +116,6 @@
   gap: 12px;
 }
 
-.kitch-bottom-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  flex: 1;
-  min-width: 0;
-}
-
-.kitch-cart-icon-wrap {
-  position: relative;
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
-}
-
-.kitch-cart-svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.kitch-cart-badge {
-  position: absolute;
-  top: -4px;
-  left: 22px;
-  background: #c84020;
-  color: #fff;
-  font-family: var(--k-font-display);
-  font-size: 11px;
-  font-weight: 800;
-  width: 18px;
-  height: 18px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.kitch-bottom-text-wrap {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-
-.kitch-bottom-title {
-  font-family: var(--k-font-display);
-  font-size: 16px;
-  font-weight: 800;
-  color: #e8ddb8;
-  letter-spacing: 0.64px;
-  text-transform: uppercase;
-  line-height: 1.15;
-}
-
-.kitch-bottom-total {
-  font-family: var(--k-font-display);
-  font-size: 14px;
-  font-weight: 600;
-  color: #8a7e60;
-}
-
 .kitch-btn-vai {
   background: #c84020;
   color: #fff;
@@ -614,7 +124,7 @@
   border: none;
   border-radius: 10px;
   padding: 11px 16px;
-  min-height: 38px;
+  min-height: 44px; /* V4 */
   font-size: 15px;
   cursor: pointer;
   letter-spacing: 0.75px;
@@ -627,27 +137,7 @@
   flex-shrink: 0;
 }
 
-.kitch-btn-vai:hover {
-  background: #a83318;
-}
-
 /* ── Feedback add-to-cart (2026-09-24) ───────────── */
-/* Sacco "riempito": bordo/orlo più evidente quando c'è almeno un articolo. */
-.kitch-bottom-card--filled {
-  border-color: rgba(200, 150, 10, 0.6);
-  box-shadow: 0 4px 18px rgba(200, 130, 10, 0.18);
-}
-
-@keyframes kitchCartPulse {
-  0% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7); }
-  35% { transform: scale(1.04); box-shadow: 0 6px 22px rgba(200, 130, 10, 0.55); }
-  100% { transform: scale(1); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7); }
-}
-
-.kitch-bottom-card--pulse {
-  animation: kitchCartPulse 600ms ease-out;
-}
-
 .kitch-add-toast {
   position: fixed;
   left: 50%;
@@ -707,7 +197,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kitch-bottom-card--pulse,
   .kitch-add-toast,
   .kitch-fly-thumb {
     animation: none;
@@ -730,8 +219,13 @@
   /* Allineato alla colonna da 480px di .kitch-page (vedi commento lì). */
   max-width: 480px;
   margin-inline: auto;
-  background: var(--k-cream);
-  border-radius: 24px 24px 0 0;
+  /* Giro 5: sacco nello stesso linguaggio del menu (nero caldo, crema, giallo, League Gothic, angoli 12px). */
+  background: var(--poster-bg);
+  color: var(--poster-ink);
+  font-family: var(--poster-font-body);
+  border-top: 1px solid var(--poster-line);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.6);
   z-index: 300;
   max-height: 90vh;
   display: flex;
@@ -741,73 +235,88 @@
 .kitch-drawer-handle {
   width: 40px;
   height: 4px;
-  background: #ccc;
+  background: var(--poster-muted);
+  opacity: 0.5;
   border-radius: 2px;
   margin: 12px auto;
+  flex-shrink: 0; /* giro 5b N-10: col sacco pieno il foglio e' una colonna flex, la maniglia non deve schiacciarsi */
 }
 
 .kitch-drawer-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px 16px;
-  border-bottom: 1px solid #e0c89e;
+  padding: 0 20px 8px;
+  border-bottom: 1px solid var(--poster-line);
 }
 
 .kitch-drawer-title {
-  font-family: var(--k-font-display);
-  font-size: 24px;
-  color: var(--k-surface);
-  letter-spacing: 1px;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1;
+  color: var(--poster-ink);
+  letter-spacing: 0.04em;
 }
 
 .kitch-drawer-close {
   background: transparent;
   border: none;
-  font-size: 28px;
-  color: var(--k-surface);
+  font-size: 34px;
+  color: var(--poster-ink);
   cursor: pointer;
   line-height: 1;
   min-width: 44px;
   min-height: 44px;
+  margin-right: -10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
+.kitch-drawer-close:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: -4px; }
 
 .kitch-drawer-body {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
   flex: 1;
+  /* V2 (Fase 3.0): il footer sticky .cx-footer (~197px) copre il fondo dell'area scrollabile; con scroll-padding
+     focus, scrollIntoView e tab portano nome / dove / note SOPRA il footer, non sotto. */
+  scroll-padding-bottom: 240px;
 }
 
 .kitch-drawer-items-list {
-  padding: 16px 20px;
+  padding: 14px 20px 8px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 0;
 }
 
-/* A 390px la colonna del nome era ~104px: "BRISKET — FALLO PESANTE" andava su
-   3 righe, con la lineetta orfana su una riga da sola. Il nome ha ora una base
-   di 200px, quindi sotto quella soglia il blocco quantità va a capo su una
-   riga propria allineata a destra invece di stritolare il nome. Nessuna
-   riduzione dei target di tocco. */
+/* Riga compatta come le schede: miniatura a sinistra, nome (con la scelta) al centro, prezzo a destra,
+   sotto il nome lo stepper giallo - N + e il cestino. A 320 px la colonna del nome resta >= 130 px. */
 .kitch-drawer-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  row-gap: 8px;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "img name price"
+    "img ctrl ctrl";
+  column-gap: 12px;
+  row-gap: 6px;
+  align-items: start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--poster-line);
   flex-shrink: 0;
 }
 
+.kitch-drawer-row:last-child { border-bottom: 0; }
+
 .kitch-drawer-row-img {
+  grid-area: img;
   width: 60px;
   height: 60px;
-  background: var(--k-surface);
-  border-radius: var(--k-radius);
+  background: #2a1a10;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -823,129 +332,111 @@
 }
 
 .kitch-drawer-row-content {
-  flex: 1 1 200px;
+  grid-area: name;
   min-width: 0;
 }
 
 .kitch-drawer-row-name {
-  font-family: var(--k-font-display);
-  font-size: 16px;
-  line-height: 1.15;
-  color: var(--k-surface);
-  margin-bottom: 4px;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: var(--poster-ink);
+  overflow-wrap: break-word;
+}
+
+/* H7 fase 2: dettaglio della riga MENU ("MENU · PANINO + PATATE + X"), piccolo e attenuato, va a capo. */
+.kitch-drawer-row-detail {
+  margin-top: 4px;
+  font-family: var(--poster-font-body);
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: var(--poster-muted);
+  overflow-wrap: anywhere;
 }
 
 .kitch-drawer-row-price {
-  color: #b8261d;
-  font-weight: 700;
-  font-size: 14px;
+  grid-area: price;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--poster-yellow);
+  white-space: nowrap;
+  text-align: right;
 }
 
 .kitch-drawer-row-controls {
+  grid-area: ctrl;
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: #eaddc2;
-  padding: 6px 12px;
-  border-radius: 20px;
-  flex-shrink: 0;
-  /* quando va a capo (vedi .kitch-drawer-row) resta allineato a destra */
-  margin-left: auto;
+  gap: 4px;
+  min-width: 0;
+}
+
+/* Stepper giallo come quello delle schede compatte. */
+.kitch-qty-pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  border-radius: 22px;
+  background: var(--poster-yellow);
 }
 
 .kitch-qty-btn {
   background: transparent;
   border: none;
-  font-size: 20px;
-  font-weight: 700;
-  color: var(--k-surface);
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 30px;
+  line-height: 1;
+  color: var(--poster-on-yellow);
   cursor: pointer;
-  min-width: 36px;
-  min-height: 36px;
+  min-width: 44px; /* V4 */
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.kitch-qty-btn:focus-visible { outline: 3px solid var(--poster-on-yellow); outline-offset: -8px; }
+
 .kitch-qty-num {
-  font-family: var(--k-font-display);
-  font-size: 18px;
-  color: var(--k-surface);
-  min-width: 20px;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--poster-on-yellow);
+  min-width: 18px;
   text-align: center;
 }
 
 .kitch-trash-btn {
   background: transparent;
   border: none;
-  font-size: 16px;
+  color: var(--poster-muted);
   cursor: pointer;
-  margin-left: 4px;
-  min-width: 40px;
-  min-height: 40px;
+  margin-left: 2px;
+  min-width: 44px; /* V4 */
+  min-height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* ── Drawer totals + submit ──────────────────────── */
-.kitch-drawer-footer {
-  padding: 16px 20px;
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
-  background: var(--k-cream);
-  border-top: 1px solid #e0c89e;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.kitch-drawer-total-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 0;
-  margin-bottom: 4px;
-}
-
-.kitch-drawer-total-label,
-.kitch-drawer-total-value {
-  font-family: var(--k-font-display);
-  font-size: 24px;
-  color: var(--k-surface);
-}
-
-.kitch-btn-submit {
-  background: var(--k-orange);
-  color: var(--k-cream);
-  font-family: var(--k-font-display);
-  border: none;
-  border-radius: var(--k-radius);
-  padding: 16px;
-  font-size: 20px;
-  cursor: pointer;
-  letter-spacing: 1px;
-  width: 100%;
-  transition: var(--k-transition);
-}
-
-.kitch-btn-submit:hover {
-  background: var(--k-orange-hover);
-}
-
-.kitch-secure-hint {
-  text-align: center;
-  font-size: 12px;
-  color: #555;
-  margin-top: 4px;
-}
+.kitch-trash-btn:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: -6px; }
 
 /* ── Drawer — suggerimento birra contestuale (AUTO-SELLING V1) ───────── */
 .kitch-pairing-banner {
-  margin: 0 20px 16px;
+  margin: 8px 20px 16px;
   padding: 12px 14px;
-  border-radius: var(--k-radius);
-  background: #eaddc2;
+  border: 1px solid var(--poster-line);
+  border-radius: 12px;
+  background: var(--poster-panel);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -960,802 +451,410 @@
 }
 
 .kitch-pairing-label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: #6b5c3e;
+  font-family: var(--poster-font-label);
+  font-size: 16px;
+  line-height: 1.1;
+  letter-spacing: var(--poster-track-sm);
+  color: var(--poster-muted);
 }
 
 .kitch-pairing-name {
-  font-family: var(--k-font-display);
-  font-size: 16px;
-  line-height: 1.15;
-  color: var(--k-surface);
+  font-family: var(--poster-font-display);
+  font-size: 22px;
+  line-height: 1.05;
+  color: var(--poster-ink);
 }
 
 .kitch-pairing-add {
   flex-shrink: 0;
-  background: var(--k-orange);
-  color: var(--k-cream);
+  min-height: 44px;
+  background: var(--poster-yellow);
+  color: var(--poster-on-yellow);
   border: none;
-  border-radius: 20px;
-  padding: 8px 14px;
-  font-family: var(--k-font-display);
-  font-size: 14px;
+  border-radius: 6px;
+  padding: 0 14px;
+  font-family: var(--poster-font-display);
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
   cursor: pointer;
 }
 
-/* ── Drawer — DOVE LO MANGI? (fulfillment, unica domanda) ────────────── */
-.kitch-fulfillment-wrap {
-  padding: 4px 20px 16px;
-}
+.kitch-pairing-add:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 3px; }
 
-.kitch-fulfillment-label {
-  font-family: var(--k-font-display);
-  font-size: 15px;
-  color: var(--k-surface);
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
+/* ══════════════════════════════════════════════════════════════════
+   RESTYLING POSTER DA PUB (menu cliente) — riferimento unico:
+   ai-ops/reports/mockup-restyling/B-poster-da-pub.html
+   Prefissi: .kh-brand (testata), .kp-* (tab, testata categoria), .kb-* (dock).
+   ══════════════════════════════════════════════════════════════════ */
+.kh-brand {
+  position: relative;
+  background: #000; /* H3: logo "walrus-pub-logo-nero" = stesso file con il fondo grigio portato a nero (livelli, niente AI) */
+  border-bottom: 1px solid #000;
 }
-
-.kitch-fulfillment-grid {
+.kh-brand-img {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  margin-inline: auto;
+  height: auto;
+}
+/* Menu a sinistra e carrello a destra, nello spazio vuoto ai lati del logo. */
+.kh-brand-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  padding: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--poster-yellow);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.kh-brand-btn--menu { left: max(8px, calc(50% - 240px + 8px)); }
+.kh-brand-btn--cart { right: max(8px, calc(50% - 240px + 8px)); }
+.kh-brand-btn:disabled { cursor: default; opacity: 0.85; }
+.kh-brand-btn:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: -4px; }
+.kh-brand-badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--poster-yellow);
+  color: var(--poster-on-yellow);
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 1;
 }
 
-.kitch-fulfillment-card {
-  height: 88px;
-  border-radius: var(--k-radius);
-  background: #fff8ea;
-  border: 2px solid #e0c89e;
+/* ── Pannello CATEGORIE (hamburger, H7 fase 3) ──
+   Sopra testata, banner e linguette sticky (z 5-90), sotto il sacco (200/300). Stesse variabili --poster-*. */
+.kc-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.72);
+}
+.kc-panel {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 480px;
+  max-height: 100%;
+  margin-inline: auto;
+  overflow-y: auto;
+  padding: 0 16px 16px;
+  background: var(--poster-bg);
+  color: var(--poster-ink);
+  border-bottom: var(--poster-rule);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+}
+.kc-head {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 56px;
+  border-bottom: 1px solid var(--poster-line);
+  margin-bottom: 12px;
+}
+.kc-title {
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 36px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--poster-ink);
+}
+.kc-close {
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0 -10px 0 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--poster-ink);
+  font-family: var(--poster-font-display);
+  font-size: 40px;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+/* gruppi del pannello (APERITIVO, LEGGERO, FAME VERA, DA BERE): titolo piccolo sopra la griglia */
+.kc-group + .kc-group { margin-top: 18px; }
+.kc-group-title {
+  margin: 0 0 8px;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--poster-yellow);
+}
+.kc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.kc-cat {
+  min-height: 52px;
+  padding: 6px 10px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  border: 1px solid var(--poster-line);
+  border-radius: 6px;
+  background: var(--poster-panel);
+  color: var(--poster-ink);
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
+  text-transform: uppercase;
+  text-align: center;
   cursor: pointer;
-  transition: var(--k-transition);
+  -webkit-tap-highlight-color: transparent;
+}
+/* attiva = giallo come .kp-chip.is-active */
+.kc-cat.is-active {
+  background: var(--poster-yellow);
+  border-color: var(--poster-yellow);
+  color: var(--poster-on-yellow);
+}
+/* l'ultima voce del gruppo, se sola sulla riga, occupa tutta la riga */
+.kc-cat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.kc-close:focus-visible,
+.kc-cat:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
+.kc-cat.is-active:focus-visible { outline-color: var(--poster-ink); }
+
+/* Avviso "tocca ancora indietro" (guard tasto indietro con sacco pieno). */
+.kh-exit-hint {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 84px;
+  z-index: 90;
+  padding: 10px 14px;
+  text-align: center;
+  font-family: var(--poster-font-label);
+  font-weight: 400;
+  font-size: var(--poster-size-sm);
+  letter-spacing: var(--poster-track-sm);
+  color: var(--poster-ink);
+  background: var(--poster-panel);
+  border: 1px solid var(--poster-yellow);
 }
 
-.kitch-fulfillment-card-emoji {
-  font-size: 20px;
+/* Pagina menu = fondo manifesto del mockup. `overflow-x: clip` (non hidden) perché hidden
+   rompe lo sticky della barra chip. */
+.kitch-page--poster {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(184, 71, 47, 0.18), transparent 45%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 2px, transparent 2px 4px),
+    var(--poster-bg);
+  box-shadow: 0 0 0 100vmax #070302;
+  overflow-x: clip;
+}
+
+/* ── Barra chip categorie (mockup .top / .chip) ── */
+.kp-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  gap: 0;
+  padding: 8px 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: rgba(14, 8, 5, 0.96);
+  backdrop-filter: blur(8px);
+  border-bottom: var(--poster-rule);
+}
+.kp-tabs::-webkit-scrollbar { display: none; }
+
+.kp-chip {
+  position: relative;
+  flex: none;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  border-radius: 0;
+  background: transparent;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: var(--poster-size-sm);
+  line-height: 1;
+  letter-spacing: var(--poster-track-sm);
+  text-transform: uppercase;
+  color: var(--poster-ink);
+  border: 0;
+  border-right: 1px solid var(--poster-line);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.kp-chip:last-child { border-right: 0; }
+.kp-chip.is-active {
+  border-radius: 6px;
+  border-right-color: var(--poster-yellow);
+  color: var(--poster-on-yellow);
+  background: var(--poster-yellow);
+  border-color: var(--poster-yellow);
+}
+/* H7 fase 3: chip alti 44 px veri (prima 38 + estensione invisibile). L'estensione e' tolta: con i chip
+   attaccati e 8 px di padding sopra/sotto non serve piu' e non puo' rubare tocchi alla barra. */
+.kp-chip:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
+
+/* ── Testata categoria da manifesto (mockup .poster-head) ── */
+.kp-head {
+  position: relative;
+  margin: 0 16px;
+  padding: 16px 0 12px;
+  font-family: var(--poster-font-body);
+}
+.kp-kicker {
+  font-family: var(--poster-font-label);
+  font-weight: 400;
+  font-size: var(--poster-size-sm);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  line-height: normal;
+  color: var(--poster-yellow);
+}
+.kp-title {
+  margin: 6px 0 0;
+  font-family: var(--poster-font-display);
+  font-weight: 400; /* League Gothic ha un solo peso: niente bold sintetico */
+  letter-spacing: 0.01em;
+  font-size: min(var(--poster-size-xl), 18.5vw);
+  line-height: 0.92;
+  text-transform: uppercase;
+  color: var(--poster-ink);
+  overflow-wrap: break-word; /* a capo solo tra le parole (PESI / MASSIMI), mai dentro una parola */
+}
+.kp-title em {
+  display: inline;
+  font-style: normal;
+  color: var(--poster-yellow);
+}
+/* Teste con timbro "TUTTI X €" (Birre, Panini...): timbro più piccolo e titolo più basso, così il timbro non copre
+   le lettere e nessuna parola va a capo a metà. */
+.kp-head--stamp { padding-right: 72px; }
+.kp-head--stamp .kp-title { font-size: min(var(--poster-size-xl), 13vw); }
+.kp-head--stamp .kp-stamp { width: 64px; height: 64px; top: 6px; right: 0; }
+/* Segni gialli a destra del titolo (come nel riferimento): decorazione, nessun significato. */
+.kp-head:not(.kp-head--stamp)::after {
+  content: '';
+  position: absolute;
+  right: 4px;
+  top: 12px;
+  width: 64px;
+  height: 56px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 56'%3E%3Cpath fill='%23ffc83d' d='M30 2 L40 6 L12 40 Z M62 30 L63 38 L20 52 Z'/%3E%3C/svg%3E") no-repeat center / contain;
+  pointer-events: none;
+}
+@media (max-width: 339px) { .kp-head:not(.kp-head--stamp)::after { display: none; } }
+.kp-sub {
+  margin: 6px 0 0;
+  max-width: 340px;
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--poster-ink);
+}
+.kp-stamp {
+  position: absolute;
+  right: 2px;
+  top: 22px;
+  width: 86px;
+  height: 86px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border-radius: 50%;
+  border: 2px solid var(--poster-yellow);
+  color: var(--poster-yellow);
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: var(--poster-size-sm);
+  letter-spacing: var(--poster-track-sm);
+  line-height: 1;
+  text-transform: uppercase;
+  transform: rotate(-12deg);
   opacity: 0.9;
 }
 
-.kitch-fulfillment-card-title {
-  font-family: var(--k-font-display);
-  font-size: 15px;
-  color: var(--k-surface);
-}
-
-.kitch-fulfillment-card-sub {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
-  color: #8a7358;
-  text-align: center;
-}
-
-.kitch-fulfillment-card--selected {
-  background: var(--k-orange);
-  border-color: #c0421a;
-  box-shadow: 0 2px 0 #c0421a;
-}
-
-.kitch-fulfillment-card--selected .kitch-fulfillment-card-title {
-  color: var(--k-cream);
-}
-
-.kitch-fulfillment-card--selected .kitch-fulfillment-card-sub {
-  color: rgba(247, 223, 181, 0.8);
-}
-
-/* ── Drawer — EXTRA (note / codice, collassate) ──────────────────────── */
-.kitch-extra-wrap {
-  padding: 0 20px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.kitch-extra-chip {
-  width: 100%;
-  height: 44px;
-  border-radius: var(--k-radius-sm);
-  background: transparent;
-  border: 1.5px dashed #d8bd93;
-  color: #6b5741;
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 700;
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  text-align: left;
-  padding: 0 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-.kitch-extra-chip--open {
-  border-style: solid;
-  background: #fff8ea;
-}
-
-.kitch-extra-field {
-  margin-top: 8px;
-  background: #fff8ea;
-  border: 1.5px solid #e0c89e;
-  border-radius: var(--k-radius-sm);
-  color: var(--k-surface);
-  font-family: 'Montserrat', sans-serif;
-  font-size: 14px;
-  padding: 10px 12px;
-  width: 100%;
-  box-sizing: border-box;
-  outline: none;
-}
-
-.kitch-extra-field--promo {
-  text-transform: uppercase;
-}
-
-.kitch-extra-counter {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 11px;
-  color: #a8927d;
-  text-align: right;
-  margin-top: 2px;
-}
-
-/* ── Mobile Responsiveness ──────────────────────── */
-@media (max-width: 430px) {
-  .kitch-hero-headline {
-    font-size: 22px;
-    padding: 14px 12px 2px;
-  }
-  .kitch-card {
-    min-height: 130px;
-  }
-  .kitch-card-img {
-    width: 120px;
-    min-height: 130px;
-  }
-  .kitch-card-content {
-    padding: 10px;
-  }
-  .kitch-card-name {
-    font-size: 15px;
-  }
-  .kitch-card-desc {
-    font-size: 11.5px;
-    margin-bottom: 6px;
-  }
-  .kitch-card-price {
-    font-size: 18px;
-  }
-  .kitch-btn-lo-voglio {
-    padding: 8px 10px;
-    min-height: 40px;
-    font-size: 13px;
-  }
-  .kitch-tabs {
-    padding: 12px 16px 0;
-  }
-  .kitch-tab {
-    width: 62px;
-  }
-  .kitch-tab-circle {
-    width: 62px;
-    height: 62px;
-  }
-  .kitch-bottom-card {
-    padding: 10px 10px 10px 12px;
-    gap: 8px;
-  }
-  .kitch-bottom-left {
-    gap: 8px;
-  }
-  .kitch-cart-icon-wrap {
-    width: 28px;
-    height: 28px;
-  }
-  .kitch-cart-badge {
-    top: -5px;
-    left: 18px;
-    width: 16px;
-    height: 16px;
-    font-size: 10px;
-  }
-  .kitch-bottom-title {
-    font-size: 14px;
-    letter-spacing: 0.4px;
-  }
-  .kitch-bottom-total {
-    font-size: 12px;
-  }
-  .kitch-btn-vai {
-    font-size: 13px;
-    padding: 8px 12px;
-    min-height: 40px;
-  }
-}
-
-@media (max-width: 380px) {
-  .kitch-card {
-    min-height: 120px;
-  }
-  .kitch-card-img {
-    width: 105px;
-    min-height: 120px;
-  }
-  .kitch-card-content {
-    padding: 8px;
-  }
-  .kitch-card-name {
-    font-size: 14px;
-  }
-  .kitch-btn-lo-voglio {
-    padding: 6px 8px;
-    min-height: 40px;
-    font-size: 12px;
-  }
-  .kitch-tab {
-    width: 56px;
-  }
-  .kitch-tab-circle {
-    width: 56px;
-    height: 56px;
-  }
-  .kitch-bottom-card {
-    padding: 8px 8px 8px 10px;
-    gap: 6px;
-  }
-  .kitch-bottom-left {
-    gap: 6px;
-  }
-  .kitch-cart-icon-wrap {
-    width: 24px;
-    height: 24px;
-  }
-  .kitch-cart-badge {
-    top: -6px;
-    left: 15px;
-    width: 14px;
-    height: 14px;
-    font-size: 9px;
-  }
-  .kitch-bottom-title {
-    font-size: 13px;
-    letter-spacing: 0.2px;
-  }
-  .kitch-bottom-total {
-    font-size: 11px;
-  }
-  .kitch-btn-vai {
-    font-size: 12px;
-    padding: 6px 10px;
-    min-height: 40px;
-  }
-}
-
-/* ══════════════════════════════════════════════════════════════════
-   HOME KITCHEN (.kh-*) — Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED
-   Page 4 · frame `Walrus Kitchen — Home V3.4 PHOTO MENU` (111:58)
-   Cards featured 140:2 / 140:12 · CTA 140:22 · blocco menu 111:84.
-   Prefisso isolato .kh- : non tocca .kitch-* né .pm-* (Pesi Massimi LOCKED).
-   ══════════════════════════════════════════════════════════════════ */
-
-.kh-header,
-.kh-card,
-.kh-intro,
-.kh-section-head,
-.kh-featured-list,
-.kh-cta-outline,
-.kh-menu-block,
-.kh-menu-topbar,
-.kh-cat-screen {
-  --kh-card: #1c1a14;
-  --kh-red: #c84020;
-  --kh-gold: #c8960a;
-  --kh-cream: #e8ddb8;
-  --kh-sand: #d4c89a;
-  --kh-muted: #8a7e60;
-  --kh-rule: #2e2a1e;
-  font-family: 'Barlow Condensed', 'Oswald', 'Montserrat', sans-serif;
-}
-
-/* ── Header Figma (111:59 banner · 111:63 cornice · 111:60/61/62 claim · 111:64 rule)
-   Frame 390x130 → aspect-ratio 3/1, posizionamenti in % per restare 1:1 a 390px. ── */
-.kh-header {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 390 / 130;
-  background: #0e0c08;
-  overflow: hidden;
-}
-
-.kh-header-img {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* 111:63 — cornice 378x112 @ (6,8) */
-.kh-header-frame {
-  position: absolute;
-  left: 1.538%;
-  top: 6.154%;
-  width: 96.923%;
-  height: 86.154%;
-  border: 1.5px solid #2e2a1e;
-  border-radius: 14px;
-  pointer-events: none;
-}
-
-/* 111:60 — copre il claim stampato nel banner: 274x35 @ (108,83) */
-.kh-header-claim-cover {
-  position: absolute;
-  left: 27.692%;
-  top: 63.846%;
-  width: 70.256%;
-  height: 26.923%;
-  background: #0e0c08;
-}
-
-/* 111:61 — filetto oro 248x2 @ (112,84) */
-.kh-header-claim-rule {
-  position: absolute;
-  left: 28.718%;
-  top: 64.615%;
-  width: 63.590%;
-  height: 1.538%;
-  background: #c8960a;
-  border-radius: 1px;
-}
-
-/* 111:62 — claim 266 @ (112,92) */
-.kh-header-claim {
-  position: absolute;
-  left: 28.718%;
-  top: 70.769%;
-  width: 68.205%;
-  margin: 0;
-  font-family: 'Barlow Condensed', 'Oswald', sans-serif;
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 16px;
-  text-align: center;
-  color: #c8960a;
-}
-
-/* 111:64 — rule bassa 374x2 @ (8,121) */
-.kh-header-baseline {
-  position: absolute;
-  left: 2.051%;
-  top: 93.077%;
-  width: 95.897%;
-  height: 1.538%;
-  background: #2e2a1e;
-  border-radius: 1px;
-}
-
-/* ── Intro (111:65 / 111:66) ─────────────────────────────── */
-.kh-intro {
-  padding: 18px 14px 4px;
-}
-
-.kh-intro-title {
-  margin: 0;
-  font-size: 26px;
-  font-weight: 900;
-  line-height: 1.08;
-  letter-spacing: 0.02em;
-  color: var(--kh-gold);
-  text-transform: uppercase;
-}
-
-.kh-intro-sub {
-  margin: 6px 0 0;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--kh-sand);
-}
-
-/* ── Section head `I PANINI DA SPACCO` (111:67 / 111:68) ─── */
-.kh-section-head {
-  padding: 14px 14px 0;
-}
-
-.kh-section-title {
-  margin: 0;
-  font-size: 27px;
-  font-weight: 900;
-  line-height: 1.08;
-  letter-spacing: 0.02em;
-  color: var(--kh-gold);
-  text-transform: uppercase;
-}
-
-.kh-section-sub {
-  margin: 5px 0 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--kh-sand);
-}
-
-/* ── Card featured (140:2 / 140:12) ────────────────────────
-   Layout assoluto 1:1 col Figma: card 366x366, foto 192, accent 3px,
-   name@208 · ingredients@238 · desc@282 · rule@310 · price@328 · CTA@316. */
-.kh-featured-list {
-  padding: 14px 12px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.kh-card {
-  position: relative;
-  height: 366px;
-  background: var(--kh-card);
-  border-radius: 14px;
-  overflow: hidden;
-}
-
-.kh-card-photo {
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 192px;
-  /* Sovrascritto inline dal PHOTO BG del frame Figma (146:2 / 146:3), quindi
-     questo valore non arriva mai a schermo sulle card Home. Con `cover` il
-     fondo si vede solo durante il caricamento della foto. */
-  background: #fdf7f1;
-  border-radius: 14px 14px 0 0;
-  overflow: hidden;
-}
-
-/* Stesso difetto già chiuso nelle 4 sezioni categoria: foto 1254×1254 dentro un
-   box ~1,9:1 con `contain` lasciava bande chiare da 87px per lato a 390 (132 a
-   1440), e la stessa foto risultava trattata in due modi a due tap di distanza.
-   Qui il box resta 192px — la geometria della card Home è 1:1 con Figma 111:58 e
-   tutto ciò che segue è posizionato in assoluto su quel valore — e si cambia solo
-   il fit. Il fondo passa dal bianco a un tono caldo per il caricamento. */
-.kh-card-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  display: block;
-}
-
-.kh-card-accent {
-  position: absolute;
-  left: 0;
-  top: 192px;
-  width: 100%;
-  height: 3px;
-  background: var(--kh-red);
-}
-
-.kh-card-name {
-  position: absolute;
-  left: 18px;
-  top: 208px;
-  width: 330px;
-  margin: 0;
-  font-size: 24px;
-  font-weight: 900;
-  line-height: 26px;
-  color: var(--kh-cream);
-  text-transform: uppercase;
-}
-
-.kh-card-ingredients {
-  position: absolute;
-  left: 18px;
-  top: 238px;
-  width: 330px;
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 20px;
-  color: var(--kh-sand);
-}
-
-.kh-card-desc {
-  position: absolute;
-  left: 18px;
-  top: 282px;
-  width: 330px;
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 17px;
-  color: var(--kh-muted);
-}
-
-.kh-card-rule {
-  position: absolute;
-  left: 18px;
-  top: 310px;
-  width: 330px;
-  height: 1px;
-  background: var(--kh-rule);
-}
-
-.kh-card-price {
-  position: absolute;
-  left: 18px;
-  top: 328px;
-  width: 150px;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 15px;
-  letter-spacing: 0.01em;
-  color: var(--kh-red);
-  text-transform: uppercase;
-}
-
-.kh-btn-want {
-  position: absolute;
-  left: 204px;
-  top: 316px;
-  width: 144px;
-  height: 38px;
-  padding: 0 6px;
-  border: none;
-  border-radius: 10px;
-  background: var(--kh-red);
-  color: #fff;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 900;
-  line-height: 17px;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.kh-btn-want:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* ── CTA `VEDI TUTTI I PANINI →` (140:22) ────────────────── */
-.kh-cta-outline {
-  display: block;
-  width: calc(100% - 24px);
-  margin: 18px 12px 0;
-  min-height: 48px;
-  background: transparent;
-  border: 1px solid rgba(200, 150, 10, 0.85);
-  border-radius: 12px;
-  color: #c8960a;
-  font-family: 'Barlow Condensed', 'Oswald', sans-serif;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-/* ── Blocco `ADESSO ENTRA NEL MENU.` (111:84 → 111:88) ───── */
-.kh-menu-block {
-  margin: 22px 12px 0;
-  padding: 16px;
-  background: var(--kh-card);
-  border: 1px solid rgba(200, 150, 10, 0.35);
-  border-radius: 14px;
-}
-
-.kh-menu-block-title {
-  margin: 0;
-  font-size: 23px;
-  font-weight: 900;
-  line-height: 1.1;
-  color: var(--kh-gold);
-  text-transform: uppercase;
-}
-
-.kh-menu-block-sub {
-  margin: 6px 0 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--kh-sand);
-}
-
-.kh-btn-menu {
-  margin-top: 14px;
-  min-height: 40px;
-  padding: 0 16px;
-  border: none;
-  border-radius: 10px;
-  background: var(--kh-red);
-  color: #fff;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-/* ── Topbar menu completo (171:2 `BTN INDIETRO`) ─────────── */
-.kh-menu-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 14px 4px;
-}
-
-.kh-btn-back {
-  min-height: 40px;
-  padding: 0 16px;
-  background: transparent;
-  border: 1px solid rgba(200, 150, 10, 0.55);
-  border-radius: 10px;
-  color: var(--kh-cream);
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.kh-menu-topbar-label {
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  color: var(--kh-gold);
-  text-transform: uppercase;
-}
-
-/* ── MENU — CATEGORIE (Figma 166:2) — schermata tra Home e lista prodotto ── */
-.kh-cat-screen {
-  background: #0e0c08;
-  min-height: 100vh;
-  padding-bottom: 24px;
-}
-
-.kh-cat-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 56px;
-  padding: 0 12px;
-  border-bottom: 1px solid var(--kh-rule);
-}
-
-.kh-cat-back {
-  min-height: 32px;
-  padding: 0 14px;
-  background: transparent;
-  border: 1px solid var(--kh-cream);
-  border-radius: 10px;
-  color: var(--kh-cream);
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-}
-
-.kh-cat-topbar-label {
-  font-size: 17px;
-  font-weight: 900;
-  color: var(--kh-gold);
-  text-transform: uppercase;
-}
-
-.kh-cat-title {
-  margin: 20px 0 0;
-  padding: 0 14px;
-  font-size: 29px;
-  font-weight: 900;
-  line-height: 1.03;
-  color: var(--kh-gold);
-  text-transform: uppercase;
-}
-
-.kh-cat-subtitle {
-  margin: 8px 0 0;
-  padding: 0 14px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--kh-sand);
-}
-
-.kh-cat-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 20px 12px 0;
-}
-
-.kh-cat-row {
-  display: flex;
-  align-items: stretch;
-  width: 100%;
-  height: 84px;
-  background: var(--kh-card);
-  border: 1px solid var(--kh-rule);
-  border-radius: 14px;
-  overflow: hidden;
+/* ── Dock: biglietto da bancone (mockup .dock / .ticket) ── */
+.kitch-bottom-bar .kb-wrap {
   padding: 0;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-}
-
-.kh-cat-photo {
-  flex: 0 0 84px;
-  width: 84px;
-  height: 84px;
-  background: #fdf7f1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.kh-cat-photo img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+  gap: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
   display: block;
 }
-
-.kh-cat-photo--dark {
-  background: var(--kh-card);
-}
-
-.kh-cat-photo--dark img {
-  object-fit: cover;
-}
-
-.kh-cat-accent {
-  flex: 0 0 3px;
-  width: 3px;
-  background: var(--kh-red);
-}
-
-.kh-cat-text {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 14px;
-}
-
-.kh-cat-name {
-  font-size: 24px;
-  font-weight: 900;
-  line-height: 1.05;
-  color: var(--kh-cream);
-  text-transform: uppercase;
-}
-
-.kh-cat-count {
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  color: var(--kh-muted);
-  text-transform: uppercase;
-}
-
-.kh-cat-arrow {
-  flex: 0 0 auto;
+.kitch-bottom-bar .kb-ticket {
+  width: 100%;
+  height: 58px;
+  min-height: 58px;
+  padding: 0 18px;
   display: flex;
   align-items: center;
-  padding-right: 14px;
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--kh-gold);
+  justify-content: space-between;
+  border: 2px dashed rgba(255, 255, 255, 0.35);
+  outline: 3px solid var(--poster-brick);
+  border-radius: 0;
+  background: var(--poster-brick);
+  color: #fff;
+  font-family: var(--poster-font-display);
+  font-weight: 400;
+  font-size: 28px; /* League Gothic è più stretto di Anton: 28 per non rimpicciolire il tasto cassa */
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  gap: 10px; /* giro 5b N-08: con totale >= 100 EUR a 320 px le due scritte si toccavano */
+  cursor: pointer;
+}
+@media (max-width: 340px) {
+  .kitch-bottom-bar .kb-ticket { font-size: 24px; }
+}
+.kitch-bottom-bar .kb-ticket:hover { background: var(--poster-brick); }
+.kitch-bottom-bar .kb-ticket:focus-visible { outline-color: var(--poster-ink); }
+.kitch-bottom-bar .kb-wrap.kitch-bottom-card--pulse .kb-ticket { animation: kbPulse 600ms ease-out; }
+@keyframes kbPulse {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kitch-bottom-bar .kb-wrap.kitch-bottom-card--pulse .kb-ticket { animation: none; }
+}
+
+/* Schermi stretti: il kicker non deve finire sotto il timbro. */
+@media (max-width: 380px) {
+  .kp-head--stamp .kp-kicker { padding-right: 84px; }
+}
+
+/* Restyling hero: lista di schede compatte (PosterCard), come Panini/Tartare. */
+.ct-list {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px 16px;
 }
