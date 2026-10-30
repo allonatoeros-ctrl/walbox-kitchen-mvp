@@ -1,5 +1,5 @@
 # CHECKPOINT — Walbox Kitchen
-Aggiornato: 2026-10-24 (inizio restyling menu cliente). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
+Aggiornato: 2026-10-30 (restyling hero/menu cliente, PR #6 aperta). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
 
 Regole di questo file: solo stato corrente. Niente cronologia (va nell'archivio), niente regole stabili
 (vanno in `ai-ops/knowledge/MEMORY.md`), un solo NEXT STEP. Lavoro in corso multi-fase: il file di stato
@@ -68,7 +68,7 @@ oltre, si spostano in archivio.
   (formato Krombacher, pairing, foto birre) non sono state riconfermate: vedi archivio.
 
 ## NEXT STEP
-**Restyling menu cliente** — Fase 1 (foto nuove) chiusa e committata (`24bdc8d`, `76b8018`, tag locale
-`menu-foto-nuove-v1`, non pushati). Prossima: **Fase 2, audit visivo** (sola lettura, subagent `visual-reviewer`), poi
-Eros sceglie la direzione grafica (max 3 opzioni). Decisioni prese: cicchetti con piatti colorati ammessi. Stato
-dettagliato: `ai-ops/current/RESTYLING_MENU.md`.
+**Merge della PR #6 (`feat/restyling-hero` → `main`) = deploy produzione, decide Eros.** Branch pushato e allineato
+(2026-10-30), 59 commit avanti a `main`. Prima: guardare la Preview Vercel (env Preview con DB/pagamenti reali: non
+pagare) e far controllare al cuoco `ai-ops/reports/allergeni-bozza.md`. Stato dettagliato (blocco `## ORA`):
+`ai-ops/current/RESTYLING_HERO.md`.
