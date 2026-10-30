@@ -21,7 +21,7 @@ export async function getCheckoutVerified({ sumupApiKey, providerRef, attemptId,
     });
     checkout = await sumupRes.json();
     if (!sumupRes.ok) {
-      console.error(`[${logTag}] SumUp GET checkout failed`, sumupRes.status, checkout);
+      console.error(`[${logTag}] SumUp GET checkout failed`, { status: sumupRes.status, error_code: checkout?.error_code ?? checkout?.code, id: checkout?.id ?? providerRef, message: checkout?.message });
       return { outcome: 'unknown' };
     }
   } catch (err) {

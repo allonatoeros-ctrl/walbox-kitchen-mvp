@@ -147,7 +147,7 @@ export default async function handler(req, res) {
     });
     checkout = await sumupRes.json();
     if (!sumupRes.ok) {
-      console.error('[kitchen-staff-sumup-reconcile] SumUp GET checkout failed', sumupRes.status, checkout);
+      console.error('[kitchen-staff-sumup-reconcile] SumUp GET checkout failed', { status: sumupRes.status, error_code: checkout?.error_code ?? checkout?.code, id: checkout?.id ?? providerRef, message: checkout?.message });
       return res.status(200).json({ outcome: 'unknown', retryable: false });
     }
   } catch (err) {
