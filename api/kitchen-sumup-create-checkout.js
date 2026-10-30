@@ -228,7 +228,7 @@ export default async function handler(req, res) {
     }
 
     if (!sumupRes.ok) {
-      console.error('[kitchen-sumup-create-checkout] SumUp API error', sumupRes.status, sumupData);
+      console.error('[kitchen-sumup-create-checkout] SumUp API error', { status: sumupRes.status, error_code: sumupData?.error_code ?? sumupData?.code, id: sumupData?.id, message: sumupData?.message });
       if (DOCUMENTED_CREATE_ERROR_STATUSES.has(sumupRes.status)) {
         return res.status(502).json({ error: 'sumup_create_checkout_failed' });
       }

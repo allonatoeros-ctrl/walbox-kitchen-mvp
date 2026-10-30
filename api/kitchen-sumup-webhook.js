@@ -107,7 +107,7 @@ export default async function handler(req, res) {
     });
     checkout = await sumupRes.json();
     if (!sumupRes.ok) {
-      console.error('[kitchen-sumup-webhook] SumUp GET checkout failed', sumupRes.status, checkout);
+      console.error('[kitchen-sumup-webhook] SumUp GET checkout failed', { status: sumupRes.status, error_code: checkout?.error_code ?? checkout?.code, id: checkout?.id ?? checkoutId, message: checkout?.message });
       return res.status(502).json({ error: 'sumup_verify_failed' });
     }
   } catch (err) {
