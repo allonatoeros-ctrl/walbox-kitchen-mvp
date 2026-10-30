@@ -48,6 +48,8 @@ test('una sola istruzione eseguibile: INSERT ... ON CONFLICT, nessun DDL né DEL
 
 // I prezzi dei 6 menu sono poi tornati 19/20/20 con 20261030150000 (decisione Eros 30/10): qui si confronta
 // solo il nome con kitchenMockData.js; il prezzo storico lo fissa il test successivo, lo stato finale il cumulativo.
+// item-040/060 rinominati poi da 20261030160000 (menu Pulled Pork di nuovo sul panino): nome verificato dal cumulativo.
+const RENAMED_LATER = ['item-040', 'item-060'];
 const REPRICED_LATER = ['item-040', 'item-041', 'item-042', 'item-060', 'item-061', 'item-062'];
 
 test('le 10 righe attese, ognuna identica a kitchenMockData.js (prezzo menu: vedi 20261030150000)', () => {
@@ -58,7 +60,8 @@ test('le 10 righe attese, ognuna identica a kitchenMockData.js (prezzo menu: ved
   for (const [id, got] of rows) {
     const want = expectedRow(id);
     assert.ok(want, `${id} deve esistere nel catalogo cliente`);
-    if (REPRICED_LATER.includes(id)) assert.equal(got.name, want.name, `nome server divergente per ${id}`);
+    if (RENAMED_LATER.includes(id)) assert.ok(got.name, `nome server mancante per ${id}`);
+    else if (REPRICED_LATER.includes(id)) assert.equal(got.name, want.name, `nome server divergente per ${id}`);
     else assert.deepEqual(got, want, `riga server divergente per ${id}`);
   }
 });

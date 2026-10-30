@@ -40,8 +40,8 @@ test('itemId fuori catalogo: known = false, MAI confuso con "nessun allergene"',
 });
 
 // MENU OTTOBRE (2026-10-28): ogni MENU ha due varianti (birra `combo.id`, bibita `combo.softDrink.id`);
-// il contorno conta solo con `includesSide` (il Box ha le patate dentro). Il MENU del Box eredita
-// "non verificato" dalla box (item-018, allergensVerified: false).
+// il contorno conta solo con `includesSide`. Un MENU eredita "non verificato" se il suo piatto base
+// ha allergensVerified: false.
 const drinks = () => kitchenMenuItems.filter(isFalloPesanteDrinkAllowed);
 const variants = () => Object.entries(kitchenPesiMassimiCombos).flatMap(([baseItemId, combo]) => [
   { baseItemId, combo, id: combo.id, drinkOptions: falloPesanteBeerOptions() },
@@ -69,9 +69,11 @@ test('ogni combo FALLO PESANTE e l unione derivata dei suoi componenti dichiarat
   }
 });
 
-test('MENU del Box Pulled Pork (birra e bibita): ALLERGENI NON VERIFICATI come la box', () => {
+test('MENU Pulled Pork (birra e bibita) sul panino item-009: allergeni noti, unione col panino', () => {
   for (const id of ['item-040', 'item-060']) {
-    assert.deepEqual(resolveItemAllergens(id), { allergens: [], known: false }, id);
+    const got = resolveItemAllergens(id);
+    assert.equal(got.known, true, id);
+    for (const a of byId('item-009').allergens) assert.ok(got.allergens.includes(a), `${id} perde '${a}'`);
   }
 });
 

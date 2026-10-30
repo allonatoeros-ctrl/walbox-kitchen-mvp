@@ -287,8 +287,8 @@ export const kitchenMenuItems = [
     allergens: ['glutine', 'latte', 'senape', 'uova', 'solfiti'],
     allergensVerified: false,
   },
-  // BOX (standalone speciale, categoria bbq). Dal 2026-10-28 ha il MENU (item-040/060 in
-  // kitchenPesiMassimiCombos): box + da bere, le patate sono gia' nella box.
+  // BOX (standalone speciale, categoria bbq). Si vende SOLO, senza MENU (decisione Eros
+  // 2026-10-30): il menu Pulled Pork (item-040/060) sta sul panino item-009.
   // MENU POLISH SPRINT (2026-09-16, decisione Eros): resta dentro PESI MASSIMI ma non va
   // MAI chiamato panino. `detailCtaLabel`/`priceNote` sono override di copy opzionali letti
   // da PesiMassimiSection.jsx: assenti sugli altri item bbq → fallback "VEDI IL PANINO" /
@@ -657,19 +657,20 @@ export const kitchenMenuItems = [
 // MENU OTTOBRE (2026-10-28, decisione Eros): due prezzi per menu, con birra o con bibita.
 // La variante birra resta sull'id storico (`id`/`price`), la variante bibita ha un id di
 // catalogo proprio (`softDrink.id`/`softDrink.price`) perche' il server prezza per item_id.
-// Il menu Pulled Pork ora e' sul BOX (item-018, patate gia' dentro la box): niente contorno
-// a parte (`includesSide: false`). Il panino Pulled Pork (item-009) resta vendibile da solo.
+// Il menu Pulled Pork sta sul PANINO (item-009, come prima del 28/10; decisione Eros 2026-10-30).
+// Il Box Pulled Pork (item-018) si vende solo, senza menu. `includesSide: false` resta supportato
+// dal codice (combo senza contorno a parte) ma oggi nessun combo lo usa.
 export const FALLO_PESANTE_INCLUDED_SIDE_ID = 'item-058';
 
 export const kitchenPesiMassimiCombos = {
-  'item-018': {
+  'item-009': {
     id: 'item-040',
-    name: 'Box Pulled Pork — Fallo Pesante',
-    subtitle: 'BOX CON PATATE + DA BERE',
+    name: 'Pulled Pork — Fallo Pesante',
+    subtitle: 'PANINO + DA BERE + PATATE AL FORNO',
     price: 19,
-    image: '/assets/kitchen/menu/box/box-pulled-pork.webp',
-    includesSide: false,
-    softDrink: { id: 'item-060', name: 'Box Pulled Pork — Menu Bibita', price: 19 },
+    image: '/assets/kitchen/photo-pulled-pork-special.webp',
+    includesSide: true,
+    softDrink: { id: 'item-060', name: 'Pulled Pork — Menu Bibita', price: 19 },
   },
   'item-010': {
     id: 'item-041',

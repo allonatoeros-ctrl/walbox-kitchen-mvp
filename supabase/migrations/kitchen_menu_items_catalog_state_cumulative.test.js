@@ -33,6 +33,7 @@ const removeSql = readFileSync(join(__dirname, '20260922090000_kitchen_menu_item
 const garpezSql = readFileSync(join(__dirname, '20261016100000_kitchen_menu_items_add_garpez_v1.sql'), 'utf8');
 const ottobreSql = readFileSync(join(__dirname, '20261028120000_kitchen_menu_items_menu_ottobre_v1.sql'), 'utf8');
 const comePrimaSql = readFileSync(join(__dirname, '20261030150000_kitchen_menu_items_prezzi_menu_come_prima_v1.sql'), 'utf8');
+const panninoSql = readFileSync(join(__dirname, '20261030160000_kitchen_menu_items_menu_pulled_pork_panino_v1.sql'), 'utf8');
 
 // Righe ancora nel catalogo server ma tolte dal cliente: la migration 20261028120000 non le
 // cancella per restare additiva verso il frontend in produzione (supabase/CLAUDE.md regola 5).
@@ -86,6 +87,11 @@ const finalState = new Map([...applyDelete(stateAfter0916, deletedBy0922), ...ad
 // 20261030150000: solo UPDATE di prezzo (`SET price = N ... item_id IN (...)`), applicati in ordine.
 for (const m of executableOnly(comePrimaSql).matchAll(/SET price = ([\d.]+)[^;]*item_id IN \(([^)]*)\)/g)) {
   for (const id of m[2].match(/item-\d+/g)) finalState.set(id, { ...finalState.get(id), price: Number(m[1]) });
+}
+
+// 20261030160000: solo UPDATE di nome (`SET name = '...' ... item_id = 'item-NNN'`), applicati in ordine.
+for (const m of executableOnly(panninoSql).matchAll(/SET name = '([^']*)'[^;]*item_id = '(item-\d+)'/g)) {
+  finalState.set(m[2], { ...finalState.get(m[2]), name: m[1] });
 }
 
 test('stato intermedio (solo 20260916120000): item-057/Krombacher esiste, 40 righe, price 6', () => {
