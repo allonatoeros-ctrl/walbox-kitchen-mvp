@@ -371,6 +371,9 @@ export default function PosterCard({
               <p className="pc-allergens">
                 Allergeni:{' '}
                 {allergens.map(allergenText).join(' · ')}
+                <span className="pc-allergens-note" style={{ display: 'block', marginTop: '3px', fontFamily: "'Montserrat', system-ui, sans-serif", fontSize: '12.5px', fontWeight: 600, letterSpacing: 'normal', textTransform: 'none', lineHeight: 1.3, color: 'var(--poster-ink)' }}>
+                  Per allergeni e contaminazioni chiedi al personale
+                </span>
               </p>
             )}
             {children}
@@ -442,6 +445,9 @@ export default function PosterCard({
           <p className="pc-allergens">
             Allergeni:{' '}
             {allergens.map(allergenText).join(' · ')}
+            <span className="pc-allergens-note" style={{ display: 'block', marginTop: '3px', fontFamily: "'Montserrat', system-ui, sans-serif", fontSize: '12.5px', fontWeight: 600, letterSpacing: 'normal', textTransform: 'none', lineHeight: 1.3, color: 'var(--poster-ink)' }}>
+              Per allergeni e contaminazioni chiedi al personale
+            </span>
           </p>
         )}
 

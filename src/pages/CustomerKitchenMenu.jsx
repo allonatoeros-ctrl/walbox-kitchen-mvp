@@ -528,6 +528,14 @@ export default function CustomerKitchenMenu() {
 
   const total = orderItems.reduce((sum, o) => sum + o.price * o.qty, 0);
   const itemCount = orderItems.reduce((sum, o) => sum + o.qty, 0);
+  // Avviso alcol nel checkout (privacy/GDPR Fase 1): vero se nel sacco c'è una birra (riga standalone
+  // di categoria `birre`) o un FALLO PESANTE la cui bevanda inclusa (`includesBeerId`) è una birra.
+  // Una bibita nel combo o nessuna bevanda → falso.
+  const hasAlcohol = orderItems.some((o) => {
+    const own = menuItems.find((i) => i.id === (o.baseId || o.id));
+    const included = o.includesBeerId ? menuItems.find((i) => i.id === o.includesBeerId) : null;
+    return own?.category === 'birre' || included?.category === 'birre';
+  });
   // Evento: niente birre in menu, quindi nessun suggerimento birra nel sacco.
   const recommendedBeer = eventMode ? null : findRecommendedBeer(orderItems, menuItems);
   // Evento: chip patate inline (non modale).
@@ -907,6 +915,10 @@ export default function CustomerKitchenMenu() {
       )}
       </>
 
+      <p style={{ textAlign: 'center', margin: '16px 0 8px', fontSize: '12px' }}>
+        <a href="/kitchen/privacy" data-testid="privacy-footer-link" style={{ color: 'var(--poster-muted)', textDecoration: 'underline' }}>Informativa privacy</a>
+      </p>
+
       {/* Feedback add-to-cart: toast breve + thumbnail che vola verso il sacco. */}
       {addedToast && (
         <div
@@ -1047,6 +1059,7 @@ export default function CustomerKitchenMenu() {
               orderError={orderError}
               issue={checkoutIssue}
               onPay={handleSubmit}
+              hasAlcohol={hasAlcohol}
             />
           </div>
         </div>

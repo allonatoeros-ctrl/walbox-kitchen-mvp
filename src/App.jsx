@@ -13,6 +13,7 @@ import KitchenLogin from "./pages/KitchenLogin";
 import KitchenTvScreen from "./pages/KitchenTvScreen";
 import KitchenPrepBoard from "./pages/KitchenPrepBoard";
 import KitchenPrepBoardDemo from "./pages/KitchenPrepBoardDemo";
+import KitchenPrivacy from "./pages/KitchenPrivacy";
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -64,6 +65,8 @@ export default function App() {
         return <KitchenPrepBoard />;
       case "/kitchen/prep-demo":
         return <KitchenPrepBoardDemo />;
+      case "/kitchen/privacy":
+        return <KitchenPrivacy />;
       default:
         return <CustomerKitchenEntry />;
     }

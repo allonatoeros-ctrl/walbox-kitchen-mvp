@@ -38,8 +38,16 @@ function persistDismissedId(orderId) {
 }
 
 export default function NotificationOptIn({ orderId, orderCode }) {
-  const { status, activate, permission } = useWebPushSubscription();
+  const { status, activate, deactivate, permission } = useWebPushSubscription();
   const [dismissedIds, setDismissedIds] = useState(readDismissedIds);
+  const [turnedOff, setTurnedOff] = useState(false);
+  const [offError, setOffError] = useState(false);
+
+  const handleDeactivate = async () => {
+    const ok = await deactivate();
+    setOffError(!ok);
+    if (ok) setTurnedOff(true);
+  };
 
   const dismissed = Boolean(orderId) && dismissedIds.includes(orderId);
 
@@ -105,6 +113,10 @@ export default function NotificationOptIn({ orderId, orderCode }) {
               <br />
               Ti avvisiamo appena <span className="noti-gate-code">{orderCode || 'il tuo ordine'}</span> è pronto.
             </p>
+            <p className="noti-gate-body" style={{ fontSize: '12px', opacity: 0.8 }} data-testid="notification-gate-info">
+              Riceverai solo l'avviso sul tuo ordine, niente pubblicità. Puoi disattivare le notifiche in qualsiasi momento.{' '}
+              <a href="/kitchen/privacy" target="_blank" rel="noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>Informativa privacy</a>
+            </p>
 
             {status === 'error' && (
               <p className="noti-gate-error">Non è stato possibile attivare le notifiche. Riprova.</p>
@@ -133,9 +145,29 @@ export default function NotificationOptIn({ orderId, orderCode }) {
         </div>
       )}
 
-      {(status === 'subscribed' || permission === 'granted') && status !== 'denied' && (
+      {status === 'subscribed' && !turnedOff && (
         <div className="noti-optin" data-testid="notification-active" data-status={status}>
           <span className="noti-optin-text noti-optin-text--active">🔔 NOTIFICHE ATTIVE</span>
+          <button
+            type="button"
+            className="noti-gate-secondary"
+            style={{ width: 'auto', display: 'inline-block', marginTop: 0, padding: '8px 10px' }}
+            onClick={handleDeactivate}
+            data-testid="notification-deactivate"
+          >
+            DISATTIVA
+          </button>
+          {offError && (
+            <span className="noti-optin-text noti-optin-text--error" role="alert">
+              Non riesco a disattivarle da qui: usa le impostazioni del browser.
+            </span>
+          )}
+        </div>
+      )}
+
+      {turnedOff && (
+        <div className="noti-optin" data-testid="notification-turned-off">
+          <span className="noti-optin-text">🔕 Notifiche disattivate. Non riceverai più avvisi su questo ordine.</span>
         </div>
       )}
 
