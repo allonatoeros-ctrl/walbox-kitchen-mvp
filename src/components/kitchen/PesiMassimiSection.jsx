@@ -137,6 +137,12 @@ function beerNameNodes(name) {
   ));
 }
 
+// Nome corto SOLO per i bottoni pill (2026-10-30): via il prefisso "Keiler " (HELLES, LAND-PILS...).
+// Il nome completo resta nel dettaglio birra, nella riga DA BERE e nel carrello.
+function beerShortName(name) {
+  return String(name).replace(/^keiler\s+/i, '');
+}
+
 // Porta `el` sopra il dock fisso del sacco (altezza reale misurata, fallback 96 px) e, se c'è,
 // sopra il toast "aggiunto al sacco" (3.4f), con `prefers-reduced-motion` rispettato. Nessuna
 // dipendenza da transitionend.
@@ -176,6 +182,9 @@ export default function PesiMassimiSection({
   const featuredItem = featuredTag ? items?.find((i) => i.tags?.includes(featuredTag)) ?? null : null;
   const [selectedBeerByItem, setSelectedBeerByItem] = useState({});
   const [previewBeerByItem, setPreviewBeerByItem] = useState({});
+  // Scelta da bere in due passi (2026-10-30): gruppo aperto per scheda, 'drinks' | 'beers' (nessuno di default).
+  // Non si azzera passando a SOLO PANINO: tornando al MENU resta il gruppo di prima.
+  const [drinkGroupByItem, setDrinkGroupByItem] = useState({});
   // SCEGLI COME LO VUOI (2026-09-24): scelta esplicita e visibile tra SOLO PANINO e MENU
   // per ogni prodotto aperto. Default SOLO PANINO — il selettore birra compare solo col MENU.
   const [choiceByItem, setChoiceByItem] = useState({});
@@ -226,6 +235,19 @@ export default function PesiMassimiSection({
           const chosenDrink = drinkOptions.find((d) => d.id === selectedBeerByItem[item.id]) ?? null;
           const chosenDrinkOrBeer = chosenBeer ?? chosenDrink;
           const hasDrinkChoice = beerOptions.length > 0 || drinkOptions.length > 0;
+          // Passo 1 (BIBITA / BIRRA) solo se ci sono entrambi i gruppi; con uno solo la lista si vede subito.
+          const hasBothGroups = beerOptions.length > 0 && drinkOptions.length > 0;
+          const openGroup = hasBothGroups
+            ? (drinkGroupByItem[item.id] ?? null)
+            : (beerOptions.length > 0 ? 'beers' : 'drinks');
+          // Cambio gruppo: azzera la bevanda gia' scelta (il CTA torna "SCEGLI DA BERE", niente +1 € a sorpresa).
+          // Ritoccare lo stesso gruppo non fa nulla.
+          const pickGroup = (group) => {
+            if (openGroup === group) return;
+            setDrinkGroupByItem((prev) => ({ ...prev, [item.id]: group }));
+            setSelectedBeerByItem((prev) => ({ ...prev, [item.id]: null }));
+            setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: null }));
+          };
           const previewBeer = beerOptions.find((b) => b.id === previewBeerByItem[item.id]) ?? null;
           const previewLocked =
             previewBeer?.availability === 'evening_only' && !isEveningServiceActive();
@@ -311,7 +333,34 @@ export default function PesiMassimiSection({
                     SCEGLI DA BERE
                   </h4>
 
-                  {drinkOptions.length > 0 && (
+                  {hasBothGroups && (
+                    <div className="pm-groups">
+                      <button
+                        type="button"
+                        className={`pm-group-btn${openGroup === 'drinks' ? ' pm-group-btn--on' : ''}`}
+                        aria-pressed={openGroup === 'drinks'}
+                        data-testid="fallo-pesante-group-drinks"
+                        onClick={() => pickGroup('drinks')}
+                      >
+                        <span className="pm-group-name">BIBITA</span>
+                        <span className="pm-group-sub">compresa</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`pm-group-btn${openGroup === 'beers' ? ' pm-group-btn--on' : ''}`}
+                        aria-pressed={openGroup === 'beers'}
+                        data-testid="fallo-pesante-group-beers"
+                        onClick={() => pickGroup('beers')}
+                      >
+                        <span className="pm-group-name">BIRRA</span>
+                        <span className="pm-group-sub">
+                          {beerExtra > 0 ? `+${formatPrice(beerExtra, forceDecimals)}` : 'compresa'}
+                        </span>
+                      </button>
+                    </div>
+                  )}
+
+                  {drinkOptions.length > 0 && openGroup === 'drinks' && (
                     <>
                       <p className="pm-drink-label" data-testid="fallo-pesante-drinks-label">BIBITE · comprese</p>
                       <div className="pm-beer-pills pm-drink-pills" data-testid="fallo-pesante-drinks">
@@ -344,7 +393,7 @@ export default function PesiMassimiSection({
                     </>
                   )}
 
-                  {beerOptions.length > 0 && (
+                  {beerOptions.length > 0 && openGroup === 'beers' && (
                     <>
                       <p className="pm-drink-label" data-testid="fallo-pesante-beers-label">
                         {beerExtra > 0 ? `BIRRE · +${formatPrice(beerExtra, forceDecimals)}` : 'BIRRE · comprese'}
@@ -376,7 +425,7 @@ export default function PesiMassimiSection({
                               ) : (
                                 <span className="pm-beer-pill-photo pm-beer-pill-photo--empty" aria-hidden="true" />
                               )}
-                              <span className="pm-beer-pill-name">{beerNameNodes(beer.name)}</span>
+                              <span className="pm-beer-pill-name">{beerNameNodes(beerShortName(beer.name))}</span>
                               {beerLocked && <span className="pm-beer-pill-lock"> · SOLO LA SERA</span>}
                             </button>
                           );
@@ -385,7 +434,7 @@ export default function PesiMassimiSection({
                     </>
                   )}
 
-                  {previewBeer && (
+                  {previewBeer && openGroup === 'beers' && (
                     <div className="pm-beer-detail" ref={(el) => { detailRefs.current[item.id] = el; }}>
                       <div className="pm-beer-detail-media">
                         {previewBeer.image ? (
@@ -457,6 +506,8 @@ export default function PesiMassimiSection({
                         className="pm-beer-chosen-change"
                         onClick={() => {
                           pendingScrollRef.current = { id: item.id, kind: 'detail' };
+                          // Il dettaglio vive nel gruppo birre: assicurati che sia quello aperto.
+                          setDrinkGroupByItem((prev) => ({ ...prev, [item.id]: 'beers' }));
                           setPreviewBeerByItem((prev) => ({ ...prev, [item.id]: chosenBeer.id }));
                         }}
                       >

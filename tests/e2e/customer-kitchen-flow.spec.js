@@ -1129,14 +1129,16 @@ test('21. FALLO PESANTE (H7 fase 1): SCEGLI COME LO VUOI — un solo prezzo in a
   await expect(openCard.getByTestId('fallo-pesante-beer-step')).toHaveText('SCEGLI DA BERE');
   await expect(openCard.locator('.pmx-beer-badge')).toHaveCount(0);
   await expect(openCard.getByTestId('pmx-solo-cta')).toHaveCount(0);
-  // Prima le bibite (comprese), poi le birre col loro extra (17,90 − 16,90 = +1 €), calcolato dai dati.
+  // Due passi: prima BIBITA / BIRRA (nessun gruppo aperto), poi la lista del gruppo toccato.
   const drinksLabel = openCard.getByTestId('fallo-pesante-drinks-label');
   const beersLabel = openCard.getByTestId('fallo-pesante-beers-label');
+  await expect(drinksLabel).toHaveCount(0);
+  await expect(beersLabel).toHaveCount(0);
+  await openCard.getByTestId('fallo-pesante-group-drinks').click();
   await expect(drinksLabel).toHaveText('BIBITE · comprese');
+  // Birre col loro extra (17,90 − 16,90 = +1 €), calcolato dai dati.
+  await openCard.getByTestId('fallo-pesante-group-beers').click();
   await expect(beersLabel).toHaveText('BIRRE · +1 €');
-  const drinksY = (await drinksLabel.boundingBox()).y;
-  const beersY = (await beersLabel.boundingBox()).y;
-  expect(drinksY).toBeLessThan(beersY);
   const heavyCta = openCard.getByTestId('fallo-pesante-cta');
   // Nessuna bevanda scelta: il pulsante resta spento, nessun add silenzioso.
   await expect(heavyCta).toBeDisabled();
@@ -1147,7 +1149,7 @@ test('21. FALLO PESANTE (H7 fase 1): SCEGLI COME LO VUOI — un solo prezzo in a
   await expect(openCard.locator('.pm-beer-pill', { hasText: 'Krombacher' })).toHaveCount(0);
 
   // BEER DISCOVERY (FINAL UX POLISH): il tap sulla birra apre il dettaglio, non seleziona.
-  await openCard.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
+  await openCard.locator('.pm-beer-pill', { hasText: 'Helles' }).click();
   const beerDetail = openCard.locator('.pm-beer-detail');
   await expect(beerDetail.locator('.pm-beer-detail-name')).toHaveText('KEILER HELLES');
   await expect(beerDetail.locator('.pm-beer-detail-story')).toContainText('Morbida');
@@ -1204,10 +1206,12 @@ test('21a. FALLO PESANTE con BIBITA (H4 + MENU OTTOBRE): scelta diretta, prezzo 
   const heavyCta = openCard.getByTestId('fallo-pesante-cta');
   await expect(heavyCta).toBeDisabled();
 
-  // Birre invariate (6), sotto "BIBITE · comprese" le 7 bibite ammesse: l'acqua non c'e', Schweppes tolte.
+  // Birre invariate (6) nel gruppo BIRRA; nel gruppo BIBITA, sotto "BIBITE · comprese", le 7 bibite ammesse: l'acqua non c'e', Schweppes tolte.
+  await openCard.getByTestId('fallo-pesante-group-beers').click();
   await expect(openCard.locator('.pm-beer-pills .pm-beer-pill')).toHaveCount(6);
-  await expect(openCard.getByTestId('fallo-pesante-drinks-label')).toHaveText('BIBITE · comprese');
   await expect(openCard.getByTestId('fallo-pesante-beers-label')).toHaveText('BIRRE · +1 €');
+  await openCard.getByTestId('fallo-pesante-group-drinks').click();
+  await expect(openCard.getByTestId('fallo-pesante-drinks-label')).toHaveText('BIBITE · comprese');
   const drinks = openCard.locator('.pm-drink-pill');
   await expect(drinks).toHaveCount(7);
   // Ogni pillola ha il suo riquadro foto (immagine o segnaposto): Fanta/Sprite/Estathe non hanno ancora il file, niente buco.
@@ -1226,14 +1230,17 @@ test('21a. FALLO PESANTE con BIBITA (H4 + MENU OTTOBRE): scelta diretta, prezzo 
   await expect(heavyCta).toBeEnabled();
   await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 16,90 €');
 
-  // Scegliere una birra dopo la bibita sostituisce la scelta (mai entrambe) e il prezzo torna 17,90.
-  await openCard.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
+  // Passare al gruppo BIRRA azzera la bibita (CTA torna "SCEGLI DA BERE"); scegliere la birra porta il prezzo a 17,90.
+  await openCard.getByTestId('fallo-pesante-group-beers').click();
+  await expect(heavyCta).toHaveText('SCEGLI DA BERE');
+  await openCard.locator('.pm-beer-pill', { hasText: 'Helles' }).click();
   await openCard.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
   await expect(openCard.locator('.pm-beer-chosen-name')).toHaveText('DA BERE: KEILER HELLES');
   await expect(openCard.locator('.pm-drink-pill--on')).toHaveCount(0);
   await expect(heavyCta).toHaveText('AGGIUNGI IL MENU · 17,90 €');
 
   // Torno sulla bibita e aggiungo: il sacco mostra la variante bibita, a 16,90 EUR.
+  await openCard.getByTestId('fallo-pesante-group-drinks').click();
   await openCard.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
   await heavyCta.click();
   await page.getByRole('button', { name: /VAI ALLA CASSA/i }).click();
@@ -1319,7 +1326,9 @@ test('23. MENU OTTOBRE: il MENU Pulled Pork sta sul Box (niente patate a parte),
 
   await box.getByTestId('choose-menu').click();
   const cta = box.getByTestId('fallo-pesante-cta');
+  await box.getByTestId('fallo-pesante-group-beers').click();
   await expect(box.getByTestId('fallo-pesante-beers-label')).toHaveText('BIRRE · +2 €');
+  await box.getByTestId('fallo-pesante-group-drinks').click();
   await box.locator('.pm-drink-pill', { hasText: 'Fanta' }).click();
   await expect(cta).toHaveText('AGGIUNGI IL MENU · 13,90 €');
   await cta.click();
@@ -1349,6 +1358,7 @@ test('23b. MENU OTTOBRE: patate finite → MENU di Pastrami/Brisket bloccati, ME
   const box = page.locator('.pm-list .pc-card', { hasText: 'Box Pulled Pork' });
   await expect(box.getByTestId('choose-menu')).toBeEnabled();
   await box.getByTestId('choose-menu').click();
+  await box.getByTestId('fallo-pesante-group-drinks').click();
   await box.locator('.pm-drink-pill', { hasText: 'Sprite' }).click();
   await expect(box.getByTestId('fallo-pesante-cta')).toBeEnabled();
 });
@@ -1388,6 +1398,7 @@ test('23d. H7: doppio tap su AGGIUNGI IL MENU aggiunge un solo menu', async ({ p
   const brisket = page.locator('.pm-list .pc-card', { hasText: 'Brisket' });
   await brisket.getByTestId('choose-menu').click();
   await expect(brisket.getByTestId('fallo-pesante-price')).toHaveText('+1,90 €');
+  await brisket.getByTestId('fallo-pesante-group-drinks').click();
   await brisket.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
   const cta = brisket.getByTestId('fallo-pesante-cta');
   await expect(cta).toHaveText('AGGIUNGI IL MENU · 16,90 €');
@@ -1436,16 +1447,12 @@ test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun 
   await expect(fanta.locator('.pc-meta')).toHaveCount(0);
   await expect(fanta.locator('.pc-price')).toHaveText(/^4[\d,]*\s?€$/);
 
-  // Foto: 4 <img> reali, nessun 404. Le 4 bibite nuove (Fanta, Sprite, Estathé) non hanno ancora
-  // la foto: riquadro "FOTO IN ARRIVO", mai un <img> rotto. Le foto sotto la piega sono `lazy`:
-  // si portano in vista una a una e si aspetta che il file sia decodificato (`naturalWidth > 0`).
-  await expect(page.locator('.bv-list .pc-photo')).toHaveCount(4);
-  await expect(page.locator('.bv-list .pc-photo-missing')).toHaveCount(4);
-  for (const name of ['Fanta', 'Sprite', 'Estathé Pesca', 'Estathé Limone']) {
-    await expect(page.locator('.bv-list .pc-card', { hasText: name }).locator('.pc-photo-missing')).toHaveText('FOTO IN ARRIVO');
-  }
+  // Foto: 8 <img> reali, nessun 404. Le foto sotto la piega sono `lazy`: si portano in vista una a
+  // una e si aspetta che il file sia decodificato (`naturalWidth > 0`).
+  await expect(page.locator('.bv-list .pc-photo')).toHaveCount(8);
+  await expect(page.locator('.bv-list .pc-photo-missing')).toHaveCount(0);
 
-  for (let i = 0; i < 4; i += 1) {
+  for (let i = 0; i < 8; i += 1) {
     const img = page.locator('.bv-list .pc-photo').nth(i);
     await img.scrollIntoViewIfNeeded();
     await expect.poll(() => img.evaluate((el) => el.complete && el.naturalWidth > 0)).toBe(true);
@@ -1454,10 +1461,14 @@ test('24. BEVANDE (restyling hero): schede compatte, nessuna foto rotta, nessun 
     imgs.map((img) => new URL(img.getAttribute('src'), location.origin).pathname)
   );
   expect(srcs).toEqual([
-    '/assets/kitchen/menu/bevande/bevanda_acqua.webp',
-    '/assets/kitchen/menu/bevande/bevanda_pepsi.webp',
-    '/assets/kitchen/menu/bevande/bevanda_pepsi_zero.webp',
-    '/assets/kitchen/menu/bevande/bevanda_seven_up.webp',
+    '/assets/kitchen/menu/bevande/item-038-acqua.webp',
+    '/assets/kitchen/menu/bevande/item-046-pepsi.webp',
+    '/assets/kitchen/menu/bevande/item-047-pepsi-zero.webp',
+    '/assets/kitchen/menu/bevande/item-048-seven-up.webp',
+    '/assets/kitchen/menu/bevande/item-063-fanta.webp',
+    '/assets/kitchen/menu/bevande/item-064-sprite.webp',
+    '/assets/kitchen/menu/bevande/item-065-estathe-pesca.webp',
+    '/assets/kitchen/menu/bevande/item-066-estathe-limone.webp',
   ]);
   expect(missing404).toEqual([]);
 

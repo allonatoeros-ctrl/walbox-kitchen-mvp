@@ -25,7 +25,8 @@ async function addFalloPesante(page) {
   const card = page.locator('.pm-list .pc-card', { hasText: MENU_CARD });
   // SCEGLI COME LO VUOI (2026-09-24): il selettore birra appare solo scegliendo MENU.
   await card.getByTestId('choose-menu').click();
-  await card.locator('.pm-beer-pill', { hasText: INCLUDED_BEER }).click();
+  await card.getByTestId('fallo-pesante-group-beers').click();
+  await card.locator('.pm-beer-pill', { hasText: INCLUDED_BEER.replace(/^keiler\s+/i, '') }).click();
   await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
   await expect(card.getByTestId('fallo-pesante-cta')).toBeEnabled();
   await card.getByTestId('fallo-pesante-cta').click();
@@ -55,6 +56,7 @@ test('refresh: il MENU con BIBITA resta nel sacco sulla sua variante, a prezzo b
   await page.getByRole('button', { name: /PESI MASSIMI/i }).first().click();
   const card = page.locator('.pm-list .pc-card', { hasText: MENU_CARD });
   await card.getByTestId('choose-menu').click();
+  await card.getByTestId('fallo-pesante-group-drinks').click();
   await card.locator('.pm-drink-pill', { hasText: 'Pepsi Zero' }).click();
   await card.getByTestId('fallo-pesante-cta').click();
   await expect(page.locator('.kitch-bottom-bar')).toContainText('16,90 €');

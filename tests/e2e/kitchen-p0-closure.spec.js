@@ -193,12 +193,13 @@ test.describe('P0-2 — la birra sopravvive dal catalogo reale alla nota, per tu
     await expect(heavy).toBeVisible();
 
     // Krombacher rimossa dal catalogo (2026-09-22): non compare tra le pillole selezionabili.
+    await card.getByTestId('fallo-pesante-group-beers').click();
     await expect(card.locator('.pm-beer-pill', { hasText: 'Krombacher' })).toHaveCount(0);
 
     // Nessuna birra scelta: il combo resta disabilitato.
     await expect(heavy).toBeDisabled();
 
-    await card.locator('.pm-beer-pill', { hasText: 'Keiler Helles' }).click();
+    await card.locator('.pm-beer-pill', { hasText: 'Helles' }).click();
     await card.locator('.pm-beer-detail').getByRole('button', { name: 'SCEGLI QUESTA BIRRA' }).click();
 
     await expect(heavy).toBeEnabled();

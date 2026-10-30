@@ -211,7 +211,60 @@
 .pm-beer-pills {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 10px;
+}
+
+/* Scelta da bere in due passi (2026-10-30): BIBITA / BIRRA come due bottoni grossi, poi la lista del gruppo.
+   Stesso stile delle pill (bordo scuro, giallo quando e' "on"). */
+.pm-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.pm-group-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 64px;
+  padding: 8px;
+  border: 1px solid var(--poster-line, #3a2617);
+  border-radius: 0;
+  background: transparent;
+  color: var(--poster-ink, #f7dfb5);
+  font-family: inherit;
+  font-weight: 400;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pm-group-btn--on {
+  border-color: var(--poster-yellow, #ffc83d);
+  color: var(--poster-yellow, #ffc83d);
+}
+
+.pm-group-name {
+  font-size: var(--poster-size-sm, 20px);
+  line-height: 1.05;
+  letter-spacing: var(--poster-track-sm, 0.06em);
+  text-transform: uppercase;
+}
+
+/* Riga leggera sotto il nome ("compresa", "+1 €"): come le descrizioni dei piatti. */
+.pm-group-sub {
+  font-family: var(--poster-font-body, 'Montserrat', system-ui, sans-serif);
+  font-size: 14px;
+  line-height: 1.2;
+  letter-spacing: 0;
+  color: var(--poster-muted, #c9b39a);
+}
+.pm-group-btn--on .pm-group-sub {
+  color: var(--poster-yellow, #ffc83d);
 }
 
 .pm-beer-pill,
@@ -268,8 +321,9 @@
   background: rgba(247, 223, 181, 0.06);
 }
 
-.pm-drink-label {
-  margin: 16px 0 6px;
+/* `.pmx-beer` davanti: `.pc-under p { margin: 0 }` di PosterCard vinceva e azzerava lo spazio (2026-10-30). */
+.pmx-beer .pm-drink-label {
+  margin: 18px 0 10px;
   font-weight: 400;
   font-size: var(--poster-size-sm, 20px);
   line-height: 1.1;
@@ -403,6 +457,7 @@
 .pmx-opt:focus-visible,
 .pm-beer-pill:focus-visible,
 .pm-drink-pill:focus-visible,
+.pm-group-btn:focus-visible,
 .pm-beer-chosen-change:focus-visible,
 .pm-beer-detail-cta:focus-visible,
 .pm-beer-detail-close:focus-visible {
