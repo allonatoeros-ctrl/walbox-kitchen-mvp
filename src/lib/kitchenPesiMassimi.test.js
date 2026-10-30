@@ -83,7 +83,7 @@ test('bibite nuove a catalogo, Schweppes fuori', () => {
     const b = item(id);
     assert.equal(b.category, 'bevande');
     assert.equal(b.price, 4);
-    assert.equal(b.image, null, 'senza foto: la card mostra FOTO IN ARRIVO');
+    assert.match(b.image, /^\/assets\/kitchen\/menu\/bevande\/item-06\d-.+\.webp$/);
   }
 });
 

@@ -1,6 +1,6 @@
 # ASSET BEVANDE — SPEC DI PRODUZIONE
 
-MENU POLISH SPRINT, 2026-09-16. **Batch fotografico consegnato e cablato.** I 6 file sono in
+MENU POLISH SPRINT, 2026-09-16. **Batch fotografico consegnato e cablato.** Gli 8 file (batch del 2026-10-30) sono in
 questa cartella (512×512 `.webp`) e `image` in `src/data/kitchenMockData.js` punta al path
 definitivo di ciascuno. Il campo ponte `imagePending` è stato rimosso: non serve più.
 
@@ -8,16 +8,21 @@ La card cliente (`src/components/kitchen/BevandeSection.jsx`) mantiene comunque 
 placeholder "FOTO IN ARRIVO" come fallback per una voce bevanda futura aggiunta prima della
 sua foto — così non si torna mai a un `<img>` rotto.
 
-## I 6 file (presenti in cartella, cablati su `image`)
+## I 8 file (presenti in cartella, cablati su `image`)
 
-| # | Voce menu | id | Filename esatto |
-|---|---|---|---|
-| 1 | Acqua 0,5L | `item-038` | `bevanda_acqua.webp` |
-| 2 | Pepsi 33cl | `item-046` | `bevanda_pepsi.webp` |
-| 3 | Pepsi Zero | `item-047` | `bevanda_pepsi_zero.webp` |
-| 4 | Seven Up | `item-048` | `bevanda_seven_up.webp` |
-| 5 | Schweppes Lemon | `item-049` | `bevanda_schweppes_lemon.webp` |
-| 6 | Schweppes Tonica | `item-050` | `bevanda_schweppes_tonica.webp` |
+Aggiornato 2026-10-30: batch nuovo, filename `item-<id>-<nome>.webp` (512x512). Via Schweppes
+(item-049/050) e i vecchi `bevanda_*.webp`.
+
+| Voce menu | id | Filename esatto |
+|---|---|---|
+| Acqua 0,5L | `item-038` | `item-038-acqua.webp` |
+| Pepsi | `item-046` | `item-046-pepsi.webp` |
+| Pepsi Zero | `item-047` | `item-047-pepsi-zero.webp` |
+| Seven Up | `item-048` | `item-048-seven-up.webp` |
+| Fanta | `item-063` | `item-063-fanta.webp` |
+| Sprite | `item-064` | `item-064-sprite.webp` |
+| Estathé Pesca | `item-065` | `item-065-estathe-pesca.webp` |
+| Estathé Limone | `item-066` | `item-066-estathe-limone.webp` |
 
 Path pubblico risultante: `/assets/kitchen/menu/bevande/<filename>`
 
@@ -39,23 +44,19 @@ Due differenze fra quanto chiesto sopra e quanto e' arrivato. Nessuna delle due 
 difetto visivo — le 6 foto sono coerenti fra loro e leggibili sulla card scura — ma vanno
 registrate, perche' la spec qui sopra resta il riferimento per eventuali rifacimenti.
 
-1. **Fondo chiaro, non scuro.** I requisiti chiedevano "fondo scuro pieno"; le foto sono su
-   un banco caldo chiaro (bordi ~`#d9bd9c`). Di conseguenza `--bv-photo-bg` in
-   `BevandeSection.css` e' stato portato su quel tono, per non avere un flash scuro→chiaro
-   durante il caricamento. Se un rifacimento futuro tornasse al fondo scuro, quel token va
-   riportato a un tono scuro.
-2. **Le lattine mostrano "33 cl" stampato.** Su Pepsi Zero, Seven Up, Schweppes Lemon e
-   Schweppes Tonica il formato e' leggibile nella foto. Questo **non** e' stato usato per
-   riempire il campo `format`: dedurre un dato di prodotto da un'immagine non e' una fonte,
-   e i 4 formati restano quelli da confermare nella sezione qui sotto. Se Eros conferma che
-   sono 33 cl, bastano 4 righe `format: '33 cl'` in `kitchenMockData.js`.
+1. **Fondo scuro.** Le foto del batch 2026-10-30 hanno fondo scuro uniforme, in linea con la spec;
+   il riquadro foto della card e' scuro (#2a1a10). Il vecchio token `--bv-photo-bg` (fondo chiaro
+   #d9bd9c) non esiste piu'.
+2. **Le lattine possono mostrare "33 cl" stampato.** Questo **non** e' usato per riempire il campo
+   `format`: dedurre un dato di prodotto da un'immagine non e' una fonte. I formati restano
+   quelli da confermare qui sotto; se Eros conferma, basta `format: '33 cl'` in `kitchenMockData.js`.
 
 ## Se una foto va rifatta
 
 Sovrascrivere il file mantenendo lo stesso filename: `image` in `src/data/kitchenMockData.js`
 punta al path, non al contenuto, quindi non serve toccare il codice.
 
-## Aperto, non bloccante: 4 formati su 6 non confermati
+## Aperto, non bloccante: formati non confermati
 
 L'anatomia della card è `foto → nome → formato → prezzo → LO VOGLIO`, ma il campo `format` è
 valorizzato solo dove il dato è confermato da una fonte nel repo:
@@ -66,8 +67,7 @@ valorizzato solo dove il dato è confermato da una fonte nel repo:
 | Pepsi | `33 cl` | il formato è nel nome (`Pepsi 33cl`) |
 | Pepsi Zero | *assente* | **da confermare a Eros** |
 | Seven Up | *assente* | **da confermare a Eros** |
-| Schweppes Lemon | *assente* | **da confermare a Eros** |
-| Schweppes Tonica | *assente* | **da confermare a Eros** |
+| Fanta, Sprite, Estathé Pesca, Estathé Limone | *assente* | **da confermare a Eros** |
 
 Nessun cl inventato (stessa regola già applicata a Krombacher, `format: null`): dove il formato
 manca la riga non viene renderizzata, e il CSS le riserva comunque l'altezza così le card della

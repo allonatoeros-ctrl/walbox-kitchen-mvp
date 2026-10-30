@@ -17,7 +17,7 @@ import './BevandeSection.css';
  * .webp, spec nel README della cartella) e `item.image` punta al path definitivo di
  * ciascuna. Sono scatti sui prodotti reali del locale: nessun hotlink a marchi terzi,
  * nessuna immagine generata. Il ramo placeholder "FOTO IN ARRIVO" della PosterCard è
- * il fallback per le voci senza foto (oggi Fanta, Sprite, Estathé Pesca e Limone),
+ * il fallback per una voce futura senza foto (oggi tutte e 8 ce l'hanno),
  * così non si torna mai a un `<img>` rotto.
  *
  * Formato: renderizzato solo se `item.format` esiste. Per Pepsi Zero / Seven Up / Fanta /
@@ -31,8 +31,7 @@ import './BevandeSection.css';
 // Ordine menu approvato (stesso di getCategorySubtitle in CustomerKitchenMenu.jsx):
 // ACQUA · PEPSI · PEPSI ZERO · SEVEN UP · FANTA · SPRITE · ESTATHÉ PESCA · ESTATHÉ LIMONE.
 // MENU OTTOBRE (2026-10-28): via Schweppes Lemon/Tonica (item-049/050), dentro Fanta, Sprite ed
-// Estathé. Le 4 nuove non hanno ancora la foto (`image: null`): la PosterCard mostra
-// "FOTO IN ARRIVO" nella stessa cornice.
+// Estathé. Foto delle 4 nuove consegnate 2026-10-30.
 const BEVANDE_LIST_ORDER = [
   'item-038', // ACQUA
   'item-046', // PEPSI
