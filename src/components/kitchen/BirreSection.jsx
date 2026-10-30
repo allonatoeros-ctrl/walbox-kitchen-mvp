@@ -23,6 +23,12 @@ export default function BirreSection({ items, onAdd, onRemove, qtyById }) {
 
   return (
     <div className="br-list">
+      <p
+        data-testid="alcohol-notice-beers"
+        style={{ margin: '0 0 8px', fontSize: '12px', color: 'var(--poster-muted)' }}
+      >
+        Bevande alcoliche vietate ai minori di 18 anni. Al ritiro/servizio potrebbe essere richiesto un documento.
+      </p>
       {items.map((item, index) => {
         const eveningLocked = item.availability === 'evening_only' && !eveningActive;
         const meta = [item.choiceLabel, item.format].filter(Boolean).join(' · ');

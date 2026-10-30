@@ -22,6 +22,9 @@ export default function AllergenBadges({ allergens }) {
   if (!allergens || allergens.length === 0) return null;
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 4px', marginTop: '6px', marginBottom: '4px' }}>
+      <span style={{ flexBasis: '100%', fontSize: '11px', opacity: 0.8 }}>
+        Per allergeni e contaminazioni chiedi al personale
+      </span>
       {allergens.map((a) => (
         <span key={a} style={{
           fontSize: '12px',
