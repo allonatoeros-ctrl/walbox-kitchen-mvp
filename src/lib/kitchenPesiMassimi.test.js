@@ -1,4 +1,4 @@
-// kitchenPesiMassimi.test.js — MENU OTTOBRE (2026-10-28): due prezzi per MENU (birra / bibita).
+// kitchenPesiMassimi.test.js — MENU Fallo Pesante: prezzi tornati a quelli pre-28/10 (19/20/20), birra = bibita.
 // Eseguire a mano: node --test src/lib/kitchenPesiMassimi.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
@@ -34,15 +34,15 @@ test('prezzi decisi da Eros: birra vs bibita', () => {
   const prices = Object.fromEntries(Object.entries(kitchenPesiMassimiCombos)
     .map(([k, c]) => [k, [c.id, c.price, c.softDrink.id, c.softDrink.price]]));
   assert.deepEqual(prices, {
-    'item-018': ['item-040', 15.9, 'item-060', 13.9],
-    'item-010': ['item-041', 17.9, 'item-061', 16.9],
-    'item-011': ['item-042', 17.9, 'item-062', 16.9],
+    'item-018': ['item-040', 19, 'item-060', 19],
+    'item-010': ['item-041', 20, 'item-061', 20],
+    'item-011': ['item-042', 20, 'item-062', 20],
   });
 });
 
 test('falloPesanteVariant: birra → variante storica, bibita ammessa → softDrink', () => {
   const c = kitchenPesiMassimiCombos['item-010'];
-  assert.deepEqual(falloPesanteVariant(c, BEER), { id: 'item-041', name: c.name, price: 17.9 });
+  assert.deepEqual(falloPesanteVariant(c, BEER), { id: 'item-041', name: c.name, price: 20 });
   assert.deepEqual(falloPesanteVariant(c, PEPSI), c.softDrink);
   assert.equal(falloPesanteVariant(c, null).id, 'item-041', 'senza bevanda vale la variante birra');
   assert.equal(falloPesanteVariant(c, WATER).id, 'item-041', 'l\'acqua non e una bibita del MENU');
@@ -55,13 +55,13 @@ test('buildFalloPesanteCartLine: baseId e prezzo della variante giusta', () => {
   const beerLine = buildFalloPesanteCartLine(box, BEER, 2);
   assert.deepEqual(
     { id: beerLine.id, baseId: beerLine.baseId, price: beerLine.price, qty: beerLine.qty, inc: beerLine.includesBeerId },
-    { id: 'item-040::item-051', baseId: 'item-040', price: 15.9, qty: 2, inc: 'item-051' },
+    { id: 'item-040::item-051', baseId: 'item-040', price: 19, qty: 2, inc: 'item-051' },
   );
   assert.equal(beerLine.name, `Box Pulled Pork — Fallo Pesante · ${BEER.name}`);
   const softLine = buildFalloPesanteCartLine(box, PEPSI);
   assert.deepEqual(
     { id: softLine.id, baseId: softLine.baseId, price: softLine.price, qty: softLine.qty, inc: softLine.includesBeerId },
-    { id: 'item-060::item-046', baseId: 'item-060', price: 13.9, qty: 1, inc: 'item-046' },
+    { id: 'item-060::item-046', baseId: 'item-060', price: 19, qty: 1, inc: 'item-046' },
   );
   assert.equal(softLine.name, 'Box Pulled Pork — Menu Bibita · Pepsi 33cl');
   assert.equal(softLine.image, box.image);
@@ -90,24 +90,25 @@ test('bibite nuove a catalogo, Schweppes fuori', () => {
 test('falloPesanteMenuSupplement: calcolato dai dati (variante bibita meno prezzo panino)', () => {
   const byId = (id) => item(id);
   const sup = (id) => falloPesanteMenuSupplement(byId(id).price, kitchenPesiMassimiCombos[id]);
-  assert.equal(sup('item-010'), 2.4, 'Pastrami 16,90 − 14,50');
-  assert.equal(sup('item-011'), 1.9, 'Brisket 16,90 − 15,00');
-  assert.equal(sup('item-018'), 2.4, 'Box 13,90 − 11,50');
+  assert.equal(sup('item-010'), 5.5, 'Pastrami 20 − 14,50');
+  assert.equal(sup('item-011'), 5, 'Brisket 20 − 15,00');
+  assert.equal(sup('item-018'), 7.5, 'Box 19 − 11,50');
 });
 
 test('falloPesanteMenuSupplement: senza bibite ordinabili vale la variante birra; dati mancanti = null', () => {
   const c = kitchenPesiMassimiCombos['item-010'];
-  assert.equal(falloPesanteMenuSupplement(14.5, c, false), 3.4, 'solo birra: 17,90 − 14,50');
-  assert.equal(falloPesanteMenuSupplement(14.5, { id: 'x', price: 17.9 }), 3.4, 'combo senza softDrink');
+  assert.equal(falloPesanteMenuSupplement(14.5, c, false), 5.5, 'solo birra: 20 − 14,50');
+  assert.equal(falloPesanteMenuSupplement(14.5, { id: 'x', price: 20 }), 5.5, 'combo senza softDrink');
   assert.equal(falloPesanteMenuSupplement(null, c), null);
   assert.equal(falloPesanteMenuSupplement('', c), null);
   assert.equal(falloPesanteMenuSupplement(14.5, null), null);
 });
 
 test('falloPesanteBeerExtra: birra meno bibita, 0 se non applicabile', () => {
-  assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos['item-010']), 1);
-  assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos['item-011']), 1);
-  assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos['item-018']), 2, 'Box 15,90 − 13,90');
+  // Prezzi reali: birra e bibita stesso prezzo → differenza 0.
+  for (const id of ['item-010', 'item-011', 'item-018']) assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos[id]), 0);
+  // Formula (dati di prova): birra 20 − bibita 19 = 1.
+  assert.equal(falloPesanteBeerExtra({ id: 'x', price: 20, softDrink: { price: 19 } }), 1, 'formula birra − bibita');
   assert.equal(falloPesanteBeerExtra(kitchenPesiMassimiCombos['item-010'], false), 0, 'niente bibite');
   assert.equal(falloPesanteBeerExtra({ id: 'x', price: 10 }), 0, 'combo senza softDrink');
   assert.equal(falloPesanteBeerExtra(null), 0);

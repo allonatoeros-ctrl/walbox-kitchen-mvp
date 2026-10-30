@@ -161,7 +161,7 @@ test('MENU OTTOBRE: variante bibita (item-060/061/062) riconosciuta e riprezzata
   ];
   const { items, dropped } = reconcileCartItems(saved, kitchenMenuItems, kitchenPesiMassimiCombos);
   assert.deepEqual(dropped, []);
-  assert.deepEqual(items.map((l) => [l.baseId, l.price, l.qty]), [['item-061', 16.9, 1], ['item-060', 13.9, 2]]);
+  assert.deepEqual(items.map((l) => [l.baseId, l.price, l.qty]), [['item-061', 20, 1], ['item-060', 19, 2]]);
   assert.equal(items[1].name, 'Box Pulled Pork — Menu Bibita · Sprite');
 });
 
@@ -172,7 +172,7 @@ test('MENU OTTOBRE: la variante segue SEMPRE la bevanda salvata, mai il baseId s
     kitchenMenuItems, kitchenPesiMassimiCombos);
   assert.equal(items[0].baseId, 'item-041');
   assert.equal(items[0].id, 'item-041::item-054');
-  assert.equal(items[0].price, 17.9);
+  assert.equal(items[0].price, 20);
 });
 
 test('MENU OTTOBRE: carrelli vecchi (prezzi 19/20, Schweppes, menu PP del panino) mai incoerenti', () => {
@@ -187,7 +187,7 @@ test('MENU OTTOBRE: carrelli vecchi (prezzi 19/20, Schweppes, menu PP del panino
     { id: 'item-050', baseId: 'item-050', qty: 1 },
   ];
   const { items, dropped } = reconcileCartItems(saved, kitchenMenuItems, kitchenPesiMassimiCombos);
-  assert.deepEqual(items.map((l) => [l.baseId, l.price]), [['item-040', 15.9], ['item-042', 17.9]]);
+  assert.deepEqual(items.map((l) => [l.baseId, l.price]), [['item-040', 19], ['item-042', 20]]);
   assert.match(items[0].name, /^Box Pulled Pork — Fallo Pesante · /);
   assert.deepEqual(dropped, ['item-041', 'item-050']);
 });

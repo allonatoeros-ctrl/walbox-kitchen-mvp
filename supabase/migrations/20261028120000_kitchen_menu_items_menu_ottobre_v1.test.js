@@ -46,7 +46,11 @@ test('una sola istruzione eseguibile: INSERT ... ON CONFLICT, nessun DDL né DEL
   assert.doesNotMatch(src, /\b(CREATE|ALTER|DROP|GRANT|REVOKE)\b\s+(TABLE|FUNCTION|POLICY|INDEX|TRIGGER|EXECUTE|ALL|SELECT)/i);
 });
 
-test('le 10 righe attese, ognuna identica a kitchenMockData.js', () => {
+// I prezzi dei 6 menu sono poi tornati 19/20/20 con 20261030150000 (decisione Eros 30/10): qui si confronta
+// solo il nome con kitchenMockData.js; il prezzo storico lo fissa il test successivo, lo stato finale il cumulativo.
+const REPRICED_LATER = ['item-040', 'item-041', 'item-042', 'item-060', 'item-061', 'item-062'];
+
+test('le 10 righe attese, ognuna identica a kitchenMockData.js (prezzo menu: vedi 20261030150000)', () => {
   assert.deepEqual([...rows.keys()].sort(), [
     'item-040', 'item-041', 'item-042', 'item-060', 'item-061', 'item-062',
     'item-063', 'item-064', 'item-065', 'item-066',
@@ -54,7 +58,8 @@ test('le 10 righe attese, ognuna identica a kitchenMockData.js', () => {
   for (const [id, got] of rows) {
     const want = expectedRow(id);
     assert.ok(want, `${id} deve esistere nel catalogo cliente`);
-    assert.deepEqual(got, want, `riga server divergente per ${id}`);
+    if (REPRICED_LATER.includes(id)) assert.equal(got.name, want.name, `nome server divergente per ${id}`);
+    else assert.deepEqual(got, want, `riga server divergente per ${id}`);
   }
 });
 
