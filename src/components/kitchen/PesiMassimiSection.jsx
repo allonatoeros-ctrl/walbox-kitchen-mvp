@@ -25,8 +25,8 @@ import './PesiMassimiSection.css';
  * MENU OTTOBRE (2026-10-28, decisione Eros) — due prezzi per MENU: con birra (`combo.price`) o con
  * bibita (`combo.softDrink.price`). Prezzo e pulsante seguono la bevanda scelta (`falloPesanteVariant`), e la riga
  * carrello la costruisce `buildFalloPesanteCartLine` (id/baseId/prezzo della variante giusta). Il menu Pulled Pork
- * ora sta sul BOX (`includesSide: false`): niente patate a parte, quindi il vincolo "patate finite" vale solo con
- * `includesSide`. Etichetta della scelta singola: `item.priceNote` ("SOLO BOX") o "SOLO PANINO".
+ * sta sul PANINO (item-009, dal 2026-10-30); il Box si vende solo. Un combo con `includesSide: false` non ha
+ * patate a parte, quindi il vincolo "patate finite" vale solo con `includesSide`. Etichetta della scelta singola: `item.priceNote` ("SOLO BOX") o "SOLO PANINO".
  */
 
 /**

@@ -26,7 +26,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const beers = kitchenMenuItems.filter((i) => i.category === 'birre' && i.tags?.includes('birre-v1'));
 
 // Riga carrello come la costruisce PesiMassimiSection.jsx (helper condiviso: id composito,
-// baseId della variante birra/bibita). MENU OTTOBRE: il MENU Pulled Pork sta sul Box (item-018).
+// baseId della variante birra/bibita). Il MENU Pulled Pork sta sul panino (item-009).
 function comboCartLine(baseItemId, beer, qty = 1) {
   return buildFalloPesanteCartLine(kitchenPesiMassimiCombos[baseItemId], beer, qty);
 }
@@ -49,14 +49,14 @@ test('carrello senza combo: nessuna nota (non si sporca la nota del cliente)', (
 });
 
 test('due combo con la stessa birra: quantita sommata, non riga ripetuta', () => {
-  const note = buildIncludedBeersNote([comboCartLine('item-018', beers[3], 2)], kitchenMenuItems);
+  const note = buildIncludedBeersNote([comboCartLine('item-009', beers[3], 2)], kitchenMenuItems);
   assert.ok(note.includes(`2x ${beers[3].name.toUpperCase()}`), note);
   assert.equal(note.split(beers[3].name.toUpperCase()).length - 1, 1);
 });
 
 test('due combo con birre diverse: entrambe presenti', () => {
   const note = buildIncludedBeersNote(
-    [comboCartLine('item-018', beers[3]), comboCartLine('item-011', beers[5])],
+    [comboCartLine('item-009', beers[3]), comboCartLine('item-011', beers[5])],
     kitchenMenuItems,
   );
   assert.ok(note.includes(beers[3].name.toUpperCase()), note);
@@ -70,8 +70,8 @@ test('birra non piu in catalogo: si degrada sull id, mai una nota vuota o un cra
 
 test('il nome della birra NON viene ricavato dal nome della riga carrello', () => {
   // Stessa riga, nome composito bugiardo: la nota deve seguire includesBeerId, non il nome.
-  const line = comboCartLine('item-018', beers[0]);
-  line.name = 'Box Pulled Pork — Fallo Pesante · NOME SBAGLIATO';
+  const line = comboCartLine('item-009', beers[0]);
+  line.name = 'Pulled Pork — Fallo Pesante · NOME SBAGLIATO';
   const note = buildIncludedBeersNote([line], kitchenMenuItems);
   assert.ok(note.includes(beers[0].name.toUpperCase()), note);
   assert.doesNotMatch(note, /NOME SBAGLIATO/);
@@ -82,13 +82,13 @@ const PEPSI_ZERO = kitchenMenuItems.find((i) => i.id === 'item-047');
 const SEVEN_UP = kitchenMenuItems.find((i) => i.id === 'item-048');
 
 test('H4 nota: solo birra resta identica al formato storico', () => {
-  const note = buildIncludedBeersNote([comboCartLine('item-018', beers[3]), comboCartLine('item-010', beers[5], 2)], kitchenMenuItems);
+  const note = buildIncludedBeersNote([comboCartLine('item-009', beers[3]), comboCartLine('item-010', beers[5], 2)], kitchenMenuItems);
   assert.equal(note, `\u{1F37A} BIRRA INCLUSA: ${beers[3].name.toUpperCase()} \u00B7 2x ${beers[5].name.toUpperCase()}`);
   assert.doesNotMatch(note, new RegExp(INCLUDED_DRINK_NOTE_PREFIX));
 });
 
 test('H4 nota: solo bibita usa il prefisso BIBITA INCLUSA, mai BIRRA INCLUSA', () => {
-  const note = buildIncludedBeersNote([comboCartLine('item-018', PEPSI_ZERO)], kitchenMenuItems);
+  const note = buildIncludedBeersNote([comboCartLine('item-009', PEPSI_ZERO)], kitchenMenuItems);
   assert.equal(note, '\u{1F964} BIBITA INCLUSA: PEPSI ZERO');
   assert.equal(INCLUDED_DRINK_NOTE_PREFIX, 'BIBITA INCLUSA');
   assert.doesNotMatch(note, new RegExp(INCLUDED_BEER_NOTE_PREFIX));
@@ -97,10 +97,10 @@ test('H4 nota: solo bibita usa il prefisso BIBITA INCLUSA, mai BIRRA INCLUSA', (
 test('H4 nota: carrello misto (birra + bibite), quantita sommate per tipo, unite da " · "', () => {
   const note = buildIncludedBeersNote(
     [
-      comboCartLine('item-018', PEPSI_ZERO),
+      comboCartLine('item-009', PEPSI_ZERO),
       comboCartLine('item-010', beers[0]),
       comboCartLine('item-011', PEPSI_ZERO, 2),
-      comboCartLine('item-018', SEVEN_UP),
+      comboCartLine('item-009', SEVEN_UP),
     ],
     kitchenMenuItems,
   );
@@ -709,7 +709,7 @@ test('computeTopProductsAndCategories: combo FALLO PESANTE (item-040/041/042 + b
       { itemId: 'item-040', name: 'Pulled Pork — Fallo Pesante', quantity: 1 },
       { itemId: 'item-041', name: 'Pastrami — Fallo Pesante', quantity: 1 },
       { itemId: 'item-042', name: 'Brisket — Fallo Pesante', quantity: 1 },
-      { itemId: 'item-060', name: 'Box Pulled Pork — Menu Bibita', quantity: 1 },
+      { itemId: 'item-060', name: 'Pulled Pork — Menu Bibita', quantity: 1 },
       { itemId: 'item-061', name: 'Pastrami — Menu Bibita', quantity: 1 },
       { itemId: 'item-062', name: 'Brisket — Menu Bibita', quantity: 2 },
       // Schweppes tolte dal catalogo il 2026-10-28: lo storico resta `bevande`, mai "non mappato".

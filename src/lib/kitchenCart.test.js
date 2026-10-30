@@ -22,8 +22,8 @@ function fakeStorage(initial = {}) {
   };
 }
 
-// MENU OTTOBRE (2026-10-28): il combo di riferimento e' il Pastrami (item-010); il panino Pulled
-// Pork (item-009) non ha piu' il MENU, che ora sta sul Box (item-018).
+// Combo di riferimento: Pastrami (item-010). Dal 2026-10-30 il MENU Pulled Pork sta di nuovo sul
+// panino (item-009); il Box (item-018) si vende solo.
 const COMBO = kitchenPesiMassimiCombos['item-010'];
 const BEER = kitchenMenuItems.find((i) => i.id === 'item-054');
 const comboLine = (qty = 1) => ({ id: `${COMBO.id}::${BEER.id}`, baseId: COMBO.id, qty, includesBeerId: BEER.id });
@@ -162,7 +162,7 @@ test('MENU OTTOBRE: variante bibita (item-060/061/062) riconosciuta e riprezzata
   const { items, dropped } = reconcileCartItems(saved, kitchenMenuItems, kitchenPesiMassimiCombos);
   assert.deepEqual(dropped, []);
   assert.deepEqual(items.map((l) => [l.baseId, l.price, l.qty]), [['item-061', 20, 1], ['item-060', 19, 2]]);
-  assert.equal(items[1].name, 'Box Pulled Pork — Menu Bibita · Sprite');
+  assert.equal(items[1].name, 'Pulled Pork — Menu Bibita · Sprite');
 });
 
 test('MENU OTTOBRE: la variante segue SEMPRE la bevanda salvata, mai il baseId salvato', () => {
@@ -177,7 +177,7 @@ test('MENU OTTOBRE: la variante segue SEMPRE la bevanda salvata, mai il baseId s
 
 test('MENU OTTOBRE: carrelli vecchi (prezzi 19/20, Schweppes, menu PP del panino) mai incoerenti', () => {
   const saved = [
-    // menu Pulled Pork salvato quando item-040 era sul panino: torna come MENU del Box, a prezzo e nome correnti
+    // menu Pulled Pork salvato quando item-040 era sul panino: resta MENU del panino, a prezzo e nome correnti
     { id: 'item-040::item-051', baseId: 'item-040', qty: 1, includesBeerId: 'item-051', price: 19, name: 'Pulled Pork — Fallo Pesante' },
     // Brisket a 20: riprezzato
     { id: 'item-042::item-052', baseId: 'item-042', qty: 1, includesBeerId: 'item-052', price: 20 },
@@ -188,12 +188,12 @@ test('MENU OTTOBRE: carrelli vecchi (prezzi 19/20, Schweppes, menu PP del panino
   ];
   const { items, dropped } = reconcileCartItems(saved, kitchenMenuItems, kitchenPesiMassimiCombos);
   assert.deepEqual(items.map((l) => [l.baseId, l.price]), [['item-040', 19], ['item-042', 20]]);
-  assert.match(items[0].name, /^Box Pulled Pork — Fallo Pesante · /);
+  assert.match(items[0].name, /^Pulled Pork — Fallo Pesante · /);
   assert.deepEqual(dropped, ['item-041', 'item-050']);
 });
 
-test('MENU OTTOBRE: Box esaurito → cadono entrambe le varianti del suo MENU', () => {
-  const boxOut = kitchenMenuItems.map((i) => (i.id === 'item-018' ? { ...i, available: false } : i));
+test('MENU OTTOBRE: panino Pulled Pork esaurito → cadono entrambe le varianti del suo MENU', () => {
+  const boxOut = kitchenMenuItems.map((i) => (i.id === 'item-009' ? { ...i, available: false } : i));
   const { items, dropped } = reconcileCartItems([
     { id: 'item-040::item-051', baseId: 'item-040', qty: 1, includesBeerId: 'item-051' },
     { id: 'item-060::item-046', baseId: 'item-060', qty: 1, includesBeerId: 'item-046' },
