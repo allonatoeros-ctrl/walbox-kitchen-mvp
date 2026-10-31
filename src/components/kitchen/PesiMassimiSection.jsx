@@ -20,7 +20,8 @@ import './PesiMassimiSection.css';
  * dati). Col menu: "SCEGLI DA BERE" con prima le bibite (comprese) poi le birre (+Y €). UN solo pulsante d'acquisto in
  * fondo che segue la scelta ("AGGIUNGI PANINO · X" / "AGGIUNGI IL MENU · X"); dopo l'add "AGGIUNTO ✓" ~1,5 s e
  * spento. La riga carrello e la nota "BIRRA/BIBITA INCLUSA" sono identiche a prima (stessi payload, stessi helper).
- * Senza menu (Pulled Pork panino, Garpez, o `hideCombo`) la scheda resta quella di prima, col "+" / stepper.
+ * Senza menu (Garpez, Box Pulled Pork) dal 2026-10-31 c'e' solo il pulsante d'acquisto in fondo, niente "+";
+ * con `hideCombo` (/kitchen/promo) la scheda resta quella di prima, col "+" / stepper.
  *
  * MENU OTTOBRE (2026-10-28, decisione Eros) — due prezzi per MENU: con birra (`combo.price`) o con
  * bibita (`combo.softDrink.price`). Prezzo e pulsante seguono la bevanda scelta (`falloPesanteVariant`), e la riga
@@ -272,6 +273,37 @@ export default function PesiMassimiSection({
           const beerNotChosen = hasDrinkChoice && !chosenDrinkOrBeer;
           // SCEGLI COME LO VUOI (2026-09-24): default SOLO PANINO, il MENU si sceglie.
           const isMenuChoice = Boolean(combo) && !comboBlocked && (choiceByItem[item.id] ?? 'solo') === 'menu';
+          // Senza menu (Garpez, Box Pulled Pork) stessa barra AGGIUNGI dei panini col menu, al posto del "+"
+          // (decisione Eros 2026-10-31). In /kitchen/promo (`hideCombo`) resta la scheda col "+".
+          const showSoloBuy = !combo && !hideCombo;
+
+          // Pulsante d'acquisto SOLO PANINO / SOLO BOX: lo stesso per le schede con e senza menu.
+          const soloBuyButton = (
+            <button
+              type="button"
+              className={`pc-cta pmx-menu-cta pmx-buy${isJustAdded ? ' pmx-buy--done' : ''}`}
+              disabled={!canAddSolo || isJustAdded}
+              data-testid="pmx-solo-cta"
+              aria-label={canAddSolo
+                ? `Aggiungi ${item.name}, ${soloNoun.toLowerCase()} · ${formatPrice(item.price, forceDecimals)}`
+                : undefined}
+              onClick={() => {
+                if (!canAddSolo || addLockRef.current[item.id]) return;
+                pendingScrollRef.current = { id: item.id, kind: 'pick' };
+                flashAdded(item.id);
+                // Stesso payload che mandava il "+" della PosterCard: la riga ordine non cambia.
+                onAdd({ id: item.id, name: item.name, price: item.price, image: item.image });
+              }}
+            >
+              {isJustAdded
+                ? 'AGGIUNTO ✓'
+                : soldOut
+                  ? 'ESAURITO'
+                  : noPrice
+                    ? 'PREZZO IN ARRIVO'
+                    : `AGGIUNGI ${soloNoun} · ${formatPrice(item.price, forceDecimals)}`}
+            </button>
+          );
 
           const choiceBlock = combo ? (
             <div className={`pmx${soldOut ? ' pmx--off' : ''}`}>
@@ -543,32 +575,13 @@ export default function PesiMassimiSection({
                           ? 'SCEGLI DA BERE'
                           : `AGGIUNGI IL MENU · ${formatPrice(comboVariant.price, forceDecimals)}`}
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={`pc-cta pmx-menu-cta pmx-buy${isJustAdded ? ' pmx-buy--done' : ''}`}
-                    disabled={!canAddSolo || isJustAdded}
-                    data-testid="pmx-solo-cta"
-                    aria-label={canAddSolo
-                      ? `Aggiungi ${item.name}, ${soloNoun.toLowerCase()} · ${formatPrice(item.price, forceDecimals)}`
-                      : undefined}
-                    onClick={() => {
-                      if (!canAddSolo || addLockRef.current[item.id]) return;
-                      pendingScrollRef.current = { id: item.id, kind: 'pick' };
-                      flashAdded(item.id);
-                      // Stesso payload che mandava il "+" della PosterCard: la riga ordine non cambia.
-                      onAdd({ id: item.id, name: item.name, price: item.price, image: item.image });
-                    }}
-                  >
-                    {isJustAdded
-                      ? 'AGGIUNTO ✓'
-                      : soldOut
-                        ? 'ESAURITO'
-                        : noPrice
-                          ? 'PREZZO IN ARRIVO'
-                          : `AGGIUNGI ${soloNoun} · ${formatPrice(item.price, forceDecimals)}`}
-                  </button>
-                )}
+                ) : soloBuyButton}
+              </div>
+            </div>
+          ) : showSoloBuy ? (
+            <div className={`pmx${soldOut ? ' pmx--off' : ''}`}>
+              <div className="pmx-pick" ref={(el) => { pickRefs.current[item.id] = el; }}>
+                {soloBuyButton}
               </div>
             </div>
           ) : null;
@@ -584,7 +597,7 @@ export default function PesiMassimiSection({
               objectPosition={OBJECT_POSITION_BY_ID[item.id] ?? COMPACT_OBJECT_POSITION}
               photoZoom={PHOTO_ZOOM_BY_ID[item.id] ?? COMPACT_PHOTO_ZOOM}
               zoomQuote={ZOOM_QUOTE_BY_ID[item.id]}
-              hideAdd={Boolean(combo)}
+              hideAdd={Boolean(combo) || showSoloBuy}
               compact
             >
               {choiceBlock}
