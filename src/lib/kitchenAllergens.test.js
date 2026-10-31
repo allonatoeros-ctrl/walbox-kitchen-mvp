@@ -156,9 +156,17 @@ test('ALLERGEN_LABEL copre ogni chiave allergene presente nei dati', () => {
 // "non verificato" finche' Eros non conferma ricetta/etichetta.
 // ---------------------------------------------------------------------------------------------
 
-const PRUDENTIAL_UNVERIFIED = ['item-018', 'item-043'];
+// item-018 (Box Pulled Pork) e' uscito il 2026-10-31: allergeni confermati da Eros, uguali al panino.
+const PRUDENTIAL_UNVERIFIED = ['item-043'];
 
-test('item-018 e item-043 NON sono piu presentati come "nessun allergene"', () => {
+test('Box Pulled Pork (item-018): allergeni verificati, uguali al panino item-009', () => {
+  assert.deepEqual(resolveItemAllergens('item-018'), resolveItemAllergens('item-009'));
+  assert.equal(byId('item-018').allergensVerified, undefined);
+  assert.deepEqual(resolveOrderAllergens({ items: [{ itemId: 'item-018', name: 'Box Pulled Pork', quantity: 1 }] }),
+    { allergens: ['uova', 'latte', 'glutine', 'senape'], unknownItems: [], hasUnknown: false });
+});
+
+test('item-043 NON e piu presentato come "nessun allergene"', () => {
   for (const id of PRUDENTIAL_UNVERIFIED) {
     const res = resolveItemAllergens(id);
     assert.equal(res.known, false, `${id} risulta ancora verificato`);
@@ -170,7 +178,6 @@ test('item-018 e item-043 NON sono piu presentati come "nessun allergene"', () =
 // 2026-10-29 (approvazione Eros): array compilati con allergeni DEDOTTI dagli ingredienti, ma il flag
 // allergensVerified: false resta: la UI staff continua a mostrare ALLERGENI NON VERIFICATI.
 const DEDUCED = {
-  'item-018': ['glutine', 'latte', 'uova', 'senape'],
   'item-043': ['frutta_secca', 'latte'],
 };
 
@@ -233,7 +240,7 @@ test('un combo erediterebbe il flag da qualunque componente non verificato', () 
 
 test('il motivo del flag e scritto accanto al dato, non solo nel report', () => {
   const data = readFileSync(join(__dirname, '../data/kitchenMockData.js'), 'utf8');
-  assert.match(data, /salsa cheddar e maionese/);
   assert.match(data, /mortadella/);
-  assert.match(data, /quando Eros conferma ricetta\/etichetta/);
+  assert.match(data, /Restano da confermare con l'etichetta/);
+  assert.match(data, /Allergeni confermati da Eros il 2026-10-31: uguali al panino Pulled Pork/);
 });

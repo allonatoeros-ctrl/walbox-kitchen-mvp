@@ -27,7 +27,6 @@ test.describe('P0-3 — allergeni combo e item non verificati sulla focus card s
 
   test('ordine FALLO PESANTE: unione allergeni panino + birra, non piu "nessun allergene"', async ({ page }) => {
     // item-042 = MENU Brisket (item-011: latte, uova); la birra inclusa porta glutine.
-    // (MENU OTTOBRE: item-040 ora e' il MENU del Box, che resta ALLERGENI NON VERIFICATI come la box.)
     await seed(page, [{
       id: 'p0-combo', orderCode: 'A90', nickname: 'Combo',
       items: [{ itemId: 'item-042', name: 'Brisket — Fallo Pesante', quantity: 1, price: 17.9 }],
@@ -83,8 +82,8 @@ test.describe('P0-3 — allergeni combo e item non verificati sulla focus card s
   // Fix prudenziale 2026-09-16: item-018 (salsa cheddar + maionese) e item-043 (mortadella)
   // dichiaravano allergens: [] in contrasto coi propri ingredienti. Non si inventano allergeni:
   // la cucina li vede come NON VERIFICATI finche' Eros non conferma ricetta/etichetta.
+  // item-018 confermato il 2026-10-31 (uguale al panino item-009): non e' piu in questa lista.
   for (const { id, name } of [
-    { id: 'item-018', name: 'Box Pulled Pork' },
     { id: 'item-043', name: 'Salumi Serissimi' },
   ]) {
     test(`fix prudenziale: ${id} ${name} esce come NON VERIFICATI, non come "nessun allergene"`, async ({ page }) => {
