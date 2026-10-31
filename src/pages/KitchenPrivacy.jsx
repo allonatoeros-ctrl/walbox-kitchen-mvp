@@ -1,10 +1,10 @@
 import './KitchenPrivacy.css';
 
 // Informativa privacy cliente (GDPR art. 13) — Fase 1 privacy, 2026-10-30. Pagina statica, nessuna
-// chiamata di rete. I dati del titolare NON sono inventati: restano segnaposto `[[DA COMPILARE: ...]]`
-// (classe kpv-todo, evidenziati in giallo) finché Eros non li fornisce. Testo da far rivedere a un
-// consulente privacy prima della pubblicazione definitiva.
-const Todo = ({ children }) => <span className="kpv-todo">[[DA COMPILARE: {children}]]</span>;
+// chiamata di rete. Dati del titolare (2026-10-31): da Virgilio/Pagine Gialle, email scelta da Eros; nessuna
+// visura. Testo da far rivedere a un consulente privacy prima della pubblicazione definitiva.
+const PRIVACY_EMAIL = 'thewalrus.melegnano@gmail.com';
+const EmailLink = () => <a href={`mailto:${PRIVACY_EMAIL}`}>{PRIVACY_EMAIL}</a>;
 
 export default function KitchenPrivacy() {
   return (
@@ -16,7 +16,8 @@ export default function KitchenPrivacy() {
 
         <h2>CHI TRATTA I TUOI DATI</h2>
         <p>
-          Il titolare del trattamento è il locale: <Todo>ragione sociale, P.IVA, indirizzo, email</Todo>.
+          Il titolare del trattamento è il locale: Ci.Na. S.n.c. di Nanni Marco &amp; C., P.IVA 07521420963,
+          Via Monte Grappa 5/7, 20077 Melegnano (MI), email <EmailLink />.
         </p>
 
         <h2>QUALI DATI USIAMO</h2>
@@ -60,7 +61,7 @@ export default function KitchenPrivacy() {
         <h2>I TUOI DIRITTI</h2>
         <p>
           Puoi chiedere di accedere ai tuoi dati, correggerli, cancellarli, limitarne l'uso o opporti, e
-          ritirare il consenso alle notifiche. Scrivi a <Todo>contatto per i diritti privacy</Todo> indicando
+          ritirare il consenso alle notifiche. Scrivi a <EmailLink /> indicando
           il codice ordine e il nome usato. Se pensi che i tuoi dati non siano trattati correttamente puoi
           fare reclamo al Garante per la protezione dei dati personali: <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer">garanteprivacy.it</a>.
         </p>
