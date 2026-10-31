@@ -123,6 +123,12 @@ function saveOrders(scope, orders) {
 // `persist` dentro useKitchenOrders, nessun nuovo consumer applicativo.
 export { saveOrders };
 
+// Logout staff (GDPR, 2026-10-30): svuota la cache locale degli ordini del locale (nickname, note,
+// totali di tutti i clienti) dal dispositivo. Solo la chiave staff: quella cliente non si tocca.
+export function clearVenueOrdersCache() {
+  try { localStorage.removeItem(LS_VENUE_KEY); } catch { /* storage non disponibile: nulla da pulire */ }
+}
+
 function appendLog(order, action) {
   const log = [...(order.actionLog ?? []), { action, at: new Date().toISOString() }];
   return { ...order, actionLog: log };

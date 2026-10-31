@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { useKitchenOrders } from '../hooks/useKitchenOrders';
+import { useKitchenOrders, clearVenueOrdersCache } from '../hooks/useKitchenOrders';
 import { isStaffOperationalOrder } from '../lib/kitchenServiceRules';
 import { useKitchenMenu } from '../hooks/useKitchenMenu';
 import { useKitchenServiceState } from '../hooks/useKitchenServiceState';
@@ -200,6 +200,7 @@ function KitchenSoloServiceLive() {
     try {
       await signOut();
     } finally {
+      clearVenueOrdersCache();
       navigate('/kitchen/login');
     }
   };

@@ -101,5 +101,32 @@ export function useWebPushSubscription() {
     }
   }, [status]);
 
-  return { status, error, activate, permission };
+  // Disattivazione (GDPR, 2026-10-30): annulla la subscription nel browser e prova a cancellare la
+  // propria riga (policy DELETE own-only già esistente, nessuna RPC nuova). Se la cancellazione
+  // della riga fallisce (rete/grant) la subscription browser è comunque annullata: nessuna push
+  // può più arrivare, la riga orfana verrà ripulita dalla retention. Ritorna true se l'unsubscribe
+  // browser è andato a buon fine.
+  const deactivate = useCallback(async () => {
+    if (!isPushSupported()) return false;
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = registration ? await registration.pushManager.getSubscription() : null;
+      if (subscription) {
+        const endpoint = subscription.endpoint;
+        await subscription.unsubscribe();
+        try {
+          await supabase.from('kitchen_push_subscriptions').delete().eq('endpoint', endpoint);
+        } catch {
+          // riga non cancellata: vedi nota sopra
+        }
+      }
+      setStatus('idle');
+      return true;
+    } catch (err) {
+      setError(err);
+      return false;
+    }
+  }, []);
+
+  return { status, error, activate, deactivate, permission };
 }

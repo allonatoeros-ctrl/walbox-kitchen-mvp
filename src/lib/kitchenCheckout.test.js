@@ -68,3 +68,25 @@ test('appendNotePrefix: nota vuota, nota esistente, prefisso già presente, limi
   assert.equal(appendNotePrefix('a'.repeat(KITCHEN_NOTE_MAX), 'SENZA ').length, KITCHEN_NOTE_MAX);
   assert.equal(appendNotePrefix(undefined, 'SENZA '), 'SENZA ');
 });
+
+// ── Blocklist nickname (privacy/GDPR Fase 1, 2026-10-30) ──
+test('blocklist nickname: parolacce bloccate anche con maiuscole, spazi, accenti e lettere ripetute', async () => {
+  const { isBlockedNickname } = await import('./kitchenCheckout.js');
+  for (const bad of ['puttana', 'PUTTANA', '  Puttana  ', 'p u t t a n a', 'PUTTTANA', 'pùttana', 'Che Merda', 'm.e.r.d.a', 'FUCK', 'Fuck You', 'Cazzo', 'che cazzo', 'Vaffanculo', 'Hitler']) {
+    assert.equal(isBlockedNickname(bad), true, bad);
+    assert.equal(isValidCustomerName(bad), false, bad);
+  }
+});
+
+test('blocklist nickname: nomi normali, cognomi e parole innocue restano accettati', async () => {
+  const { isBlockedNickname } = await import('./kitchenCheckout.js');
+  for (const ok of ['Marco', 'Giulia Rossi', 'Zanna', 'Baffo Unto', 'Àngela', 'Cazzola', 'Troiani', 'Negroni', 'Figaro', 'Nazionale', 'Produce', 'Bocchini', 'Claudio Cane', 'Ospite', '']) {
+    assert.equal(isBlockedNickname(ok), false, ok);
+  }
+  for (const ok of ['Marco', 'Giulia Rossi', 'Cazzola', 'Negroni']) assert.equal(isValidCustomerName(ok), true, ok);
+});
+
+test('blocklist nickname: i suggerimenti del pub non sono bloccati', async () => {
+  const { isBlockedNickname } = await import('./kitchenCheckout.js');
+  for (const n of NICKNAME_SUGGESTIONS) assert.equal(isBlockedNickname(n), false, n);
+});

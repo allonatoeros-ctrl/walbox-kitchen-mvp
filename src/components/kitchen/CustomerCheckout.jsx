@@ -4,6 +4,8 @@ import {
   KITCHEN_NOTE_MAX,
   appendNotePrefix,
   checkoutMissing,
+  NICKNAME_BLOCKED_MESSAGE,
+  isBlockedNickname,
   isValidCustomerName,
   normalizeCustomerName,
 } from '../../lib/kitchenCheckout';
@@ -71,6 +73,7 @@ export default function CustomerCheckout({
   orderError,
   issue,
   onPay,
+  hasAlcohol = false,
 }) {
   const nameRef = useRef(null);
   const noteRef = useRef(null);
@@ -134,6 +137,10 @@ export default function CustomerCheckout({
       <div className="cx-block cx-name" ref={nameBlockRef} data-testid="customer-name-step" onAnimationEnd={(e) => e.currentTarget.classList.remove('cx-shake')}>
         <label className="cx-title" htmlFor="customer-name-input">COME TI CHIAMI?</label>
         <p className="cx-help" id="cx-name-help">Ti chiamiamo così quando è pronto.</p>
+        <p className="cx-help" data-testid="privacy-notice-short">
+          Il nome serve solo per chiamarti: compare sulla TV del locale insieme al tuo ordine. Usa un nome di fantasia se preferisci.{' '}
+          <a href="/kitchen/privacy" target="_blank" rel="noopener" style={{ color: 'var(--poster-ink)', textDecoration: 'underline' }} data-testid="privacy-link">Informativa privacy</a>
+        </p>
         <div className="cx-name-row">
           <input
             id="customer-name-input"
@@ -154,7 +161,7 @@ export default function CustomerCheckout({
         </div>
         <div id="cx-name-status" aria-live="polite" className="cx-name-status">
           {showNameError ? (
-            <span className="cx-error" role="alert" data-testid="customer-name-error">{MISSING_TEXT.name}</span>
+            <span className="cx-error" role="alert" data-testid="customer-name-error">{isBlockedNickname(customerName) ? NICKNAME_BLOCKED_MESSAGE : MISSING_TEXT.name}</span>
           ) : null}
         </div>
       </div>
@@ -273,6 +280,9 @@ export default function CustomerCheckout({
           <span id="cx-note-help">La cucina la legge sulla comanda.</span>
           <span>{note.length}/{KITCHEN_NOTE_MAX}</span>
         </div>
+        <p className="cx-help" data-testid="note-health-notice">
+          Se indichi un'allergia la usiamo solo per preparare il tuo ordine e la cancelliamo dopo 30 giorni. Nel dubbio avvisa anche il personale.
+        </p>
       </div>
 
       {/* 4 — TOTALE + COME PAGHI: sempre agganciati in basso, il tap su una corsia invia l'ordine. */}
@@ -281,6 +291,11 @@ export default function CustomerCheckout({
           <div className="cx-order-error" role="alert" data-testid="order-submit-error">
             {orderError.toUpperCase()}
           </div>
+        )}
+        {hasAlcohol && (
+          <p className="cx-help" data-testid="alcohol-notice">
+            Bevande alcoliche vietate ai minori di 18 anni. Al ritiro/servizio potrebbe essere richiesto un documento.
+          </p>
         )}
         {kitchenOpen ? (
           <div data-testid="pay-lane-step" role="group" aria-labelledby="cx-pay-label">

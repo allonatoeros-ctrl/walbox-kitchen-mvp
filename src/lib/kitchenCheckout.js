@@ -13,7 +13,42 @@ export function normalizeCustomerName(value) {
 
 export function isValidCustomerName(value) {
   const name = normalizeCustomerName(value);
-  return name.length >= CUSTOMER_NAME_MIN && name !== GUEST_NICKNAME;
+  return name.length >= CUSTOMER_NAME_MIN && name !== GUEST_NICKNAME && !isBlockedNickname(name);
+}
+
+// Blocklist semplice di parole offensive (il nome compare sulla TV del locale). Il confronto
+// ignora maiuscole, accenti, punteggiatura e lettere ripetute ("PUTTTANA", "p u t t a n a" e
+// "pùttana" sono bloccati). Lista volutamente corta: non e' un filtro completo, solo il minimo
+// per non mostrare insulti pesanti sullo schermo.
+//  - SUBSTRING: parole lunghe e non ambigue, bloccate anche dentro altre (sull'intero nome compattato).
+//  - WHOLE_WORD: parole corte o che sono dentro cognomi/parole normali ("Cazzola", "Negroni",
+//    "Troiani", "Figaro", "Nazionale"): bloccate solo se compaiono come parola intera.
+export const NICKNAME_BLOCKLIST_SUBSTRING = [
+  'minchia', 'merda', 'stronz', 'puttana', 'vaffanculo', 'fanculo', 'coglione', 'ricchione',
+  'frocio', 'sborra', 'segaiolo', 'porcodio', 'fuck', 'shit', 'bitch', 'nigger', 'faggot', 'whore',
+  'asshole', 'hitler', 'mussolini',
+];
+export const NICKNAME_BLOCKLIST_WHOLE_WORD = [
+  'cazzo', 'cazzi', 'cazzone', 'culo', 'figa', 'troia', 'negro', 'bocchino', 'cunt', 'nazi', 'duce',
+];
+
+export const NICKNAME_BLOCKED_MESSAGE = 'Questo nome non va bene per lo schermo del locale: scegline un altro.';
+
+function foldText(value) {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+const squeeze = (t) => t.replace(/(.)\1+/g, '$1');
+
+export function isBlockedNickname(value) {
+  const folded = foldText(value);
+  const compact = squeeze(folded.replace(/[^a-z0-9]/g, ''));
+  if (!compact) return false;
+  if (NICKNAME_BLOCKLIST_SUBSTRING.some((w) => compact.includes(squeeze(w)))) return true;
+  const words = folded.split(/[^a-z0-9]+/).filter(Boolean).map(squeeze);
+  return NICKNAME_BLOCKLIST_WHOLE_WORD.some((w) => words.includes(squeeze(w)));
 }
 
 // Nomi da pub per chi non ha voglia di pensare. Solo testo fisso (niente input libero offensivo da
