@@ -306,13 +306,9 @@ export const kitchenMenuItems = [
     detailCtaLabel: 'VEDI IL BOX',
     priceNote: 'SOLO BOX',
     ingredients: 'Pulled pork senza pane · patate al forno · anelli di cipolla · salsa coleslaw · salsa cheddar · maionese al pepe',
-    // Allergeni compilati 2026-10-29 (approvazione Eros): DEDOTTI dagli ingredienti, non da
-    // etichette. Certi: latte e uova (salsa cheddar e maionese, come item-009). Dedotti: glutine
-    // (anelli di cipolla impanati), senape (maionese/salse). `allergensVerified: false` mantiene
-    // l'avviso ALLERGENI NON VERIFICATI nella UI staff (il resolver non li pubblica come
-    // verificati): togliere il flag quando Eros conferma ricetta/etichetta.
-    allergens: ['glutine', 'latte', 'uova', 'senape'],
-    allergensVerified: false,
+    // Allergeni confermati da Eros il 2026-10-31: uguali al panino Pulled Pork (item-009).
+    // Tolto `allergensVerified: false`: cliente e staff vedono la lista come verificata.
+    allergens: ['uova', 'latte', 'glutine', 'senape'],
   },
   // TARTARE
   {
