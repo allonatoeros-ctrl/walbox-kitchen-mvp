@@ -1,5 +1,19 @@
 # CHECKPOINT — Walbox Kitchen
-Aggiornato: 2026-10-30 (restyling hero/menu cliente, PR #6 aperta). Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
+Aggiornato: 2026-10-31. Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
+
+**ORA (31/10):** produzione (`main` = `eb96ee7`, deploy Vercel success) = restyling (PR #6), DB solo Kitchen (#7),
+prezzi di prima 19/20/20 e Pulled Pork sul panino (#8, #9), **PR #10 mergiata 31/10**: font self-hosted, retention privacy
+(job 31/10 succeeded), log SumUp puliti, header sicurezza (CSP Report-Only), pagina `/kitchen/privacy` con dati titolare
+(Ci.Na. S.n.c. di Nanni Marco & C., P.IVA 07521420963, Via Monte Grappa 5/7 Melegnano, thewalrus.melegnano@gmail.com: da
+Virgilio/Pagine Gialle, nessuna visura → farli confermare al gestore), avvisi alcol/allergeni, disattiva notifiche, blocklist.
+Verificato online: privacy ok, header attivi, 0 richieste Google. **Non provato:** un ordine reale completo col checkout nuovo.
+**PR #11 mergiata 31/10** (`main` = `e304139`, deploy Vercel success): allergeni Box Pulled Pork uguali al panino, verificati.
+Non visto a video sul telefono. **PR #12 mergiata 31/10** (`main` = `6485cbe`, deploy Vercel success, verificato online: 0 "+" su Garpez/Box): branch `fix/aggiungi-garpez-box` (da `origin/main`,
+worktree `scratchpad/aggiungi` della sessione da0fa721): Garpez e Box senza "+", con barra "AGGIUNGI PANINO · 15 €" /
+"AGGIUNGI BOX · 11,50 €"; solo `PesiMassimiSection.jsx`; lint/build ok, verificato a 390 (aggiunta al sacco ok).
+Worktree `scratchpad/allergeni` della sessione 31/10: rimovibile.
+`feat/restyling-hero` locale è superato: non pusharlo. Worktree `rilascio` in scratchpad: rimovibile (`git worktree remove`, decide Eros).
+NEXT STEP: smoke di un ordine reale al banco in serata (checkout con avviso alcol). Le sezioni sotto sono in parte vecchie. Il branch `feat/restyling-hero` locale è superato: non pusharlo. Le sezioni sotto sono in parte vecchie.
 
 Regole di questo file: solo stato corrente. Niente cronologia (va nell'archivio), niente regole stabili
 (vanno in `ai-ops/knowledge/MEMORY.md`), un solo NEXT STEP. Lavoro in corso multi-fase: il file di stato
@@ -46,12 +60,9 @@ oltre, si spostano in archivio.
 - Migration: si applicano solo con `npx supabase db push --linked` (`ai-ops/SECURITY_POLICY.md §5.1`).
 
 ## OPEN ISSUES
-- **RPC EXECUTE grants:** `anon` aveva EXECUTE su `kitchen_promo_pass_redeem_for_order`,
-  `kitchen_payment_attempt_start`, `kitchen_payment_confirm` (rilevato 2026-10-09; le funzioni hanno guardie
-  interne, gravità non determinata). La migration `20261009130000` è committata in locale; stato remoto da
-  verificare in sola lettura (Fase 1).
-- **S2 Migration A** (`20261009140000`, stati `pending_online_payment`/`payment_abandoned`, `client_request_id`):
-  committata in locale, non applicata. Apply = gate di Eros.
+- **Verificato in sola lettura 31/10:** migration remote = locali fino a `20261030160000` (compresi grant
+  `20261009130000`, S2 `20261009140000`, Garpez `20261016100000`). `anon` non ha più EXECUTE sulle 3 RPC di
+  pagamento. Garpez `item-059` presente in DB a 15 €, uguale al catalogo frontend.
 - **F6 Web Push:** prova reale su telefono mai fatta; chiavi VAPID su Vercel dichiarate da Eros, non verificate.
   Il commento della edge function dice "version 1", il remoto era v3: da correggere.
 - **Ambiente locale:** `.env.local` punta alla produzione Supabase; il guard di `vite.config.js` blocca dev/build.
@@ -70,5 +81,6 @@ oltre, si spostano in archivio.
 ## NEXT STEP
 **Merge della PR #6 (`feat/restyling-hero` → `main`) = deploy produzione, decide Eros.** Branch pushato e allineato
 (2026-10-30), 59 commit avanti a `main`. Prima: guardare la Preview Vercel (env Preview con DB/pagamenti reali: non
-pagare) e far controllare al cuoco `ai-ops/reports/allergeni-bozza.md`. Stato dettagliato (blocco `## ORA`):
+pagare) e far controllare al cuoco `ai-ops/reports/allergeni-bozza.md`. **Prima del merge: db push delle 2 migration
+della PR #6** (menu ottobre, ritiro con orario), poi merge subito; dopo, congela non-Kitchen (`ai-ops/current/DB_PULIZIA.md`). Stato dettagliato (blocco `## ORA`):
 `ai-ops/current/RESTYLING_HERO.md`.

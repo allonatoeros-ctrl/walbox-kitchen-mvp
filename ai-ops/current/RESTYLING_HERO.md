@@ -13,6 +13,11 @@ Storia completa (H1 → H7 fase 3, audit, brief di Eros copiato esatto): `docs/c
   Prima: hero, testata, schede compatte, sacco, H7 fasi 1-3, allergeni dedotti (`b6698ca`), zoom foto, pannello gruppi.
 - **Prossimo passo:** il cuoco controlla `ai-ops/reports/allergeni-bozza.md` (018/043 restano `allergensVerified: false`).
   Poi Eros guarda la Preview Vercel della PR #6 (env Preview: DB e pagamenti reali, non pagare) e decide il merge.
+- **Rilascio (verificato 30/10):** la PR #6 dipende da 2 migration NON applicate in produzione: `20261028120000`
+  (menu ottobre: senza, i menu bibita/bibite nuove danno `unknown_menu_item`) e `20261028121000` (ritiro con orario:
+  senza, manca la RPC v3). Ordine: db push di queste 2 → merge subito dopo (tra i due il server prezza i menu
+  15,90/17,90 col frontend vecchio). Il db push va fatto da un checkout a `39facce`: qui c'è anche il congela
+  (`ai-ops/current/DB_PULIZIA.md`), che va applicato dopo. Non pushare il branch locale (4 commit non per la PR #6).
 - **Aperto:** e2e 4 fail non misurati su HEAD (3g2 pannello 11 bottoni, 14/15 annulla staff, 24 `.bv-list .pc-photo`);
   test `kitchenMenuCopy` "selettore birra" rosso preesistente.
 - **Da fare a mano (Eros):** cancellare il file vuoto `src/pages/__head_tmp.jsx` (divieto `rm` per Claude);
