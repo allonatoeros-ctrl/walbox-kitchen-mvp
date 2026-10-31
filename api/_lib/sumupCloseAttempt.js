@@ -8,7 +8,8 @@ import { deactivateAndVerify, getCheckoutVerified, sumupGetFetchWithTimeout } fr
 // Porta un attempt sumup a "checkout sicuramente non pagabile". Ritorna { kind: 'closed' }, { kind: 'paid', data }
 // oppure { kind: 'uncertain', reason, needs_manual_reconciliation? }.
 // Recupero del riferimento (List per checkout_reference, logica I-3 per i claim senza provider_ref) -> GET verificato
-// -> PAID: paid -> EXPIRED/CANCELLED: gia' chiuso -> altro: DELETE + GET di verifica. Qualunque incertezza: uncertain.
+// -> PAID: paid -> EXPIRED/CANCELLED: gia' chiuso -> altro: DELETE + GET di verifica (FAILED dopo il DELETE = chiuso,
+// vedi deactivateAndVerify). Qualunque incertezza: uncertain.
 export async function closeSumupAttempt({ supabaseAdmin, sumupApiKey, attempt, logTag }) {
   let providerRef = attempt.provider_ref;
   if (!providerRef) {
@@ -46,7 +47,7 @@ export async function closeSumupAttempt({ supabaseAdmin, sumupApiKey, attempt, l
     return { kind: 'closed' };
   }
 
-  // PENDING, FAILED (non terminale su SumUp) o altro: DELETE + verifica, fail-closed.
+  // PENDING, FAILED (non terminale su SumUp) o altro: DELETE + verifica, fail-closed salvo FAILED confermato.
   const deactivation = await deactivateAndVerify({ sumupApiKey, providerRef, attemptId: attempt.id, logTag });
   if (deactivation.kind === 'paid') return { kind: 'paid', data: deactivation.data };
   if (deactivation.kind === 'closed') return { kind: 'closed' };

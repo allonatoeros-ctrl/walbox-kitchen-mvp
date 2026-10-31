@@ -39,8 +39,9 @@ const LOG_TAG = 'kitchen-staff-sumup-close-for-counter';
 //        - qualunque altra risposta al DELETE (2xx, 404, altri 4xx) NON e' una prova di chiusura: si
 //          rilegge il checkout via GET. GET non verificabile -> blocca (outcome 'unknown'); PAID ->
 //          risolto via resolver condiviso e STOP; EXPIRED/CANCELLED -> checkout davvero chiuso,
-//          si procede; qualunque altro stato (PENDING/FAILED/...) -> checkout ancora potenzialmente
-//          pagabile, blocca (outcome 'unknown', reason 'checkout_close_unverified').
+//          si procede; ancora FAILED -> SumUp non lo disattiva, trattato come chiuso (incidente A23,
+//          vedi deactivateAndVerify); qualunque altro stato (PENDING/...) -> checkout ancora
+//          potenzialmente pagabile, blocca (outcome 'unknown', reason 'checkout_close_unverified').
 //      "Blocca" = nessuna chiamata alla RPC di chiusura, nessun attempt marcato chiuso.
 //   6. Chiusura atomica: kitchen_payment_attempt_close_unpaid marca/converte solo l'attempt come
 //      failed/staff_closed_for_counter (mai l'ordine) — kitchen_payment_record_counter si sblocca

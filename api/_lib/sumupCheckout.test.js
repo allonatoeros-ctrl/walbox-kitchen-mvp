@@ -64,9 +64,9 @@ test('DELETE 5xx / rete / timeout -> indeterminate, nessun GET di verifica', asy
   restore();
 });
 
-test('DELETE con timeout (signal) + verifica: CANCELLED/EXPIRED -> closed, PAID -> paid, PENDING -> unverified', async () => {
+test('DELETE con timeout (signal) + verifica: CANCELLED/EXPIRED/FAILED -> closed, PAID -> paid, PENDING -> unverified', async () => {
   const restore = quiet();
-  const cases = [['CANCELLED', 'closed'], ['EXPIRED', 'closed'], ['PAID', 'paid'], ['PENDING', 'unverified'], ['FAILED', 'unverified']];
+  const cases = [['CANCELLED', 'closed'], ['EXPIRED', 'closed'], ['FAILED', 'closed'], ['PAID', 'paid'], ['PENDING', 'unverified']];
   for (const [status, kind] of cases) {
     const f = fakeFetch({ get: [co(status)], del: { status: 204 } });
     const r = await deactivateAndVerify({ ...base, fetchImpl: f.impl });

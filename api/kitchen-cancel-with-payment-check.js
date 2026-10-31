@@ -34,7 +34,8 @@ const LOG_TAG = 'kitchen-cancel-with-payment-check';
 //      got deactivated (P0 fix) -> retryable 502, order/attempt untouched. Any other DELETE response
 //      (2xx, 404, other 4xx) is NOT proof of closure either: the follow-up GET decides. GET not
 //      verifiable -> blocked ('unknown'); PAID -> same shared resolver and STOP; EXPIRED/CANCELLED
-//      -> really closed, proceed to cancel; any other status (still PENDING/FAILED/...) -> the
+//      -> really closed, proceed to cancel; still FAILED -> SumUp does not deactivate it, treated as
+//      closed (A23 incident, see deactivateAndVerify); any other status (still PENDING/...) -> the
 //      checkout may still be payable, blocked ('unknown', reason 'checkout_close_unverified').
 //      "Blocked" = the atomic cancel RPC is never called.
 //   5. Atomic DB cancel: kitchen_order_cancel_with_payment_attempt (see the Payment Cancel
