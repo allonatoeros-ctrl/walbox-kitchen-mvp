@@ -88,3 +88,8 @@ export function registerServiceWorkerEarly() {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
   navigator.serviceWorker.register('/sw.js').catch(() => { /* non bloccante */ });
 }
+
+// Prima apertura dalla Home (start_url /kitchen?src=home) non ancora registrata: senza consumarla.
+export function isPendingFirstStandaloneOpen() {
+  return isStandalone() && !safeGet(LS_STANDALONE_SEEN);
+}

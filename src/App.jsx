@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
 import CustomerKitchenEntry from "./pages/CustomerKitchenEntry";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
@@ -14,6 +14,12 @@ import KitchenTvScreen from "./pages/KitchenTvScreen";
 import KitchenPrepBoard from "./pages/KitchenPrepBoard";
 import KitchenPrepBoardDemo from "./pages/KitchenPrepBoardDemo";
 import KitchenPrivacy from "./pages/KitchenPrivacy";
+import { FOOD_CLUB_ENABLED } from "./lib/foodClubConfig";
+import { isPendingFirstStandaloneOpen } from "./lib/pwaInstall";
+
+// WALRUS FOOD CLUB V1: pagine caricate solo quando servono (nessun peso sul menu se il Club è spento).
+const FoodClubPage = lazy(() => import("./pages/FoodClubPage"));
+const FoodClubStaffPage = lazy(() => import("./pages/FoodClubStaffPage"));
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
@@ -30,6 +36,17 @@ export default function App() {
   }, []);
 
   const renderRoute = () => {
+    // Club cliente: /kitchen/club e sottopagine (/tessera, /buoni, /amici, /preferenze, /messaggi, /iscriviti, /accedi).
+    if (FOOD_CLUB_ENABLED && (currentPath === "/kitchen/club" || currentPath.startsWith("/kitchen/club/"))) {
+      return <Suspense fallback={null}><FoodClubPage path={currentPath} /></Suspense>;
+    }
+    // PWA spec §2.2 p.3: prima apertura dall'icona (start_url /kitchen?src=home) -> "Bentornato" / ritrova la tessera.
+    if (FOOD_CLUB_ENABLED && currentPath === "/kitchen" && window.location.search.includes("src=home") && isPendingFirstStandaloneOpen()) {
+      return <Suspense fallback={null}><FoodClubPage path="/kitchen/club" /></Suspense>;
+    }
+    if (FOOD_CLUB_ENABLED && currentPath === "/kitchen/club-staff") {
+      return <Suspense fallback={null}><FoodClubStaffPage /></Suspense>;
+    }
     switch (currentPath) {
       case "/":
         return <CustomerKitchenEntry />;

@@ -23,6 +23,9 @@ import MenuView from './MenuView';
 import StoricoView from './StoricoView';
 import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
 import AlertView from './AlertView';
+import { FOOD_CLUB_ENABLED } from '../lib/foodClubConfig';
+import { foodClubStaffApi } from '../lib/foodClubApi';
+import { formatEuro } from '../lib/foodClubRules';
 import './KitchenStaffDashboard.css';
 import './KitchenSoloService.css';
 
@@ -122,6 +125,52 @@ function sortQueueBy(list, snoozed) {
 function isPending(o) {
   return o.status === 'pending_counter_payment';
 }
+
+// WALRUS FOOD CLUB V1 (sola lettura): sconto senza promoCode = buono Club. `total` e' gia' scontato
+// (e' cio' che si incassa): qui si mostra soltanto, nessun ricalcolo.
+function isClubVoucherOrder(o) {
+  return FOOD_CLUB_ENABLED && !!o && !o.promoCode && Number(o.discountAmount) > 0 && o.total != null;
+}
+function clubVoucherLabel(o) {
+  return `BUONO −${formatEuro(o.discountAmount).replace(',00', '')}`;
+}
+
+function romeHour(now = new Date()) {
+  const h = new Intl.DateTimeFormat('it-IT', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Europe/Rome' }).format(now);
+  return Number(h);
+}
+
+/**
+ * WALRUS FOOD CLUB V1: promemoria "ordini da pagare" per la fine servizio. Solo Live, solo con il flag.
+ * Qualsiasi errore RPC (migration non applicate, permessi) = null: nessun banner, Solo invariato.
+ * `show`: ci sono ordini di serate passate, oppure siamo tra l'01:00 e le 06:00 con ordini aperti.
+ */
+function useClubUnpaidReminder(enabled) {
+  const [summary, setSummary] = useState(null);
+  useEffect(() => {
+    if (!enabled) return undefined;
+    let alive = true;
+    const load = () => foodClubStaffApi.unpaidOrders().then(
+      (rows) => {
+        if (!alive) return;
+        const list = Array.isArray(rows) ? rows : [];
+        const past = list.filter((r) => r.older_than_tonight).length;
+        const hour = romeHour();
+        setSummary({
+          count: list.length,
+          withVoucher: list.filter((r) => r.voucher_code).length,
+          past,
+          show: list.length > 0 && (past > 0 || (hour >= 1 && hour < 6)),
+        });
+      },
+      () => { if (alive) setSummary(null); }
+    );
+    load();
+    const id = setInterval(load, 60000);
+    return () => { alive = false; clearInterval(id); };
+  }, [enabled]);
+  return summary;
+}
 function isToDo(o) {
   return o.status === 'received' || o.status === 'preparing';
 }
@@ -159,6 +208,8 @@ function KitchenSoloServiceLive() {
   const [authChecked, setAuthChecked] = useState(
     () => import.meta.env.VITE_E2E_BYPASS_STAFF_AUTH === 'true'
   );
+  // WALRUS FOOD CLUB V1: null se flag spento o RPC non disponibili (niente banner, niente link CLUB).
+  const clubReminder = useClubUnpaidReminder(FOOD_CLUB_ENABLED && authChecked);
 
   // Stesso guard della dashboard Kitchen esistente (invariata): auth + membership venue.
   // Fail-closed: qualsiasi errore manda al login, mai alla cucina.
@@ -228,6 +279,7 @@ function KitchenSoloServiceLive() {
       setKitchenOpen={setKitchenOpen}
       kitchenStateWriting={kitchenStateWriting}
       kitchenStateError={kitchenStateError}
+      clubReminder={clubReminder}
     />
   );
 }
@@ -287,6 +339,8 @@ export function KitchenSoloServiceView({
   setKitchenOpen = null,
   kitchenStateWriting = false,
   kitchenStateError = null,
+  // WALRUS FOOD CLUB V1: solo Live lo passa (null = Club non disponibile → nessun banner/link).
+  clubReminder = null,
 }) {
   const requestFullscreenIfAllowed = () => {
     if (allowFullscreen) requestFullscreenBestEffort();
@@ -622,6 +676,9 @@ export function KitchenSoloServiceView({
                     {o.fulfillmentType === 'takeaway' ? 'VIA' : 'QUI'}
                   </span>
                 )}
+                {isPending(o) && isClubVoucherOrder(o) && (
+                  <span className="kss-qcard-tag kss-qcard-tag--club" data-testid={`club-tag-${o.orderCode}`}>BUONO</span>
+                )}
                 {isPending(o) && o.total != null && (
                   <span className="kss-qcard-amount">€{o.total.toFixed(2)}</span>
                 )}
@@ -668,6 +725,12 @@ export function KitchenSoloServiceView({
             <span aria-hidden="true">🔔</span><span className="kss-secondary-label">ALERT</span>
             {alertCount > 0 && <span className="kss-secondary-badge">{alertCount}</span>}
           </button>
+          {/* WALRUS FOOD CLUB V1: vista Club staff, solo se flag acceso e RPC Club disponibili. */}
+          {clubReminder && (
+            <button className="kss-secondary-btn" data-testid="go-club" onClick={() => navigate('/kitchen/club-staff')}>
+              <span aria-hidden="true">⭐</span><span className="kss-secondary-label">CLUB</span>
+            </button>
+          )}
           {/* Ordine assistito al banco per il cliente che non usa l'app (/kitchen/cassa). */}
           <button className="kss-secondary-btn" data-testid="go-cassa" onClick={() => navigate('/kitchen/cassa')}>
             <span aria-hidden="true">🧾</span><span className="kss-secondary-label">CASSA</span>
@@ -692,6 +755,19 @@ export function KitchenSoloServiceView({
           )}
         </div>
       </div>
+
+      {clubReminder?.show && (
+        <div className="kss-club-reminder" data-testid="club-unpaid-reminder">
+          <span>
+            <b>{clubReminder.count} {clubReminder.count === 1 ? 'ordine da pagare' : 'ordini da pagare'}</b>
+            {clubReminder.withVoucher > 0 && ` (di cui ${clubReminder.withVoucher} con buono)`}
+            {clubReminder.past > 0 && ` · ${clubReminder.past} di serate precedenti`}
+          </span>
+          <button type="button" className="kss-club-reminder-btn" onClick={() => navigate('/kitchen/club-staff?tab=fine')}>
+            FINE SERVIZIO ›
+          </button>
+        </div>
+      )}
 
       <div className="kss-body">
 
@@ -767,6 +843,11 @@ export function KitchenSoloServiceView({
                   <span className={`kss-status-pill kss-status-pill--${STATUS_PILL[focusOrder.status]?.cls ?? 'received'}`}>
                     {STATUS_PILL[focusOrder.status]?.label ?? focusOrder.status}
                   </span>
+                  {isPending(focusOrder) && isClubVoucherOrder(focusOrder) && (
+                    <span className="kss-club-pill kss-club-pill--focus" data-testid="focus-club-pill">
+                      {clubVoucherLabel(focusOrder)} · DA INCASSARE {formatEuro(focusOrder.total)}
+                    </span>
+                  )}
                   {formatPickupBadge(focusOrder.pickupSlot) ? (
                     <span className="kss-qcard-tag kss-qcard-tag--pickup" data-testid="focus-fulfillment">
                       {formatPickupBadge(focusOrder.pickupSlot)}
@@ -967,6 +1048,20 @@ export function KitchenSoloServiceView({
                       <div className="kss-promo-badge" data-testid="promo-badge">
                         PROMO {focusOrder.promoCode} · −€{focusOrder.discountAmount.toFixed(2)} ·
                         TOTALE €{focusOrder.total.toFixed(2)}
+                      </div>
+                    </div>
+                  )}
+                  {/* WALRUS FOOD CLUB V1 (sola lettura): buono Club gia' scalato dal cliente. */}
+                  {action?.kind === 'pay' && isClubVoucherOrder(focusOrder) && (
+                    <div className="kss-club-pay" data-testid="club-voucher-badge">
+                      <div className="kss-club-pay-head">
+                        <span className="kss-club-pill">{clubVoucherLabel(focusOrder)}</span>
+                        <span>Buono Club già applicato dal cliente: non va scalato a mano.</span>
+                      </div>
+                      <div className="kss-club-pay-label">DA INCASSARE</div>
+                      <div className="kss-club-pay-amount" data-testid="club-due">{formatEuro(focusOrder.total)}</div>
+                      <div className="kss-club-pay-sub">
+                        <s>{formatEuro(Number(focusOrder.total) + Number(focusOrder.discountAmount))}</s> · buono Club già tolto
                       </div>
                     </div>
                   )}

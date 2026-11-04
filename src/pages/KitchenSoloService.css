@@ -900,3 +900,55 @@
   .kss-header-actions { gap: 0; }
   .kss-secondary-btn { padding: 7px 6px; }
 }
+
+/* WALRUS FOOD CLUB V1 — badge buono Club, promemoria fine servizio (solo con VITE_FOOD_CLUB_ENABLED). */
+.kss-qcard-tag.kss-qcard-tag--club { color: #111; background: var(--kss-yellow); border-color: var(--kss-yellow); }
+.kss-club-pay {
+  border: 2px solid var(--kss-yellow);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(234, 179, 8, 0.06);
+}
+.kss-club-pay-head { display: flex; align-items: center; gap: 10px; font-size: 12px; font-weight: 700; color: var(--kss-text); }
+.kss-club-pill {
+  white-space: nowrap;
+  background: var(--kss-yellow);
+  color: #111;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+}
+.kss-club-pay-label { margin-top: 4px; font-size: 11px; font-weight: 900; letter-spacing: 1.4px; color: var(--kss-yellow); }
+.kss-club-pay-amount { font-size: 40px; line-height: 1; font-weight: 900; color: var(--kss-text); }
+.kss-club-pay-sub { font-size: 12px; color: var(--kss-muted, #8fa2b5); }
+.kss-club-reminder {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 18px;
+  padding: 8px 14px;
+  border: 1px solid var(--kss-yellow);
+  border-radius: 10px;
+  background: rgba(234, 179, 8, 0.1);
+  color: var(--kss-yellow);
+  font-size: 13px;
+}
+.kss-club-reminder b { font-weight: 900; letter-spacing: 0.4px; }
+.kss-club-reminder-btn {
+  margin-left: auto;
+  background: var(--kss-yellow);
+  color: #111;
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+}
+.kss-club-pill--focus { font-size: 15px; padding: 5px 14px; margin-left: 8px; }
