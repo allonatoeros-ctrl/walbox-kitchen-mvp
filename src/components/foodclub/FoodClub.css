@@ -1,0 +1,510 @@
+/* === Walrus Food Club V1 — cliente === */
+/* ==========================================================================================
+   WALRUS FOOD CLUB V1 — stili cliente (portati dal prototipo v4). Classi fc-* costruite SOLO sui token --poster-*
+   di CustomerKitchenMenu.css:26-49 e sulle grammatiche esistenti:
+   - biglietto tratteggiato  = .kb-ticket   (CustomerKitchenMenu.css:812-838)
+   - timbro tondo            = .kp-stamp    (CustomerKitchenMenu.css:780-795)
+   - CTA gialla              = .cx-pay      (CustomerCheckout.css:407-470)
+   - card/riga               = .kitch-pairing-banner / .kc-cat (pannello, bordo --poster-line)
+   Nessun colore nuovo: i soli valori fuori token sono quelli già usati nel menu
+   (--cx-error #ff8a6b, verde del toast #3fae5a).
+   ========================================================================================== */
+
+/* Token poster in uno scope condiviso: nel prototipo serve alla card su /kitchen/status, che
+   oggi vive fuori da .kitch-page. Valori copiati 1:1 da CustomerKitchenMenu.css:26-49.
+   (In app = la piccola modifica CSS strutturale della decisione D6.) */
+.fc-scope {
+  --poster-bg:     #120806;
+  --poster-panel:  #1b0f09;
+  --poster-line:   #3a2617;
+  --poster-ink:    #f7dfb5;
+  --poster-muted:  #c9b39a;
+  --poster-yellow: #ffc83d;
+  --poster-brick:  #b8472f;
+  --poster-on-yellow: #140a05;
+  --poster-font-display: 'League Gothic', 'Oswald', 'Arial Narrow', sans-serif;
+  --poster-font-label:   'League Gothic', 'Oswald', 'Arial Narrow', sans-serif;
+  --poster-font-body:    'Montserrat', system-ui, sans-serif;
+  --poster-size-xl: 72px;
+  --poster-size-md: 40px;
+  --poster-size-sm: 20px;
+  --poster-track-sm: 0.06em;
+  --poster-rule-color: rgba(255, 200, 61, 0.8);
+  --poster-rule: 1px solid var(--poster-rule-color);
+  font-family: var(--poster-font-body);
+  color: var(--poster-ink);
+}
+
+.fc-page { padding-bottom: 40px; }
+.fc-wrap { padding: 0 16px; }
+.fc-section { padding: 18px 16px 0; }
+.fc-rule { border: 0; border-top: var(--poster-rule); margin: 18px 16px 0; }
+
+/* Barra superiore delle pagine Club: stessa fascia nera di .kh-brand, freccia al posto dell'hamburger */
+.fc-topbar {
+  position: sticky; top: 0; z-index: 60;
+  display: flex; align-items: center; gap: 6px;
+  min-height: 56px; padding: 0 8px;
+  background: #000; border-bottom: var(--poster-rule);
+}
+.fc-back {
+  flex: none; width: 44px; height: 44px; display: grid; place-items: center;
+  background: transparent; border: 0; color: var(--poster-ink); cursor: pointer; padding: 0;
+}
+.fc-back:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: -4px; }
+.fc-topbar-title {
+  min-width: 0; white-space: nowrap; font-family: var(--poster-font-display); font-size: 28px; letter-spacing: var(--poster-track-sm);
+  color: var(--poster-ink); text-transform: uppercase; line-height: 1;
+}
+.fc-topbar-logo { flex: none; height: 18px; width: auto; margin-left: auto; margin-right: 8px; opacity: 0.95; }
+
+/* kicker/titolo/sottotitolo = kp-head (riuso classi reali); qui solo spaziatura per le pagine Club */
+.fc-head { position: relative; padding: 18px 16px 4px; }
+.fc-head .kp-title { font-size: min(64px, 16vw); }
+.fc-head--sm .kp-title { font-size: min(48px, 13vw); }
+
+/* Testo */
+.fc-p { margin: 8px 0 0; font-size: 15px; line-height: 1.4; color: var(--poster-ink); }
+.fc-muted { color: var(--poster-muted); }
+.fc-small { font-size: 13px; line-height: 1.4; color: var(--poster-muted); }
+.fc-label {
+  font-family: var(--poster-font-label); font-size: var(--poster-size-sm); letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--poster-yellow); line-height: 1.1;
+}
+.fc-num { font-family: var(--poster-font-display); letter-spacing: 0.02em; line-height: 0.9; }
+.fc-yellow { color: var(--poster-yellow); }
+.fc-error { color: #ff8a6b; font-size: 14px; font-weight: 600; margin-top: 6px; }
+
+/* ---------- Striscia nel menu (sotto la testata) ---------- */
+.fc-strip {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  min-height: 52px; padding: 8px 12px 8px 14px; box-sizing: border-box;
+  background: var(--poster-panel); border: 0; border-bottom: 1px solid var(--poster-line);
+  color: var(--poster-ink); text-align: left; cursor: pointer; font: inherit;
+}
+.fc-strip-text { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.fc-strip-title { font-family: var(--poster-font-display); font-size: 22px; line-height: 1; letter-spacing: var(--poster-track-sm); text-transform: uppercase; }
+.fc-strip-sub { font-size: 13px; line-height: 1.3; color: var(--poster-muted); margin-top: 2px; }
+.fc-strip-arrow { font-size: 22px; color: var(--poster-yellow); }
+.fc-strip--buono { background: var(--poster-brick); border-bottom-color: var(--poster-brick); color: #fff; }
+.fc-strip--buono .fc-strip-sub { color: rgba(255,255,255,.88); }
+.fc-strip--buono .fc-strip-arrow { color: #fff; }
+.fc-strip-mini { display: flex; gap: 4px; }
+.fc-strip-close {
+  flex: none; width: 48px; min-height: 52px; margin: 0; border: 0; background: transparent;
+  color: var(--poster-muted); font-size: 24px; cursor: pointer;
+}
+
+/* ---------- Timbro (grammatica .kp-stamp) ---------- */
+.fc-stamps { display: flex; gap: 22px; align-items: flex-start; justify-content: center; }
+.fc-stamp-col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.fc-stamp {
+  width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; text-align: center;
+  border: 2px solid var(--poster-line); color: var(--poster-muted);
+  font-family: var(--poster-font-display); font-size: 20px; line-height: 0.95; letter-spacing: 0.06em; text-transform: uppercase;
+  transform: rotate(-6deg);
+}
+.fc-stamp--on { border-color: var(--poster-yellow); background: var(--poster-yellow); color: var(--poster-on-yellow); font-size: 36px; }
+.fc-stamp--pending { border: 2px dashed var(--poster-yellow); color: var(--poster-yellow); }
+.fc-stamp--void { border-color: var(--poster-line); color: var(--poster-muted); text-decoration: line-through; opacity: .7; }
+.fc-stamp--sm { width: 52px; height: 52px; font-size: 14px; }
+.fc-stamp--sm.fc-stamp--on { font-size: 24px; }
+.fc-stamp-cap { font-family: var(--poster-font-label); font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--poster-muted); text-align: center; line-height: 1.05; }
+.fc-stamp-cap b { color: var(--poster-ink); font-weight: 400; }
+@keyframes fcStampIn { 0% { transform: rotate(-6deg) scale(1.6); opacity: 0; } 60% { transform: rotate(-6deg) scale(.92); opacity: 1; } 100% { transform: rotate(-6deg) scale(1); } }
+.fc-stamp--new { animation: fcStampIn .45s ease-out; }
+@media (prefers-reduced-motion: reduce) { .fc-stamp--new { animation: none; } }
+
+/* ---------- Tessera = biglietto (grammatica .kb-ticket, su pannello) ---------- */
+.fc-card {
+  margin: 14px 16px 0; padding: 16px 16px 14px;
+  background: var(--poster-panel);
+  border: 2px dashed rgba(255, 200, 61, 0.45);
+  outline: 3px solid var(--poster-panel);
+  color: var(--poster-ink);
+}
+.fc-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.fc-card-title { font-family: var(--poster-font-display); font-size: 34px; line-height: .95; letter-spacing: 0.02em; text-transform: uppercase; }
+.fc-card-title em { font-style: normal; color: var(--poster-yellow); }
+.fc-card .fc-stamps { margin: 16px 0 10px; }
+.fc-card-link { display: block; width: 100%; background: none; border: 0; padding: 0; text-align: left; color: inherit; cursor: pointer; font: inherit; }
+
+/* barra tempo */
+.fc-bar { height: 8px; background: var(--poster-line); border-radius: 0; overflow: hidden; margin-top: 10px; }
+.fc-bar > i { display: block; height: 100%; background: var(--poster-yellow); }
+.fc-bar--warn > i { background: var(--poster-brick); }
+.fc-bar-row { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--poster-muted); }
+.fc-bar-row b { color: var(--poster-ink); font-weight: 700; }
+
+/* ---------- Buono = biglietto mattone (stessa grammatica di .kb-ticket) ---------- */
+.fc-voucher {
+  margin: 14px 16px 0; position: relative;
+  background: var(--poster-brick); color: #fff;
+  border: 2px dashed rgba(255, 255, 255, 0.35); outline: 3px solid var(--poster-brick);
+}
+.fc-voucher-top { display: flex; align-items: center; gap: 14px; padding: 14px 16px 12px; }
+.fc-voucher-amount { font-family: var(--poster-font-display); font-size: 72px; line-height: .85; letter-spacing: 0.01em; }
+.fc-voucher-kind { font-family: var(--poster-font-display); font-size: 26px; line-height: 1; letter-spacing: var(--poster-track-sm); text-transform: uppercase; }
+.fc-voucher-rule { font-size: 13px; line-height: 1.3; color: rgba(255,255,255,.9); margin-top: 3px; }
+.fc-voucher-tear { border-top: 2px dashed rgba(255,255,255,.35); margin: 0 10px; }
+.fc-voucher-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px 14px; font-size: 13px; }
+.fc-voucher-foot b { font-family: var(--poster-font-display); font-size: 22px; font-weight: 400; letter-spacing: 0.06em; }
+.fc-voucher .cx-pay { margin: 0 16px 16px; width: calc(100% - 32px); }
+.fc-voucher--used, .fc-voucher--expired { background: var(--poster-panel); outline-color: var(--poster-panel); border-color: var(--poster-line); color: var(--poster-muted); }
+.fc-voucher--used .fc-voucher-rule, .fc-voucher--expired .fc-voucher-rule { color: var(--poster-muted); }
+.fc-voucher--expired .fc-voucher-amount { text-decoration: line-through; }
+.fc-voucher--reserved { background: var(--poster-panel); outline-color: var(--poster-panel); border-color: var(--poster-yellow); color: var(--poster-ink); }
+.fc-voucher--reserved .fc-voucher-rule { color: var(--poster-muted); }
+
+/* chip di stato (grammatica .cx-chip / etichetta MENU di Pesi Massimi) */
+.fc-chip {
+  display: inline-flex; align-items: center; min-height: 26px; padding: 2px 8px;
+  font-family: var(--poster-font-label); font-size: 18px; letter-spacing: 0.08em; line-height: 1; text-transform: uppercase;
+  background: var(--poster-yellow); color: var(--poster-on-yellow); border-radius: 3px; white-space: nowrap;
+}
+.fc-chip--line { background: transparent; color: var(--poster-ink); border: 1px solid var(--poster-line); }
+.fc-chip--brick { background: var(--poster-brick); color: #fff; }
+.fc-chip--white { background: #fff; color: var(--poster-brick); }
+
+/* ---------- Bottoni ---------- */
+.fc-cta-row { padding: 16px 16px 0; }
+.fc-cta-row .cx-pay { min-height: 58px; }
+.fc-link {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 2px;
+  background: none; border: 0; color: var(--poster-ink); text-decoration: underline; text-underline-offset: 3px;
+  font: 600 15px var(--poster-font-body); cursor: pointer;
+}
+.fc-link--muted { color: var(--poster-muted); }
+.fc-link--danger { color: #ff8a6b; }
+.fc-btn-line {
+  width: 100%; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 6px 14px; background: var(--poster-panel); border: 1px solid var(--poster-line); border-radius: 6px;
+  color: var(--poster-ink); font-family: var(--poster-font-display); font-size: 26px; letter-spacing: var(--poster-track-sm);
+  text-transform: uppercase; cursor: pointer; text-align: left;
+}
+.fc-btn-line small { font-family: var(--poster-font-body); font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--poster-muted); display: block; margin-top: 2px; }
+.fc-btn-line .fc-strip-arrow { flex: none; }
+.fc-list { display: grid; gap: 8px; padding: 14px 16px 0; }
+
+/* ---------- Passi "come funziona" ---------- */
+.fc-steps { list-style: none; margin: 14px 16px 0; padding: 0; display: grid; gap: 10px; }
+.fc-steps li { display: grid; grid-template-columns: 40px 1fr; gap: 12px; align-items: start; }
+.fc-steps .fc-step-n {
+  width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--poster-yellow); color: var(--poster-yellow);
+  display: grid; place-items: center; font-family: var(--poster-font-display); font-size: 24px;
+}
+.fc-steps b { display: block; font-family: var(--poster-font-display); font-weight: 400; font-size: 24px; line-height: 1; letter-spacing: var(--poster-track-sm); text-transform: uppercase; }
+.fc-steps span { font-size: 14px; color: var(--poster-muted); line-height: 1.35; }
+
+/* ---------- Form iscrizione (riusa cx-block/cx-title/cx-help/cx-name-input) ---------- */
+.fc-progress { display: flex; gap: 6px; padding: 14px 16px 0; }
+.fc-progress i { flex: 1; height: 4px; background: var(--poster-line); }
+.fc-progress i.on { background: var(--poster-yellow); }
+.fc-phone { display: grid; grid-template-columns: 76px 1fr; gap: 8px; }
+.fc-prefix {
+  display: grid; place-items: center; min-height: 52px; border: 1px solid var(--poster-line); border-radius: 12px;
+  background: var(--poster-panel); font: 600 17px var(--poster-font-body); color: var(--poster-ink);
+}
+.fc-check { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; padding: 10px 0; cursor: pointer; }
+.fc-check input { appearance: none; -webkit-appearance: none; width: 28px; height: 28px; margin: 0; border: 2px solid var(--poster-muted); border-radius: 4px; background: transparent; display: grid; place-items: center; cursor: pointer; }
+.fc-check input:checked { background: var(--poster-yellow); border-color: var(--poster-yellow); }
+.fc-check input:checked::after { content: '✓'; color: var(--poster-on-yellow); font: 700 18px/1 var(--poster-font-body); }
+.fc-check input:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
+.fc-check-text { font-size: 14px; line-height: 1.4; color: var(--poster-ink); }
+.fc-check-text small { display: block; color: var(--poster-muted); font-size: 13px; margin-top: 2px; }
+.fc-otp { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.fc-otp input {
+  width: 100%; min-height: 60px; box-sizing: border-box; text-align: center;
+  background: var(--poster-panel); border: 1px solid var(--poster-line); border-radius: 12px;
+  color: var(--poster-ink); font-family: var(--poster-font-display); font-size: 34px;
+}
+.fc-otp input:focus { outline: 2px solid var(--poster-yellow); outline-offset: 0; }
+.fc-otp--err input { border-color: #ff8a6b; }
+@keyframes fcShake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+.fc-otp--err { animation: fcShake .3s ease-out; }
+@media (prefers-reduced-motion: reduce) { .fc-otp--err { animation: none; } }
+
+/* ---------- Righe (visite, messaggi, inviti) ---------- */
+.fc-rows { margin: 10px 16px 0; border-top: 1px solid var(--poster-line); }
+.fc-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 11px 0; border-bottom: 1px solid var(--poster-line); font-size: 14px; }
+.fc-row-date { font-family: var(--poster-font-label); font-size: 20px; letter-spacing: 0.04em; color: var(--poster-muted); min-width: 48px; }
+.fc-row-main { min-width: 0; }
+.fc-row-main b { font-weight: 700; }
+.fc-row-main small { display: block; color: var(--poster-muted); font-size: 12.5px; margin-top: 1px; }
+.fc-row-end { text-align: right; font-weight: 700; white-space: nowrap; }
+.fc-ok { color: var(--poster-yellow); }
+.fc-ko { color: var(--poster-muted); }
+
+/* ---------- Segmented (riuso .cx-where-btn) ---------- */
+.fc-seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 14px 16px 0; }
+.fc-seg .cx-where-btn { min-height: 48px; justify-content: center; text-align: center; padding: 4px 6px; }
+.fc-seg .cx-where-title { font-size: 22px; }
+
+/* ---------- Toggle preferenze ---------- */
+.fc-toggle-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--poster-line); }
+.fc-toggle-row b { display: block; font-family: var(--poster-font-display); font-weight: 400; font-size: 24px; letter-spacing: var(--poster-track-sm); text-transform: uppercase; line-height: 1; }
+.fc-toggle-row small { display: block; color: var(--poster-muted); font-size: 13px; line-height: 1.35; margin-top: 3px; }
+/* area di tocco 64x48, binario visibile 60x34 */
+.fc-switch { position: relative; width: 64px; height: 48px; border: 0; background: transparent; cursor: pointer; padding: 0; }
+.fc-switch::before { content: ''; position: absolute; left: 2px; top: 7px; width: 60px; height: 34px; box-sizing: border-box; border-radius: 17px; border: 1px solid var(--poster-line); background: var(--poster-panel); }
+.fc-switch::after { content: ''; position: absolute; top: 11px; left: 6px; width: 26px; height: 26px; border-radius: 50%; background: var(--poster-muted); transition: left .15s; }
+.fc-switch[aria-checked="true"]::before { background: var(--poster-yellow); border-color: var(--poster-yellow); }
+.fc-switch[aria-checked="true"]::after { left: 32px; background: var(--poster-on-yellow); }
+.fc-switch:disabled { opacity: .45; cursor: not-allowed; }
+.fc-switch:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
+
+/* ---------- Nel sacco: riga buono e riga timbro (grammatica .kitch-pairing-banner) ---------- */
+.fc-cart-voucher {
+  margin: 0 20px 14px; padding: 12px 12px 12px 14px;
+  border: 2px dashed rgba(255, 200, 61, 0.55); background: var(--poster-panel);
+  display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center;
+}
+.fc-cart-voucher--on { border-color: var(--poster-yellow); background: #24140b; }
+.fc-cart-voucher--low { border-color: var(--poster-line); }
+.fc-cart-voucher-title { font-family: var(--poster-font-display); font-size: 26px; line-height: 1; letter-spacing: var(--poster-track-sm); text-transform: uppercase; color: var(--poster-ink); }
+.fc-cart-voucher-sub { font-size: 13px; line-height: 1.35; color: var(--poster-muted); margin-top: 3px; }
+.fc-cart-voucher-sub b { color: var(--poster-ink); }
+.fc-cart-voucher .fc-bar { grid-column: 1 / -1; margin-top: 0; }
+.fc-apply {
+  min-width: 96px; min-height: 48px; padding: 0 12px; border-radius: 6px; cursor: pointer;
+  font-family: var(--poster-font-display); font-size: 24px; letter-spacing: var(--poster-track-sm);
+  background: var(--poster-yellow); color: var(--poster-on-yellow); border: 2px solid var(--poster-yellow);
+}
+.fc-apply--off { background: transparent; color: var(--poster-ink); border-color: var(--poster-line); }
+.fc-apply:disabled { background: transparent; color: var(--poster-muted); border-color: var(--poster-line); cursor: not-allowed; }
+.fc-suggest { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 10px; border-top: 1px solid var(--poster-line); }
+.fc-suggest span { font-family: var(--poster-font-display); font-size: 20px; letter-spacing: var(--poster-track-sm); text-transform: uppercase; line-height: 1.05; }
+.fc-suggest span small { display: block; font-family: var(--poster-font-body); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--poster-muted); }
+.fc-cart-stamp {
+  margin: 0 20px 14px; padding: 10px 12px; display: flex; gap: 12px; align-items: center;
+  border: 1px solid var(--poster-line); border-radius: 12px; background: var(--poster-panel); font-size: 13.5px; line-height: 1.35;
+}
+.fc-cart-stamp b { font-family: var(--poster-font-display); font-weight: 400; font-size: 21px; letter-spacing: var(--poster-track-sm); text-transform: uppercase; display: block; line-height: 1; }
+.fc-total-strike { display: block; text-align: right; font: 600 13px var(--poster-font-body); color: var(--poster-muted); }
+.fc-total-strike s { margin-right: 6px; }
+.fc-total-strike b { color: var(--poster-yellow); }
+
+/* ---------- Card su /kitchen/status (in poster, decisione D6) ---------- */
+.fc-status-card {
+  margin: 0 20px 18px; padding: 14px 14px 12px;
+  background: #120806; border: 2px dashed rgba(255, 200, 61, 0.45); outline: 3px solid #120806;
+}
+.fc-status-card .fc-card-title { font-size: 32px; }
+.fc-status-card .fc-stamps { justify-content: flex-start; gap: 14px; margin: 12px 0 4px; }
+.fc-status-card .cx-pay { margin-top: 12px; }
+.fc-status-card--ok { border-color: var(--poster-yellow); }
+.fc-status-card--neutral { border-style: solid; border-color: var(--poster-line); }
+
+/* ---------- Toast (grammatica .kitch-add-toast) ---------- */
+.fc-toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(28px + env(safe-area-inset-bottom)); z-index: 400;
+  max-width: min(440px, calc(100% - 24px)); background: #1c1a14; border: 1px solid rgba(200,150,10,.65); border-left: 4px solid #3fae5a;
+  border-radius: 12px; padding: 12px 16px; color: #f7dfb5; font: 400 22px/1.05 'League Gothic', 'Oswald', sans-serif; letter-spacing: 0.05em; text-transform: uppercase;
+  box-shadow: 0 6px 18px rgba(0,0,0,.6); animation: fcToast 2.6s ease-out forwards; pointer-events: none;
+}
+@keyframes fcToast { 0% { opacity: 0; transform: translate(-50%, 12px); } 10% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ---------- Mascotte stati vuoti ---------- */
+.fc-empty { text-align: center; padding: 22px 16px 6px; }
+.fc-empty img { width: 120px; height: auto; display: block; margin: 0 auto 8px; }
+.fc-empty b { display: block; font-family: var(--poster-font-display); font-weight: 400; font-size: 30px; letter-spacing: 0.02em; text-transform: uppercase; }
+
+/* ---------- Invito ---------- */
+.fc-code {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px;
+  padding: 10px 12px; border: 1px solid var(--poster-line); border-radius: 12px; background: #120806;
+}
+.fc-code b { font-family: var(--poster-font-display); font-weight: 400; font-size: 36px; letter-spacing: 0.08em; color: var(--poster-yellow); }
+.fc-code small { display: block; color: var(--poster-muted); font-size: 12px; overflow-wrap: anywhere; }
+.fc-two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.fc-two .cx-pay { justify-content: center; }
+.fc-btn-ghost {
+  min-height: 56px; border: 1px solid var(--poster-line); background: var(--poster-panel); color: var(--poster-ink); border-radius: 6px;
+  font-family: var(--poster-font-display); font-size: 26px; letter-spacing: var(--poster-track-sm); cursor: pointer;
+}
+.fc-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 12px 16px 0; }
+.fc-kpi { background: var(--poster-panel); border: 1px solid var(--poster-line); padding: 10px 8px; text-align: center; }
+.fc-kpi b { display: block; font-family: var(--poster-font-display); font-weight: 400; font-size: 40px; line-height: .9; color: var(--poster-yellow); }
+.fc-kpi span { font-family: var(--poster-font-label); font-size: 17px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--poster-muted); line-height: 1.05; display: block; margin-top: 4px; }
+
+/* ---------- Staff CLUB: solo token --kss-* di KitchenSoloService.css:8-23 ---------- */
+.fc-staff .kss-overlay-body { max-width: 1180px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.fc-staff-tabs { flex-wrap: wrap; }
+.fc-staff-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+@media (max-width: 560px) { .fc-staff-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } }
+.fc-staff-sample { margin-left: auto; font-size: 11px; font-weight: 800; letter-spacing: .1em; color: var(--kss-muted); border: 1px dashed var(--kss-line); border-radius: 6px; padding: 4px 8px; }
+.fc-staff-note { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--kss-line); border-radius: 10px; background: var(--kss-panel); color: var(--kss-text); font-size: 13px; line-height: 1.5; }
+.fc-staff-note b { letter-spacing: .04em; }
+.fc-staff-help { margin: 10px 0 0; color: var(--kss-muted); font-size: 12.5px; line-height: 1.45; }
+.fc-staff-table { margin-top: 8px; border: 1px solid var(--kss-line); border-radius: 10px; overflow: hidden; font-size: 13px; }
+.fc-staff-tr { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding: 10px 12px; border-top: 1px solid var(--kss-line); color: var(--kss-text); align-items: center; }
+.fc-staff-tr:first-child { border-top: 0; }
+.fc-staff-th { background: var(--kss-panel); color: var(--kss-muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.fc-staff-table .fc-staff-tr:has(> span:nth-child(4):last-child) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+@media (max-width: 640px) {
+  .fc-staff-tr { grid-template-columns: 1fr 1fr; row-gap: 2px; }
+  .fc-staff-th { display: none; }
+  .fc-staff-table .fc-staff-tr:has(> span:nth-child(4):last-child) { grid-template-columns: 1fr 1fr; }
+}
+.fc-staff-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--kss-line); font-size: 11px; font-weight: 800; letter-spacing: .06em; }
+.fc-staff-pill--y { border-color: var(--kss-yellow); color: var(--kss-yellow); }
+.fc-staff-pill--g { border-color: var(--kss-green); color: var(--kss-green); }
+.fc-staff-pill--r { border-color: var(--kss-red); color: var(--kss-red); }
+body.fc-body-staff { background: #070a0e; }
+
+.fc-row-note { margin-top: 2px; font-size: 12.5px; line-height: 1.25; color: var(--poster-muted); }
+/* Staff CLUB: le classi Storico reali hanno chip da 28px ed etichette da 11px (debito esistente).
+   Nel CLUB si alzano a 44px / 12px+ senza cambiare il look. */
+.fc-staff .kss-overlay-close { min-height: 44px; padding: 0 14px; }
+.fc-staff .kpd-sumup-badge { min-height: 44px; padding: 0 14px; font-size: 13px; }
+.fc-staff .kpd-filter-label, .fc-staff .kpd-cash-label, .fc-staff .kpd-attention-badge-label, .fc-staff .kpd-category-label, .fc-staff .kpd-category-qty, .fc-staff .fc-staff-th, .fc-staff .fc-staff-pill, .fc-staff .fc-staff-sample { font-size: 12px; }
+/* etichette dei funnel più lunghe delle categorie Storico: colonna più larga solo nel CLUB */
+.fc-staff .kpd-category-label { width: 150px; text-transform: none; color: var(--kss-text); }
+.fc-staff .kpd-category-row { min-height: 30px; }
+
+/* --- correzioni dopo la revisione visiva --- */
+/* index.css:83-88 mette maiuscolo + spaziatura su TUTTI i button: nelle righe-bottone del Club il
+   sottotitolo deve restare in minuscolo Montserrat come le sub del checkout (.cx-pay-sub). */
+.fc-strip, .fc-link, .fc-card-link { text-transform: none; letter-spacing: normal; font-weight: inherit; }
+.fc-link { font-family: var(--poster-font-body); font-weight: 600; }
+.fc-card-link .fc-small { font-family: var(--poster-font-body); }
+.fc-steps span { display: block; margin-top: 3px; }
+.fc-topbar-logo { clip-path: inset(0 2% 0 0); }
+.fc-cx-club { padding-top: 2px; }
+.fc-resv { margin: 12px 0 0; flex-direction: column; align-items: flex-start; gap: 6px; }
+/* titolo topbar: mai sotto il logo (overflow non visibile ai controlli automatici) */
+.fc-topbar-title { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; }
+/* ==========================================================================================
+   FASE 3 — solo classi fc-* su token --poster-* / --kss-* (nessun colore o font nuovo)
+   ========================================================================================== */
+.fc-stamp--on.fc-stamp--gift { font-size: 19px; }
+.fc-stamp--sm.fc-stamp--gift { font-size: 12px; }
+.fc-card--ok { border-color: var(--poster-yellow); }
+.fc-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+
+/* Tessera: "1 visita su 2" molto evidente + finestra dei 30 giorni */
+.fc-visits { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+.fc-visits-n { font-family: var(--poster-font-display); font-size: 96px; line-height: .82; letter-spacing: 0.01em; color: var(--poster-yellow); }
+.fc-visits-n small { font-size: 48px; color: var(--poster-muted); }
+.fc-visits-lbl { font-family: var(--poster-font-display); font-size: 36px; line-height: .95; letter-spacing: var(--poster-track-sm); text-transform: uppercase; color: var(--poster-ink); }
+.fc-deadline { margin-top: 12px; padding: 12px 14px 12px; border: 2px solid var(--poster-yellow); background: #24140b; }
+.fc-deadline--idle { border: 2px dashed var(--poster-line); background: transparent; }
+.fc-deadline--warn { border-color: var(--poster-brick); }
+.fc-deadline-title { font-family: var(--poster-font-display); font-size: 28px; line-height: 1; letter-spacing: var(--poster-track-sm); text-transform: uppercase; color: var(--poster-yellow); }
+.fc-deadline--idle .fc-deadline-title { color: var(--poster-ink); }
+.fc-deadline-sub { font-size: 14px; line-height: 1.35; color: var(--poster-ink); margin-top: 4px; }
+.fc-deadline .fc-bar { margin-top: 10px; }
+.fc-bar--big { height: 18px; margin-top: 14px; }
+.fc-card .fc-stamps { margin: 14px 0 4px; }
+
+/* Come funziona: richiudibile, in fondo */
+.fc-how { margin: 22px 16px 0; border-top: 1px solid var(--poster-line); }
+.fc-how summary { list-style: none; display: flex; justify-content: space-between; align-items: center; min-height: 52px; cursor: pointer; }
+.fc-how summary::-webkit-details-marker { display: none; }
+.fc-how summary::after { content: '+'; font-family: var(--poster-font-display); font-size: 32px; color: var(--poster-yellow); }
+.fc-how[open] summary::after { content: '–'; }
+.fc-how .fc-p { margin: 0; padding-bottom: 14px; font-size: 14px; line-height: 1.5; color: var(--poster-muted); }
+.fc-how .fc-p b { color: var(--poster-ink); }
+
+/* Porta un amico: i due vantaggi */
+.fc-benefits { display: grid; gap: 8px; margin: 14px 16px 0; }
+.fc-benefit { display: grid; grid-template-columns: 104px 1fr; gap: 12px; align-items: center; padding: 12px 14px; background: var(--poster-panel); border: 1px solid var(--poster-line); }
+.fc-benefit-n { font-family: var(--poster-font-display); font-size: 56px; line-height: .9; color: var(--poster-yellow); text-align: center; }
+.fc-benefit-n--sm { font-size: 36px; line-height: .95; }
+.fc-benefit b { display: block; font-family: var(--poster-font-display); font-weight: 400; font-size: 24px; letter-spacing: var(--poster-track-sm); text-transform: uppercase; }
+.fc-benefit span { display: block; font-size: 13.5px; line-height: 1.35; color: var(--poster-muted); margin-top: 2px; }
+.fc-ref { margin-top: 12px; padding: 12px 14px; }
+.fc-ref-row { display: flex; gap: 14px; align-items: center; }
+
+/* Sacco: riga Club dentro il footer di pagamento */
+.fc-foot-club { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
+
+/* Staff tablet: comanda con buono e fine servizio (token --kss-*) */
+.fc-co-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 14px; align-items: stretch; }
+@media (max-width: 760px) { .fc-co-grid { grid-template-columns: 1fr; } }
+.fc-co-line { display: flex; justify-content: space-between; gap: 10px; padding: 11px 0; border-top: 1px solid var(--kss-card-line); font-size: 17px; font-weight: 700; }
+.fc-co-sub { color: #5b6673; font-weight: 600; }
+.fc-co-voucher { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 12px; padding: 10px 12px; background: #fff6d6; border: 2px solid var(--kss-yellow); border-radius: 10px; font-size: 13px; line-height: 1.35; font-weight: 700; color: #3d3200; }
+.fc-co-voucher .fc-staff-pill { background: var(--kss-yellow); color: #0b0b0b; font-size: 16px; padding: 6px 12px; border-color: var(--kss-yellow); }
+.fc-co-voucher b { font-size: 18px; }
+.fc-co-pay { display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 22px; border: 2px solid var(--kss-yellow); border-radius: 14px; background: var(--kss-panel); }
+.fc-co-pay-label { letter-spacing: 2px; font-size: 16px; font-weight: 900; color: var(--kss-yellow); }
+.fc-co-pay-amount { font-size: clamp(64px, 9vw, 112px); font-weight: 900; line-height: 1; letter-spacing: -2px; color: var(--kss-text); }
+.fc-co-pay-sub { font-size: 15px; font-weight: 600; color: var(--kss-muted); }
+.fc-co-pay--ok { border-color: var(--kss-green); }
+.fc-co-pay--ok .fc-co-pay-label { color: var(--kss-green); }
+.fc-co-pay--void { border-color: var(--kss-line); }
+.fc-co-pay--void .fc-co-pay-amount { text-decoration: line-through; color: var(--kss-muted); }
+.fc-co-actions { display: grid; gap: 10px; margin-top: 10px; }
+.fc-co-btn { min-height: 64px; font-size: 17px; flex-direction: column; gap: 2px; }
+.fc-co-btn small { font-size: 12px; font-weight: 600; letter-spacing: 0; color: var(--kss-muted); }
+.fc-btn-cancel { border-color: var(--kss-red); color: #ffb4b4; }
+.fc-co-done { margin-top: 10px; font-size: 15px; font-weight: 700; color: var(--kss-text); }
+.fc-end-list { margin-top: 12px; display: grid; gap: 10px; }
+.fc-end-row { display: grid; grid-template-columns: minmax(130px, 1fr) 130px 140px minmax(300px, 1.7fr); gap: 14px; align-items: center; padding: 14px 16px; background: var(--kss-panel); border: 1px solid var(--kss-line); border-radius: 12px; }
+.fc-end-row--done { opacity: .6; }
+.fc-end-id b { display: block; font-size: 32px; font-weight: 900; line-height: 1; }
+.fc-end-id span { font-size: 13px; font-weight: 600; color: var(--kss-muted); }
+.fc-end-amt small { display: block; font-size: 12px; letter-spacing: 1px; font-weight: 900; color: var(--kss-muted); }
+.fc-end-amt b { display: block; font-size: 30px; font-weight: 900; }
+.fc-end-act { display: grid; grid-template-columns: 1fr 1.25fr; gap: 10px; }
+@media (max-width: 900px) { .fc-end-row { grid-template-columns: 1fr 1fr; } .fc-end-act { grid-column: 1 / -1; } }
+
+.fc-voucher-amount { flex: none; white-space: nowrap; }
+.fc-voucher-foot b { white-space: nowrap; }
+
+
+/* ==========================================================================================
+   PWA e NOTIFICHE (gruppo 9): installazione, guida, permesso, preferenze. Solo token esistenti.
+   Le finestre di sistema sono quelle vere del browser: qui nessuna simulazione.
+   ========================================================================================== */
+html.fc-lock, html.fc-lock body { height: 100%; overflow: hidden; }
+.fc-inv-row { display: flex; gap: 14px; align-items: center; }
+.fc-inv-row > svg { flex: none; color: var(--poster-ink); }
+.fc-inv .fc-card-title { font-size: 31px; }
+.fc-inv .fc-p { margin-top: 10px; }
+.fc-inv .cx-pay { margin-top: 12px; min-height: 58px; }
+.fc-inv-foot { display: flex; justify-content: center; margin-top: 2px; }
+.fc-inv-note { margin: 10px 0 0; padding: 8px 10px; border: 1px dashed var(--poster-line); font-size: 13px; line-height: 1.35; color: var(--poster-muted); }
+.fc-inv-note b { color: var(--poster-ink); }
+.fc-on-row { margin: 14px 16px 0; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--poster-panel); border: 1px solid var(--poster-line); border-left: 4px solid #3fae5a; font-size: 14px; font-weight: 600; line-height: 1.3; }
+.fc-on-row .fc-link { flex: none; font-size: 14px; }
+.fc-on-row--muted { border-left-color: var(--poster-line); font-weight: 500; color: var(--poster-muted); }
+.fc-inv-steps { margin: 10px 0 0; padding-left: 0; list-style: none; display: grid; gap: 6px; }
+.fc-inv-steps li { font-size: 14px; line-height: 1.35; color: var(--poster-ink); }
+.fc-inv-steps b { color: var(--poster-yellow); }
+.fc-ill { display: block; width: 100%; max-width: 320px; height: auto; margin: 8px 0 0; }
+.fc-ill-row { display: flex; align-items: center; gap: 14px; margin-top: 8px; }
+.fc-sheet-intro { margin: 0; padding: 14px 20px 0; font-size: 15px; line-height: 1.4; }
+.fc-sheet-cta { padding: 16px 20px calc(18px + env(safe-area-inset-bottom)); display: grid; gap: 8px; }
+.fc-sheet .fc-steps { margin: 14px 20px 0; }
+.fc-sheet .fc-steps b { font-size: 25px; }
+.fc-sheet-warn { margin: 14px 20px 0; padding: 12px 14px; border: 2px solid var(--poster-brick); background: #24140b; }
+.fc-sheet-warn b { display: block; font-family: var(--poster-font-display); font-weight: 400; font-size: 28px; line-height: 1; letter-spacing: var(--poster-track-sm); text-transform: uppercase; color: var(--poster-yellow); }
+.fc-sheet-warn span { display: block; margin-top: 4px; font-size: 14px; line-height: 1.35; }
+.fc-alert small { max-width: 30ch; font-weight: 500; }
+.fc-dev { margin: 0; padding: 12px 0; border-bottom: 1px solid var(--poster-line); }
+.fc-dev b { display: block; font-family: var(--poster-font-display); font-weight: 400; font-size: 24px; letter-spacing: var(--poster-track-sm); text-transform: uppercase; line-height: 1.05; }
+.fc-dev small { display: block; color: var(--poster-muted); font-size: 13px; line-height: 1.35; margin-top: 3px; }
+.fc-dev .fc-two { margin-top: 10px; }
+.fc-dev-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.fc-dev-btns .fc-btn-ghost { min-height: 44px; padding: 0 14px; }
+.fc-pref-why { margin: 8px 0 0; padding: 8px 10px; border: 1px dashed var(--poster-line); }
+
+/* ==========================================================================================
+   APP (V1): poche regole in più per stati reali (caricamento, errori, messaggi). Solo token esistenti.
+   ========================================================================================== */
+.fc-state { padding: 28px 16px 0; text-align: center; }
+.fc-state b { display: block; font-family: var(--poster-font-display); font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: 0.02em; text-transform: uppercase; color: var(--poster-ink); }
+.fc-state .fc-small { margin: 8px 0 0; }
+.fc-state .cx-pay { margin-top: 16px; }
+.fc-loading { padding: 40px 16px; text-align: center; color: var(--poster-muted); font-family: var(--poster-font-label); font-size: 24px; letter-spacing: 0.08em; text-transform: uppercase; }
+.fc-msg-unread .fc-row-main b { color: var(--poster-yellow); }
+.fc-msg-body { display: block; color: var(--poster-ink); font-size: 14px; line-height: 1.35; margin-top: 2px; }
+.fc-confirm { margin: 10px 0 0; padding: 12px 14px; border: 2px solid var(--poster-brick); background: #24140b; }
+.fc-confirm .fc-two { margin-top: 10px; }
+.fc-btn-ghost:focus-visible, .fc-btn-line:focus-visible, .fc-card-link:focus-visible, .fc-link:focus-visible { outline: 3px solid var(--poster-ink); outline-offset: 2px; }
+.fc-btn-ghost:disabled { opacity: .5; cursor: not-allowed; }
+.fc-check input:disabled { opacity: .5; }
+.fc-sheet .kitch-drawer-body { padding-bottom: 0; }
+.fc-ref-input { margin-top: 8px; }
