@@ -10,13 +10,13 @@ CREATE OR REPLACE FUNCTION fc_test.as_service() RETURNS void LANGUAGE sql AS $$
 
 CREATE OR REPLACE FUNCTION fc_test.new_user(p_anon boolean DEFAULT true, p_phone text DEFAULT NULL)
 RETURNS uuid LANGUAGE sql AS $$
-  INSERT INTO auth.users (is_anonymous, phone, phone_confirmed_at)
-  VALUES (p_anon, p_phone, CASE WHEN p_phone IS NULL THEN NULL ELSE now() END) RETURNING id $$;
+  INSERT INTO auth.users (id, is_anonymous, phone, phone_confirmed_at)
+  VALUES (gen_random_uuid(), p_anon, p_phone, CASE WHEN p_phone IS NULL THEN NULL ELSE now() END) RETURNING id $$;
 
 CREATE OR REPLACE FUNCTION fc_test.new_staff() RETURNS uuid LANGUAGE plpgsql AS $$
 DECLARE v uuid;
 BEGIN
-  INSERT INTO auth.users (is_anonymous, email) VALUES (false, 'staff-' || gen_random_uuid() || '@test.local') RETURNING id INTO v;
+  INSERT INTO auth.users (id, is_anonymous, email) VALUES (gen_random_uuid(), false, 'staff-' || gen_random_uuid() || '@test.local') RETURNING id INTO v;
   INSERT INTO public.kitchen_staff_members (user_id, venue_id, role) VALUES (v, 'walrus-main', 'staff');
   RETURN v;
 END $$;

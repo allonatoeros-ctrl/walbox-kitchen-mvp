@@ -46,9 +46,14 @@ export const foodClubApi = {
     p_user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
     p_scope: scope ?? null, p_text_version: FOOD_CLUB_PUSH_TEXT_VERSION,
   }),
-  // Misura: mai bloccante, errori ignorati.
+  // Misura: mai bloccante, errori ignorati. Senza sessione il server scarterebbe comunque l'evento
+  // (auth.uid() NULL) e il ruolo anon non ha EXECUTE: niente chiamata, niente 401 in console.
   track: (event, context = null, platform = null) =>
-    supabase.rpc('food_club_track', { p_event: event, p_context: context, p_platform: platform }).then(() => {}, () => {}),
+    supabase.auth.getSession()
+      .then(({ data }) => (data?.session
+        ? supabase.rpc('food_club_track', { p_event: event, p_context: context, p_platform: platform })
+        : null))
+      .then(() => {}, () => {}),
 };
 
 // Staff (permessi verificati dal server con is_staff_for_venue / manager).

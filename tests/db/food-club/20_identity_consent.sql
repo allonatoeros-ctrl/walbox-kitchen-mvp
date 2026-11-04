@@ -6,7 +6,7 @@ SELECT fc_test.activate_campaign();
 DO $$ DECLARE a uuid := fc_test.new_user(true); u uuid; BEGIN
   PERFORM fc_test.as_user(a, 'authenticated', true);
   PERFORM fc_test.expect_error($q$SELECT public.food_club_join('privacy-v1', true)$q$, 'verified_phone_required');
-  INSERT INTO auth.users (is_anonymous, phone) VALUES (false, '+393331112223') RETURNING id INTO u; -- phone senza conferma
+  INSERT INTO auth.users (id, is_anonymous, phone) VALUES (gen_random_uuid(), false, '+393331112223') RETURNING id INTO u; -- phone senza conferma
   PERFORM fc_test.as_user(u);
   PERFORM fc_test.expect_error($q$SELECT public.food_club_join('privacy-v1', true)$q$, 'verified_phone_required');
   RAISE NOTICE 'PASS I01 serve telefono verificato';
