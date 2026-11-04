@@ -1,0 +1,11 @@
+import { generateKeyPairSync, randomBytes } from 'node:crypto';
+import { writeFileSync } from 'node:fs';
+const b64u = (b) => Buffer.from(b).toString('base64url');
+const raw = (kp) => { const j = kp.publicKey.export({ format: 'jwk' }); return Buffer.concat([Buffer.from([4]), Buffer.from(j.x, 'base64url'), Buffer.from(j.y, 'base64url')]); };
+const vapid = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+const ua = generateKeyPairSync('ec', { namedCurve: 'prime256v1' });
+const auth = randomBytes(16);
+const dir = process.argv[2];
+writeFileSync(`${dir}/push.env`, `FOOD_CLUB_PUSH_SECRET=local-test-secret-123\nVAPID_PUBLIC_KEY=${b64u(raw(vapid))}\nVAPID_PRIVATE_KEY=${vapid.privateKey.export({ format: 'jwk' }).d}\nVAPID_SUBJECT=mailto:test@example.invalid\n`);
+writeFileSync(`${dir}/ua.json`, JSON.stringify({ p256dh: b64u(raw(ua)), auth: b64u(auth), priv: ua.privateKey.export({ format: 'jwk' }), vapidPub: b64u(raw(vapid)) }));
+console.log('ok');

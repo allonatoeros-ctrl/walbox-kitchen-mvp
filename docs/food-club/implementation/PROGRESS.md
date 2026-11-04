@@ -9,7 +9,7 @@ Niente di questo è in produzione: migration non applicate, nessun deploy, flag 
 |---|---|---|
 | F0 Ricognizione | FATTA | branch, decisioni, strumenti (Postgres nativo + shim; niente Docker/GoTrue/Deno) |
 | F1 Base dati e regole | IMPLEMENTATO E VERIFICATO | `20261105100000`: food autorevole, `source`, campagne, tessere, timbri, buoni, inviti, messaggi, eventi, RLS |
-| F2 Ordini e pagamenti | IMPLEMENTATO E VERIFICATO | `20261105101000`: v4 con riserva, consumo su paid+charge, rilascio su annullo/abbandono, rimborso, guardia importi, concorrenza |
+| F2 Ordini e pagamenti | IMPLEMENTATO E VERIFICATO (+ patch di revisione proposta: P1 doppio uso buono, vedi REVIEW-2026-11-04) | `20261105101000`: v4 con riserva, consumo su paid+charge, rilascio su annullo/abbandono, rimborso, guardia importi, concorrenza |
 | F3 Identità e privacy | PARZIALE | DB verificato (join, consensi, biglietto legato al numero, uscita); client OTP scritto ma OTP reale NON VERIFICABILE QUI; "Confirm phone" in produzione = **BLOCCATO** (gate Eros) |
 | F4 Esperienza cliente | IMPLEMENTATO E VERIFICATO (mock) | pagine `/kitchen/club/*`, striscia menu, buono e timbro nel sacco, card stato ordine; verificato a 390/430 con RPC mock, non su Supabase reale |
 | F5 Staff | IMPLEMENTATO E VERIFICATO (mock) | `/kitchen/club-staff` (6 tab), badge BUONO/DA INCASSARE in Solo, banner da pagare |
@@ -33,6 +33,11 @@ Niente di questo è in produzione: migration non applicate, nessun deploy, flag 
 - Baseline `origin/main`: 5 unit + 9 statici falliti, 121 problemi lint, 1 unit flaky: preesistenti.
 - E2E Playwright esistenti rossi anche sul codice di partenza in questo ambiente (race `goto('/')` → `/kitchen`, sezioni dipendenti dall'orario).
 - Le icone PWA derivano da `favicon.svg` (fulmine viola, non il Walrus): da decidere con D-22.
+
+## Revisione 2026-11-04
+Stack Supabase locale vero (Docker): migration, RLS, OTP reale, checkout on/off, regressione `main`, PWA: verdi.
+1 P1 + 4 P2 SQL corretti in `proposed/20261105104000_food_club_v1_review_fixes.sql` (NON in `supabase/migrations/`,
+area protetta: da adottare con gate). Dettagli: `REVIEW-2026-11-04.md`.
 
 ## Prossima attività
 Gate di Eros: decisioni aperte (DECISIONS.md), poi prova su Supabase locale vero sul Mac (`e2e-real-local`) delle 4 migration.

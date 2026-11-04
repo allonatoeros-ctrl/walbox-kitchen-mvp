@@ -28,5 +28,7 @@ VITE_SUPABASE_URL=http://127.0.0.1:54321 VITE_FOOD_CLUB_ENABLED=true npm run bui
 Sul Mac (Docker/OrbStack): stack Supabase locale + skill `e2e-real-local` per provare migration, RLS e OTP di test veri.
 
 ## Prossimo task prioritario
-Decisioni di Eros su D-3/D-5/D-14/D-2/D-13 e verifica "Confirm phone" in produzione (P1, bloccante); poi prova delle 4 migration
-su Supabase locale reale sul Mac e smoke del checkout con flag spento e acceso.
+Revisione 2026-11-04 fatta (`REVIEW-2026-11-04.md`, §"cosa manca" nel report). Ordine:
+1. Gate Eros: adottare `proposed/20261105104000_food_club_v1_review_fixes.sql` (P1 doppio uso buono) + decisioni D-3/D-5/D-14/D-2/D-13.
+2. Sul Mac: `WITH_FIXES=1 docs/food-club/implementation/proposed/harness/run-local-review.sh` + Edge Function in locale.
+3. Produzione (gate): "Confirm phone" ON + provider SMS, poi migration, poi deploy Edge Function/cron, poi prova su telefono (I-7).

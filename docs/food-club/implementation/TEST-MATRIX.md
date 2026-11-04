@@ -90,3 +90,19 @@ Risultato: **PASS** · **FAIL** · **NON ESEGUITO** (con motivo).
 | E2E esistenti (customer flow, notification gate, solo service) | Playwright | NON CONCLUSIVO | rossi anche su origin/main in questo ambiente (race di navigazione `goto('/')`→`/kitchen`, orario del servizio) |
 | E2E reali (OrbStack) | `scripts/e2e-real-supabase-local.sh` | NON ESEGUITO | Docker senza daemon |
 | Mobile reale / tablet reale | — | NON ESEGUITO | |
+
+## Revisione 2026-11-04 — stack Supabase locale VERO (Docker), dettagli in `REVIEW-2026-11-04.md`
+| Requisito | Test | Risultato |
+|---|---|---|
+| 121 migration su Supabase reale (`supabase start` / `db reset`) | CLI 3.0.0, Postgres 17 | PASS |
+| 44 scenari SQL + 4 concorrenza su Postgres Supabase vero | `tests/db/*` | PASS (con e senza patch) |
+| Permessi con default privileges Supabase (EXECUTE, tabelle, RLS, search_path) | `has_function_privilege` / `has_table_privilege` | PASS |
+| Doppio uso buono via abbandono + pagamento tardivo (P1) | `proposed/50_review_fixes.sql` RF1/RF1b | FAIL senza patch → PASS con patch |
+| Buono riservato su `paid` manuale + charge tardivo; rimborso invito; FK; combo | RF2–RF5 | FAIL senza patch → PASS con patch |
+| OTP reale GoTrue (test_otp), stesso uid, unione secondo dispositivo | `proposed/harness/fc-http.mjs` | PASS (Confirm phone ON) |
+| Confirm phone OFF → numero confermato senza OTP, join possibile | idem | RISCHIO DIMOSTRATO (gate produzione) |
+| Abusi HTTP: buono altrui, tabelle, funzioni interne, RPC staff, totale, importo SumUp | idem | PASS |
+| Checkout browser flag spento (0 chiamate Club) / acceso (OTP da UI, buono, 8,90 €) | `proposed/harness/fc-checkout.cjs` | PASS 6/6 · 8/8 |
+| Frontend `origin/main` su DB con migration Food Club + patch (ordine + banco) | idem, porta 5183 | PASS |
+| PWA build prod: SW, manifest, installabilità; push Club al SW → notifica; push ordine invariata | `proposed/harness/fc-pwa.mjs` (CDP) | PASS |
+| `send-food-club-push/index.ts` eseguita | edge-runtime locale | NON ESEGUITO: proxy TLS del cloud (ambiente), harness pronto per il Mac |
