@@ -164,27 +164,30 @@ test('b2) GET=FAILED -> DELETE errore di rete -> 502, nessuna RPC di chiusura', 
   assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
 
-for (const stillOpen of ['PENDING', 'FAILED']) {
-  test(`c) DELETE 2xx ma verify GET ancora ${stillOpen} -> bloccato (unknown), nessuna RPC di chiusura`, async () => {
-    const { res, calls } = await run({
-      attempt: baseAttempt,
-      sumup: { get: [co('FAILED'), co(stillOpen)], del: { status: 204 } },
-    });
-    assert.equal(res.statusCode, 200);
-    assert.equal(res.body.outcome, 'unknown');
-    assert.equal(res.body.reason, 'checkout_close_unverified');
-    assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
-  });
-}
-
-test('c2) DELETE 404 ma verify GET ancora FAILED -> bloccato (404 non e\' prova di chiusura)', async () => {
+test('c) DELETE 2xx ma verify GET ancora PENDING -> bloccato (unknown), nessuna RPC di chiusura', async () => {
   const { res, calls } = await run({
     attempt: baseAttempt,
-    sumup: { get: [co('FAILED'), co('FAILED')], del: { status: 404 } },
+    sumup: { get: [co('FAILED'), co('PENDING')], del: { status: 204 } },
   });
+  assert.equal(res.statusCode, 200);
   assert.equal(res.body.outcome, 'unknown');
+  assert.equal(res.body.reason, 'checkout_close_unverified');
   assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 0);
 });
+
+// Incidente A23 (31/10): SumUp non disattiva un checkout FAILED, il GET dopo il DELETE resta FAILED. Non e' PAID:
+// trattato come chiuso, altrimenti l'attempt resta bloccato per sempre.
+for (const delStatus of [204, 404, 409]) {
+  test(`c2) GET=FAILED -> DELETE ${delStatus} -> verify GET ancora FAILED -> trattato come chiuso, RPC di chiusura chiamata`, async () => {
+    const { res, calls } = await run({
+      attempt: baseAttempt,
+      sumup: { get: [co('FAILED'), co('FAILED')], del: { status: delStatus } },
+    });
+    assert.equal(sumupCalls(calls, 'DELETE').length, 1);
+    assert.equal(rpcCalls(calls, 'kitchen_payment_attempt_close_unpaid').length, 1);
+    assert.notEqual(res.body.outcome, 'unknown');
+  });
+}
 
 test('c3) DELETE 4xx rifiutato + verify GET ancora PENDING -> bloccato (non procede piu\')', async () => {
   const { res, calls } = await run({

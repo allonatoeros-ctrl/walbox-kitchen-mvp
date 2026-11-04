@@ -238,6 +238,18 @@ test('attempt failed/sumup_failed: GET=FAILED -> DELETE -> verifica EXPIRED -> s
   assert.equal(res.statusCode, 200);
 });
 
+// Incidente A23 (31/10): SumUp lascia FAILED anche dopo il DELETE. Prima: 409 a ogni tap, cliente bloccato.
+test('attempt failed/sumup_failed: GET=FAILED -> DELETE 4xx -> verifica ancora FAILED -> switch', async () => {
+  const { res, calls } = await run({
+    attempts: [{ ...liveAttempt, status: 'failed', failure_reason: 'sumup_failed' }],
+    sumup: { get: [co('FAILED'), co('FAILED')], del: { status: 409 } },
+  });
+  assert.equal(sumupCalls(calls, 'DELETE').length, 1);
+  assert.equal(rpcCalls(calls, SWITCH).length, 1);
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.outcome, 'switched_to_counter');
+});
+
 test('GET=EXPIRED gia chiuso -> nessun DELETE -> switch', async () => {
   const { res, calls } = await run({ sumup: { get: [co('EXPIRED')] } });
   assert.equal(sumupCalls(calls, 'DELETE').length, 0);
