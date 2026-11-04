@@ -5,6 +5,7 @@ import {
   shouldShowIosInstallGate,
   shouldShowNotificationGate,
 } from '../../lib/webPush';
+import { detectPlatform, installGuideSteps } from '../../lib/installInvite';
 import './NotificationOptIn.css';
 
 // F6 Notification Decision Gate (2026-09-24). Il cliente che atterra su /kitchen/status deve
@@ -37,6 +38,18 @@ function persistDismissedId(orderId) {
   }
 }
 
+// Passi reali per aggiungere Walbox alla Home su iPhone, per il browser in uso (stessi testi della guida del
+// Food Club, src/lib/installInvite.js). Dentro un'app (Instagram, Facebook…) il primo passo è aprire in Safari.
+function iosInstallSteps() {
+  try {
+    const platform = detectPlatform({ ua: navigator.userAgent, maxTouchPoints: navigator.maxTouchPoints || 0 });
+    if (platform.inApp) return { inApp: true, steps: installGuideSteps('ios') };
+    return { inApp: false, steps: installGuideSteps(`ios-${platform.browser}`) };
+  } catch {
+    return { inApp: false, steps: installGuideSteps('ios-safari') };
+  }
+}
+
 export default function NotificationOptIn({ orderId, orderCode }) {
   const { status, activate, deactivate, permission } = useWebPushSubscription();
   const [dismissedIds, setDismissedIds] = useState(readDismissedIds);
@@ -62,6 +75,7 @@ export default function NotificationOptIn({ orderId, orderCode }) {
     if (!shouldShowIosInstallGate({ supported: false, iosNonPwa: isIosNonPwa(), dismissed })) {
       return null;
     }
+    const guide = iosInstallSteps();
     return (
       <div
         className="noti-gate"
@@ -77,6 +91,20 @@ export default function NotificationOptIn({ orderId, orderCode }) {
             Su iPhone aggiungi Walbox alla schermata Home per ricevere l'avviso quando il tuo
             ordine è pronto.
           </p>
+          {guide.inApp && (
+            <p className="noti-gate-body" data-testid="notification-gate-ios-inapp">
+              Sei dentro un'app: prima apri questa pagina in Safari.
+            </p>
+          )}
+          {guide.steps.length > 0 && (
+            <ol
+              className="noti-gate-body"
+              style={{ textAlign: 'left', margin: '0 0 12px', paddingLeft: '22px', display: 'grid', gap: '4px' }}
+              data-testid="notification-gate-ios-steps"
+            >
+              {guide.steps.map((step) => <li key={step}>{step}</li>)}
+            </ol>
+          )}
           <button
             type="button"
             className="noti-gate-secondary noti-gate-secondary--solo"

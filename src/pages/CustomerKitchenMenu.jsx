@@ -36,6 +36,11 @@ import { isEventModeActive, filterEventMenuItems, excludeEventOnlyItems, shouldS
 import { loadCart, saveCart, clearCart, reconcileCartItems } from '../lib/kitchenCart';
 import { formatPrice } from '../lib/kitchenPrice';
 import { kitchenPesiMassimiCombos } from '../data/kitchenMockData';
+import { useFoodClub } from '../hooks/useFoodClub';
+import { cartFoodAmount, isFoodItem, pickVoucherForCart, voucherCartStatus, stampForecast, clubErrorMessage } from '../lib/foodClubRules';
+import { foodClubApi } from '../lib/foodClubApi';
+import ClubMenuStrip from '../components/foodclub/ClubMenuStrip';
+import ClubCartRows, { ClubCartFooter } from '../components/foodclub/ClubCartRows';
 import './CustomerKitchenMenu.css';
 
 // Categorie del menu completo — Figma WALRUS_KITCHEN_MENU_TARGET_V1_APPROVED, Page 4
@@ -182,6 +187,14 @@ function navigateToOrderStatus(orderId) {
 // Cleanup cliente (2026-09-18): stessa retro-compatibilità di CustomerOrderStatus.jsx —
 // una sessione aperta prima del registro `walbox_kitchen_my_order_ids` aveva solo la chiave
 // legacy a id singolo.
+// FOOD CLUB V1: errore del server legato al buono (nessun ordine creato: il cliente riprova senza buono).
+function clubVoucherErrorCode(err) {
+  const raw = [err?.message, err?.details, err?.error, typeof err === 'string' ? err : '']
+    .filter(Boolean).join(' ');
+  const m = raw.match(/voucher_[a-z_]+/);
+  return m ? m[0] : null;
+}
+
 function ownedOrderIdsWithLegacy() {
   const ids = getOwnedOrderIds();
   try {
@@ -255,6 +268,10 @@ export default function CustomerKitchenMenu() {
   // RITIRO AL WALRUS (2026-10-28): orario 'HH:MM' scelto nel checkout. loadCart scarta un orario
   // salvato ormai passato; handleSubmit lo ricontrolla al momento dell'invio.
   const [pickupSlot, setPickupSlot] = useState(restoredCart.pickupSlot ?? null);
+  // FOOD CLUB V1: stato del Club (available=false se flag/campagna spenti o RPC assenti: tutto il Club è inerte).
+  // La scelta "usa il buono" vale solo per questo sacco: niente localStorage, default NON applicato.
+  const club = useFoodClub();
+  const [clubVoucherOn, setClubVoucherOn] = useState(false);
 
   // Banner "hai un ordine attivo" (cleanup cliente, 2026-09-18): deve riflettere lo STATO reale
   // dell'ordine, non solo la presenza di una chiave locale — un cancelled/delivered non deve mai
@@ -546,6 +563,22 @@ export default function CustomerKitchenMenu() {
     dismissed: sideChipDismissed,
   });
 
+  // FOOD CLUB V1 — solo presentazione: buono e timbro li decide il server. Il totale mostrato col buono è una
+  // stima; quello che si paga arriva da result.order.total dopo la creazione dell'ordine.
+  const clubOn = club.available;
+  const clubFood = clubOn
+    ? cartFoodAmount(orderItems.map((o) => ({ itemId: o.baseId || o.id, quantity: o.qty, price: o.price })))
+    : 0;
+  const clubVoucher = clubOn && club.member ? pickVoucherForCart(club.state) : null;
+  const clubVoucherStatus = clubVoucher ? voucherCartStatus({ voucher: clubVoucher, foodAmount: clubFood, total }) : null;
+  const clubVoucherApplied = clubOn && clubVoucherOn && Boolean(clubVoucherStatus?.usable);
+  const clubForecast = clubOn ? stampForecast({ state: club.state, foodAmount: clubFood, withVoucher: clubVoucherApplied }) : null;
+  const toggleClubVoucher = () => {
+    const next = !clubVoucherOn;
+    setClubVoucherOn(next);
+    if (next) foodClubApi.track('voucher_applied_cart', 'cart');
+  };
+
   const handleSubmit = async (lane) => {
     if (orderItems.length === 0 || submitting || submitLockRef.current) return;
     // KITCHEN_OPEN_CLOSE_V1: difesa in profondità — il bottone è già disabilitato quando la
@@ -591,10 +624,25 @@ export default function CustomerKitchenMenu() {
       paymentLane: lane,
     };
     newOrder.clientRequestId = getOrCreateClientRequestId(cartFingerprint(newOrder));
+    // FOOD CLUB V1: il buono va al server come id (v4: riserva atomica + totale scontato lato server). Resta
+    // fuori dall'impronta del carrello: togliere/rimettere il buono non genera un secondo client_request_id.
+    const clubVoucherId = clubVoucherApplied ? clubVoucher.id : null;
+    if (clubVoucherId) newOrder.voucherId = clubVoucherId;
     // "ORDINE PRESO" è mostrato solo se addOrder() conferma una persistenza server reale
     // (id/order_code arrivano dalla RPC): se fallisce, il carrello resta intatto per il retry
     // e non viene mai mostrato un ordine fantasma (F02 — Phantom Order).
     const result = await addOrder(newOrder);
+    const clubVoucherError = !result.ok && clubVoucherId ? clubVoucherErrorCode(result.error) : null;
+    if (clubVoucherError) {
+      // Buono rifiutato dal server: nessun ordine creato. Si toglie il buono, si ricarica lo stato Club e il
+      // cliente riprova senza (stesso carrello, stesso client_request_id).
+      setClubVoucherOn(false);
+      club.refresh();
+      setOrderError(`${clubErrorMessage(clubVoucherError)} Abbiamo tolto il buono: tocca di nuovo per ordinare senza.`);
+      setSubmitting(false);
+      submitLockRef.current = false;
+      return;
+    }
     if (!result.ok) {
       // La cucina puo' essere stata chiusa nel frattempo (race tra apertura pagina e submit): la
       // RPC alza 'kitchen_closed', il messaggio resta specifico invece del generico "riprova".
@@ -659,6 +707,7 @@ export default function CustomerKitchenMenu() {
     setCustomerNote((prev) => (prev ? '' : prev));
     setFulfillmentType((prev) => (prev ? null : prev));
     setPickupSlot((prev) => (prev ? null : prev));
+    setClubVoucherOn(false);
   }, [cartRestored, orderItems.length]);
 
   // ── Main menu ─────────────────────────────────────────────────────────
@@ -741,6 +790,7 @@ export default function CustomerKitchenMenu() {
           {itemCount > 0 && <span className="kh-brand-badge" aria-hidden="true">{itemCount}</span>}
         </button>
       </header>
+      {clubOn && <ClubMenuStrip club={club} />}
 
       {/* Pannello CATEGORIE (hamburger): sopra testata e linguette sticky, sotto il sacco. */}
       {catsOpen && (
@@ -1000,6 +1050,11 @@ export default function CustomerKitchenMenu() {
                   <div className="kitch-drawer-row-content">
                     <div className="kitch-drawer-row-name">{(menuLine ? menuLine.title : o.name).toUpperCase()}</div>
                     {menuLine && <div className="kitch-drawer-row-detail">{menuLine.detail}</div>}
+                    {clubOn && club.member && (
+                      <div className="fc-row-note" data-testid="fc-row-note">
+                        {isFoodItem(o.baseId || o.id) ? 'food · conta per il Club' : 'non conta per il Club'}
+                      </div>
+                    )}
                   </div>
                   <div className="kitch-drawer-row-price">{formatPrice(o.price, true)}</div>
                   <div className="kitch-drawer-row-controls">
@@ -1060,6 +1115,27 @@ export default function CustomerKitchenMenu() {
               issue={checkoutIssue}
               onPay={handleSubmit}
               hasAlcohol={hasAlcohol}
+              clubRows={clubOn ? (
+                <ClubCartRows
+                  club={club}
+                  foodAmount={clubFood}
+                  voucher={clubVoucher}
+                  voucherStatus={clubVoucherStatus}
+                  applied={clubVoucherApplied}
+                  forecast={clubForecast}
+                  onToggleVoucher={toggleClubVoucher}
+                />
+              ) : null}
+              clubFooter={clubOn ? (
+                <ClubCartFooter
+                  club={club}
+                  applied={clubVoucherApplied}
+                  voucherStatus={clubVoucherStatus}
+                  forecast={clubForecast}
+                  total={total}
+                />
+              ) : null}
+              displayTotal={clubVoucherApplied ? clubVoucherStatus.newTotal : undefined}
             />
           </div>
         </div>

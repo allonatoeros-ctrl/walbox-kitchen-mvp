@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { kitchenOrderStatuses } from '../data/kitchenMockData';
 import { useKitchenOrders, getOwnedOrderIds, rememberOwnedOrderId } from '../hooks/useKitchenOrders';
 import CustomerOrderPanel from '../components/kitchen/CustomerOrderPanel';
 import NotificationOptIn from '../components/kitchen/NotificationOptIn';
 import { getOrderStatusLabel, readHiddenOrderIds, hideOrderId, STATUS_PA } from '../lib/kitchenOnlineLane';
+import { useFoodClub } from '../hooks/useFoodClub';
+import ClubOrderStatusCard from '../components/foodclub/ClubOrderStatusCard';
 import './CustomerOrderStatus.css';
 
 function navigate(path) {
@@ -43,6 +45,9 @@ export default function CustomerOrderStatus() {
   // scope cliente: lo storage locale di questa pagina contiene solo gli ordini creati da
   // questo dispositivo, mai la cache della lista ordini del locale lasciata da staff/cassa.
   const { orders } = useKitchenOrders({ scope: 'customer' });
+  // FOOD CLUB V1: card Club per ordine (buono riservato/usato/rilasciato, timbro). Inerte se il Club non c'è.
+  const club = useFoodClub();
+  const [clubOpenedAt] = useState(() => Date.now());
   const [ownedIds, setOwnedIds] = useState(readOwnedOrderIds);
   const [devOpen, setDevOpen] = useState(false);
   // S5: ordini annullati dal sistema (payment_abandoned) che il cliente ha chiuso su QUESTO
@@ -77,6 +82,14 @@ export default function CustomerOrderStatus() {
   // con `?orderId=` in querystring — mai un fallback sul più recente.
   const sumupReturnTargetId = sumupReturnRequested ? resolveUrlOrderId(ownedIds) : null;
 
+  // FOOD CLUB V1: un ordine annullato dallo staff esce dalla vista attiva, ma se aveva il buono il cliente deve
+  // sapere che è tornato nel portafoglio. Solo ordini propri di questo dispositivo, delle ultime 12 ore.
+  const clubReleasedOrders = club.available
+    ? myOrders.filter((o) => o.status === 'cancelled' && Number(o.discountAmount) > 0 && !o.promoCode
+        && clubOpenedAt - new Date(o.createdAt).getTime() < 12 * 3600 * 1000)
+    : [];
+  const clubReleasedCards = clubReleasedOrders.map((o) => <ClubOrderStatusCard key={`fc-${o.id}`} order={o} club={club} />);
+
   return (
     <div className="ost-page notranslate" translate="no">
 
@@ -100,6 +113,7 @@ export default function CustomerOrderStatus() {
           <button className="ost-topbar-back-btn" onClick={() => navigate('/kitchen')}>
             ← Torna al menu
           </button>
+          {clubReleasedCards.length > 0 && <div style={{ marginTop: 24, textAlign: 'left' }}>{clubReleasedCards}</div>}
         </div>
       ) : (
         <>
@@ -119,13 +133,16 @@ export default function CustomerOrderStatus() {
           </div>
           <div className="ost-orders-stack">
           {activeOrders.map((o) => (
-            <CustomerOrderPanel
-              key={o.id}
-              order={o}
-              isReturnTarget={o.id === sumupReturnTargetId}
-              onDismissAbandoned={dismissAbandoned}
-            />
+            <Fragment key={o.id}>
+              <CustomerOrderPanel
+                order={o}
+                isReturnTarget={o.id === sumupReturnTargetId}
+                onDismissAbandoned={dismissAbandoned}
+              />
+              {club.available && <ClubOrderStatusCard order={o} club={club} />}
+            </Fragment>
           ))}
+          {clubReleasedCards}
           </div>
         </>
       )}

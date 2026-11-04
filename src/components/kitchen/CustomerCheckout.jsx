@@ -74,6 +74,11 @@ export default function CustomerCheckout({
   issue,
   onPay,
   hasAlcohol = false,
+  // FOOD CLUB V1 (opzionali): righe Club sopra il nome, chip nel footer e totale stimato col buono.
+  // Senza Club arrivano null/undefined e il checkout resta quello di prima.
+  clubRows = null,
+  clubFooter = null,
+  displayTotal,
 }) {
   const nameRef = useRef(null);
   const noteRef = useRef(null);
@@ -133,6 +138,8 @@ export default function CustomerCheckout({
 
   return (
     <section className="cx" data-testid="customer-checkout" aria-label="Chiudi l'ordine">
+      {/* 0 — FOOD CLUB: buono e previsione timbro dentro .cx, così il footer sticky resta in vista. */}
+      {clubRows}
       {/* 1 — NOME: il protagonista. */}
       <div className="cx-block cx-name" ref={nameBlockRef} data-testid="customer-name-step" onAnimationEnd={(e) => e.currentTarget.classList.remove('cx-shake')}>
         <label className="cx-title" htmlFor="customer-name-input">COME TI CHIAMI?</label>
@@ -301,8 +308,9 @@ export default function CustomerCheckout({
           <div data-testid="pay-lane-step" role="group" aria-labelledby="cx-pay-label">
             <div className="cx-pay-head">
               <span className="cx-title" id="cx-pay-label">COME PAGHI?</span>
-              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>{total.toFixed(2).replace('.', ',')}&nbsp;€</span>
+              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>{(displayTotal ?? total).toFixed(2).replace('.', ',')}&nbsp;€</span>
             </div>
+            {clubFooter}
             <div
               key={ready ? 'ready' : 'idle'}
               className={`cx-status${ready ? ' cx-status--ready' : ''}`}
