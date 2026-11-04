@@ -1,0 +1,99 @@
+== E1
+ signInAnon ok
+  [A] getUser uid=e7146d11 is_anon(user)=true is_anon(jwt)=true phone= ok
+ push insert ok
+  [A] orders visible=2 totals=[10,20] ok
+  [A] push visible=1 ok
+== E2
+ updateUser phone ok user.phone=  new_phone= 393330000001
+ verifyOtp phone_change ok
+  [A after verify (no refresh)] getUser uid=e7146d11 is_anon(user)=false is_anon(jwt)=false phone=393330000001 ok
+  uid unchanged? true
+  claim after verify is_anonymous= false phone= 393330000001
+  [A] orders visible=2 totals=[10,20] ok
+  [A] push visible=1 ok
+  OLD anon token getUser: uid e7146d11 is_anonymous= false phone= 393330000001 ok
+  OLD anon token orders visible= 2 ok
+ refreshSession ok
+  claim after refresh is_anonymous= false phone= 393330000001
+  [A after refresh] getUser uid=e7146d11 is_anon(user)=false is_anon(jwt)=false phone=393330000001 ok
+== E3
+ signInWithOtp ok
+ verifyOtp sms ok
+  [B] getUser uid=e7146d11 is_anon(user)=false is_anon(jwt)=false phone=393330000001 ok
+  B uid == A uid? true
+  [B] orders visible=2 totals=[10,20] ok
+  [B] push visible=1 ok
+  [A still] getUser uid=e7146d11 is_anon(user)=false is_anon(jwt)=false phone=393330000001 ok
+  [A still] orders visible=2 totals=[10,20] ok
+ A refresh after B login ok
+ B refresh ok
+== E4
+  [C] getUser uid=3859f62c is_anon(user)=true is_anon(jwt)=true phone= ok
+  [C] orders visible=1 totals=[99] ok
+ C updateUser(phone existing): ERR{msg="A user with this phone number has already been registered" code=phone_exists status=422} new_phone= undefined
+  [C after attempt] getUser uid=3859f62c is_anon(user)=true is_anon(jwt)=true phone= ok
+ create_merge_ticket ok token len 64
+ C signInWithOtp ok
+ C verifyOtp sms ok
+  [C now] getUser uid=e7146d11 is_anon(user)=false is_anon(jwt)=false phone=393330000001 ok
+  C uid==A uid? true
+  [C before redeem] orders visible=2 totals=[10,20] ok
+ redeem ok moved= 1
+  [C after redeem] orders visible=3 totals=[10,20,99] ok
+  [A after redeem] orders visible=3 totals=[10,20,99] ok
+  [C] push visible=1 ok
+  orphan anon C row: 3859f62c-5405-4dd9-abbd-626df1211ee1|t
+== E5
+ (a) riuso ERR{msg="biglietto gia usato" code=P0001 status=undefined} res= null
+  [E] getUser uid=56bc4130 is_anon(user)=true is_anon(jwt)=true phone= ok
+ (b) scaduto ERR{msg="biglietto scaduto" code=P0001 status=undefined} res= null
+  [F] getUser uid=ec5967da is_anon(user)=true is_anon(jwt)=true phone= ok
+ (c) redeem da anonimo ERR{msg="serve utente non anonimo" code=42501 status=undefined} res= null
+ (c2) redeem da anonimo stesso owner ERR{msg="serve utente non anonimo" code=42501 status=undefined} res= null
+  [H(P2)] getUser uid=0f90b744 is_anon(user)=false is_anon(jwt)=false phone=393330000002 ok
+ (d) altro utente telefono con ticket intercettato ok moved= 1
+  [H after] orders visible=1 totals=[5] ok
+ (e) create da non anonimo ERR{msg="solo utenti anonimi" code=42501 status=undefined} res= null
+ (f) create ruolo anon senza sessione ERR{msg="permission denied for function create_merge_ticket" code=42501 status=undefined}
+ (f) redeem ruolo anon senza sessione ERR{msg="permission denied for function redeem_merge_ticket" code=42501 status=undefined}
+ (g) select diretto tickets da authenticated ERR{msg="permission denied for table identity_merge_tickets" code=42501 status=undefined} rows= undefined
+ (h) token inventato ERR{msg="biglietto non valido" code=P0002 status=undefined}
+ (i) anon con phone pending prova redeem su proprio ticket ERR{msg="serve utente non anonimo" code=42501 status=undefined}
+== E6
+  [D] getUser uid=2714c403 is_anon(user)=true is_anon(jwt)=true phone= ok
+ updateUser ok
+ verifyOtp ok
+  [D after] getUser uid=2714c403 is_anon(user)=false is_anon(jwt)=false phone=393330000003 ok
+  uid unchanged? true
+  [D] orders visible=1 totals=[3] ok
+== E7
+  [Q anon] getUser uid=d7877fff is_anon(user)=true is_anon(jwt)=true phone= ok
+ signInWithOtp new phone on anon client ok
+ verifyOtp ok
+  [Q after] getUser uid=8072118f is_anon(user)=false is_anon(jwt)=false phone=393330000004 ok
+  new uid != anon uid? true
+  [Q after] orders visible=0 totals=[] ok
+  anon orphan: d7877fff-43cc-465d-b18d-ea393d09830c|t|
+== E8
+e7146d11 anon=false phone=393330000001 conf=2026-11-04 00:07:45.372395+00
+  3859f62c anon=true phone=- conf=-
+  56bc4130 anon=true phone=- conf=-
+  ec5967da anon=true phone=- conf=-
+  216b29d6 anon=true phone=- conf=-
+  0f90b744 anon=false phone=393330000002 conf=2026-11-04 00:07:45.685914+00
+  5e5554dd anon=true phone=- conf=-
+  2714c403 anon=false phone=393330000003 conf=2026-11-04 00:07:45.829973+00
+  d7877fff anon=true phone=- conf=-
+  8072118f anon=false phone=393330000004 conf=2026-11-04 00:07:45.973798+00
+orders: e7146d11 total=10
+orders: e7146d11 total=20
+orders: e7146d11 total=99
+orders: 56bc4130 total=7
+orders: 0f90b744 total=5
+orders: 2714c403 total=3
+orders: d7877fff total=1
+tickets: 3859f62c redeemed_by=e7146d11
+tickets: 56bc4130 redeemed_by=-
+tickets: ec5967da redeemed_by=0f90b744
+tickets: 5e5554dd redeemed_by=-
