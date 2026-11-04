@@ -123,3 +123,5 @@ BEGIN
   END;
   RAISE EXCEPTION 'atteso errore "%", nessun errore', p_msg;
 END $$;
+GRANT USAGE ON SCHEMA fc_test TO anon, authenticated;
+GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA fc_test TO anon, authenticated;
