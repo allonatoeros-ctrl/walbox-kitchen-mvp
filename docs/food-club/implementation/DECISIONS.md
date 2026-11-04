@@ -53,3 +53,13 @@ implementata come configurazione prudente o spenta, mai presentata come approvat
 | D-20 | Titolo card notifiche senza buono | variante per stato |
 | D-22 | Nome sotto l'icona | invariato "Walbox Kitchen" |
 | P1 F0 | "Confirm phone" in produzione | **bloccante** per il lancio, non verificabile da qui |
+
+## Aggiunte durante l'implementazione UI (assunzioni, da confermare)
+| ID | Assunzione |
+|---|---|
+| A-11 | Buono nel sacco NON applicato di default: il cliente lo attiva con un tocco |
+| A-12 | Se il server rifiuta il buono, l'ordine non nasce: si toglie il buono e il cliente riprova senza (stesso `client_request_id`) |
+| A-13 | Push Club con TTL 12 h nella Edge Function |
+| A-14 | Club dietro `VITE_FOOD_CLUB_ENABLED` + campagna attiva: con flag spento nessuna chiamata Club (verificato) |
+| A-15 | Icone PWA generate da `favicon.svg` (fulmine viola): estetica da decidere con D-22 |
+| A-16 | Banner Solo "ordini da pagare" con controllo ogni 60 s (solo flag acceso) |

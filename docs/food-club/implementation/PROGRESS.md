@@ -1,24 +1,38 @@
 # Food Club V1 — PROGRESS
 
-Branch `feat/food-club-v1` (locale). Legenda stato: **IMPLEMENTATO E VERIFICATO** · **IMPLEMENTATO MA NON VERIFICABILE QUI** ·
-**PARZIALE** · **BLOCCATO** · **NON INIZIATO**.
+Branch `feat/food-club-v1` (solo locale, non pubblicato). Stati: **IMPLEMENTATO E VERIFICATO** (qui, in locale) ·
+**IMPLEMENTATO MA NON VERIFICABILE QUI** · **PARZIALE** · **BLOCCATO** · **NON INIZIATO**.
+Niente di questo è in produzione: migration non applicate, nessun deploy, flag `VITE_FOOD_CLUB_ENABLED` assente = Club invisibile.
 
-## Fasi
-| Fase | Stato | Note |
+## Matrice F1–F8
+| Fase | Stato | Cosa c'è |
 |---|---|---|
-| F0 Ricognizione | FATTA | branch/commit verificati; base = docs/food-club-pwa + merge origin/main (fix #13); Postgres 16 nativo con shim Supabase (Docker senza daemon) |
-| F1 Base dati e regole | IMPLEMENTATO E VERIFICATO (locale) | migration `20261105100000`; 25 scenari SQL + 4 concorrenza |
-| F2 Ordini e pagamenti | IMPLEMENTATO E VERIFICATO (locale) | migration `20261105101000`; trigger su paid/annullo/abbandono/rimborso, v4 con buono, guardia importi |
-| F3 Identità e privacy | DB: IMPLEMENTATO E VERIFICATO (locale) · OTP reale: NON VERIFICABILE QUI | migration `20261105102000`; hook OTP client; provider Phone/SMS mai attivato |
-| F4 Esperienza cliente | IN CORSO | pagine Club, integrazione menu/sacco/stato ordine |
-| F5 Staff | IN CORSO | pagina /kitchen/club-staff, badge Solo, fine servizio |
-| F6 PWA e notifiche | IN CORSO | manifest/icone/SW, coda + regole in DB, Edge Function (file, mai deploy) |
-| F7 Analytics | DB: IMPLEMENTATO E VERIFICATO (locale) | `food_club_staff_overview` descrittiva + eventi interni deduplicati |
-| F8 Qualità finale | NON INIZIATO | |
+| F0 Ricognizione | FATTA | branch, decisioni, strumenti (Postgres nativo + shim; niente Docker/GoTrue/Deno) |
+| F1 Base dati e regole | IMPLEMENTATO E VERIFICATO | `20261105100000`: food autorevole, `source`, campagne, tessere, timbri, buoni, inviti, messaggi, eventi, RLS |
+| F2 Ordini e pagamenti | IMPLEMENTATO E VERIFICATO | `20261105101000`: v4 con riserva, consumo su paid+charge, rilascio su annullo/abbandono, rimborso, guardia importi, concorrenza |
+| F3 Identità e privacy | PARZIALE | DB verificato (join, consensi, biglietto legato al numero, uscita); client OTP scritto ma OTP reale NON VERIFICABILE QUI; "Confirm phone" in produzione = **BLOCCATO** (gate Eros) |
+| F4 Esperienza cliente | IMPLEMENTATO E VERIFICATO (mock) | pagine `/kitchen/club/*`, striscia menu, buono e timbro nel sacco, card stato ordine; verificato a 390/430 con RPC mock, non su Supabase reale |
+| F5 Staff | IMPLEMENTATO E VERIFICATO (mock) | `/kitchen/club-staff` (6 tab), badge BUONO/DA INCASSARE in Solo, banner da pagare |
+| F6 PWA e notifiche | PARZIALE | manifest/icone/SW, inviti per piattaforma, coda e regole in DB verificate; Edge Function solo file; push reali e installazione reale NON VERIFICABILI QUI |
+| F7 Analytics | IMPLEMENTATO E VERIFICATO | `20261105103000`: panoramica descrittiva, funnel, PWA, notifiche, anomalie; nessun dato sintetico |
+| F8 Qualità | FATTA (con limiti) | vedi TEST-MATRIX; E2E esistenti non conclusivi in questo ambiente |
+
+## Matrice I-1…I-7 (PWA-NOTIFICHE-spec §7)
+| Passo | Stato |
+|---|---|
+| I-1 prefs/log notifiche, touch, eventi | IMPLEMENTATO E VERIFICATO (`food_club_messages`, `food_club_events`, consensi su `food_club_members`, riclaim = touch) |
+| I-2 riclaim al cambio uid, bentornato, esci dal telefono | IMPLEMENTATO; riclaim/bentornato non provati su telefono |
+| I-3 installInvite + guide + card | IMPLEMENTATO E VERIFICATO (unit + screenshot) |
+| I-4 manifest/icone/SW all'avvio | IMPLEMENTATO E VERIFICATO (headless); installazione reale da provare |
+| I-5 Edge Function + coda + job | Edge Function: IMPLEMENTATO MA NON VERIFICABILE QUI; job pg_cron push NON schedulato (serve Vault: gate Eros) |
+| I-6 viste aggregate | IMPLEMENTATO E VERIFICATO |
+| I-7 prova reale push "ordine pronto" | NON INIZIATO (serve telefono: Eros) |
 
 ## Problemi incontrati
-- Docker presente ma senza daemon: niente stack Supabase locale. Soluzione equivalente: Postgres 16 nativo + `tests/db/supabase-shim.sql` (ruoli, `auth.uid()` da `request.jwt.claims`, stub pg_cron/pg_net/vault). Limiti: niente GoTrue (OTP), niente PostgREST/Realtime, niente Edge Functions.
-- Baseline `origin/main` ha già 9 test statici di migration e 5 unit falliti (+1 flaky `sumup-refund-reliability`), e 121 problemi lint: preesistenti, non introdotti qui.
+- Docker senza daemon → Postgres nativo + shim (limiti: niente GoTrue, PostgREST, Realtime, Edge Functions).
+- Baseline `origin/main`: 5 unit + 9 statici falliti, 121 problemi lint, 1 unit flaky: preesistenti.
+- E2E Playwright esistenti rossi anche sul codice di partenza in questo ambiente (race `goto('/')` → `/kitchen`, sezioni dipendenti dall'orario).
+- Le icone PWA derivano da `favicon.svg` (fulmine viola, non il Walrus): da decidere con D-22.
 
 ## Prossima attività
-Integrazione dei lavori UI (4 subagent), build/lint/test, verifica visuale 390/430 e staff desktop, commit.
+Gate di Eros: decisioni aperte (DECISIONS.md), poi prova su Supabase locale vero sul Mac (`e2e-real-local`) delle 4 migration.

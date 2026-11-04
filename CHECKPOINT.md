@@ -1,4 +1,6 @@
 # CHECKPOINT — Walbox Kitchen
+**FOOD CLUB V1 (2026-11-04, sessione cloud):** sviluppo su branch locale `feat/food-club-v1` (non pushato, nulla in produzione,
+migration non applicate). Stato e ripresa: `docs/food-club/implementation/RESUME.md`.
 Aggiornato: 2026-10-31. Storico completo fino a oggi: `docs/checkpoints/archive-2026-10.md`.
 
 **ORA (31/10):** produzione (`main` = `eb96ee7`, deploy Vercel success) = restyling (PR #6), DB solo Kitchen (#7),
