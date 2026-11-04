@@ -614,7 +614,7 @@ export async function createOrderOnServer(order) {
     // (20261028121000), che valida l'orario e delega alla v2. Senza orario resta la v2: MANGIO QUI
     // e PORTO VIA non dipendono dalla migration nuova.
     if (order.paymentLane) {
-      const { paymentLane, clientRequestId, pickupSlot, ...baseOrder } = order;
+      const { paymentLane, clientRequestId, pickupSlot, voucherId, ...baseOrder } = order;
       const rpcArgs = {
         p_venue_id: 'walrus-main',
         p_nickname: order.nickname,
@@ -624,9 +624,13 @@ export async function createOrderOnServer(order) {
         p_payment_lane: paymentLane,
         p_client_request_id: clientRequestId ?? crypto.randomUUID(),
       };
-      const { data, error } = pickupSlot
-        ? await supabase.rpc('kitchen_customer_create_order_v3', { ...rpcArgs, p_pickup_slot: pickupSlot })
-        : await supabase.rpc('kitchen_customer_create_order_v2', rpcArgs);
+      // FOOD CLUB V1: con `voucherId` l'ordine nasce dalla v4 (v3 + riserva atomica del buono e totale già
+      // scontato prima di qualsiasi pagamento). Senza buono il percorso v2/v3 resta identico.
+      const { data, error } = voucherId
+        ? await supabase.rpc('kitchen_customer_create_order_v4', { ...rpcArgs, p_pickup_slot: pickupSlot ?? null, p_voucher_id: voucherId })
+        : pickupSlot
+          ? await supabase.rpc('kitchen_customer_create_order_v3', { ...rpcArgs, p_pickup_slot: pickupSlot })
+          : await supabase.rpc('kitchen_customer_create_order_v2', rpcArgs);
       if (error) throw error;
       if (!data?.id || !data?.order_code || !data?.status) throw new Error('order_creation_invalid_response');
 
@@ -643,6 +647,7 @@ export async function createOrderOnServer(order) {
           serviceDay: data.service_day,
           serviceSequence: data.service_sequence,
           total: Number(data.total),
+          discountAmount: data.discount_amount != null ? Number(data.discount_amount) : 0,
           createdAt: data.created_at,
           fulfillmentType: data.fulfillment_type ?? order.fulfillmentType ?? null,
           pickupSlot: data.pickup_slot ?? pickupSlot ?? null,
@@ -824,15 +829,21 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
     // Login/logout/refresh dopo il mount: prima non esisteva alcuna subscription in questi casi.
     // INITIAL_SESSION e' coperto da getSession() qui sotto; SIGNED_IN dopo il mount => canale +
     // catch-up immediato (il poll lento/hidden non deve ritardare i primi ordini dopo il login).
+    // FOOD CLUB V1 (P5 di F0): anche un cambio di utente (anonimo -> iscritto su altro dispositivo, PWA iPhone)
+    // rifà subito il caricamento, così la lista non resta quella del vecchio uid.
+    let lastUid = null;
     const authSub = supabase.auth.onAuthStateChange?.((event, session) => {
       if (cancelled || event === 'INITIAL_SESSION') return;
       const wasNone = sessionStatusRef.current !== 'authenticated';
+      const uid = session?.user?.id ?? null;
+      const uidChanged = lastUid !== null && uid !== null && uid !== lastUid;
+      if (uid) lastUid = uid;
       applySession(session);
-      if (event === 'SIGNED_IN' && isValidSession(session) && wasNone) scheduler.onOnline();
+      if (event === 'SIGNED_IN' && isValidSession(session) && (wasNone || uidChanged)) scheduler.onOnline();
     });
 
     supabase.auth.getSession()
-      .then(({ data }) => applySession(data?.session ?? null))
+      .then(({ data }) => { lastUid = data?.session?.user?.id ?? lastUid; applySession(data?.session ?? null); })
       .catch(() => applySession(null));
 
     return () => {

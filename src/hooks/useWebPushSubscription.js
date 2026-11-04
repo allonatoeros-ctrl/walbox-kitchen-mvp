@@ -8,6 +8,7 @@ import {
   subscriptionToRow,
   urlBase64ToUint8Array,
 } from '../lib/webPush';
+import { FOOD_CLUB_PUSH_TEXT_VERSION } from '../lib/foodClubConfig';
 
 // status: 'unsupported' | 'not-configured' | 'denied' | 'idle' | 'subscribing' | 'subscribed' | 'error'
 //
@@ -31,25 +32,50 @@ export function useWebPushSubscription() {
   // se esiste una subscription attiva e in tal caso segnala 'subscribed' — così un device già
   // iscritto non rivede mai l'overlay dopo un reload. Nessun prompt: getSubscription non chiede
   // permessi (il permesso resta richiesto SOLO dal click sulla CTA primaria, dentro `activate`).
+  //
+  // FOOD CLUB V1 (A10/A11 della spec PWA): a ogni apertura e dopo ogni cambio di utente (iscrizione col
+  // numero, accesso da altro dispositivo, PWA iPhone) la subscription già concessa viene riassociata
+  // all'uid corrente con la stessa RPC claim, che aggiorna anche last_seen_at (la retention 180 gg non
+  // cancella più la push di chi usa l'app). Solo se esiste già una sessione: mai creare un anonimo qui.
   useEffect(() => {
     if (!isPushSupported()) return undefined;
     let cancelled = false;
-    (async () => {
+    let lastUid = null;
+    const reclaim = async (session) => {
       try {
         if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
         const registration = await navigator.serviceWorker.getRegistration();
         const subscription = registration ? await registration.pushManager.getSubscription() : null;
-        if (subscription && !cancelled) setStatus('subscribed');
+        if (!subscription || cancelled) return;
+        setStatus('subscribed');
+        const uid = session?.user?.id ?? null;
+        if (!uid || uid === lastUid) return;
+        lastUid = uid;
+        const row = subscriptionToRow(subscription);
+        await supabase.rpc('kitchen_push_subscription_claim', {
+          p_venue_id: 'walrus-main',
+          p_endpoint: row.endpoint,
+          p_p256dh: row.p256dh,
+          p_auth_key: row.auth_key,
+          p_user_agent: navigator.userAgent,
+        });
       } catch {
-        // nessuna subscription rilevabile: lo stato iniziale resta valido
+        // nessuna subscription rilevabile o rete assente: lo stato iniziale resta valido
       }
-    })();
+    };
+    supabase.auth.getSession().then(({ data }) => reclaim(data?.session ?? null), () => reclaim(null));
+    const authSub = supabase.auth.onAuthStateChange?.((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'USER_UPDATED') reclaim(session);
+    });
     return () => {
       cancelled = true;
+      authSub?.data?.subscription?.unsubscribe?.();
     };
   }, []);
 
-  const activate = useCallback(async () => {
+  // `scope: 'club'` (FOOD CLUB V1): il tocco su ATTIVA NOTIFICHE della card Club registra la subscription
+  // con consenso agli avvisi tessera/premi (food_club_push_subscribe). Senza scope: comportamento storico.
+  const activate = useCallback(async ({ scope = null } = {}) => {
     if (status === 'unsupported' || status === 'not-configured' || status === 'subscribing') return;
 
     setStatus('subscribing');
@@ -85,14 +111,27 @@ export function useWebPushSubscription() {
       // riassegnare atomicamente un endpoint stale (vedi migration 20260924120000, OWNERSHIP FIX).
       // auth.uid() è preso server-side dentro la RPC: nessun customer_id passato dal client.
       const row = subscriptionToRow(subscription);
-      const { error: claimError } = await supabase.rpc('kitchen_push_subscription_claim', {
-        p_venue_id: 'walrus-main',
-        p_endpoint: row.endpoint,
-        p_p256dh: row.p256dh,
-        p_auth_key: row.auth_key,
-        p_user_agent: navigator.userAgent,
-      });
-      if (claimError) throw claimError;
+      if (scope === 'club') {
+        const { error: clubError } = await supabase.rpc('food_club_push_subscribe', {
+          p_venue_id: 'walrus-main',
+          p_endpoint: row.endpoint,
+          p_p256dh: row.p256dh,
+          p_auth_key: row.auth_key,
+          p_user_agent: navigator.userAgent,
+          p_scope: 'club',
+          p_text_version: FOOD_CLUB_PUSH_TEXT_VERSION,
+        });
+        if (clubError) throw clubError;
+      } else {
+        const { error: claimError } = await supabase.rpc('kitchen_push_subscription_claim', {
+          p_venue_id: 'walrus-main',
+          p_endpoint: row.endpoint,
+          p_p256dh: row.p256dh,
+          p_auth_key: row.auth_key,
+          p_user_agent: navigator.userAgent,
+        });
+        if (claimError) throw claimError;
+      }
 
       setStatus('subscribed');
     } catch (err) {

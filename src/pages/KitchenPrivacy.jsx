@@ -1,4 +1,5 @@
 import './KitchenPrivacy.css';
+import { FOOD_CLUB_ENABLED, FOOD_CLUB_TERMS_VERSION } from '../lib/foodClubConfig';
 
 // Informativa privacy cliente (GDPR art. 13) — Fase 1 privacy, 2026-10-30. Pagina statica, nessuna
 // chiamata di rete. Dati del titolare (2026-10-31): da Virgilio/Pagine Gialle, email scelta da Eros; nessuna
@@ -57,6 +58,24 @@ export default function KitchenPrivacy() {
 
         <h2>COOKIE E PROFILAZIONE</h2>
         <p>Nessun cookie di tracciamento, nessuna pubblicità, nessuna profilazione.</p>
+
+        {FOOD_CLUB_ENABLED && (
+          <section id="food-club" data-testid="privacy-food-club">
+            <h2>WALRUS FOOD CLUB (SE TI ISCRIVI)</h2>
+            <p className="kpv-updated">
+              Bozza da validare con il consulente privacy prima del lancio · versione testi {FOOD_CLUB_TERMS_VERSION}
+            </p>
+            <ul>
+              <li><strong>Numero di telefono</strong>: lo verifichiamo con un codice SMS e diventa la tua tessera. Serve per ritrovare timbri e buoni anche su un altro telefono. Allo staff compaiono solo le ultime 3 cifre.</li>
+              <li><strong>Tessera, timbri e buoni</strong>: le visite valide (ordini dall'app, pagati, con almeno 10 € di cibo), i buoni ottenuti, riservati e usati. Base: esecuzione del regolamento del Club che accetti iscrivendoti.</li>
+              <li><strong>Inviti</strong>, se il locale li attiva: chi ti ha invitato e se hai completato il primo ordine.</li>
+              <li><strong>Avvisi tessera e premi</strong> (timbro, buono sbloccato, buono in scadenza): solo se tocchi ATTIVA NOTIFICHE; li spegni quando vuoi dalle Preferenze.</li>
+              <li><strong>Promo e novità</strong>: solo con un consenso separato e facoltativo (marketing), registrato con data e ora e revocabile in ogni momento. Senza questo consenso non ricevi promozioni.</li>
+              <li><strong>Misure interne</strong>: eventi tecnici anonimi nel contenuto (es. «invito installazione mostrato», «notifica aperta») legati alla tessera, per capire se il Club funziona. Nessuno strumento di analytics esterno, nessuna pubblicità.</li>
+              <li><strong>Conservazione</strong>: finché resti iscritto; i messaggi del Club 180 giorni, le misure interne 400 giorni. Puoi lasciare il Club dalle Preferenze; per cancellare tutto scrivi a <EmailLink />.</li>
+            </ul>
+          </section>
+        )}
 
         <h2>I TUOI DIRITTI</h2>
         <p>
