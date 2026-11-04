@@ -20,7 +20,8 @@ const indexHtml = readFileSync(join(ROOT, 'index.html'), 'utf8');
 
 test('manifest.webmanifest è JSON valido con i campi minimi PWA', () => {
   const manifest = JSON.parse(manifestRaw);
-  assert.equal(manifest.start_url, '/kitchen');
+  // FOOD CLUB V1 (PWA spec I-4): start_url marcato per riconoscere l'apertura dalla Home.
+  assert.equal(manifest.start_url, '/kitchen?src=home');
   assert.equal(manifest.display, 'standalone');
   assert.ok(Array.isArray(manifest.icons) && manifest.icons.length > 0, 'serve almeno un\'icona');
 });
