@@ -105,12 +105,36 @@
   font: 600 14px var(--poster-font-body); text-transform: none; letter-spacing: normal; cursor: pointer;
 }
 
-/* Footer di pagamento: chip Club + totale barrato, compatti (i bottoni PAGO restano in vista). */
-.cx .fc-foot-club { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 0 2px; }
-.cx .fc-total-strike { display: block; text-align: right; font: 600 12px/1.3 var(--poster-font-body); color: var(--poster-muted); }
-.cx .fc-total-strike s { margin-right: 6px; }
-.cx .fc-total-strike b { color: var(--poster-yellow); }
-.cx .fc-total-note { font: 500 11px/1.3 var(--poster-font-body); color: var(--poster-muted); }
+/* Footer di pagamento: riepilogo economico (3 righe) separato dal blocco timbro; i bottoni PAGO restano in vista. */
+.cx .fc-sum { margin: 6px 0 4px; padding: 6px 10px 6px; border: 1px solid var(--poster-yellow); border-radius: 6px; background: var(--poster-panel); }
+.cx .fc-sum-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font: 600 13px/1.5 var(--poster-font-body); color: var(--poster-ink); }
+.cx .fc-sum-row b { font-family: var(--poster-font-display); font-weight: 400; font-size: 20px; letter-spacing: var(--poster-track-sm); white-space: nowrap; }
+.cx .fc-sum-row--disc { color: var(--poster-yellow); }
+.cx .fc-sum-row--due { margin-top: 2px; padding-top: 4px; border-top: 1px dashed var(--poster-line); text-transform: uppercase; }
+.cx .fc-sum-row--due span { font-family: var(--poster-font-display); font-size: 22px; letter-spacing: var(--poster-track-sm); }
+.cx .fc-sum-row--due b { font-size: 30px; color: var(--poster-yellow); }
+.cx .fc-foot-club { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 2px; padding-left: 8px; border-left: 3px solid var(--poster-line); }
+.cx .fc-foot-club-label { font: 600 11px/1 var(--poster-font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--poster-muted); }
+.cx .fc-total-note { margin-top: 2px; font: 500 11px/1.3 var(--poster-font-body); color: var(--poster-muted); }
+
+/* Schermi bassi (es. 320x568): col buono applicato il footer agganciato arrivava al 52% dello schermo.
+   Compatto SOLO quando contiene il riepilogo del buono (:has) e l'altezza e' <= 600px: il totale "Da pagare" resta
+   il numero piu' grande, lo sconto resta una riga leggibile, i PAGO restano >= 48px. Il checkout senza buono non cambia. */
+@media (max-height: 600px) {
+  .cx .cx-footer:has(.fc-sum) { padding-top: 6px; padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  .cx .cx-footer:has(.fc-sum) .cx-title { font-size: 20px; }
+  .cx .cx-footer:has(.fc-sum) .fc-sum { margin: 4px 0 4px; padding: 3px 8px 4px; }
+  .cx .cx-footer:has(.fc-sum) .fc-sum-row { font-size: 12px; line-height: 1.35; }
+  .cx .cx-footer:has(.fc-sum) .fc-sum-row b { font-size: 17px; }
+  .cx .cx-footer:has(.fc-sum) .fc-sum-row--due { margin-top: 1px; padding-top: 2px; }
+  .cx .cx-footer:has(.fc-sum) .fc-sum-row--due span { font-size: 18px; }
+  .cx .cx-footer:has(.fc-sum) .fc-sum-row--due b { font-size: 26px; }
+  .cx .cx-footer:has(.fc-sum) .fc-total-note { font-size: 10px; line-height: 1.25; margin-top: 1px; }
+  .cx .cx-footer:has(.fc-sum) .cx-status { margin: 0 0 4px; font-size: 11px; }
+  .cx .cx-footer:has(.fc-sum) .cx-pay-grid { gap: 8px; }
+  .cx .cx-footer:has(.fc-sum) .cx-pay { min-height: 48px; padding: 4px 10px; }
+  .cx .cx-footer:has(.fc-sum) .cx-pay-title { font-size: 21px; }
+}
 
 /* Riga del sacco: food conta / bevande no (solo iscritti). */
 .kitch-drawer .fc-row-note { margin-top: 2px; font-size: 12px; line-height: 1.25; color: var(--poster-muted); }

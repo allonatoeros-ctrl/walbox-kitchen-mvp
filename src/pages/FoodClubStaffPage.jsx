@@ -5,7 +5,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getStaffSession, onAuthStateChange, isKitchenStaff } from '../lib/supabaseAuth';
 import { foodClubStaffApi } from '../lib/foodClubApi';
-import { formatEuro, formatShortDate } from '../lib/foodClubRules';
+import { formatEuro, formatShortDate, staffCycleLabel, staffTotalVisits } from '../lib/foodClubRules';
 import { serviceNightWindow, shiftServiceNight } from '../lib/kitchenServiceRules';
 import './FoodClubStaffPage.css';
 
@@ -85,9 +85,9 @@ function ErrorBox({ error, onRetry }) {
     </div>
   );
 }
-function Kpi({ label, value, sub, tone }) {
+function Kpi({ label, value, sub, tone, big = false }) {
   return (
-    <div className="fcs-kpi">
+    <div className={`fcs-kpi${big ? ' fcs-kpi--big' : ''}`}>
       <span className="fcs-kpi-label">{label}</span>
       <span className={`fcs-kpi-value${tone ? ` fcs-kpi-value--${tone}` : ''}`}>{value}</span>
       {sub && <span className="fcs-kpi-sub">{sub}</span>}
@@ -142,6 +142,8 @@ function Overview() {
     members: d.members, visits: d.visits, vouchers: d.vouchers, referrals: d.referrals,
     funnel: d.funnel, pwa: d.pwa, notifications: d.notifications,
   }) === 0;
+  const anomalyCount = (n(d?.anomalies?.unpaid_with_voucher) > 0 ? n(d.anomalies.unpaid_with_voucher) : 0)
+    + (n(d?.anomalies?.food_club_errors) > 0 ? n(d.anomalies.food_club_errors) : 0);
 
   return (
     <>
@@ -166,61 +168,72 @@ function Overview() {
               Il Club non ha ancora iscritti.<br /><small>Appena qualcuno si iscrive, qui compaiono i numeri reali.</small>
             </div>
           ) : (
-            <>
-              <div className="fcs-kpis">
-                <Kpi label="Iscritti attivi" value={n(d.members?.total_active)} sub={`+${n(d.members?.new_in_range)} nel periodo · ${n(d.members?.left_total)} usciti`} />
-                <Kpi label="Visite riconosciute" value={n(d.visits?.stamps)} tone="green" sub={`${n(d.visits?.members_with_2plus_nights)} iscritti con 2+ serate`} />
-                <Kpi label="Tessere completate" value={n(d.visits?.cards_completed)} sub={`${n(d.visits?.members_with_visit)} iscritti con almeno 1 visita`} />
-                <Kpi label="Buoni emessi" value={n(d.vouchers?.issued)} tone="yellow" sub={`${n(d.vouchers?.available_now)} validi · ${n(d.vouchers?.reserved_now)} riservati ora`} />
-                <Kpi label="Buoni usati" value={n(d.vouchers?.used)} tone="green" sub={`${n(d.vouchers?.expired)} scaduti · ${n(d.vouchers?.revoked)} revocati`} />
-                <Kpi label="Sconti concessi" value={formatEuro(d.vouchers?.discount_total)} tone="yellow" sub="buoni usati nel periodo" />
-                <Kpi label="Ordini pagati da iscritti" value={n(d.orders?.paid_by_members)} sub={`su ${n(d.orders?.paid_total)} pagati nel periodo`} />
-                <Kpi label="Ordini dall’app" value={n(d.orders?.paid_customer_app)} sub={`${n(d.orders?.paid_staff)} al banco · ${n(d.orders?.paid_unknown_source)} senza fonte`} />
-              </div>
-
-              <div className="fcs-section-title">Iscrizione (utenti distinti)</div>
-              <Bars rows={[
-                ['Vista intro Club', d.funnel?.club_intro_view],
-                ['Inizio iscrizione', d.funnel?.join_start],
-                ['SMS inviato', d.funnel?.otp_sent],
-                ['Iscrizione completata', d.funnel?.join_done],
-                ['Accesso da altro dispositivo', d.funnel?.login_done],
-                ['Buono applicato al carrello', d.funnel?.voucher_applied_cart],
-              ]} />
-
-              <div className="fcs-cols">
-                <div>
-                  <div className="fcs-section-title">App e notifiche</div>
-                  <Bars rows={[
-                    ['Invito installazione', d.pwa?.invite_shown],
-                    ['Tocco “installa”', d.pwa?.install_cta_click],
-                    ['App installata (Android)', d.pwa?.app_installed_android],
-                    ['Prima apertura da app', d.pwa?.first_standalone_open],
-                    ['Notifiche permesse', d.pwa?.push_granted],
-                    ['Notifiche negate', d.pwa?.push_denied],
-                  ]} />
-                </div>
-                <div>
-                  <div className="fcs-section-title">Notifiche Club</div>
-                  <Bars rows={[
-                    ['In coda', d.notifications?.queued],
-                    ['Inviate', d.notifications?.sent],
-                    ['Aperte', d.notifications?.opened],
-                    ['Saltate', d.notifications?.skipped],
-                    ['Fallite', d.notifications?.failed],
-                  ]} />
-                </div>
-              </div>
-            </>
+            <div className="fcs-kpis fcs-kpis--main" data-testid="fcs-kpis-main">
+              <Kpi big label="Iscritti attivi" value={n(d.members?.total_active)} sub={`+${n(d.members?.new_in_range)} nel periodo · ${n(d.members?.left_total)} usciti`} />
+              <Kpi big label="Visite riconosciute" value={n(d.visits?.stamps)} tone="green" sub={`${n(d.visits?.members_with_2plus_nights)} iscritti con 2+ serate`} />
+              <Kpi big label="Buoni utilizzati" value={n(d.vouchers?.used)} tone="green" sub={`${n(d.vouchers?.expired)} scaduti · ${n(d.vouchers?.revoked)} revocati`} />
+              <Kpi big label="Sconti concessi" value={formatEuro(d.vouchers?.discount_total)} tone="yellow" sub="buoni usati nel periodo" />
+            </div>
           )}
 
-          <div className="fcs-section-title">Da tenere d’occhio</div>
-          <div className="fcs-kpis fcs-kpis--3">
-            <Kpi label="Ordini con buono non pagati" value={n(d.anomalies?.unpaid_with_voucher)} tone={n(d.anomalies?.unpaid_with_voucher) ? 'red' : 'green'} sub="vedi Fine servizio" />
-            <Kpi label="Errori Club registrati" value={n(d.anomalies?.food_club_errors)} tone={n(d.anomalies?.food_club_errors) ? 'red' : 'green'} sub="nel periodo" />
-            <Kpi label="Inviti" value={n(d.referrals?.rewarded)} sub={`${n(d.referrals?.pending)} in attesa · ${n(d.referrals?.capped)} oltre il limite`} />
-          </div>
-          <p className="fcs-help">Numeri descrittivi sugli iscritti: senza un gruppo di confronto non dicono quanti ritorni ha “creato” il Club (D-8).</p>
+          <details className="fcs-more" data-testid="fcs-more">
+            <summary>
+              <span>ALTRE STATISTICHE</span>
+              {anomalyCount > 0 && <span className="fcs-more-badge" data-testid="fcs-more-badge">{anomalyCount} da controllare</span>}
+            </summary>
+            {!isEmpty && (
+              <>
+                <div className="fcs-kpis">
+                  <Kpi label="Tessere completate" value={n(d.visits?.cards_completed)} sub={`${n(d.visits?.members_with_visit)} iscritti con almeno 1 visita`} />
+                  <Kpi label="Buoni emessi" value={n(d.vouchers?.issued)} tone="yellow" sub={`${n(d.vouchers?.available_now)} validi · ${n(d.vouchers?.reserved_now)} riservati ora`} />
+                  <Kpi label="Ordini pagati da iscritti" value={n(d.orders?.paid_by_members)} sub={`su ${n(d.orders?.paid_total)} pagati nel periodo`} />
+                  <Kpi label="Ordini dall’app" value={n(d.orders?.paid_customer_app)} sub={`${n(d.orders?.paid_staff)} al banco · ${n(d.orders?.paid_unknown_source)} senza fonte`} />
+                </div>
+
+                <div className="fcs-section-title">Iscrizione (utenti distinti)</div>
+                <Bars rows={[
+                  ['Vista intro Club', d.funnel?.club_intro_view],
+                  ['Inizio iscrizione', d.funnel?.join_start],
+                  ['SMS inviato', d.funnel?.otp_sent],
+                  ['Iscrizione completata', d.funnel?.join_done],
+                  ['Accesso da altro dispositivo', d.funnel?.login_done],
+                  ['Buono applicato al carrello', d.funnel?.voucher_applied_cart],
+                ]} />
+
+                <div className="fcs-cols">
+                  <div>
+                    <div className="fcs-section-title">App e notifiche</div>
+                    <Bars rows={[
+                      ['Invito installazione', d.pwa?.invite_shown],
+                      ['Tocco “installa”', d.pwa?.install_cta_click],
+                      ['App installata (Android)', d.pwa?.app_installed_android],
+                      ['Prima apertura da app', d.pwa?.first_standalone_open],
+                      ['Notifiche permesse', d.pwa?.push_granted],
+                      ['Notifiche negate', d.pwa?.push_denied],
+                    ]} />
+                  </div>
+                  <div>
+                    <div className="fcs-section-title">Notifiche Club</div>
+                    <Bars rows={[
+                      ['In coda', d.notifications?.queued],
+                      ['Inviate', d.notifications?.sent],
+                      ['Aperte', d.notifications?.opened],
+                      ['Saltate', d.notifications?.skipped],
+                      ['Fallite', d.notifications?.failed],
+                    ]} />
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="fcs-section-title">Da tenere d’occhio</div>
+            <div className="fcs-kpis fcs-kpis--3">
+              <Kpi label="Ordini con buono non pagati" value={n(d.anomalies?.unpaid_with_voucher)} tone={n(d.anomalies?.unpaid_with_voucher) ? 'red' : 'green'} sub="vedi Fine servizio" />
+              <Kpi label="Errori Club registrati" value={n(d.anomalies?.food_club_errors)} tone={n(d.anomalies?.food_club_errors) ? 'red' : 'green'} sub="nel periodo" />
+              <Kpi label="Inviti" value={n(d.referrals?.rewarded)} sub={`${n(d.referrals?.pending)} in attesa · ${n(d.referrals?.capped)} oltre il limite`} />
+            </div>
+            <p className="fcs-help">Numeri descrittivi sugli iscritti: senza un gruppo di confronto non dicono quanti ritorni ha “creato” il Club (D-8).</p>
+          </details>
         </>
       )}
     </>
@@ -393,13 +406,14 @@ function Members() {
       {q.status !== 'error' && q.data && (
         <Table
           testId="fcs-members"
-          head={['Nome', 'Telefono', 'Iscritto', 'Timbri', 'Tessera scade', 'Buoni (validi / usati)', 'Ultimo ordine', 'Promo', 'Avvisi', 'Stato']}
+          head={['Nome', 'Telefono', 'Iscritto', 'Giro attuale', 'Visite totali', 'Tessera scade', 'Buoni (validi / usati)', 'Ultimo ordine', 'Promo', 'Avvisi', 'Stato']}
           empty={search ? 'Nessun iscritto trovato.' : 'Il Club non ha ancora iscritti.'}
           rows={rows.map((m) => [
             m.display_name || '—',
             m.phone_masked || '—',
             formatShortDate(m.joined_at),
-            n(m.stamps_open),
+            staffCycleLabel(m),
+            staffTotalVisits(m),
             m.card_expires_at ? formatShortDate(m.card_expires_at) : '—',
             `${n(m.vouchers_available)} / ${n(m.vouchers_used)}`,
             m.last_order_at ? formatShortDate(m.last_order_at) : '—',

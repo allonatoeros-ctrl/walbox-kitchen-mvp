@@ -134,7 +134,7 @@ export default function ClubOrderStatusCard({ order, club }) {
       <div>
         {voucher.status === 'used'
           ? `Buono da ${value} usato su questo ordine.`
-          : `Buono applicato all’ordine #${code} — si conferma quando paghi. Se l’ordine viene annullato, torna disponibile.`}
+          : `Buono applicato all’ordine #${code} — si conferma quando paghi. Resta riservato finché il pagamento non è chiuso del tutto; se l’ordine viene annullato senza alcun pagamento, torna disponibile.`}
       </div>
     </div>
   ) : null;

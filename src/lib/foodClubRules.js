@@ -106,6 +106,50 @@ export function cardProgress(state, now = new Date()) {
   };
 }
 
+// Vista della tessera per la UI (solo presentazione). Usa `last_completed_card` quando il server lo manda:
+// dopo il 2° timbro la card "open" non c'è più, ma il cliente deve vedere 2/2 e il premio.
+// Senza il campo (DB vecchio) il risultato è identico a cardProgress: mode 'plain'.
+// mode: 'plain' | 'reward' (giro chiuso, buono spendibile) | 'restart' (giro chiuso, buono usato, nuovo giro da aprire)
+//       | 'newCycle' (card open con timbri dopo una completata)
+export function cardView(state, now = new Date()) {
+  const cp = cardProgress(state, now);
+  const lc = state?.last_completed_card ?? null;
+  const lcVoucher = lc?.voucher ?? null;
+  const lcStatus = lcVoucher ? effectiveVoucherStatus(lcVoucher, now) : null;
+  const reward = lcStatus === 'available' || lcStatus === 'reserved' ? lcVoucher : null;
+  const openStamps = state?.card && !state.card.expired ? state.card.stamps ?? [] : [];
+  let mode = 'plain';
+  if (lc && openStamps.length > 0) mode = 'newCycle';
+  else if (lc && reward) mode = 'reward';
+  else if (lc && lcStatus === 'used') mode = 'restart';
+  if (mode === 'reward') {
+    const stamps = lc.stamps ?? [];
+    return { ...cp, mode, reward, stamps, count: stamps.length, expiresAt: null, daysLeft: null,
+      orderStamps: stamps.filter((x) => x.kind === 'order'), hasWelcome: stamps.some((x) => x.kind === 'welcome') };
+  }
+  return { ...cp, mode, reward: mode === 'newCycle' ? reward : null, stamps: openStamps };
+}
+
+// Storico "Premi conquistati": buoni già usati (non spendibili), più recenti prima.
+export function rewardHistory(state, now = new Date()) {
+  const byId = new Map();
+  for (const v of [...(state?.vouchers ?? []), state?.last_completed_card?.voucher].filter(Boolean)) {
+    if (effectiveVoucherStatus(v, now) === 'used') byId.set(v.id ?? v.code, v);
+  }
+  return [...byId.values()].sort((a, b) => new Date(b.used_at || b.issued_at) - new Date(a.used_at || a.issued_at));
+}
+
+// Vista staff ISCRITTI: "giro attuale" e "visite totali". Campi nuovi assenti (DB vecchio): si ricade su stamps_open / '—'.
+export function staffCycleLabel(m, required = DEFAULT_RULES.stamps_required) {
+  if (m?.cycle_completed) return 'completato';
+  const n = Number(m?.cycle_stamps ?? m?.stamps_open) || 0;
+  return `${n}/${required}`;
+}
+
+export function staffTotalVisits(m) {
+  return m?.total_visits == null ? '—' : Number(m.total_visits) || 0;
+}
+
 export function formatEuro(n) {
   return `${(Number(n) || 0).toFixed(2).replace('.', ',')} €`;
 }
@@ -150,4 +194,33 @@ export function clubErrorMessage(code) {
   };
   const key = Object.keys(map).find((k) => String(code ?? '').includes(k));
   return key ? map[key] : 'Qualcosa non ha funzionato. Riprova.';
+}
+
+// ---- Animazione "premio conquistato": si riproduce una sola volta per buono, per dispositivo. ----
+// Lo storage è iniettato (localStorage nel browser). Se è bloccato/assente: nessun errore e nessuna animazione.
+export function celebrationKey(voucherId) {
+  return voucherId ? `walbox_fc_celebrated_${voucherId}` : null;
+}
+
+export function shouldCelebrate(storage, voucherId) {
+  const key = celebrationKey(voucherId);
+  if (!key) return false;
+  try {
+    if (!storage) return false;
+    return storage.getItem(key) == null;
+  } catch {
+    return false;
+  }
+}
+
+export function markCelebrated(storage, voucherId) {
+  const key = celebrationKey(voucherId);
+  if (!key) return false;
+  try {
+    if (!storage) return false;
+    storage.setItem(key, '1');
+    return true;
+  } catch {
+    return false;
+  }
 }

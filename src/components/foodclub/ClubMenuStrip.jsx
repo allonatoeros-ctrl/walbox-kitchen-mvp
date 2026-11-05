@@ -3,7 +3,7 @@
 // della tessera. Invisibile se il Club non è disponibile (flag spento, campagna spenta, RPC assenti).
 import { useState } from 'react';
 import { spaNavigate } from '../../lib/spaNavigate';
-import { cardProgress, formatShortDate, pickVoucherForCart } from '../../lib/foodClubRules';
+import { cardView, formatShortDate, pickVoucherForCart } from '../../lib/foodClubRules';
 import './ClubCheckout.css';
 
 const STRIP_CLOSED_KEY = 'walbox_fc_menu_strip_closed';
@@ -62,7 +62,7 @@ export default function ClubMenuStrip({ club }) {
     );
   }
 
-  const progress = cardProgress(state);
+  const progress = cardView(state);
   const voucher = pickVoucherForCart(state);
   const goTessera = () => spaNavigate('/kitchen/club/tessera');
 

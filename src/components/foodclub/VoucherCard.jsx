@@ -19,7 +19,7 @@ export default function VoucherCard({ voucher, withCta = false, onUse = null, ct
   const left = daysLeft(voucher.expires_at);
   const minFood = Number(voucher.min_food) || DEFAULT_RULES.voucher_min_food;
   const amount = amountLabel(voucher.value);
-  const dimmed = st === 'used' ? ' fc-voucher--used' : (st === 'expired' || st === 'revoked') ? ' fc-voucher--expired' : st === 'reserved' ? ' fc-voucher--reserved' : '';
+  const dimmed = st === 'used' ? ' fc-voucher--used' : (st === 'expired' || st === 'revoked') ? ' fc-voucher--expired' : st === 'reserved' ? ' fc-voucher--reserved' : st === 'available' ? ' fc-voucher--available' : '';
 
   const chips = [];
   if (st === 'reserved') chips.push(<span key="s" className="fc-chip">RISERVATO{voucher.reserved_order_code ? ` · #${voucher.reserved_order_code}` : ''}</span>);
@@ -27,7 +27,7 @@ export default function VoucherCard({ voucher, withCta = false, onUse = null, ct
   else if (st === 'expired') chips.push(<span key="s" className="fc-chip fc-chip--line">SCADUTO</span>);
   else if (st === 'revoked') chips.push(<span key="s" className="fc-chip fc-chip--line">REVOCATO</span>);
   else {
-    chips.push(<span key="s" className="fc-chip fc-chip--white">{released ? 'RILASCIATO' : 'DISPONIBILE'}</span>);
+    chips.push(<span key="s" className="fc-chip fc-chip--white">DISPONIBILE</span>);
     if (left != null && left <= 7) chips.push(<span key="d" className="fc-chip">{left <= 0 ? 'SCADE OGGI' : `SCADE TRA ${left} GG`}</span>);
     if (voucher.source === 'referral') chips.push(<span key="r" className="fc-chip fc-chip--line">DA INVITO</span>);
   }
@@ -43,7 +43,7 @@ export default function VoucherCard({ voucher, withCta = false, onUse = null, ct
   } else if (st === 'reserved') {
     foot = <span>Buono applicato all’ordine {orderNo(voucher.reserved_order_code)} — si conferma quando paghi · scade il {expires}</span>;
   } else if (released) {
-    foot = <><span>L’ordine è stato annullato o non pagato: il buono è di nuovo disponibile.<br />Valido fino al <b style={{ fontSize: 20 }}>{expires}</b></span><b>{voucher.code}</b></>;
+    foot = <><span>Il tuo buono da {amount} è di nuovo disponibile. Puoi utilizzarlo sul prossimo ordine!<br />Valido fino al <b style={{ fontSize: 20 }}>{expires}</b></span><b>{voucher.code}</b></>;
   } else {
     foot = <><span>valido fino al <b style={{ fontSize: 20 }}>{expires}</b></span><b>{voucher.code}</b></>;
   }
@@ -66,7 +66,7 @@ export default function VoucherCard({ voucher, withCta = false, onUse = null, ct
         ) : null}
         {st === 'reserved' ? (
           <div className="fc-voucher-foot" style={{ paddingTop: 0 }}>
-            <span>Se l’ordine non viene pagato o viene annullato, il buono torna disponibile con la stessa scadenza.</span>
+            <span>Il buono resta riservato finché il pagamento non è chiuso del tutto. Se l’ordine viene annullato senza alcun pagamento, torna disponibile con la stessa scadenza.</span>
           </div>
         ) : null}
       </div>

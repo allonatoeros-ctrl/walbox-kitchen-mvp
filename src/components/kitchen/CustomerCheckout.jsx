@@ -308,7 +308,10 @@ export default function CustomerCheckout({
           <div data-testid="pay-lane-step" role="group" aria-labelledby="cx-pay-label">
             <div className="cx-pay-head">
               <span className="cx-title" id="cx-pay-label">COME PAGHI?</span>
-              <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>{(displayTotal ?? total).toFixed(2).replace('.', ',')}&nbsp;€</span>
+              {/* Con il buono applicato il riepilogo "Da pagare" qui sotto è l'unico totale (niente doppione). */}
+              {displayTotal === undefined && (
+                <span className="cx-total" data-testid="checkout-total"><small>TOTALE</small>{total.toFixed(2).replace('.', ',')}&nbsp;€</span>
+              )}
             </div>
             {clubFooter}
             <div

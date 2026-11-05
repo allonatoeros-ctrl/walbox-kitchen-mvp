@@ -109,11 +109,11 @@ export default function ClubCartRows({ club, foodAmount, voucher, voucherStatus,
   return <div className="fc-cx-club" data-testid="fc-cart-club">{voucherRow}{stampRow}</div>;
 }
 
-// Footer di pagamento: chip compatte + totale lordo barrato quando il buono è applicato.
+// Footer di pagamento: con il buono applicato un riepilogo a 3 righe (valori già calcolati dal genitore, nessun ricalcolo),
+// poi un blocco separato e secondario con i chip del timbro.
 export function ClubCartFooter({ club, applied, voucherStatus, forecast, total }) {
   const required = Number(club?.state?.campaign?.stamps_required) || 2;
   const chips = [];
-  if (applied) chips.push(<span key="v" className="fc-chip" data-testid="fc-chip-voucher">BUONO −{euroShort(voucherStatus.discount)}</span>);
   if (forecast?.willStamp) {
     chips.push(
       <span key="s" className="fc-chip fc-chip--line" data-testid="fc-chip-stamp">
@@ -125,14 +125,28 @@ export function ClubCartFooter({ club, applied, voucherStatus, forecast, total }
   return (
     <>
       {applied && (
-        <span className="fc-total-strike" data-testid="fc-total-strike">
-          <s>{formatEuro(total)}</s><b>buono Club −{formatEuro(voucherStatus.discount)}</b>
-        </span>
+        <div className="fc-sum" data-testid="fc-total-strike">
+          <div className="fc-sum-row">
+            <span>Totale ordine</span>
+            <b data-testid="fc-sum-gross">{formatEuro(total)}</b>
+          </div>
+          <div className="fc-sum-row fc-sum-row--disc" data-testid="fc-chip-voucher">
+            <span>Sconto Food Club</span>
+            <b data-testid="fc-sum-discount">−{formatEuro(voucherStatus.discount)}</b>
+          </div>
+          <div className="fc-sum-row fc-sum-row--due">
+            <span>Da pagare</span>
+            <b data-testid="fc-sum-due">{formatEuro(voucherStatus.newTotal)}</b>
+          </div>
+          <div className="fc-total-note">importo confermato dal Walrus al momento dell’ordine</div>
+        </div>
       )}
-      <div className="fc-foot-club">
-        {chips}
-        {applied && <span className="fc-total-note">importo confermato dal Walrus al momento dell’ordine</span>}
-      </div>
+      {chips.length > 0 && (
+        <div className="fc-foot-club" data-testid="fc-foot-stamp">
+          <span className="fc-foot-club-label">Timbro</span>
+          {chips}
+        </div>
+      )}
     </>
   );
 }

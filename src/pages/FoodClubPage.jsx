@@ -8,7 +8,7 @@ import { useWebPushSubscription } from '../hooks/useWebPushSubscription';
 import { foodClubApi } from '../lib/foodClubApi';
 import { FOOD_CLUB_BASE_PATH } from '../lib/foodClubConfig';
 import {
-  availableVouchers, cardProgress, clubErrorMessage, DEFAULT_RULES, effectiveVoucherStatus, formatShortDate,
+  availableVouchers, cardProgress, cardView, clubErrorMessage, DEFAULT_RULES, effectiveVoucherStatus, formatShortDate, rewardHistory,
 } from '../lib/foodClubRules';
 import { detectPlatform } from '../lib/installInvite';
 import { consumeFirstStandaloneOpen, isStandalone } from '../lib/pwaInstall';
@@ -418,8 +418,9 @@ function Tessera({ club }) {
   const state = club.state;
   const r = rules(state);
   const v = [...availableVouchers(state)].sort((a, b) => new Date(a.expires_at) - new Date(b.expires_at))[0] ?? null;
-  const stamps = [...(state?.card && !state.card.expired ? state.card.stamps ?? [] : [])]
-    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const view = cardView(state);
+  const stamps = [...view.stamps].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  const history = rewardHistory(state);
   return (
     <Page title="Tessera" back={BASE}>
       <div className="fc-card" style={{ marginTop: 18 }}>
@@ -450,10 +451,27 @@ function Tessera({ club }) {
       ) : (
         <div className="fc-empty">
           <img src="/assets/kitchen/walrus-chef.png" alt="" width="120" height="120" />
-          <b>Ancora nessuna visita</b>
+          <b>{view.mode === 'restart' ? 'Nuovo giro da aprire' : 'Ancora nessuna visita'}</b>
           <p className="fc-small">Il primo ordine food da {r.stampMin} € fa timbro.</p>
         </div>
       )}
+      {history.length ? (
+        <>
+          <div className="fc-section"><div className="fc-label">Premi conquistati</div></div>
+          <div className="fc-rows" data-testid="fc-reward-history">
+            {history.map((h) => (
+              <div className="fc-row" key={h.id ?? h.code}>
+                <span className="fc-row-date">{formatShortDate(h.used_at || h.issued_at)}</span>
+                <span className="fc-row-main">
+                  <b>Buono {Number(h.value) || r.value} €</b>
+                  <small>usato il {formatShortDate(h.used_at)}{h.used_order_code ? ` · ordine #${h.used_order_code}` : ''}</small>
+                </span>
+                <span className="fc-row-end">già usato</span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
       <div className="fc-cta-row"><ClubCta title="ORDINA ORA" onClick={() => spaNavigate(MENU)} /></div>
       <HowItWorks state={state} />
     </Page>
@@ -503,7 +521,7 @@ function Buoni({ club }) {
       {list.length ? list.map((v) => <VoucherCard key={v.id} voucher={v} withCta />) : empty}
       <div className="fc-section">
         <div className="fc-label">Regole d’uso</div>
-        <p className="fc-small">Un buono per ordine, non cumulabile, solo su un ordine Walbox con almeno {r.voucherMin} € di food al Walrus di Melegnano. Non è convertibile in denaro e non dà resto. Si usa nel sacco, prima di scegliere come pagare: se l’ordine non viene pagato o viene annullato, il buono torna disponibile.</p>
+        <p className="fc-small">Un buono per ordine, non cumulabile, solo su un ordine Walbox con almeno {r.voucherMin} € di food al Walrus di Melegnano. Non è convertibile in denaro e non dà resto. Si usa nel sacco, prima di scegliere come pagare: il buono resta riservato finché il pagamento non è chiuso del tutto; se l’ordine viene annullato senza alcun pagamento, torna disponibile con la stessa scadenza.</p>
       </div>
     </Page>
   );
