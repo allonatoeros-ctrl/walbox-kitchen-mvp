@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   cartFoodAmount, itemFoodUnitAmount, voucherCartStatus, stampForecast, effectiveVoucherStatus,
   pickVoucherForCart, normalizeItalianPhone, cardProgress, clubErrorMessage, daysLeft,
+  cardView, rewardHistory, staffCycleLabel, staffTotalVisits,
+  celebrationKey, shouldCelebrate, markCelebrated,
 } from './foodClubRules.js';
 
 test('food: bevande escluse, MENU con quota prudente come il server', () => {
@@ -67,4 +69,68 @@ test('telefono: normalizzazione E.164 italiana', () => {
 test('errori server tradotti', () => {
   assert.match(clubErrorMessage('P0001: voucher_food_below_minimum'), /12 €/);
   assert.match(clubErrorMessage('boh'), /Riprova/);
+});
+
+const FUT = '2099-01-01T00:00:00Z';
+const st2 = [{ kind: 'order', created_at: '2026-11-01T20:00:00Z' }, { kind: 'order', created_at: '2026-11-03T20:00:00Z' }];
+const mkLc = (voucher) => ({ id: 'c1', stamps: st2, voucher });
+
+test('tessera: senza i campi nuovi (DB vecchio) nessun cambio e nessun crash', () => {
+  const v = cardView({ card: null, vouchers: [] });
+  assert.equal(v.mode, 'plain'); assert.equal(v.count, 0);
+  assert.equal(cardView(null).mode, 'plain');
+  const one = cardView({ card: { stamps: [{ kind: 'order' }], expires_at: FUT } });
+  assert.equal(one.mode, 'plain'); assert.equal(one.count, 1);
+  assert.deepEqual(rewardHistory({ vouchers: [{ id: 'a', status: 'available', expires_at: FUT }] }), []);
+});
+
+test('tessera: 2/2 con premio spendibile (card null + last_completed_card)', () => {
+  for (const status of ['available', 'reserved']) {
+    const v = cardView({ card: null, last_completed_card: mkLc({ id: 'v1', status, value: 5, min_food: 12, expires_at: FUT }) });
+    assert.equal(v.mode, 'reward'); assert.equal(v.count, 2); assert.equal(v.reward.id, 'v1');
+  }
+  // card open vuota appena creata: stesso risultato
+  assert.equal(cardView({ card: { stamps: [], expires_at: FUT }, last_completed_card: mkLc({ id: 'v1', status: 'available', expires_at: FUT }) }).mode, 'reward');
+});
+
+test('tessera: premio usato = storico, nuovo giro da aprire; scaduto = come oggi', () => {
+  const used = { id: 'v1', status: 'used', value: 5, used_at: '2026-11-04T20:00:00Z', used_order_code: 'AB12' };
+  const v = cardView({ card: null, last_completed_card: mkLc(used) });
+  assert.equal(v.mode, 'restart'); assert.equal(v.count, 0); assert.equal(v.reward, null);
+  assert.deepEqual(rewardHistory({ vouchers: [used], last_completed_card: mkLc(used) }).map((x) => x.id), ['v1']);
+  const exp = cardView({ card: null, last_completed_card: mkLc({ id: 'v2', status: 'available', expires_at: '2020-01-01T00:00:00Z' }) });
+  assert.equal(exp.mode, 'plain');
+});
+
+test('tessera: nuovo giro 1/2 separato dai premi già conquistati', () => {
+  const used = { id: 'v1', status: 'used' };
+  const v = cardView({ card: { stamps: [{ kind: 'order' }], expires_at: FUT }, last_completed_card: mkLc(used) });
+  assert.equal(v.mode, 'newCycle'); assert.equal(v.count, 1); assert.equal(v.reward, null);
+  const withReward = cardView({ card: { stamps: [{ kind: 'order' }], expires_at: FUT }, last_completed_card: mkLc({ id: 'v3', status: 'available', expires_at: FUT }) });
+  assert.equal(withReward.mode, 'newCycle'); assert.equal(withReward.reward.id, 'v3');
+});
+
+test('staff ISCRITTI: giro attuale e visite totali, con fallback', () => {
+  assert.equal(staffCycleLabel({ cycle_stamps: 1, cycle_completed: false }), '1/2');
+  assert.equal(staffCycleLabel({ cycle_stamps: 0, cycle_completed: true }), 'completato');
+  assert.equal(staffCycleLabel({ stamps_open: 1 }), '1/2');
+  assert.equal(staffCycleLabel({}), '0/2');
+  assert.equal(staffTotalVisits({ total_visits: 3 }), 3);
+  assert.equal(staffTotalVisits({}), '—');
+});
+
+test('celebrazione premio: una sola volta per buono, mai errori', () => {
+  const mem = () => { const m = new Map(); return { getItem: (k) => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, v) }; };
+  const st = mem();
+  assert.equal(shouldCelebrate(st, 'v1'), true, 'prima volta');
+  assert.equal(markCelebrated(st, 'v1'), true);
+  assert.equal(shouldCelebrate(st, 'v1'), false, 'seconda volta no');
+  assert.equal(shouldCelebrate(st, 'v2'), true, 'altro buono sì');
+  const broken = { getItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } };
+  assert.equal(shouldCelebrate(broken, 'v1'), false, 'storage bloccato: niente animazione');
+  assert.equal(markCelebrated(broken, 'v1'), false, 'storage bloccato: nessun crash');
+  assert.equal(shouldCelebrate(st, null), false, 'id mancante');
+  assert.equal(shouldCelebrate(null, 'v1'), false, 'storage assente');
+  assert.equal(markCelebrated(st, undefined), false);
+  assert.equal(celebrationKey(''), null);
 });
