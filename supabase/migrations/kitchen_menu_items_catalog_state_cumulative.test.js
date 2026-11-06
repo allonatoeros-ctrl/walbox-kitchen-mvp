@@ -13,7 +13,8 @@
 //     → DELETE di 20260922090000 (rimuove item-057)
 //     → UPSERT di 20261016100000 (aggiunge item-059 GARPEZ)
 //     → UPSERT di 20261028120000 (MENU OTTOBRE: prezzi menu, varianti bibita, bibite nuove)
-//     → stato finale (47 righe: 45 vendute + Schweppes item-049/050 lasciate orfane apposta)
+//     → DELETE di 20261106100000 (rimuove item-059 GARPEZ)
+//     → stato finale (46 righe: 44 vendute + Schweppes item-049/050 lasciate orfane apposta)
 //
 // e verifica che LO STATO FINALE — non la singola migration — combaci esattamente con
 // kitchenMockData.js. Stile repo: assert statiche sui sorgenti SQL letti da disco, nessuna
@@ -34,6 +35,7 @@ const garpezSql = readFileSync(join(__dirname, '20261016100000_kitchen_menu_item
 const ottobreSql = readFileSync(join(__dirname, '20261028120000_kitchen_menu_items_menu_ottobre_v1.sql'), 'utf8');
 const comePrimaSql = readFileSync(join(__dirname, '20261030150000_kitchen_menu_items_prezzi_menu_come_prima_v1.sql'), 'utf8');
 const panninoSql = readFileSync(join(__dirname, '20261030160000_kitchen_menu_items_menu_pulled_pork_panino_v1.sql'), 'utf8');
+const removeGarpezSql = readFileSync(join(__dirname, '20261106100000_kitchen_menu_items_remove_garpez_v1.sql'), 'utf8');
 
 // Righe ancora nel catalogo server ma tolte dal cliente: la migration 20261028120000 non le
 // cancella per restare additiva verso il frontend in produzione (supabase/CLAUDE.md regola 5).
@@ -94,6 +96,9 @@ for (const m of executableOnly(panninoSql).matchAll(/SET name = '([^']*)'[^;]*it
   finalState.set(m[2], { ...finalState.get(m[2]), name: m[1] });
 }
 
+// 20261106100000: DELETE puntuale di item-059 (Garpez, tolto dal menu il 2026-11-06).
+for (const id of parseDeleteTargets(removeGarpezSql)) finalState.delete(id);
+
 test('stato intermedio (solo 20260916120000): item-057/Krombacher esiste, 40 righe, price 6', () => {
   assert.equal(stateAfter0916.size, 40);
   assert.ok(stateAfter0916.has('item-057'), 'item-057 deve poter esistere nello stato storico post-0916');
@@ -105,9 +110,10 @@ test('la migration 20260922090000 rimuove esattamente e solo item-057 dallo stat
 });
 
 test('stato finale (0916 → 0922 → 1016 → 1028 composte): item-057/Krombacher non appartiene più al catalogo corrente', () => {
-  assert.equal(finalState.size, 47);
+  assert.equal(finalState.size, 46);
   assert.ok(!finalState.has('item-057'), 'item-057 non deve più esistere dopo aver composto 0916+0922');
   assert.deepEqual(addedBy1016.get('item-059'), { name: 'Garpez', price: 15 });
+  assert.ok(!finalState.has('item-059'), 'item-059 (Garpez) rimosso da 20261106100000');
 });
 
 test('stato finale composto ≡ autorità cliente corrente (kitchenMockData.js), nessuna voce in più o in meno', () => {
