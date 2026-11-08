@@ -521,7 +521,7 @@ function Buoni({ club }) {
       {list.length ? list.map((v) => <VoucherCard key={v.id} voucher={v} withCta />) : empty}
       <div className="fc-section">
         <div className="fc-label">Regole d’uso</div>
-        <p className="fc-small">Un buono per ordine, non cumulabile, solo su un ordine Walbox con almeno {r.voucherMin} € di food al Walrus di Melegnano. Non è convertibile in denaro e non dà resto. Si usa nel sacco, prima di scegliere come pagare: il buono resta riservato finché il pagamento non è chiuso del tutto; se l’ordine viene annullato senza alcun pagamento, torna disponibile con la stessa scadenza.</p>
+        <p className="fc-small">Un buono per ordine, non cumulabile, solo su un ordine Walbox con almeno {r.voucherMin} € di food al Walrus di Melegnano. Non è convertibile in denaro e non dà resto. Si usa nel sacco, prima di scegliere come pagare: il buono resta riservato finché il pagamento non è chiuso del tutto; se l’ordine viene annullato senza alcun pagamento, torna disponibile dopo la verifica del pagamento, con la stessa scadenza.</p>
       </div>
     </Page>
   );

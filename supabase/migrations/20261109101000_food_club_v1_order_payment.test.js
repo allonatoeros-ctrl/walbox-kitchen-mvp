@@ -24,8 +24,8 @@ const fnBody = (name) => {
   return main.slice(start, end);
 };
 
-test('le migration Club sono presenti (4 file 20261109*)', () => {
-  assert.equal(files.length, 4, files.join(', '));
+test('le migration Club sono presenti (7 file 20261109*: schema, ordine-pagamento, identità, staff, rilascio buoni, tick sweep, buoni in verifica)', () => {
+  assert.equal(files.length, 7, files.join(', '));
   assert.ok(files.includes(MAIN));
 });
 

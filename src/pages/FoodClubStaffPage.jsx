@@ -20,6 +20,7 @@ const TABS = [
   ['buoni', 'BUONI'],
   ['iscritti', 'ISCRITTI'],
   ['inviti', 'INVITI'],
+  ['verifica', 'BUONI IN VERIFICA'],
   ['fine', 'FINE SERVIZIO'],
 ];
 
@@ -32,10 +33,10 @@ function initialTab() {
   }
 }
 
-function errorText(err) {
+function errorText(err, ctx) {
   const msg = String(err?.message || '');
   if (msg.includes('not_staff_for_venue')) return 'Questo account non risulta staff del Walrus.';
-  if (msg.includes('manager_only')) return 'Solo il responsabile può accendere o spegnere la campagna.';
+  if (msg.includes('manager_only')) return ctx === 'release' ? 'Solo il manager può liberare un buono.' : 'Solo il responsabile può accendere o spegnere la campagna.';
   return 'Dati del Club non disponibili in questo momento. Riprova tra poco.';
 }
 
@@ -137,13 +138,17 @@ function Overview() {
   const { from, to } = useMemo(() => rangeFor(range), [range]);
   const q = useRpc(useCallback(() => foodClubStaffApi.overview(from, to), [from, to]));
   const d = q.data;
+  // Buoni in verifica oltre 24 h: contano come anomalia. Se la lettura fallisce non rompe la panoramica.
+  const held = useRpc(useCallback(() => foodClubStaffApi.heldVouchers(), []));
+  const heldOver24 = Array.isArray(held.data) ? held.data.filter((h) => h.over_24h).length : 0;
 
   const isEmpty = d && deepNumericSum({
     members: d.members, visits: d.visits, vouchers: d.vouchers, referrals: d.referrals,
     funnel: d.funnel, pwa: d.pwa, notifications: d.notifications,
   }) === 0;
   const anomalyCount = (n(d?.anomalies?.unpaid_with_voucher) > 0 ? n(d.anomalies.unpaid_with_voucher) : 0)
-    + (n(d?.anomalies?.food_club_errors) > 0 ? n(d.anomalies.food_club_errors) : 0);
+    + (n(d?.anomalies?.food_club_errors) > 0 ? n(d.anomalies.food_club_errors) : 0)
+    + heldOver24;
 
   return (
     <>
@@ -228,6 +233,7 @@ function Overview() {
 
             <div className="fcs-section-title">Da tenere d’occhio</div>
             <div className="fcs-kpis fcs-kpis--3">
+              <Kpi label="Buoni in verifica oltre 24 h" value={heldOver24} tone={heldOver24 ? 'red' : 'green'} sub="vedi Buoni in verifica" />
               <Kpi label="Ordini con buono non pagati" value={n(d.anomalies?.unpaid_with_voucher)} tone={n(d.anomalies?.unpaid_with_voucher) ? 'red' : 'green'} sub="vedi Fine servizio" />
               <Kpi label="Errori Club registrati" value={n(d.anomalies?.food_club_errors)} tone={n(d.anomalies?.food_club_errors) ? 'red' : 'green'} sub="nel periodo" />
               <Kpi label="Inviti" value={n(d.referrals?.rewarded)} sub={`${n(d.referrals?.pending)} in attesa · ${n(d.referrals?.capped)} oltre il limite`} />
@@ -459,6 +465,123 @@ function Referrals() {
   );
 }
 
+/* ---------------- BUONI IN VERIFICA ---------------- */
+
+const RELEASE_MIN_NOTE = 10;
+const RELEASE_REASON = {
+  note_too_short: `La nota deve avere almeno ${RELEASE_MIN_NOTE} caratteri.`,
+  too_early: 'Non sono ancora passate 24 ore: il buono non si può liberare a mano.',
+  not_reserved: 'Il buono non è più riservato: nulla da liberare.',
+  charge_succeeded: 'Risulta un pagamento riuscito su questo ordine: il buono non si libera.',
+  order_paid: 'L’ordine risulta pagato: il buono non si libera.',
+  paid_evidence: 'SumUp ha segnalato questo ordine come pagato: il buono non si libera.',
+  order_not_closed: 'L’ordine non è annullato: il buono non si libera.',
+  voucher_not_found: 'Buono non trovato.',
+  payments_changed: 'I pagamenti dell’ordine sono cambiati nel frattempo: riprova.',
+};
+
+function HeldVouchers() {
+  const q = useRpc(useCallback(() => foodClubStaffApi.heldVouchers(), []));
+  const { reload } = q;
+  const [target, setTarget] = useState(null);
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const rows = Array.isArray(q.data) ? q.data : [];
+  const over = rows.filter((h) => h.over_24h);
+  const noteOk = note.trim().length >= RELEASE_MIN_NOTE;
+
+  const open = (h) => { setTarget(h); setNote(''); setResult(null); };
+  const confirmRelease = async () => {
+    if (!target || !noteOk || busy) return;
+    setBusy(true); setResult(null);
+    try {
+      const res = await foodClubStaffApi.resolveHeldVoucher(target.voucher_id, note.trim());
+      if (res?.ok) {
+        setResult({ tone: 'ok', text: res.voucher_status === 'expired' ? 'Buono liberato (risulta scaduto).' : 'Buono liberato: è di nuovo disponibile al cliente.' });
+        setTarget(null); setNote('');
+      } else {
+        setResult({ tone: 'error', text: RELEASE_REASON[res?.reason] || `Non liberato (${res?.reason || 'motivo sconosciuto'}).` });
+      }
+      reload();
+    } catch (err) {
+      setResult({ tone: 'error', text: errorText(err, 'release') });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (q.status === 'loading' && !q.data) return <Loading />;
+  if (q.status === 'error') return <ErrorBox error={q.error} onRetry={reload} />;
+  return (
+    <>
+      <div className="fcs-kpis fcs-kpis--3">
+        <Kpi label="Buoni in verifica" value={rows.length} tone={rows.length ? 'yellow' : 'green'} sub="riservati su ordini annullati" />
+        <Kpi label="Oltre 24 ore" value={over.length} tone={over.length ? 'red' : 'green'} sub="da controllare su SumUp" />
+        <Kpi label="Entro 24 ore" value={rows.length - over.length} sub="li controlla il sistema" />
+      </div>
+      <div className="fcs-note">
+        {rows.length
+          ? <><b>COSA SONO</b> · buoni fermi perché l’ordine è stato annullato dopo aver chiesto il pagamento online. Di solito si sbloccano da soli; oltre 24 ore li libera a mano un manager, dopo aver controllato SumUp.</>
+          : <><b>TUTTO A POSTO</b> · nessun buono in verifica.</>}
+        <button type="button" className="fcs-btn fcs-btn--small fcs-note-btn" onClick={reload}>AGGIORNA</button>
+      </div>
+      {result && <div className={`fcs-note fcs-note--${result.tone}`} data-testid="fcs-held-result">{result.text}</div>}
+      <div className="fcs-end-list" data-testid="fcs-held">
+        {rows.map((h) => (
+          <div className={`fcs-end-row${h.over_24h ? ' fcs-end-row--past' : ''}`} key={h.voucher_id} data-testid="fcs-held-row" data-over24={h.over_24h ? 'true' : 'false'}>
+            <div className="fcs-end-id">
+              <b>{h.order_code || '—'}</b>
+              <span>{h.order_status === 'payment_abandoned' ? 'pagamento abbandonato' : 'annullato'} · {fmtDateTime(h.order_created_at)}</span>
+              {h.over_24h && <span className="fcs-end-past">OLTRE 24 H — CONTROLLA SU SUMUP</span>}
+            </div>
+            <div className="fcs-end-tag">
+              <Pill tone="y">BUONO {formatEuro(h.value).replace(',00', '')}</Pill>
+              <span className="fcs-end-code">{h.voucher_code} · scade {formatShortDate(h.expires_at)}</span>
+            </div>
+            <div className="fcs-end-amt">
+              <small>ORE DAL RIFERIMENTO</small>
+              <b>{n(h.hours_since_reference).toLocaleString('it-IT', { maximumFractionDigits: 1 })} h</b>
+              <small>{h.seal_last_reason ? `ultimo esito: ${h.seal_last_reason}` : 'non ancora controllato'}{h.has_succeeded_charge ? ' · PAGAMENTO RIUSCITO' : ''}</small>
+            </div>
+            <div className="fcs-end-act">
+              {h.over_24h && !h.has_succeeded_charge && (
+                <button type="button" className="fcs-btn fcs-btn--danger" onClick={() => open(h)} data-testid="fcs-held-release">LIBERA A MANO</button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {target && (
+        <form
+          className="fcs-held-form"
+          data-testid="fcs-held-form"
+          onSubmit={(e) => { e.preventDefault(); confirmRelease(); }}
+        >
+          <div className="fcs-held-warn"><b>PRIMA CONTROLLA</b> nella dashboard SumUp che l’ordine #{target.order_code} non risulti pagato.</div>
+          <label className="fcs-held-label" htmlFor="fcs-held-note">NOTA (obbligatoria, almeno {RELEASE_MIN_NOTE} caratteri)</label>
+          <textarea
+            id="fcs-held-note"
+            className="fcs-input fcs-held-note"
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Es. controllato su SumUp, ordine non pagato"
+            data-testid="fcs-held-note"
+          />
+          <div className="fcs-held-actions">
+            <button type="submit" className="fcs-btn fcs-btn--danger" disabled={!noteOk || busy} data-testid="fcs-held-confirm">
+              {busy ? 'ATTENDI…' : 'CONFERMA: LIBERA IL BUONO'}
+            </button>
+            <button type="button" className="fcs-btn" onClick={() => { setTarget(null); setNote(''); }} disabled={busy}>ANNULLA</button>
+          </div>
+        </form>
+      )}
+      <p className="fcs-help">Solo il manager può liberare un buono, solo dopo 24 ore, sempre con una nota. Se il cliente avesse pagato in ritardo, il sistema lo riconosce comunque e non lo sconta due volte.</p>
+    </>
+  );
+}
+
 /* ---------------- FINE SERVIZIO ---------------- */
 
 const ORDER_STATUS_LABEL = {
@@ -592,6 +715,7 @@ export default function FoodClubStaffPage() {
         {tab === 'buoni' && <Vouchers />}
         {tab === 'iscritti' && <Members />}
         {tab === 'inviti' && <Referrals />}
+        {tab === 'verifica' && <HeldVouchers />}
         {tab === 'fine' && <EndOfService />}
       </main>
     </div>

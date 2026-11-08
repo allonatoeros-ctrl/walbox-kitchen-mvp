@@ -263,3 +263,19 @@
   .fcs-end-row { grid-template-columns: 1fr 1fr; }
   .fcs-tab--end { margin-left: 0; }
 }
+
+/* Buoni in verifica: form di rilascio manuale */
+.fcs-held-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  background: var(--fcs-panel);
+  border: 1px solid rgba(248, 113, 113, 0.7);
+  border-radius: 12px;
+}
+.fcs-held-warn { color: var(--fcs-red); font-size: 14px; }
+.fcs-held-label { font-size: 11px; font-weight: 900; letter-spacing: 1.2px; color: var(--fcs-muted); }
+.fcs-held-note { width: 100%; box-sizing: border-box; resize: vertical; font-family: inherit; }
+.fcs-held-actions { display: flex; gap: 10px; flex-wrap: wrap; }

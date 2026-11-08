@@ -66,4 +66,6 @@ export const foodClubStaffApi = {
   setCampaignActive: (id, active) => rpc('food_club_admin_set_campaign_active', { p_campaign_id: id, p_active: active }),
   orderBadges: (orderIds) => rpc('food_club_staff_order_badges', { p_venue_id: VENUE, p_order_ids: orderIds }),
   unpaidOrders: () => rpc('food_club_staff_unpaid_orders', { p_venue_id: VENUE }),
+  heldVouchers: () => rpc('food_club_staff_held_vouchers', { p_venue_id: VENUE }),
+  resolveHeldVoucher: (id, note) => rpc('food_club_manager_resolve_held_voucher', { p_voucher_id: id, p_note: note }),
 };

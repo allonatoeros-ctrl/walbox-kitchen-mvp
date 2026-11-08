@@ -116,7 +116,22 @@ export default function ClubOrderStatusCard({ order, club }) {
   if (CANCELLED.has(status)) {
     const discount = Number(info.discount_amount ?? order.discountAmount) || 0;
     const released = (voucher && voucher.status === 'available') || (!voucher && discount > 0 && !order.promoCode);
-    if (!released) return null;
+    if (!released) {
+      // Buono ancora riservato su un ordine annullato: finché non si verifica che il pagamento online non possa più arrivare resta fermo.
+      if (voucher && voucher.status === 'reserved') {
+        return (
+          <div className="fc-scope" data-testid="fc-status-card" data-state="checking">
+            <div className="fc-status-card fc-status-card--neutral">
+              <span className="fc-chip" data-testid="fc-status-checking-chip">IN VERIFICA</span>
+              <Head kicker="Food Club" title="Il buono fa un giro di controllo." />
+              <p className="fc-p">Verifichiamo che il pagamento online non possa più arrivare: può richiedere del tempo. Se dopo 24 ore è ancora bloccato lo controlla lo staff. Non perdi il buono.</p>
+              <button type="button" className="fc-cta" onClick={goBuoni}>VEDI I BUONI <span aria-hidden="true">→</span></button>
+            </div>
+          </div>
+        );
+      }
+      return null;
+    }
     return (
       <div className="fc-scope" data-testid="fc-status-card" data-state="released">
         <div className="fc-status-card fc-status-card--neutral">
@@ -134,7 +149,7 @@ export default function ClubOrderStatusCard({ order, club }) {
       <div>
         {voucher.status === 'used'
           ? `Buono da ${value} usato su questo ordine.`
-          : `Buono applicato all’ordine #${code} — si conferma quando paghi. Resta riservato finché il pagamento non è chiuso del tutto; se l’ordine viene annullato senza alcun pagamento, torna disponibile.`}
+          : `Buono applicato all’ordine #${code} — si conferma quando paghi. Resta riservato finché il pagamento non è chiuso del tutto; se l’ordine viene annullato senza alcun pagamento, torna disponibile dopo la verifica del pagamento.`}
       </div>
     </div>
   ) : null;

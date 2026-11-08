@@ -66,7 +66,7 @@ export default function VoucherCard({ voucher, withCta = false, onUse = null, ct
         ) : null}
         {st === 'reserved' ? (
           <div className="fc-voucher-foot" style={{ paddingTop: 0 }}>
-            <span>Il buono resta riservato finché il pagamento non è chiuso del tutto. Se l’ordine viene annullato senza alcun pagamento, torna disponibile con la stessa scadenza.</span>
+            <span>Il buono resta riservato finché il pagamento non è chiuso del tutto. Se l’ordine viene annullato senza alcun pagamento, torna disponibile dopo la verifica del pagamento, con la stessa scadenza.</span>
           </div>
         ) : null}
       </div>
