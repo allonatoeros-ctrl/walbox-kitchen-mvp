@@ -1,6 +1,6 @@
 // Food Club V1 — test statici sulle 4 migration 20261105* (stile repo: assert sul testo SQL, nessun DB).
 // Il comportamento a runtime è coperto da tests/db/ (Postgres locale): tests/db/run-food-club-sql.sh e
-// tests/db/food-club-concurrency.test.mjs. Eseguire: node --test supabase/migrations/20261105100000_food_club_v1_schema.test.js
+// tests/db/food-club-concurrency.test.mjs. Eseguire: node --test supabase/migrations/20261109100000_food_club_v1_schema.test.js
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { readFileSync } from 'node:fs';
@@ -9,10 +9,10 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FILES = [
-  '20261105100000_food_club_v1_schema.sql',
-  '20261105101000_food_club_v1_order_payment.sql',
-  '20261105102000_food_club_v1_identity_api.sql',
-  '20261105103000_food_club_v1_staff_analytics.sql',
+  '20261109100000_food_club_v1_schema.sql',
+  '20261109101000_food_club_v1_order_payment.sql',
+  '20261109102000_food_club_v1_identity_api.sql',
+  '20261109103000_food_club_v1_staff_analytics.sql',
 ];
 const src = Object.fromEntries(FILES.map((f) => [f, readFileSync(join(__dirname, f), 'utf8')]));
 const all = Object.values(src).join('\n');
