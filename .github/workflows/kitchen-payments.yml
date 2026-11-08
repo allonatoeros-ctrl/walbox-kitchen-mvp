@@ -33,7 +33,6 @@ jobs:
       PGPORT: '54329'
       PGUSER: postgres
       PGPASSWORD: kp_ci_only
-      KP_CI_OUT: ${{ runner.temp }}/kp-ci
       KP_LINT_BASE: ${{ github.event.pull_request.base.sha }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
