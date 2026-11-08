@@ -37,18 +37,32 @@
  * @returns {Promise<{outcome: 'confirmed'|'failed'|'pending'|'already_resolved', reason?: string}>}
  */
 export async function applySumupCheckoutResult(supabaseAdmin, attempt, checkout) {
-  if (attempt.status !== 'initiated' && attempt.status !== 'pending' && attempt.status !== 'failed') {
-    // Already resolved terminally ('succeeded'/'cancelled') by a prior call — idempotent no-op,
-    // never re-apply confirm/fail. 'failed' is deliberately NOT in this early-exit anymore (see
-    // header): it may still need re-checking for the same-checkout retry case, and re-applying
-    // fail on it is now itself idempotent (kitchen_payment_fail, 20260830130000).
+  const status = checkout.status;
+
+  // K2 lato api (Passo 4, 2026-11-08): un attempt `cancelled` (annullo staff) resta confermabile SOLO
+  // con un PAID SumUp reale: kitchen_payment_confirm (migration K2 20261108130000) lo registra
+  // (ordine annullato -> payment_confirmed_after_cancel; banco gia incassato -> lost_race), cosi
+  // l'incasso non sparisce. Ogni altro stato su `cancelled` e un no-op: kitchen_payment_fail rifiuta
+  // `cancelled` (invalid_attempt_status) e non va mai riaperto.
+  const cancelledPaid = attempt.status === 'cancelled' && status === 'PAID';
+  if (attempt.status !== 'initiated' && attempt.status !== 'pending' && attempt.status !== 'failed' && !cancelledPaid) {
+    // Already resolved terminally ('succeeded', or 'cancelled' without PAID) by a prior call —
+    // idempotent no-op, never re-apply confirm/fail. 'failed' is deliberately NOT in this early-exit
+    // anymore (see header): it may still need re-checking for the same-checkout retry case, and
+    // re-applying fail on it is now itself idempotent (kitchen_payment_fail, 20260830130000).
     return { outcome: 'already_resolved' };
   }
 
-  const status = checkout.status;
-
   if (status === 'PAID') {
     if (attempt.provider !== 'sumup' || Number(attempt.amount) !== Number(checkout.amount)) {
+      if (attempt.status === 'cancelled') {
+        // Passo 4: kitchen_payment_fail rifiuta `cancelled`. PAID con importo diverso su un attempt
+        // annullato = anomalia: nessuna RPC, errore al chiamante (la riga webhook_ingest resta come prova).
+        console.error('[sumupPaymentResolution] PAID amount mismatch on cancelled attempt — needs manual reconciliation', {
+          attemptId: attempt.id,
+        });
+        throw new Error('sumup_amount_mismatch_on_cancelled');
+      }
       const { error } = await supabaseAdmin.rpc('kitchen_payment_fail', {
         p_attempt_id: attempt.id,
         p_reason: 'sumup_amount_mismatch',
@@ -58,9 +72,26 @@ export async function applySumupCheckoutResult(supabaseAdmin, attempt, checkout)
       return { outcome: 'failed', reason: 'amount_mismatch' };
     }
 
+    // K2 lato api (Passo 4): la conferma richiede la prova del provider. L'id del checkout deve venire
+    // dalla risposta SumUp, descrivere questo attempt (checkout_reference) e, se l'attempt ha gia un
+    // provider_ref, coincidere con esso. Nessun fallback: ne attempt.id ne attempt.provider_ref sono
+    // prove di un incasso. Senza corrispondenza: niente confirm, niente fail, errore al chiamante;
+    // l'attempt resta aperto come anomalia da riconciliare.
+    const checkoutId = typeof checkout.id === 'string' ? checkout.id.trim() : '';
+    const providerRefMismatch = attempt.provider_ref != null && attempt.provider_ref !== checkout.id;
+    if (!checkoutId || checkoutId !== checkout.id || checkout.checkout_reference !== attempt.id || providerRefMismatch) {
+      console.error('[sumupPaymentResolution] PAID without verifiable SumUp checkout id — not confirmed, needs manual reconciliation', {
+        attemptId: attempt.id,
+        hasCheckoutId: Boolean(checkoutId),
+        referenceMatches: checkout.checkout_reference === attempt.id,
+        providerRefMatches: !providerRefMismatch,
+      });
+      throw new Error('sumup_checkout_unverified');
+    }
+
     const { data, error } = await supabaseAdmin.rpc('kitchen_payment_confirm', {
       p_attempt_id: attempt.id,
-      p_provider_ref: checkout.id ?? attempt.id,
+      p_provider_ref: checkout.id,
       p_raw_payload: checkout,
     });
     if (error) throw error;

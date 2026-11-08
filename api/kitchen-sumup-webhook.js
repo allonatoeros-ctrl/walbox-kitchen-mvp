@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { applySumupCheckoutResult } from './_lib/sumupPaymentResolution.js';
+import { SUMUP_GET_TIMEOUT_MS } from './_lib/sumupCheckout.js';
 
 // Kitchen Payment Hub V1 — SumUp sandbox, webhook receiver.
 //
@@ -86,9 +87,13 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
-  if (attempt.status !== 'initiated' && attempt.status !== 'pending' && attempt.status !== 'failed') {
-    // Already resolved terminally ('succeeded'/'cancelled') — a retried webhook delivery for a
-    // status we already applied would otherwise hit invalid_attempt_status. No SumUp GET needed.
+  if (attempt.status !== 'initiated' && attempt.status !== 'pending' && attempt.status !== 'failed'
+      && attempt.status !== 'cancelled') {
+    // Already resolved terminally ('succeeded') — a retried webhook delivery for a status we already
+    // applied would otherwise hit invalid_attempt_status. No SumUp GET needed.
+    // K2 lato api (Passo 4): 'cancelled' passa. Un cliente puo completare il pagamento sulla pagina
+    // SumUp mentre lo staff annulla: il PAID va verificato (GET) e registrato (confirm K2), mai scartato.
+    // Su 'cancelled' applySumupCheckoutResult inoltra al DB solo il PAID; ogni altro stato e un no-op.
     // 'failed' is deliberately let through (LONG SESSION F, same-checkout retry): a SumUp checkout
     // that reported FAILED can still be retried by the customer with a different card and later
     // report PAID for the same checkout id — applySumupCheckoutResult/kitchen_payment_confirm
@@ -102,8 +107,12 @@ export default async function handler(req, res) {
 
   let checkout;
   try {
+    // Passo 4 (B2): timeout esplicito sulla GET (5 s, stesso valore delle altre letture SumUp), cosi la
+    // funzione risponde un errore chiaro entro il proprio budget invece di essere chiusa dalla piattaforma.
+    // Non si presume che SumUp riprovi: un attempt rimasto aperto resta visibile alla riconciliazione.
     const sumupRes = await fetch(`https://api.sumup.com/v0.1/checkouts/${encodeURIComponent(checkoutId)}`, {
       headers: { Authorization: `Bearer ${sumupApiKey}` },
+      signal: AbortSignal.timeout(SUMUP_GET_TIMEOUT_MS),
     });
     checkout = await sumupRes.json();
     if (!sumupRes.ok) {
@@ -111,8 +120,9 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'sumup_verify_failed' });
     }
   } catch (err) {
-    console.error('[kitchen-sumup-webhook] unexpected error fetching checkout', err);
-    return res.status(500).json({ error: 'internal_server_error' });
+    // Timeout, errore di rete o body non JSON: esito della verifica sconosciuto, nessuna RPC.
+    console.error('[kitchen-sumup-webhook] SumUp GET checkout failed (network/timeout/body)', { attemptId: attempt.id, name: err?.name });
+    return res.status(502).json({ error: 'sumup_verify_failed' });
   }
 
   // F6 POST-GET BINDING: the authoritative response must describe exactly the checkout/attempt we
