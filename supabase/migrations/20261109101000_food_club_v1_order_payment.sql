@@ -14,6 +14,18 @@
 --   * guardia BEFORE UPDATE: total / discount_amount / venue_id bloccati se l'ordine ha un buono riservato o usato.
 -- Un errore del Club NON deve mai far fallire un pagamento: il blocco "paid" cattura le eccezioni, le registra in
 -- kitchen_action_log ('food_club_error') e lascia il buono RISERVATO (stato sicuro: non riutilizzabile).
+--
+-- PASSO 1 C-T (2026-11-08, decisioni D-P1/D-P2/D-P3 approvate da Eros). Integra P1 FIX-1/2/3 e R-b.
+--   * Consumo unico (food_club_consume_on_charge): il buono riservato diventa UTILIZZATO appena l'ordine ha un charge
+--     'succeeded', anche se l'ordine è annullato/abbandonato (PAID tardivo K2/R3). Trigger anche su kitchen_payments.
+--   * Trattenuta: annullo/abbandono di un ordine con una riga charge online -> buono resta RISERVATO
+--     ('held_until_checkout_expiry'). Rilascio subito solo per il banco puro senza incasso. Il rilascio dopo la
+--     verifica dei checkout NON è qui (Passi 2-3).
+--   * Campagna spenta: nessuna nuova prenotazione ('voucher_campaign_inactive').
+--   * Rimborso tardivo (D-P2): nessun riaccredito automatico del buono.
+--   * Lock compatibile K4: righe charge (chiamante) -> riga ordine -> buono -> tessera. Nessuna funzione
+--     kitchen_payment_* / kitchen_order_* / kitchen_reconciliation_* ridefinita (test testuale).
+--   * Anomalie Club (D-P3): solo kitchen_action_log, mostrate dalla pagina staff Food Club; K6 invariato.
 
 -- ---------------------------------------------------------------------------------------------------
 -- 1) Utilità
@@ -180,8 +192,11 @@ BEGIN
     RETURN jsonb_build_object('awarded', false, 'reason', 'already_stamped');
   END IF;
 
+  -- P1: anche un buono RILASCIATO da questo ordine conta come "ordine con buono" (lo sconto è dentro total).
   v_has_voucher := EXISTS (SELECT 1 FROM public.food_club_vouchers WHERE used_order_id = v_order.id
-                                                                    OR reserved_order_id = v_order.id);
+                                                                    OR reserved_order_id = v_order.id)
+                   OR EXISTS (SELECT 1 FROM public.food_club_voucher_events e
+                               WHERE e.order_id = v_order.id AND e.event = 'reserved_on_order');
   IF v_has_voucher AND NOT v_campaign.stamp_on_voucher_order THEN
     RETURN jsonb_build_object('awarded', false, 'reason', 'voucher_order_no_stamp');
   END IF;
@@ -319,54 +334,147 @@ CREATE TRIGGER kitchen_orders_food_club_guard
   BEFORE UPDATE OF total, discount_amount, venue_id, promo_code ON public.kitchen_orders
   FOR EACH ROW EXECUTE FUNCTION public.kitchen_orders_food_club_guard();
 
--- 3b) Pagato: consumo buono + timbro + invito (mai far fallire il pagamento).
+-- 3b) Consumo unico del buono (Passo 1 C-T: T2 + P1 FIX-1/FIX-2 + R-b). Regole:
+--   * un buono RISERVATO su un ordine diventa UTILIZZATO quando l'ordine ha un charge 'succeeded', QUALUNQUE sia lo
+--     stato dell'ordine (pagato, annullato, abbandonato, passato al banco): il PAID tardivo registrato da webhook,
+--     reconcile o sweep R3 passa sempre da kitchen_payment_confirm (K2) e quindi da qui. L'importo non conta per il
+--     consumo (in dubbio il buono non torna); conta per timbro e invito.
+--   * già UTILIZZATO su questo ordine -> nulla (R-b, idempotente: webhook ripetuti, on_paid + on_charge).
+--   * RILASCIATO prima dell'incasso (solo banco puro, vedi 3c) e ancora DISPONIBILE -> ri-consumato (FIX-1); se
+--     intanto è riservato/usato altrove -> anomalia 'food_club_voucher_double_spend' (una volta per ordine).
+--   * timbro e premio invito solo se l'ordine è 'paid' con un charge = total.
+-- Lock (compatibile K4): il chiamante tiene già le righe charge (confirm, record_counter) o la riga ordine
+-- (UPDATE ordine); qui: riga ordine FOR UPDATE -> buono FOR UPDATE -> tessera/timbri. Mai buono prima dell'ordine.
+CREATE OR REPLACE FUNCTION public.food_club_consume_on_charge(p_order_id text, p_stage text)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_order    public.kitchen_orders;
+  v_charge   public.kitchen_payments;
+  v_voucher  public.food_club_vouchers;
+  v_released public.food_club_vouchers;
+  v_result   text := 'noop';
+  v_stamp    jsonb;
+  v_ref      jsonb;
+BEGIN
+  SELECT * INTO v_order FROM public.kitchen_orders WHERE id = p_order_id FOR UPDATE;
+  IF NOT FOUND THEN RETURN jsonb_build_object('result', 'order_not_found'); END IF;
+
+  SELECT * INTO v_charge FROM public.kitchen_payments
+   WHERE order_id = v_order.id AND direction = 'charge' AND status = 'succeeded'
+   ORDER BY id LIMIT 1;
+
+  IF v_charge.id IS NULL THEN
+    -- 'paid' senza incasso (es. UPDATE manuale): il buono resta riservato, anomalia per lo staff (una volta).
+    IF v_order.payment_status = 'paid'
+       AND EXISTS (SELECT 1 FROM public.food_club_vouchers WHERE reserved_order_id = v_order.id AND status = 'reserved')
+       AND NOT EXISTS (SELECT 1 FROM public.kitchen_action_log
+                        WHERE order_id = v_order.id AND action = 'food_club_paid_without_charge') THEN
+      INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
+      VALUES (v_order.id, v_order.venue_id, 'food_club_paid_without_charge', 'system',
+              jsonb_build_object('stage', p_stage, 'needs_manual_reconciliation', true));
+    END IF;
+    RETURN jsonb_build_object('result', 'no_succeeded_charge');
+  END IF;
+
+  SELECT * INTO v_voucher FROM public.food_club_vouchers
+   WHERE reserved_order_id = v_order.id AND status = 'reserved' FOR UPDATE;
+  IF v_voucher.id IS NOT NULL THEN
+    UPDATE public.food_club_vouchers
+       SET status = 'used', used_order_id = v_order.id, used_at = now()
+     WHERE id = v_voucher.id AND status = 'reserved';
+    PERFORM public.food_club_log_voucher(v_voucher.id, 'reserved', 'used',
+      CASE WHEN v_order.status IN ('cancelled', 'payment_abandoned') THEN 'consumed_on_late_charge'
+           WHEN v_order.payment_status = 'paid' THEN 'order_paid'
+           ELSE 'used_on_charge' END,
+      v_order.id, 'system',
+      jsonb_build_object('stage', p_stage, 'payment_id', v_charge.id, 'payment_method', v_charge.method,
+                         'order_status', v_order.status, 'payment_status', v_order.payment_status));
+    v_result := 'consumed';
+  ELSIF EXISTS (SELECT 1 FROM public.food_club_vouchers WHERE used_order_id = v_order.id) THEN
+    v_result := 'already_used'; -- R-b
+  ELSIF COALESCE(v_order.discount_amount, 0) > 0 THEN
+    -- FIX-1: buono riservato su questo ordine, rilasciato, e ora l'ordine è stato incassato col totale scontato.
+    SELECT v.* INTO v_released FROM public.food_club_vouchers v
+     WHERE EXISTS (SELECT 1 FROM public.food_club_voucher_events e
+                    WHERE e.voucher_id = v.id AND e.order_id = v_order.id AND e.event = 'reserved_on_order')
+     ORDER BY v.updated_at DESC LIMIT 1 FOR UPDATE;
+    IF v_released.id IS NOT NULL THEN
+      IF v_released.status = 'available' THEN
+        UPDATE public.food_club_vouchers SET status = 'reserved', reserved_order_id = v_order.id, reserved_at = now()
+         WHERE id = v_released.id AND status = 'available';
+        UPDATE public.food_club_vouchers SET status = 'used', used_order_id = v_order.id, used_at = now()
+         WHERE id = v_released.id AND status = 'reserved';
+        PERFORM public.food_club_log_voucher(v_released.id, 'available', 'used', 'reclaimed_on_late_payment',
+          v_order.id, 'system', jsonb_build_object('stage', p_stage, 'payment_id', v_charge.id));
+        v_result := 'reclaimed';
+      ELSIF v_released.status <> 'expired'
+            AND NOT EXISTS (SELECT 1 FROM public.kitchen_action_log
+                             WHERE order_id = v_order.id AND action = 'food_club_voucher_double_spend') THEN
+        INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
+        VALUES (v_order.id, v_order.venue_id, 'food_club_voucher_double_spend', 'system',
+                jsonb_build_object('voucher_id', v_released.id, 'voucher_status', v_released.status,
+                                   'other_order_id', COALESCE(v_released.used_order_id, v_released.reserved_order_id),
+                                   'discount', v_order.discount_amount, 'stage', p_stage,
+                                   'needs_manual_reconciliation', true));
+        v_result := 'double_spend';
+      END IF;
+      -- 'expired': lo sconto è stato goduto una sola volta (su questo ordine), nulla da fare.
+    END IF;
+  END IF;
+
+  IF v_order.payment_status = 'paid'
+     AND EXISTS (SELECT 1 FROM public.kitchen_payments p WHERE p.order_id = v_order.id AND p.direction = 'charge'
+                   AND p.status = 'succeeded' AND p.amount = v_order.total) THEN
+    v_stamp := public.food_club_award_order_stamp(v_order.id);
+    v_ref := public.food_club_try_referral_reward(v_order.id);
+    IF v_order.source = 'customer_app' AND (p_stage = 'on_paid' OR (v_stamp->>'awarded')::boolean
+                                             OR (v_ref->>'rewarded')::boolean OR v_result <> 'noop') THEN
+      INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
+      VALUES (v_order.id, v_order.venue_id, 'food_club_order_paid', 'system',
+              jsonb_build_object('stamp', v_stamp, 'referral', v_ref, 'voucher_result', v_result, 'stage', p_stage));
+    END IF;
+  END IF;
+  RETURN jsonb_build_object('result', v_result, 'stamp', v_stamp, 'referral', v_ref);
+END;
+$$;
+
+-- Errore Club: log 'food_club_error' (needs_manual_reconciliation). Se anche il log fallisce: WARNING, mai errore
+-- verso Kitchen. Il chiamante ha già annullato (subtransazione) le scritture Club: il buono resta RISERVATO.
+CREATE OR REPLACE FUNCTION public.food_club_log_error(p_order_id text, p_stage text, p_sqlstate text, p_message text)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  BEGIN
+    INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
+    SELECT o.id, o.venue_id, 'food_club_error', 'system',
+           jsonb_build_object('stage', p_stage, 'sqlstate', p_sqlstate, 'message', left(p_message, 300),
+                              'needs_manual_reconciliation', true)
+      FROM public.kitchen_orders o WHERE o.id = p_order_id;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'food_club_error_not_logged order=% stage=% sqlstate=% msg=%', p_order_id, p_stage, p_sqlstate,
+      left(p_message, 200);
+  END;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.kitchen_orders_food_club_on_paid()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
-DECLARE
-  v_voucher public.food_club_vouchers;
-  v_charge_ok boolean;
-  v_stamp jsonb;
-  v_ref jsonb;
 BEGIN
   BEGIN
-    v_charge_ok := EXISTS (SELECT 1 FROM public.kitchen_payments p
-                            WHERE p.order_id = NEW.id AND p.direction = 'charge' AND p.status = 'succeeded'
-                              AND p.amount = NEW.total);
-    SELECT * INTO v_voucher FROM public.food_club_vouchers
-     WHERE reserved_order_id = NEW.id AND status = 'reserved' FOR UPDATE;
-    IF v_voucher.id IS NOT NULL THEN
-      IF v_charge_ok THEN
-        -- Invariante: un buono RISERVATO non scade mentre è riservato; se l'ordine si paga, è UTILIZZATO.
-        UPDATE public.food_club_vouchers
-           SET status = 'used', used_order_id = NEW.id, used_at = now()
-         WHERE id = v_voucher.id AND status = 'reserved';
-        PERFORM public.food_club_log_voucher(v_voucher.id, 'reserved', 'used', 'order_paid', NEW.id, 'system',
-          jsonb_build_object('payment_method', NEW.payment_method));
-      ELSE
-        -- 'paid' senza charge corrispondente (es. UPDATE manuale): il buono resta riservato, anomalia per lo staff.
-        INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
-        VALUES (NEW.id, NEW.venue_id, 'food_club_paid_without_charge', 'system',
-                jsonb_build_object('voucher_id', v_voucher.id, 'needs_manual_reconciliation', true));
-      END IF;
-    END IF;
-    IF v_charge_ok THEN
-      v_stamp := public.food_club_award_order_stamp(NEW.id);
-      v_ref := public.food_club_try_referral_reward(NEW.id);
-      IF NEW.source = 'customer_app' THEN
-        INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
-        VALUES (NEW.id, NEW.venue_id, 'food_club_order_paid', 'system',
-                jsonb_build_object('stamp', v_stamp, 'referral', v_ref, 'voucher_id', v_voucher.id));
-      END IF;
-    END IF;
+    PERFORM public.food_club_consume_on_charge(NEW.id, 'on_paid');
   EXCEPTION WHEN OTHERS THEN
-    INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
-    VALUES (NEW.id, NEW.venue_id, 'food_club_error', 'system',
-            jsonb_build_object('stage', 'on_paid', 'sqlstate', SQLSTATE, 'message', left(SQLERRM, 300),
-                               'needs_manual_reconciliation', true));
+    PERFORM public.food_club_log_error(NEW.id, 'on_paid', SQLSTATE, SQLERRM);
   END;
   RETURN NULL;
 END;
@@ -378,7 +486,44 @@ CREATE TRIGGER kitchen_orders_food_club_on_paid
   WHEN (NEW.payment_status = 'paid' AND OLD.payment_status IS DISTINCT FROM 'paid')
   EXECUTE FUNCTION public.kitchen_orders_food_club_on_paid();
 
--- 3c) Chiuso non pagato: rilascio del buono con la scadenza originale (stessa transazione dell'annullo/abbandono).
+-- T2: charge 'succeeded' (INSERT dal banco K4, UPDATE da confirm K2 anche su attempt annullato/abbandonato/passato
+-- al banco). Uscita rapida per gli ordini senza buono e non ancora pagati (ordini Kitchen normali: nessun effetto).
+CREATE OR REPLACE FUNCTION public.kitchen_payments_food_club_on_charge()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM public.food_club_vouchers v
+                  WHERE (v.status = 'reserved' AND v.reserved_order_id = NEW.order_id) OR v.used_order_id = NEW.order_id)
+     AND NOT EXISTS (SELECT 1 FROM public.food_club_voucher_events e
+                      WHERE e.order_id = NEW.order_id AND e.event = 'reserved_on_order')
+     AND NOT EXISTS (SELECT 1 FROM public.kitchen_orders o WHERE o.id = NEW.order_id AND o.payment_status = 'paid') THEN
+    RETURN NULL;
+  END IF;
+  BEGIN
+    PERFORM public.food_club_consume_on_charge(NEW.order_id, 'on_charge');
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM public.food_club_log_error(NEW.order_id, 'on_charge', SQLSTATE, SQLERRM);
+  END;
+  RETURN NULL;
+END;
+$$;
+DROP TRIGGER IF EXISTS kitchen_payments_food_club_on_charge ON public.kitchen_payments;
+CREATE TRIGGER kitchen_payments_food_club_on_charge
+  AFTER INSERT OR UPDATE OF status ON public.kitchen_payments
+  FOR EACH ROW
+  WHEN (NEW.direction = 'charge' AND NEW.status = 'succeeded')
+  EXECUTE FUNCTION public.kitchen_payments_food_club_on_charge();
+
+-- 3c) Chiuso non pagato (T3). Stessa transazione dell'annullo/abbandono; riga ordine già bloccata dal chiamante.
+--   * esiste un charge 'succeeded' -> consumo (regola 1, es. PAID tardivo arrivato prima dell'annullo);
+--   * esiste una riga charge online (provider diverso da cash/manual, qualunque stato) -> il buono RESTA RISERVATO
+--     (evento 'held_until_checkout_expiry', una volta): un checkout SumUp può essere ancora pagabile. Il rilascio
+--     richiede la prova che nessun checkout sia pagabile: NON implementato nel Passo 1 (Passi 2-3);
+--   * nessuna riga charge online e nessun incasso (banco puro) -> rilascio subito con la scadenza originale.
+-- Errore: il buono resta RISERVATO (direzione sicura) e 'food_club_error' nel log; l'annullo Kitchen riesce.
 CREATE OR REPLACE FUNCTION public.kitchen_orders_food_club_on_closed_unpaid()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -389,15 +534,37 @@ DECLARE
   v_voucher public.food_club_vouchers;
   v_to text;
 BEGIN
-  SELECT * INTO v_voucher FROM public.food_club_vouchers
-   WHERE reserved_order_id = NEW.id AND status = 'reserved' FOR UPDATE;
-  IF v_voucher.id IS NULL THEN RETURN NULL; END IF;
-  v_to := CASE WHEN v_voucher.expires_at > now() THEN 'available' ELSE 'expired' END;
-  UPDATE public.food_club_vouchers
-     SET status = v_to, reserved_order_id = NULL, reserved_at = NULL
-   WHERE id = v_voucher.id AND status = 'reserved';
-  PERFORM public.food_club_log_voucher(v_voucher.id, 'reserved', v_to, 'released', NEW.id, 'system',
-    jsonb_build_object('order_status', NEW.status));
+  IF NOT EXISTS (SELECT 1 FROM public.food_club_vouchers WHERE reserved_order_id = NEW.id AND status = 'reserved') THEN
+    RETURN NULL;
+  END IF;
+  BEGIN
+    IF EXISTS (SELECT 1 FROM public.kitchen_payments p
+                WHERE p.order_id = NEW.id AND p.direction = 'charge' AND p.status = 'succeeded') THEN
+      PERFORM public.food_club_consume_on_charge(NEW.id, 'on_closed');
+      RETURN NULL;
+    END IF;
+    SELECT * INTO v_voucher FROM public.food_club_vouchers
+     WHERE reserved_order_id = NEW.id AND status = 'reserved' FOR UPDATE;
+    IF v_voucher.id IS NULL THEN RETURN NULL; END IF;
+    IF EXISTS (SELECT 1 FROM public.kitchen_payments p
+                WHERE p.order_id = NEW.id AND p.direction = 'charge'
+                  AND p.provider IS DISTINCT FROM 'cash' AND p.provider IS DISTINCT FROM 'manual') THEN
+      IF NOT EXISTS (SELECT 1 FROM public.food_club_voucher_events e
+                      WHERE e.voucher_id = v_voucher.id AND e.order_id = NEW.id AND e.event = 'held_until_checkout_expiry') THEN
+        PERFORM public.food_club_log_voucher(v_voucher.id, 'reserved', 'reserved', 'held_until_checkout_expiry', NEW.id,
+          'system', jsonb_build_object('order_status', NEW.status));
+      END IF;
+      RETURN NULL;
+    END IF;
+    v_to := CASE WHEN v_voucher.expires_at > now() THEN 'available' ELSE 'expired' END;
+    UPDATE public.food_club_vouchers
+       SET status = v_to, reserved_order_id = NULL, reserved_at = NULL
+     WHERE id = v_voucher.id AND status = 'reserved';
+    PERFORM public.food_club_log_voucher(v_voucher.id, 'reserved', v_to, 'released', NEW.id, 'system',
+      jsonb_build_object('order_status', NEW.status, 'reason', 'counter_only_no_collection'));
+  EXCEPTION WHEN OTHERS THEN
+    PERFORM public.food_club_log_error(NEW.id, 'on_closed', SQLSTATE, SQLERRM);
+  END;
   RETURN NULL;
 END;
 $$;
@@ -409,7 +576,9 @@ CREATE TRIGGER kitchen_orders_food_club_on_closed_unpaid
         AND NEW.payment_status IS DISTINCT FROM 'paid')
   EXECUTE FUNCTION public.kitchen_orders_food_club_on_closed_unpaid();
 
--- 3d) Rimborsato: revoca timbro, revoca buono non usato generato dalla tessera, riaccredito secondo D-2.
+-- 3d) Rimborsato: revoca timbro, revoca buono non usato generato dalla tessera, revoca premio invito non usato
+--     (P1 FIX-3), riaccredito del buono usato secondo D-2 MA mai su un ordine annullato/abbandonato o consumato da
+--     un incasso tardivo (D-P2: nessun ripristino automatico dopo un rimborso tardivo).
 CREATE OR REPLACE FUNCTION public.kitchen_orders_food_club_on_refunded()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -421,6 +590,7 @@ DECLARE
   v_card     public.food_club_cards;
   v_voucher  public.food_club_vouchers;
   v_campaign public.food_club_campaigns;
+  v_ref      public.food_club_referrals;
 BEGIN
   BEGIN
     SELECT * INTO v_stamp FROM public.food_club_stamps WHERE order_id = NEW.id AND revoked_at IS NULL FOR UPDATE;
@@ -432,25 +602,42 @@ BEGIN
         IF v_voucher.status = 'available' THEN
           UPDATE public.food_club_vouchers SET status = 'revoked' WHERE id = v_voucher.id;
           PERFORM public.food_club_log_voucher(v_voucher.id, 'available', 'revoked', 'source_order_refunded', NEW.id, 'system', '{}');
-          -- La tessera torna aperta col timbro rimasto (se la finestra è ancora valida).
           UPDATE public.food_club_cards
              SET status = CASE WHEN expires_at > now() THEN 'open' ELSE 'expired' END, completed_at = NULL, voucher_id = NULL
            WHERE id = v_card.id
              AND NOT EXISTS (SELECT 1 FROM public.food_club_cards c2 WHERE c2.user_id = v_card.user_id
                                AND c2.campaign_id = v_card.campaign_id AND c2.status = 'open');
         ELSE
-          -- Buono già riservato/usato: lo si lascia (decisione D11 fase 2), segnalazione allo staff.
           INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
           VALUES (NEW.id, NEW.venue_id, 'food_club_refund_voucher_kept', 'system',
                   jsonb_build_object('voucher_id', v_voucher.id, 'voucher_status', v_voucher.status));
         END IF;
       END IF;
     END IF;
-    -- Buono usato su questo ordine: riaccredito solo se previsto (D-2), con la scadenza originale.
+    -- P1 FIX-3: premio invito generato da questo ordine.
+    SELECT * INTO v_ref FROM public.food_club_referrals
+     WHERE qualified_order_id = NEW.id AND status = 'rewarded' FOR UPDATE;
+    IF v_ref.id IS NOT NULL THEN
+      SELECT * INTO v_voucher FROM public.food_club_vouchers WHERE id = v_ref.reward_voucher_id FOR UPDATE;
+      IF v_voucher.status = 'available' THEN
+        UPDATE public.food_club_vouchers SET status = 'revoked' WHERE id = v_voucher.id;
+        PERFORM public.food_club_log_voucher(v_voucher.id, 'available', 'revoked', 'referral_order_refunded', NEW.id, 'system', '{}');
+        UPDATE public.food_club_referrals SET status = 'void' WHERE id = v_ref.id;
+      ELSE
+        INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
+        VALUES (NEW.id, NEW.venue_id, 'food_club_refund_referral_voucher_kept', 'system',
+                jsonb_build_object('referral_id', v_ref.id, 'voucher_id', v_voucher.id, 'voucher_status', v_voucher.status));
+      END IF;
+    END IF;
+    v_voucher := NULL;
     SELECT * INTO v_voucher FROM public.food_club_vouchers WHERE used_order_id = NEW.id AND status = 'used' FOR UPDATE;
     IF v_voucher.id IS NOT NULL THEN
       SELECT * INTO v_campaign FROM public.food_club_campaigns WHERE id = v_voucher.campaign_id;
-      IF v_campaign.refund_recredits_voucher THEN
+      IF v_campaign.refund_recredits_voucher
+         AND NEW.status NOT IN ('cancelled', 'payment_abandoned')
+         AND NOT EXISTS (SELECT 1 FROM public.food_club_voucher_events e
+                          WHERE e.voucher_id = v_voucher.id AND e.order_id = NEW.id
+                            AND e.event = 'consumed_on_late_charge') THEN
         UPDATE public.food_club_vouchers
            SET status = CASE WHEN expires_at > now() THEN 'available' ELSE 'expired' END,
                used_order_id = NULL, used_at = NULL, reserved_order_id = NULL, reserved_at = NULL
@@ -461,10 +648,7 @@ BEGIN
       END IF;
     END IF;
   EXCEPTION WHEN OTHERS THEN
-    INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, metadata)
-    VALUES (NEW.id, NEW.venue_id, 'food_club_error', 'system',
-            jsonb_build_object('stage', 'on_refunded', 'sqlstate', SQLSTATE, 'message', left(SQLERRM, 300),
-                               'needs_manual_reconciliation', true));
+    PERFORM public.food_club_log_error(NEW.id, 'on_refunded', SQLSTATE, SQLERRM);
   END;
   RETURN NULL;
 END;
@@ -476,7 +660,7 @@ CREATE TRIGGER kitchen_orders_food_club_on_refunded
   WHEN (NEW.payment_status = 'refunded' AND OLD.payment_status IS DISTINCT FROM 'refunded')
   EXECUTE FUNCTION public.kitchen_orders_food_club_on_refunded();
 
--- Il voucher_events "used -> used" è un evento informativo: la guardia transizioni lo permette (stato invariato).
+-- Il voucher_events "used -> used" / "reserved -> reserved" è informativo: la guardia transizioni lo permette.
 
 -- ---------------------------------------------------------------------------------------------------
 -- 4) Creazione ordine cliente con buono (v4 = v3 + riserva atomica del buono)
@@ -491,27 +675,38 @@ SECURITY DEFINER
 SET search_path = public, pg_temp
 AS $$
 DECLARE
-  v_order   public.kitchen_orders;
-  v_voucher public.food_club_vouchers;
-  v_food    numeric;
+  v_order    public.kitchen_orders;
+  v_voucher  public.food_club_vouchers;
+  v_campaign public.food_club_campaigns;
+  v_food     numeric;
   v_discount numeric;
 BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'customer_session_required'; END IF;
 
-  -- Il buono si valida PRIMA di creare l'ordine (errore = nessun ordine creato, il cliente riprova senza).
+  -- Controlli preliminari SENZA lock (errore chiaro prima di creare l'ordine; il controllo definitivo è sotto lock).
   IF p_voucher_id IS NOT NULL THEN
     IF p_client_request_id IS NULL THEN RAISE EXCEPTION 'voucher_requires_client_request_id'; END IF;
-    SELECT * INTO v_voucher FROM public.food_club_vouchers WHERE id = p_voucher_id FOR UPDATE;
+    SELECT * INTO v_voucher FROM public.food_club_vouchers WHERE id = p_voucher_id;
     IF NOT FOUND OR v_voucher.user_id IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'voucher_not_found'; END IF;
     IF NOT EXISTS (SELECT 1 FROM public.food_club_members WHERE user_id = auth.uid() AND status = 'active') THEN
       RAISE EXCEPTION 'voucher_member_required';
     END IF;
+    -- Passo 1 F4 (regola 7): campagna spenta = nessuna nuova prenotazione di buoni. D-P1: il buono emesso in una
+    -- campagna precedente resta valido alle sue condizioni (valore/minimo/scadenza scritti sul buono).
+    v_campaign := public.food_club_active_campaign(p_venue_id);
+    IF v_campaign.id IS NULL THEN RAISE EXCEPTION 'voucher_campaign_inactive'; END IF;
   END IF;
 
   v_order := public.kitchen_customer_create_order_v3(p_venue_id, p_nickname, p_customer_note, p_items,
     p_fulfillment_type, p_payment_lane, p_client_request_id, p_pickup_slot);
 
   IF p_voucher_id IS NULL THEN RETURN v_order; END IF;
+
+  -- Lock (Passo 1): ordine prima del buono, come ovunque. L'ordine è nuovo (invisibile agli altri) o è il replay.
+  -- Due richieste concorrenti con lo stesso buono: la seconda attende qui, trova 'reserved' e fallisce con rollback
+  -- del proprio ordine.
+  SELECT * INTO v_voucher FROM public.food_club_vouchers WHERE id = p_voucher_id FOR UPDATE;
+  IF NOT FOUND OR v_voucher.user_id IS DISTINCT FROM auth.uid() THEN RAISE EXCEPTION 'voucher_not_found'; END IF;
 
   -- Replay idempotente (doppio tap / retry): se il buono è già su questo ordine, ritorna l'ordine così com'è.
   IF v_voucher.reserved_order_id = v_order.id OR v_voucher.used_order_id = v_order.id THEN
@@ -541,7 +736,8 @@ BEGIN
    WHERE id = v_voucher.id AND status = 'available';
   IF NOT FOUND THEN RAISE EXCEPTION 'voucher_not_available'; END IF;
   PERFORM public.food_club_log_voucher(v_voucher.id, 'available', 'reserved', 'reserved_on_order', v_order.id,
-    'customer', jsonb_build_object('discount', v_discount, 'food', v_food, 'lane', p_payment_lane));
+    'customer', jsonb_build_object('discount', v_discount, 'food', v_food, 'lane', p_payment_lane,
+                                   'campaign_id', v_voucher.campaign_id, 'active_campaign_id', v_campaign.id));
 
   INSERT INTO public.kitchen_action_log (order_id, venue_id, action, actor_type, actor_id, metadata)
   VALUES (v_order.id, v_order.venue_id, 'food_club_voucher_reserved', 'customer', auth.uid(),
@@ -605,3 +801,8 @@ REVOKE ALL ON FUNCTION public.food_club_expire_sweep() FROM PUBLIC, anon, authen
 GRANT EXECUTE ON FUNCTION public.food_club_expire_sweep() TO service_role;
 REVOKE ALL ON FUNCTION public.kitchen_customer_create_order_v4(text, text, text, jsonb, text, text, uuid, text, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.kitchen_customer_create_order_v4(text, text, text, jsonb, text, text, uuid, text, uuid) TO authenticated, service_role;
+-- Passo 1 C-T
+REVOKE ALL ON FUNCTION public.food_club_consume_on_charge(text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.food_club_log_error(text, text, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.kitchen_payments_food_club_on_charge() FROM PUBLIC, anon, authenticated;
+

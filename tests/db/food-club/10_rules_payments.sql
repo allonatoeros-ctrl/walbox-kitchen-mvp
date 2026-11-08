@@ -258,18 +258,23 @@ DO $$ DECLARE m uuid := fc_test.new_member(); v public.food_club_vouchers; o pub
   RAISE NOTICE 'PASS T17 paid senza charge';
 END $$;
 
--- T18 pagamento SumUp arrivato dopo l'annullo: buono già rilasciato, ordine non pagato, nessun timbro
+-- T18 pagamento SumUp arrivato dopo l'annullo: buono TRATTENUTO (checkout SumUp potenzialmente pagabile), poi consumato dal
+-- charge tardivo; ordine non pagato, nessun timbro
 DO $$ DECLARE m uuid := fc_test.new_member(); s uuid := fc_test.new_staff(); v public.food_club_vouchers; o public.kitchen_orders; a public.kitchen_payments; BEGIN
   INSERT INTO public.food_club_vouchers (code, user_id, campaign_id, source, value, min_food, expires_at)
   VALUES ('WC-TEST18', m, 'visite-v1', 'manual', 5, 12, now() + interval '5 days') RETURNING * INTO v;
   o := fc_test.order(m, '[{"item_id":"item-009","quantity":1}]', 'online', v.id);
   a := fc_test.start_online(o.id);
   PERFORM fc_test.cancel(o.id, s);
-  ASSERT (SELECT status FROM public.food_club_vouchers WHERE id = v.id) = 'available', 'T18 rilasciato all''annullo';
+  ASSERT (SELECT status FROM public.food_club_vouchers WHERE id = v.id) = 'reserved', 'T18 trattenuto all''annullo (attempt SumUp)';
+  ASSERT (SELECT count(*) FROM public.food_club_voucher_events WHERE voucher_id = v.id AND event = 'held_until_checkout_expiry') = 1, 'T18 evento held';
+  ASSERT (SELECT count(*) FROM public.food_club_voucher_events WHERE voucher_id = v.id AND event = 'released') = 0, 'T18 nessun rilascio';
   -- l'attempt annullato non è confermabile: simuliamo il caso sumup_failed tardivo come fa lo sweep
   UPDATE public.kitchen_payments SET status = 'failed', failure_reason = 'sumup_failed' WHERE id = a.id;
   PERFORM fc_test.as_service(); PERFORM public.kitchen_payment_confirm(a.id, 'late', '{}'::jsonb);
   ASSERT (SELECT payment_status FROM public.kitchen_orders WHERE id = o.id) IS DISTINCT FROM 'paid', 'T18 ordine non pagato';
+  ASSERT (SELECT status FROM public.food_club_vouchers WHERE id = v.id) = 'used', 'T18 buono consumato dal charge tardivo';
+  ASSERT (SELECT count(*) FROM public.food_club_voucher_events WHERE voucher_id = v.id AND event = 'consumed_on_late_charge') = 1, 'T18 evento consumed_on_late_charge';
   ASSERT fc_test.stamps(m) = 0, 'T18 nessun timbro';
   ASSERT EXISTS (SELECT 1 FROM public.kitchen_action_log WHERE order_id = o.id AND action = 'payment_confirmed_after_cancel'), 'T18 riconciliazione manuale segnalata';
   RAISE NOTICE 'PASS T18 pagamento tardivo dopo annullo';

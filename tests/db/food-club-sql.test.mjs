@@ -18,5 +18,5 @@ test('scenari SQL Food Club (regole, pagamenti, identità, RLS, notifiche)', { s
   const r = spawnSync(join(here, 'run-food-club-sql.sh'), [DB], { encoding: 'utf8', env: { ...process.env, PGHOST, PGPORT } });
   const passes = (r.stdout.match(/PASS /g) || []).length;
   assert.equal(r.status, 0, r.stdout + r.stderr);
-  assert.ok(passes >= 44, `attesi >= 44 scenari, trovati ${passes}`);
+  assert.ok(passes >= 63, `attesi >= 63 scenari, trovati ${passes}`);
 });

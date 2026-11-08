@@ -76,6 +76,10 @@ BEGIN
     NEW.food_unit_amount := NEW.price;
   ELSIF NEW.food_category = 'drink' THEN
     NEW.food_unit_amount := 0;
+  ELSIF NEW.food_category = 'combo' AND TG_OP = 'UPDATE' AND NEW.price IS NOT NULL AND OLD.price IS NOT NULL
+        AND NEW.price IS DISTINCT FROM OLD.price AND NEW.food_unit_amount IS NOT DISTINCT FROM OLD.food_unit_amount THEN
+    -- P1 FIX-5: combo, la quota food segue la variazione di prezzo (quota bevanda costante), mai > prezzo né < 0.
+    NEW.food_unit_amount := GREATEST(LEAST(COALESCE(OLD.food_unit_amount, 0) + (NEW.price - OLD.price), NEW.price), 0);
   END IF;
   RETURN NEW;
 END;
@@ -256,7 +260,7 @@ CREATE TABLE IF NOT EXISTS public.food_club_stamps (
   card_id        uuid NOT NULL REFERENCES public.food_club_cards(id) ON DELETE CASCADE,
   campaign_id    text NOT NULL REFERENCES public.food_club_campaigns(id),
   kind           text NOT NULL CHECK (kind IN ('order', 'welcome')),
-  order_id       text UNIQUE REFERENCES public.kitchen_orders(id) ON DELETE SET NULL,
+  order_id       text UNIQUE REFERENCES public.kitchen_orders(id) ON DELETE RESTRICT, -- P1 FIX-4: SET NULL violava i CHECK
   service_night  date NOT NULL,
   food_amount    numeric NOT NULL DEFAULT 0,
   created_at     timestamptz NOT NULL DEFAULT now(),
@@ -288,9 +292,9 @@ CREATE TABLE IF NOT EXISTS public.food_club_vouchers (
                      CHECK (status IN ('available', 'reserved', 'used', 'expired', 'revoked')),
   issued_at          timestamptz NOT NULL DEFAULT now(),
   expires_at         timestamptz NOT NULL,
-  reserved_order_id  text REFERENCES public.kitchen_orders(id) ON DELETE SET NULL,
+  reserved_order_id  text REFERENCES public.kitchen_orders(id) ON DELETE RESTRICT, -- P1 FIX-4
   reserved_at        timestamptz,
-  used_order_id      text REFERENCES public.kitchen_orders(id) ON DELETE SET NULL,
+  used_order_id      text REFERENCES public.kitchen_orders(id) ON DELETE RESTRICT, -- P1 FIX-4
   used_at            timestamptz,
   updated_at         timestamptz NOT NULL DEFAULT now(),
   CHECK (status <> 'reserved' OR reserved_order_id IS NOT NULL),
@@ -321,6 +325,8 @@ CREATE TABLE IF NOT EXISTS public.food_club_voucher_events (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS food_club_voucher_events_voucher ON public.food_club_voucher_events (voucher_id, id);
+-- Passo 1: uscita rapida dei trigger Club su kitchen_payments (ricerca per ordine).
+CREATE INDEX IF NOT EXISTS food_club_voucher_events_order ON public.food_club_voucher_events (order_id) WHERE order_id IS NOT NULL;
 
 -- Integrità: transizioni ammesse del buono (anche contro chiamate SECURITY DEFINER sbagliate).
 CREATE OR REPLACE FUNCTION public.food_club_vouchers_transition_guard()

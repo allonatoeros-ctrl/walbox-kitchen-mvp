@@ -63,9 +63,11 @@ test('campagna V1 creata spenta, inviti/benvenuto/retroattivi spenti (decisioni 
   assert.match(code, /refund_recredits_voucher boolean NOT NULL DEFAULT false/);
 });
 
-test('buono: un riservato per ordine, consumo solo con charge riuscito di importo = totale', () => {
+test('buono: un riservato per ordine; consumo con qualunque charge riuscito, timbro/invito solo con importo = totale', () => {
   assert.match(code, /food_club_vouchers_one_per_reserved_order\s+ON public\.food_club_vouchers \(reserved_order_id\) WHERE status = 'reserved'/);
-  assert.match(code, /p\.status = 'succeeded'\s+AND p\.amount = NEW\.total/);
+  // Passo 1: il consumo non dipende dall'importo (in dubbio il buono non torna); timbro/invito richiedono charge = total.
+  assert.match(code, /p\.status = 'succeeded' AND p\.amount = v_order\.total/);
+  assert.match(code, /direction = 'charge' AND status = 'succeeded'\s+ORDER BY id LIMIT 1/);
   assert.match(code, /WHEN \(NEW\.payment_status = 'paid' AND OLD\.payment_status IS DISTINCT FROM 'paid'\)/);
   assert.match(code, /WHEN \(NEW\.status IN \('cancelled', 'payment_abandoned'\)/);
   assert.match(code, /RAISE EXCEPTION 'food_club_voucher_locks_order_amount'/);
