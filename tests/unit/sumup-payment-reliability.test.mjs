@@ -27,10 +27,40 @@ const mockSupabasePlugin = {
     if (importer && source === '@supabase/supabase-js') {
       return '\0virtual:supabaseJs';
     }
+    // Hook client (src/hooks/useOrderPaymentFlow.js): stub di react / client supabase / appVersion,
+    // cosi l'hook gira in node senza import.meta.env, DOM o rete. Solo per quell'importer.
+    if (importer && importer.includes('useOrderPaymentFlow')) {
+      if (source === 'react') return '\0virtual:fakeReact';
+      if (/lib\/supabaseClient(\.js)?$/.test(source)) return '\0virtual:hookSupabaseClient';
+      if (/lib\/appVersion(\.js)?$/.test(source)) return '\0virtual:hookAppVersion';
+    }
   },
   load(id) {
     if (id === '\0virtual:supabaseJs') {
       return `export function createClient() { return globalThis.__SUMUP_TEST_ADMIN__(); }`;
+    }
+    if (id === '\0virtual:hookSupabaseClient') {
+      return `export const supabase = new Proxy({}, { get: (_t, k) => globalThis.__HOOK_SUPABASE__[k] });`;
+    }
+    if (id === '\0virtual:hookAppVersion') {
+      return `export async function reloadIfStale() { return globalThis.__HOOK_RELOAD__ ? globalThis.__HOOK_RELOAD__() : false; }`;
+    }
+    if (id === '\0virtual:fakeReact') {
+      // Mini runtime: slot per useState/useRef in ordine di chiamata; useEffect registrato, mai eseguito da solo.
+      return `
+        const rt = () => globalThis.__HOOK_RT__;
+        export function useState(init) {
+          const r = rt(); const i = r.idx++;
+          if (!(i in r.slots)) r.slots[i] = { v: typeof init === 'function' ? init() : init };
+          return [r.slots[i].v, (n) => { r.slots[i].v = typeof n === 'function' ? n(r.slots[i].v) : n; }];
+        }
+        export function useRef(init) {
+          const r = rt(); const i = r.idx++;
+          if (!(i in r.slots)) r.slots[i] = { v: { current: init } };
+          return r.slots[i].v;
+        }
+        export function useEffect(fn) { rt().effects.push(fn); }
+      `;
     }
   },
 };
@@ -39,6 +69,8 @@ let server;
 let createCheckoutHandler;
 let webhookHandler;
 let reconcileHandler;
+let startSumupCheckout;
+let useOrderPaymentFlow;
 
 before(async () => {
   server = await createServer({
@@ -46,12 +78,13 @@ before(async () => {
     configFile: false,
     logLevel: 'error',
     plugins: [mockSupabasePlugin],
-    ssr: { noExternal: ['@supabase/supabase-js'] },
+    ssr: { noExternal: ['@supabase/supabase-js', 'react'] },
     server: { middlewareMode: true },
   });
   ({ default: createCheckoutHandler } = await server.ssrLoadModule(path.join(ROOT, 'api/kitchen-sumup-create-checkout.js')));
   ({ default: webhookHandler } = await server.ssrLoadModule(path.join(ROOT, 'api/kitchen-sumup-webhook.js')));
   ({ default: reconcileHandler } = await server.ssrLoadModule(path.join(ROOT, 'api/kitchen-sumup-reconcile.js')));
+  ({ startSumupCheckout, useOrderPaymentFlow } = await server.ssrLoadModule(path.join(ROOT, 'src/hooks/useOrderPaymentFlow.js')));
 });
 
 after(async () => {
@@ -335,7 +368,7 @@ test('create-checkout: provider_ref presente + SumUp GET PAID -> resolve/confirm
       kitchen_payments: { data: { id: 'att-22', order_id: 'ord-22', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-22' }, error: null },
       kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-22', total: 10, payment_status: 'pending_counter_payment' }, error: null },
     },
-    rpc: { kitchen_payment_confirm: { data: { status: 'succeeded' }, error: null } },
+    rpc: { kitchen_payment_confirm: { data: { id: 'att-22', status: 'succeeded' }, error: null } },
   });
 
   let postCalled = false;
@@ -353,6 +386,50 @@ test('create-checkout: provider_ref presente + SumUp GET PAID -> resolve/confirm
   });
   assert.equal(postCalled, false, 'un checkout gia PAID non deve mai portare a un nuovo POST');
   assert.ok(admin.__rpcCalls.some((c) => c.name === 'kitchen_payment_confirm'), 'deve confermare via applySumupCheckoutResult condivisa');
+});
+
+// ---- lost_race: SumUp ha incassato (PAID) ma il pagamento cassa ha gia vinto lo slot "un solo charge succeeded per ordine".
+// kitchen_payment_confirm restituisce la riga del VINCITORE (id diverso dall'attempt) -> applySumupCheckoutResult = 'lost_race'.
+// Gli altri endpoint (reconcile / staff-reconcile / webhook) rispondono "non confermato, riconciliazione manuale" e loggano.
+async function runCreateCheckoutLostRace({ withHostedUrl }) {
+  const admin = makeSupabaseAdminMock({
+    authUser: CALLER_AUTH,
+    tables: {
+      kitchen_payments: { data: { id: 'att-lr', order_id: 'ord-lr', provider: 'sumup', method: 'sumup_online', amount: 10, status: 'initiated', direction: 'charge', provider_ref: 'co-lr' }, error: null },
+      kitchen_orders: { data: { customer_id: CALLER_ID, id: 'ord-lr', total: 10, payment_status: 'pending_counter_payment' }, error: null },
+    },
+    // Riga di un ALTRO pagamento (cassa) gia succeeded sullo stesso ordine.
+    rpc: { kitchen_payment_confirm: { data: { id: 'pay-cassa-winner', order_id: 'ord-lr', status: 'succeeded', method: 'cash' }, error: null } },
+  });
+  const calls = [];
+  const res = makeRes();
+  await withFetch(async (url, opts) => {
+    calls.push({ url: String(url), method: opts?.method ?? 'GET' });
+    return jsonFetchResponse(200, {
+      id: 'co-lr', status: 'PAID', amount: 10, checkout_reference: 'att-lr',
+      ...(withHostedUrl ? { hosted_checkout_url: 'https://pay.sumup.com/already-paid' } : {}),
+    });
+  }, () => withAdmin(admin, () => createCheckoutHandler(makeReq({ body: { order_id: 'ord-lr', payment_attempt_id: 'att-lr' }, headers: AUTH_HEADERS }), res)));
+  return { admin, calls, res };
+}
+
+test('create-checkout: lost_race (cassa ha vinto, SumUp PAID) -> nessuna POST di creazione checkout', async () => {
+  const { admin, calls } = await runCreateCheckoutLostRace({ withHostedUrl: true });
+  assert.equal(calls.filter((c) => c.method === 'POST').length, 0, 'mai un nuovo checkout');
+  assert.ok(admin.__rpcCalls.some((c) => c.name === 'kitchen_payment_confirm'), 'tenta comunque la confirm (e il DB a decidere il vincitore)');
+});
+
+// K3 (Passo 4): erano `todo`, ora test normali.
+test('create-checkout: lost_race -> NON consegna un hosted_checkout_url di un checkout gia incassato (200 con URL = doppio pagamento)', async () => {
+  const { res } = await runCreateCheckoutLostRace({ withHostedUrl: true });
+  assert.notEqual(res.statusCode, 200, `risposta ${res.statusCode} ${JSON.stringify(res.body)}`);
+  assert.equal(res.body?.hosted_checkout_url, undefined, 'nessun URL di pagamento per un checkout PAID');
+});
+
+test('create-checkout: lost_race -> segnala riconciliazione manuale (409 needs_manual_reconciliation, come il ramo ambiguous)', async () => {
+  const { res } = await runCreateCheckoutLostRace({ withHostedUrl: false });
+  assert.equal(res.statusCode, 409, `risposta ${res.statusCode} ${JSON.stringify(res.body)}`);
+  assert.equal(res.body?.error, 'needs_manual_reconciliation');
 });
 
 test('create-checkout: provider_ref presente + SumUp GET FAILED (sumup_failed) -> fail applicato, riusa lo STESSO checkout (retry preservato)', async () => {
@@ -946,15 +1023,67 @@ test('webhook: PAID ridelivered su un attempt gia SUCCEEDED -> nessuna nuova con
   assert.equal(admin.__rpcCalls.length, 0, 'duplicate callback: nessuna mutation ne ingest');
 });
 
-test('CustomerOrderStatus: se attempt_start ritorna un attempt failed, il client non chiama create-checkout (niente CTA unsafe)', async () => {
-  const { readFileSync } = await import('node:fs');
-  const src = readFileSync(path.join(ROOT, 'src/pages/CustomerOrderStatus.jsx'), 'utf8');
-  const attemptIdx = src.indexOf("kitchen_payment_attempt_start");
-  const createCheckoutIdx = src.indexOf('/api/kitchen-sumup-create-checkout', attemptIdx);
-  const guardIdx = src.indexOf("attempt.status === 'failed'", attemptIdx);
-  assert.ok(guardIdx > -1 && guardIdx < createCheckoutIdx, 'il check su attempt.status failed deve precedere la chiamata a create-checkout');
-  const guardBlock = src.slice(guardIdx, createCheckoutIdx);
-  assert.match(guardBlock, /return;/, 'il ramo failed deve uscire prima di raggiungere create-checkout');
+// ---- Hook client (src/hooks/useOrderPaymentFlow.js) eseguito davvero in node: react / supabaseClient /
+// appVersion sono stub del plugin vite in cima al file. Nessuna rete reale: fetch e globalThis.fetch mockato.
+function hookSupabase({ attempt, attemptError = null, session = { access_token: 'tok-abc' } } = {}) {
+  const rpcCalls = [];
+  globalThis.__HOOK_SUPABASE__ = {
+    auth: {
+      getSession: async () => ({ data: { session } }),
+      signInAnonymously: async () => ({ data: { session: null }, error: null }),
+    },
+    rpc: async (name, params) => { rpcCalls.push({ name, params }); return { data: attempt, error: attemptError }; },
+  };
+  globalThis.__HOOK_RELOAD__ = async () => false;
+  return rpcCalls;
+}
+
+test('startSumupCheckout: attempt_start ritorna un attempt failed -> { kind: pending } e create-checkout MAI chiamato (niente CTA unsafe)', async () => {
+  const rpcCalls = hookSupabase({ attempt: { id: 'att-h1', status: 'failed' } });
+  const fetchCalls = [];
+  const result = await withFetch(async (url, opts) => { fetchCalls.push({ url: String(url), opts }); return jsonFetchResponse(200, { hosted_checkout_url: 'https://pay.sumup.com/x' }); }, () => startSumupCheckout('ord-h1', 10));
+  assert.deepEqual(result, { kind: 'pending' });
+  assert.equal(fetchCalls.length, 0, 'zero fetch: nessuna chiamata a create-checkout per un attempt failed');
+  assert.equal(rpcCalls.length, 1);
+  assert.equal(rpcCalls[0].name, 'kitchen_payment_attempt_start');
+});
+
+test('startSumupCheckout: attempt initiated -> 1 sola POST a create-checkout con Bearer + body {order_id, payment_attempt_id}, ritorna redirect', async () => {
+  const rpcCalls = hookSupabase({ attempt: { id: 'att-h2', status: 'initiated' } });
+  const fetchCalls = [];
+  const result = await withFetch(async (url, opts) => { fetchCalls.push({ url: String(url), opts }); return jsonFetchResponse(200, { checkout_id: 'co-h2', hosted_checkout_url: 'https://pay.sumup.com/h2' }); }, () => startSumupCheckout('ord-h2', 12.5));
+  assert.deepEqual(result, { kind: 'redirect', url: 'https://pay.sumup.com/h2' });
+  assert.equal(fetchCalls.length, 1);
+  assert.equal(fetchCalls[0].url, '/api/kitchen-sumup-create-checkout');
+  assert.equal(fetchCalls[0].opts.method, 'POST');
+  assert.equal(fetchCalls[0].opts.headers.Authorization, 'Bearer tok-abc');
+  assert.deepEqual(JSON.parse(fetchCalls[0].opts.body), { order_id: 'ord-h2', payment_attempt_id: 'att-h2' });
+  assert.deepEqual({ ...rpcCalls[0].params, p_idempotency_key: 'ANY' }, {
+    p_order_id: 'ord-h2', p_channel: 'app', p_provider: 'sumup', p_method: 'sumup_online', p_amount: 12.5, p_idempotency_key: 'ANY',
+  });
+});
+
+test('startSumupCheckout: create-checkout risponde !ok -> lancia il codice errore del server, nessun redirect', async () => {
+  hookSupabase({ attempt: { id: 'att-h3', status: 'initiated' } });
+  await withFetch(async () => jsonFetchResponse(409, { error: 'order_already_paid' }), async () => {
+    await assert.rejects(() => startSumupCheckout('ord-h3', 10), /order_already_paid/);
+  });
+});
+
+test('startSumupCheckout: 200 ma senza hosted_checkout_url -> lancia (mai un redirect senza URL)', async () => {
+  hookSupabase({ attempt: { id: 'att-h4', status: 'initiated' } });
+  await withFetch(async () => jsonFetchResponse(200, { checkout_id: 'co-h4' }), async () => {
+    await assert.rejects(() => startSumupCheckout('ord-h4', 10));
+  });
+});
+
+test('startSumupCheckout: attempt_start in errore -> lancia e create-checkout MAI chiamato', async () => {
+  hookSupabase({ attempt: null, attemptError: new Error('online_payment_expired') });
+  let fetched = 0;
+  await withFetch(async () => { fetched += 1; return jsonFetchResponse(200, {}); }, async () => {
+    await assert.rejects(() => startSumupCheckout('ord-h5', 10), /online_payment_expired/);
+  });
+  assert.equal(fetched, 0);
 });
 
 test('reconcile: duplicate reconciliation -> idempotente (secondo giro non ri-applica confirm/fail)', async () => {
@@ -1180,9 +1309,10 @@ test('F6 T11: PENDING -> solo ingest; FAILED/EXPIRED -> ingest + fail', async ()
   }
 });
 
-test('F6 T12: duplicate callback su attempt gia succeeded/cancelled -> 0 GET, 0 RPC', async () => {
-  for (const status of ['succeeded', 'cancelled']) {
-    const { admin, urls, res } = await runF6({ body: { id: 'co-f6' }, attempt: { ...F6_ATTEMPT, status } });
+// Passo 4: 'cancelled' non e piu un no-op senza GET (un PAID dopo annullo va verificato): vedi i test K2 api.
+test('F6 T12: duplicate callback su attempt gia succeeded -> 0 GET, 0 RPC', async () => {
+  for (const checkoutStatus of ['PAID', 'FAILED', 'EXPIRED', 'PENDING']) {
+    const { admin, urls, res } = await runF6({ body: { id: 'co-f6' }, attempt: { ...F6_ATTEMPT, status: 'succeeded' }, checkout: { ...F6_CHECKOUT, status: checkoutStatus } });
     assert.equal(res.statusCode, 200);
     assert.equal(urls.length, 0);
     assert.equal(admin.__rpcCalls.length, 0);
@@ -1229,17 +1359,71 @@ test('F6 T14 (static): nessun fetch SumUp prima del lookup DB; URL con encodeURI
 // Test #10 — "browser return non equivale a payment success" (static source check)
 // ================================================================================================
 
-test('CustomerOrderStatus: il redirect ?sumup=return non conferma nulla da solo, deve sempre passare da /api/kitchen-sumup-reconcile', async () => {
-  const { readFileSync } = await import('node:fs');
-  const src = readFileSync(path.join(ROOT, 'src/pages/CustomerOrderStatus.jsx'), 'utf8');
-  // Il client non chiama mai le RPC di conferma/fallimento direttamente.
-  assert.doesNotMatch(src, /kitchen_payment_confirm/);
-  assert.doesNotMatch(src, /kitchen_payment_fail/);
-  // Lo stato 'verifying' deve sempre innescare una chiamata server-side autoritativa.
-  const verifyingEffectIdx = src.indexOf("sumup.state !== 'verifying'");
-  assert.ok(verifyingEffectIdx > -1, "deve esistere un effect che reagisce allo stato 'verifying'");
-  const afterVerifying = src.slice(verifyingEffectIdx, verifyingEffectIdx + 800);
-  assert.match(afterVerifying, /\/api\/kitchen-sumup-reconcile/);
+// Render "a mano" dell'hook con il mini runtime react del plugin: render() riesegue l'hook mantenendo gli slot;
+// runEffects() esegue gli effect registrati nell'ultimo render (come al mount); document stubbato per il listener visibilita.
+function mountPaymentFlow(order, isReturnTarget) {
+  globalThis.__HOOK_RT__ = { idx: 0, slots: {}, effects: [] };
+  globalThis.document = { visibilityState: 'hidden', addEventListener() {}, removeEventListener() {} };
+  const render = () => { const rt = globalThis.__HOOK_RT__; rt.idx = 0; rt.effects = []; return useOrderPaymentFlow(order, isReturnTarget); };
+  const runEffects = async () => {
+    for (const fn of globalThis.__HOOK_RT__.effects) fn();
+    await new Promise((r) => setTimeout(r, 0));
+  };
+  return { render, runEffects };
+}
+const HOOK_ORDER = { id: 'ord-ret', status: 'pending_counter_payment', paymentStatus: 'pending_counter_payment', total: 10, createdAt: '2026-11-01T10:00:00Z' };
+
+async function runReturnFlow({ reconcileResponse, isReturnTarget = true, session }) {
+  const rpcCalls = hookSupabase({ attempt: null, ...(session === undefined ? {} : { session }) });
+  const fetchCalls = [];
+  const h = mountPaymentFlow(HOOK_ORDER, isReturnTarget);
+  const initial = h.render().sumup.state;
+  await withFetch(async (url, opts) => { fetchCalls.push({ url: String(url), opts }); return reconcileResponse(); }, async () => {
+    await h.runEffects();
+  });
+  return { initialState: initial, finalState: h.render().sumup, fetchCalls, rpcCalls };
+}
+
+test('hook: ritorno ?sumup=return -> parte in "verifying" e chiama SOLO /api/kitchen-sumup-reconcile con Bearer (il client non conferma mai da solo)', async () => {
+  const r = await runReturnFlow({ reconcileResponse: () => jsonFetchResponse(200, { outcome: 'confirmed', retryable: false }) });
+  assert.equal(r.initialState, 'verifying', 'il ritorno dal browser non prova nulla: stato iniziale verifying, non confirmed');
+  assert.equal(r.fetchCalls.length, 1);
+  assert.equal(r.fetchCalls[0].url, '/api/kitchen-sumup-reconcile');
+  assert.equal(r.fetchCalls[0].opts.headers.Authorization, 'Bearer tok-abc');
+  assert.deepEqual(JSON.parse(r.fetchCalls[0].opts.body), { order_id: 'ord-ret' });
+  assert.equal(r.rpcCalls.length, 0, 'nessuna RPC (confirm/fail/attempt_start) dal client');
+  assert.equal(r.finalState.state, 'confirmed');
+});
+
+for (const [outcome, expected] of [['already_paid', 'confirmed'], ['pending', 'pending'], ['failed', 'error'], ['no_pending_attempt', 'idle'], ['unknown', 'unknown'], ['qualcosa_di_nuovo', 'unknown']]) {
+  test(`hook: reconcile risponde outcome=${outcome} -> stato client "${expected}"`, async () => {
+    const r = await runReturnFlow({ reconcileResponse: () => jsonFetchResponse(200, { outcome, retryable: false }) });
+    assert.equal(r.finalState.state, expected);
+    assert.equal(r.rpcCalls.length, 0);
+  });
+}
+
+test('hook: reconcile HTTP !ok (es. 500) -> stato "unknown", mai "confirmed"', async () => {
+  const r = await runReturnFlow({ reconcileResponse: () => jsonFetchResponse(500, { error: 'internal_server_error' }) });
+  assert.equal(r.finalState.state, 'unknown');
+});
+
+test('hook: fetch reconcile in errore di rete -> stato "unknown", mai "confirmed"', async () => {
+  const r = await runReturnFlow({ reconcileResponse: () => { throw new TypeError('network down'); } });
+  assert.equal(r.finalState.state, 'unknown');
+});
+
+test('hook: nessuna sessione al ritorno -> "unknown" e ZERO fetch', async () => {
+  const r = await runReturnFlow({ reconcileResponse: () => jsonFetchResponse(200, { outcome: 'confirmed' }), session: null });
+  assert.equal(r.finalState.state, 'unknown');
+  assert.equal(r.fetchCalls.length, 0);
+});
+
+test('hook: ordine NON bersaglio del ritorno (isReturnTarget=false) -> stato idle e nessuna reconcile automatica', async () => {
+  const r = await runReturnFlow({ isReturnTarget: false, reconcileResponse: () => jsonFetchResponse(200, { outcome: 'confirmed' }) });
+  assert.equal(r.initialState, 'idle');
+  assert.equal(r.fetchCalls.length, 0);
+  assert.equal(r.finalState.state, 'idle');
 });
 
 // ================================================================================================
@@ -1592,3 +1776,389 @@ test('F7: List usa il timeout GET (AbortSignal) e checkout_reference = attempt.i
 });
 
 console.log('sumup-payment-reliability.test.mjs: tutti i test superati.');
+
+// ================================================================================================
+// Test di COMPORTAMENTO sui casi limite di incasso (pagamento tardivo, duplicati, annullo, timeout).
+// Nota: le regole di eleggibilita per status/failure_reason vivono NEL DB (kitchen_payment_confirm /
+// kitchen_payment_fail, 20261012100000 / 20260830101227): qui si prova cosa fa il livello applicativo
+// (api/*.js) e come reagisce a cio che l'RPC risponde. Il comportamento SQL reale non e testabile con mock.
+// ================================================================================================
+
+async function runWebhook({ attempts, attempt, checkout, rpc, fetchImpl, body, times = 1 } = {}) {
+  const admin = makeSupabaseAdminMock({
+    tables: { kitchen_payments: { data: attempt, error: null } , ...(attempts ? { kitchen_payments: attempts.map((a) => ({ data: a, error: null })) } : {}) },
+    rpc: rpc ?? {
+      kitchen_payment_webhook_ingest: { data: {}, error: null },
+      kitchen_payment_confirm: { data: { id: (attempt ?? attempts[0]).id, status: 'succeeded' }, error: null },
+      kitchen_payment_fail: { data: {}, error: null },
+    },
+  });
+  const fetchCalls = [];
+  const responses = [];
+  await withFetch(async (url, opts) => {
+    fetchCalls.push({ url: String(url), method: opts?.method ?? 'GET' });
+    if (fetchImpl) return fetchImpl(url, opts);
+    return jsonFetchResponse(200, checkout);
+  }, async () => {
+    await withAdmin(admin, async () => {
+      for (let i = 0; i < times; i += 1) {
+        const res = makeRes();
+        await webhookHandler(makeReq({ body: body ?? { id: (attempt ?? attempts[0]).provider_ref } }), res);
+        responses.push(res);
+      }
+    });
+  });
+  const calls = (n) => admin.__rpcCalls.filter((c) => c.name === n);
+  return { admin, fetchCalls, responses, res: responses[0], calls };
+}
+const wAttempt = (over = {}) => ({ id: 'att-w', order_id: 'ord-w', amount: 10, provider: 'sumup', direction: 'charge', provider_ref: 'co-w', status: 'initiated', ...over });
+const wPaid = { id: 'co-w', status: 'PAID', amount: 10, checkout_reference: 'att-w' };
+
+// (a) pagamento tardivo
+for (const failure_reason of ['abandoned_timeout', 'sumup_failed']) {
+  test(`pagamento tardivo: webhook PAID su attempt failed/${failure_reason} -> kitchen_payment_confirm registrato con id attempt e provider_ref`, async () => {
+    const attempt = wAttempt({ status: 'failed', failure_reason });
+    const r = await runWebhook({ attempt, checkout: wPaid });
+    assert.equal(r.res.statusCode, 200);
+    assert.equal(r.fetchCalls.length, 1, 'una GET autoritativa a SumUp');
+    assert.equal(r.calls('kitchen_payment_confirm').length, 1, 'il pagamento tardivo viene registrato');
+    assert.equal(r.calls('kitchen_payment_confirm')[0].params.p_attempt_id, 'att-w');
+    assert.equal(r.calls('kitchen_payment_confirm')[0].params.p_provider_ref, 'co-w');
+    assert.equal(r.calls('kitchen_payment_fail').length, 0);
+  });
+}
+
+test('pagamento tardivo: il DB rifiuta la confirm (invalid_attempt_status, es. failed/staff_closed_for_counter) -> webhook 500 rpc_failed (SumUp ritenta), mai 200 "ok"', async () => {
+  // Documenta: il filtro per failure_reason e solo nel DB; il webhook non lo conosce (la SELECT non legge failure_reason).
+  const attempt = wAttempt({ status: 'failed', failure_reason: 'staff_closed_for_counter' });
+  const r = await runWebhook({
+    attempt, checkout: wPaid,
+    rpc: {
+      kitchen_payment_webhook_ingest: { data: {}, error: null },
+      kitchen_payment_confirm: { data: null, error: Object.assign(new Error('invalid_attempt_status'), { code: 'P0001' }) },
+    },
+  });
+  assert.equal(r.res.statusCode, 500);
+  assert.equal(r.res.body.error, 'rpc_failed');
+});
+
+// (b) webhook duplicato
+test('webhook duplicato (sequenziale): 1a consegna conferma, 2a trova attempt succeeded -> 200 senza GET ne altra confirm', async () => {
+  const r = await runWebhook({
+    attempts: [wAttempt({ status: 'initiated' }), wAttempt({ status: 'succeeded' })],
+    checkout: wPaid, times: 2,
+    body: { id: 'co-w' },
+  });
+  assert.deepEqual(r.responses.map((x) => x.statusCode), [200, 200]);
+  assert.equal(r.calls('kitchen_payment_confirm').length, 1, 'una sola confirm');
+  assert.equal(r.fetchCalls.length, 1, 'una sola GET: la seconda consegna non richiama SumUp');
+  assert.equal(r.calls('kitchen_payment_webhook_ingest').length, 1);
+});
+
+test('webhook duplicato (concorrente: entrambe leggono initiated) -> stessa chiave di dedup ingest, 2a confirm innocua (stesso id, nessun lost_race, nessun fail)', async () => {
+  const r = await runWebhook({ attempt: wAttempt(), checkout: wPaid, times: 2, body: { id: 'co-w' } });
+  assert.deepEqual(r.responses.map((x) => x.statusCode), [200, 200]);
+  const ingests = r.calls('kitchen_payment_webhook_ingest');
+  assert.equal(ingests.length, 2);
+  assert.equal(ingests[0].params.p_provider_event_id, 'co-w:PAID');
+  assert.equal(ingests[1].params.p_provider_event_id, ingests[0].params.p_provider_event_id, 'stessa chiave => ON CONFLICT lato DB lo rende un no-op');
+  assert.equal(r.calls('kitchen_payment_fail').length, 0);
+  for (const c of r.calls('kitchen_payment_confirm')) assert.equal(c.params.p_attempt_id, 'att-w');
+});
+
+// (c) PAID dopo annullo staff
+// Passo 4 (K2 lato api): prima il webhook scartava l'attempt cancelled senza GET (incasso invisibile). Ora AC1-AC8.
+test('K2 api AC1: PAID dopo annullo staff (attempt cancelled) -> 1 GET, ingest, 1 confirm con provider_ref = checkout.id, 200', async () => {
+  const r = await runWebhook({ attempt: wAttempt({ status: 'cancelled' }), checkout: wPaid });
+  assert.equal(r.res.statusCode, 200);
+  assert.equal(r.fetchCalls.length, 1, 'GET autorevole a SumUp');
+  assert.equal(r.calls('kitchen_payment_webhook_ingest').length, 1);
+  assert.equal(r.calls('kitchen_payment_confirm').length, 1, 'il PAID viene registrato');
+  assert.equal(r.calls('kitchen_payment_confirm')[0].params.p_attempt_id, 'att-w');
+  assert.equal(r.calls('kitchen_payment_confirm')[0].params.p_provider_ref, 'co-w');
+  assert.equal(r.calls('kitchen_payment_fail').length, 0);
+});
+
+for (const st of ['FAILED', 'EXPIRED', 'PENDING']) {
+  test(`K2 api AC2: attempt cancelled + GET ${st} -> ingest (prova diagnostica), 0 fail, 0 confirm, 200`, async () => {
+    const r = await runWebhook({ attempt: wAttempt({ status: 'cancelled' }), checkout: { ...wPaid, status: st } });
+    assert.equal(r.res.statusCode, 200);
+    assert.equal(r.calls('kitchen_payment_webhook_ingest').length, 1);
+    assert.equal(r.calls('kitchen_payment_fail').length, 0, 'kitchen_payment_fail rifiuta cancelled: mai chiamata');
+    assert.equal(r.calls('kitchen_payment_confirm').length, 0);
+  });
+}
+
+for (const failure_reason of ['customer_switched_to_counter', 'staff_closed_for_counter']) {
+  test(`K2 api AC4: PAID su attempt failed/${failure_reason} (passato al banco) -> confirm (D1)`, async () => {
+    const r = await runWebhook({ attempt: wAttempt({ status: 'failed', failure_reason }), checkout: wPaid });
+    assert.equal(r.res.statusCode, 200);
+    assert.equal(r.calls('kitchen_payment_confirm').length, 1);
+    assert.equal(r.calls('kitchen_payment_confirm')[0].params.p_provider_ref, 'co-w');
+    assert.equal(r.calls('kitchen_payment_fail').length, 0);
+  });
+}
+
+test('K2 api AC5 webhook: GET con id o checkout_reference diversi dal legame DB -> 0 confirm, 0 fail, 0 ingest', async () => {
+  for (const checkout of [{ ...wPaid, id: undefined }, { ...wPaid, id: '' }, { ...wPaid, id: 'co-altro' }, { ...wPaid, checkout_reference: 'att-altro' }]) {
+    const r = await runWebhook({ attempt: wAttempt({ status: 'cancelled' }), checkout, body: { id: 'co-w' } });
+    assert.equal(r.res.statusCode, 200, 'binding post-GET: ignorato come oggi');
+    assert.equal(r.calls('kitchen_payment_confirm').length, 0);
+    assert.equal(r.calls('kitchen_payment_fail').length, 0);
+  }
+});
+
+test('K2 api AC5 webhook: cancelled + PAID con importo diverso -> 500, 0 fail, 0 confirm (anomalia, ingest conservato)', async () => {
+  const r = await runWebhook({ attempt: wAttempt({ status: 'cancelled' }), checkout: { ...wPaid, amount: 99 } });
+  assert.equal(r.res.statusCode, 500);
+  assert.equal(r.calls('kitchen_payment_webhook_ingest').length, 1);
+  assert.equal(r.calls('kitchen_payment_fail').length, 0);
+  assert.equal(r.calls('kitchen_payment_confirm').length, 0);
+});
+
+test('K2 api AC6: consegna doppia cancelled+PAID -> stessa chiave ingest, nessun fail, ogni confirm sullo stesso attempt', async () => {
+  const r = await runWebhook({ attempt: wAttempt({ status: 'cancelled' }), checkout: wPaid, times: 2 });
+  assert.deepEqual(r.responses.map((x) => x.statusCode), [200, 200]);
+  const ingests = r.calls('kitchen_payment_webhook_ingest');
+  assert.equal(ingests[0].params.p_provider_event_id, 'co-w:PAID');
+  assert.equal(ingests[1].params.p_provider_event_id, 'co-w:PAID', 'ON CONFLICT lato DB: nessuna seconda riga');
+  assert.equal(r.calls('kitchen_payment_fail').length, 0);
+  for (const c of r.calls('kitchen_payment_confirm')) {
+    assert.equal(c.params.p_attempt_id, 'att-w');
+    assert.equal(c.params.p_provider_ref, 'co-w');
+  }
+});
+
+test('K2 api AC6: payload webhook che dice FAILED ma la GET dice PAID -> conta la GET (confirm, nessun fail)', async () => {
+  const r = await runWebhook({ attempt: wAttempt(), checkout: wPaid, body: { id: 'co-w', event_type: 'CHECKOUT_STATUS_CHANGED', status: 'FAILED' } });
+  assert.equal(r.res.statusCode, 200);
+  assert.equal(r.calls('kitchen_payment_confirm').length, 1);
+  assert.equal(r.calls('kitchen_payment_fail').length, 0);
+});
+
+test('K2 api AC6: FAILED poi PAID sullo stesso checkout (retry carta) -> fail sumup_failed poi confirm, chiavi ingest distinte', async () => {
+  let n = 0;
+  const r = await runWebhook({
+    attempt: wAttempt(),
+    times: 2,
+    fetchImpl: async () => jsonFetchResponse(200, n++ === 0 ? { ...wPaid, status: 'FAILED' } : wPaid),
+  });
+  assert.deepEqual(r.responses.map((x) => x.statusCode), [200, 200]);
+  assert.deepEqual(r.calls('kitchen_payment_webhook_ingest').map((c) => c.params.p_provider_event_id), ['co-w:FAILED', 'co-w:PAID']);
+  assert.equal(r.calls('kitchen_payment_fail')[0].params.p_reason, 'sumup_failed');
+  assert.equal(r.calls('kitchen_payment_confirm').length, 1);
+});
+
+test('K2 api AC7: cancelled + PAID che perde la gara col banco (lost_race) -> 200, log di riconciliazione, 0 fail', async () => {
+  const errors = [];
+  const origError = console.error;
+  console.error = (...args) => { errors.push(String(args[0])); };
+  try {
+    const r = await runWebhook({
+      attempt: wAttempt({ status: 'cancelled' }),
+      checkout: wPaid,
+      rpc: {
+        kitchen_payment_webhook_ingest: { data: {}, error: null },
+        kitchen_payment_confirm: { data: { id: 'pay-cassa-winner', status: 'succeeded' }, error: null },
+        kitchen_payment_fail: { data: {}, error: null },
+      },
+    });
+    assert.equal(r.res.statusCode, 200);
+    assert.equal(r.calls('kitchen_payment_confirm').length, 1);
+    assert.equal(r.calls('kitchen_payment_fail').length, 0);
+  } finally {
+    console.error = origError;
+  }
+  assert.ok(errors.some((e) => e.includes('needs manual reconciliation')), 'lost_race non silenzioso nei log');
+});
+
+test('K2 api AC8: GET con body non JSON -> 502 sumup_verify_failed, 0 RPC', async () => {
+  const r = await runWebhook({ attempt: wAttempt(), fetchImpl: async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('bad json'); } }) });
+  assert.equal(r.res.statusCode, 502);
+  assert.equal(r.res.body.error, 'sumup_verify_failed');
+  assert.equal(r.admin.__rpcCalls.length, 0);
+});
+
+test('K2 api AC8: la GET del webhook ha un timeout esplicito (AbortSignal)', async () => {
+  let signal;
+  const r = await runWebhook({ attempt: wAttempt(), fetchImpl: async (url, opts) => { signal = opts?.signal; return jsonFetchResponse(200, wPaid); } });
+  assert.equal(r.res.statusCode, 200);
+  assert.ok(signal instanceof AbortSignal, 'fetch chiamata con signal di timeout');
+});
+
+test('K2 api AC8: ingest in errore -> 500 webhook_ingest_failed, 0 confirm/fail', async () => {
+  const r = await runWebhook({
+    attempt: wAttempt({ status: 'cancelled' }),
+    checkout: wPaid,
+    rpc: {
+      kitchen_payment_webhook_ingest: { data: null, error: { message: 'boom' } },
+      kitchen_payment_confirm: { data: { id: 'att-w' }, error: null },
+      kitchen_payment_fail: { data: {}, error: null },
+    },
+  });
+  assert.equal(r.res.statusCode, 500);
+  assert.equal(r.res.body.error, 'webhook_ingest_failed');
+  assert.equal(r.calls('kitchen_payment_confirm').length, 0);
+  assert.equal(r.calls('kitchen_payment_fail').length, 0);
+});
+
+test('K2 api AC8: confirm in errore su cancelled + PAID -> 500 rpc_failed, mai 200', async () => {
+  const r = await runWebhook({
+    attempt: wAttempt({ status: 'cancelled' }),
+    checkout: wPaid,
+    rpc: {
+      kitchen_payment_webhook_ingest: { data: {}, error: null },
+      kitchen_payment_confirm: { data: null, error: { message: 'invalid_attempt_status' } },
+      kitchen_payment_fail: { data: {}, error: null },
+    },
+  });
+  assert.equal(r.res.statusCode, 500);
+  assert.equal(r.res.body.error, 'rpc_failed');
+});
+
+// AC5 sul resolver condiviso (usato da tutti i 9 chiamanti): nessun fallback come prova di pagamento.
+test('K2 api AC5 resolver: PAID senza prova del provider -> throw sumup_checkout_unverified, 0 RPC', async () => {
+  const { applySumupCheckoutResult } = await server.ssrLoadModule(path.join(ROOT, 'api/_lib/sumupPaymentResolution.js'));
+  const base = { id: 'att-r', amount: 10, provider: 'sumup', status: 'initiated', provider_ref: 'co-r' };
+  const good = { id: 'co-r', status: 'PAID', amount: 10, checkout_reference: 'att-r' };
+  const cases = [
+    [base, { ...good, id: undefined }, 'id assente'],
+    [base, { ...good, id: '' }, 'id vuoto'],
+    [base, { ...good, id: ' co-r ' }, 'id con spazi'],
+    [base, { ...good, id: 'co-altro' }, 'id diverso da provider_ref'],
+    [base, { ...good, checkout_reference: 'att-altro' }, 'checkout_reference diverso'],
+    [base, { ...good, checkout_reference: undefined }, 'checkout_reference assente'],
+    [{ ...base, provider_ref: null }, { ...good, id: undefined }, 'provider_ref e id assenti'],
+  ];
+  const origError = console.error;
+  console.error = () => {};
+  try {
+    for (const [attempt, checkout, label] of cases) {
+      const calls = [];
+      const admin = { rpc: async (name) => { calls.push(name); return { data: { id: attempt.id }, error: null }; } };
+      await assert.rejects(() => applySumupCheckoutResult(admin, attempt, checkout), /sumup_checkout_unverified/, label);
+      assert.equal(calls.length, 0, `${label}: nessuna RPC`);
+    }
+  } finally {
+    console.error = origError;
+  }
+});
+
+test('K2 api AC5 resolver: prova valida -> confirm con p_provider_ref = checkout.id (anche senza provider_ref sull\'attempt)', async () => {
+  const { applySumupCheckoutResult } = await server.ssrLoadModule(path.join(ROOT, 'api/_lib/sumupPaymentResolution.js'));
+  for (const provider_ref of ['co-r', null]) {
+    const calls = [];
+    const admin = { rpc: async (name, params) => { calls.push({ name, params }); return { data: { id: 'att-r' }, error: null }; } };
+    const out = await applySumupCheckoutResult(admin, { id: 'att-r', amount: 10, provider: 'sumup', status: 'initiated', provider_ref }, { id: 'co-r', status: 'PAID', amount: 10, checkout_reference: 'att-r' });
+    assert.equal(out.outcome, 'confirmed');
+    assert.deepEqual(calls.map((c) => c.name), ['kitchen_payment_confirm']);
+    assert.equal(calls[0].params.p_provider_ref, 'co-r');
+  }
+});
+
+test('K2 api AC5 create-checkout: GET con id diverso da provider_ref -> nessun URL, nessuna confirm, nessuna POST', async () => {
+  const origError = console.error;
+  console.error = () => {};
+  try {
+    for (const got of [{ id: 'co-altro' }, { id: undefined }]) {
+      const r = await runF4({
+        attempt: f4Attempt({ provider_ref: 'co-e' }),
+        rpc: { kitchen_payment_confirm: { data: { id: 'att-f4' }, error: null } },
+        fetchImpl: async () => jsonFetchResponse(200, { status: 'PAID', amount: 10, checkout_reference: 'att-f4', hosted_checkout_url: 'https://pay.sumup.com/x', ...got }),
+      });
+      assert.notEqual(r.res.statusCode, 200);
+      assert.equal(r.res.body?.hosted_checkout_url, undefined);
+      assert.equal(r.admin.__rpcCalls.filter((c) => c.name === 'kitchen_payment_confirm').length, 0);
+      assert.equal(r.fetchCalls.length, 1, 'solo la GET, nessuna POST');
+    }
+  } finally {
+    console.error = origError;
+  }
+});
+
+// (d) FAILED/EXPIRED su attempt gia chiuso per il banco
+for (const failure_reason of ['staff_closed_for_counter', 'customer_switched_to_counter']) {
+  test(`documenta DIFETTO: webhook FAILED su attempt failed/${failure_reason} chiama kitchen_payment_fail('sumup_failed') -> sovrascrive il motivo`, async () => {
+    // Il webhook ammette status 'failed' (finestra retry stesso-checkout) senza guardare failure_reason (la SELECT non lo legge).
+    // Lato DB (kitchen_payment_fail, 20260830101227 r.~280-300): se failure_reason cambia, UPDATE ... failure_reason = p_reason.
+    // Effetto: failed/sumup_failed e "live" per kitchen_payment_attempt_start (20261012100000 r.~480-486) -> blocca un nuovo attempt
+    // (anche cassa) finche un check SumUp non lo cambia. Qui si fissa solo il comportamento applicativo osservabile.
+    const r = await runWebhook({
+      attempt: wAttempt({ status: 'failed', failure_reason }),
+      checkout: { ...wPaid, status: 'FAILED' },
+    });
+    assert.equal(r.res.statusCode, 200);
+    assert.equal(r.calls('kitchen_payment_fail').length, 1, 'oggi il webhook ri-applica fail');
+    assert.equal(r.calls('kitchen_payment_fail')[0].params.p_reason, 'sumup_failed', 'motivo sovrascritto con sumup_failed (riapre la finestra retry)');
+    assert.equal(r.calls('kitchen_payment_confirm').length, 0);
+  });
+}
+
+test('webhook EXPIRED su attempt failed/staff_closed_for_counter -> fail con motivo sumup_expired (non riapre la finestra retry)', async () => {
+  const r = await runWebhook({ attempt: wAttempt({ status: 'failed', failure_reason: 'staff_closed_for_counter' }), checkout: { ...wPaid, status: 'EXPIRED' } });
+  assert.equal(r.calls('kitchen_payment_fail')[0].params.p_reason, 'sumup_expired');
+});
+
+// (e) checkout fallito + retry
+test('create-checkout retry: provider_ref + GET FAILED -> riusa lo STESSO URL; esattamente 1 GET, 0 POST, 0 List, 0 claim, 0 set_provider_ref', async () => {
+  const r = await runF4({
+    attempt: f4Attempt({ provider_ref: 'co-e' }),
+    rpc: { kitchen_payment_fail: { data: {}, error: null } },
+    fetchImpl: async () => jsonFetchResponse(200, { id: 'co-e', status: 'FAILED', amount: 10, checkout_reference: 'att-f4', hosted_checkout_url: 'https://pay.sumup.com/same-e' }),
+  });
+  assert.equal(r.res.statusCode, 200);
+  assert.deepEqual(r.res.body, { checkout_id: 'co-e', hosted_checkout_url: 'https://pay.sumup.com/same-e' });
+  assert.deepEqual(r.fetchCalls, ['https://api.sumup.com/v0.1/checkouts/co-e']);
+  assert.deepEqual(r.admin.__rpcCalls.map((c) => c.name), ['kitchen_payment_fail']);
+  assert.equal(r.admin.__rpcCalls[0].params.p_reason, 'sumup_failed');
+});
+
+// (f) corpo della POST a SumUp
+test('create-checkout: corpo/headers/URL della POST a SumUp per un ordine normale (deepEqual completo)', async () => {
+  let post = null;
+  const r = await runF4({
+    rpc: F5_RPC,
+    fetchImpl: async (url, opts) => {
+      if (isListUrl(url)) return jsonFetchResponse(200, []);
+      post = { url: String(url), method: opts.method, headers: opts.headers, body: JSON.parse(opts.body) };
+      return jsonFetchResponse(200, { id: 'co-f', hosted_checkout_url: 'https://pay.sumup.com/f' });
+    },
+  });
+  assert.equal(r.res.statusCode, 200);
+  assert.equal(post.url, 'https://api.sumup.com/v0.1/checkouts');
+  assert.equal(post.method, 'POST');
+  assert.deepEqual(post.headers, { Authorization: 'Bearer test-sumup-key', 'Content-Type': 'application/json' });
+  assert.deepEqual(post.body, {
+    checkout_reference: 'att-f4',
+    amount: 10,
+    currency: 'EUR',
+    merchant_code: 'test-merchant',
+    description: 'Walrus Pub — ordine ord-f4',
+    redirect_url: 'https://prod.example.com/kitchen/status?orderId=ord-f4&sumup=return',
+    return_url: 'https://prod.example.com/api/kitchen-sumup-webhook',
+    hosted_checkout: { enabled: true },
+  });
+});
+
+// (g) timeout / errore di rete
+for (const [label, err] of [['timeout', Object.assign(new Error('timeout'), { name: 'TimeoutError' })], ['errore di rete', new TypeError('fetch failed')]]) {
+  // Passo 4 (B2): errore esplicito 502 sumup_verify_failed (prima 500 internal_server_error). Non si presume il retry di SumUp.
+  test(`webhook: GET SumUp in ${label} -> 502 sumup_verify_failed, nessuna ingest/confirm/fail`, async () => {
+    const r = await runWebhook({ attempt: wAttempt(), fetchImpl: async () => { throw err; } });
+    assert.equal(r.res.statusCode, 502);
+    assert.equal(r.res.body.error, 'sumup_verify_failed');
+    assert.equal(r.admin.__rpcCalls.length, 0);
+  });
+
+  test(`reconcile: GET SumUp in ${label} -> outcome unknown non retryable, mai confirmed, nessuna confirm/fail`, async () => {
+    const attempt = { id: 'att-g', amount: 10, provider: 'sumup', status: 'initiated', provider_ref: 'co-g' };
+    const order = { id: 'ord-g', customer_id: 'cust-1', payment_status: 'pending_counter_payment', status: 'pending_counter_payment' };
+    const admin = reconcileAdmin({ order, attempt });
+    const res = makeRes();
+    await withFetch(async () => { throw err; }, () => withAdmin(admin, () => reconcileHandler(makeReq({ body: { order_id: 'ord-g' }, headers: { authorization: 'Bearer tok' } }), res)));
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.outcome, 'unknown');
+    assert.equal(res.body.retryable, false);
+    assert.equal(admin.__rpcCalls.length, 0);
+  });
+}

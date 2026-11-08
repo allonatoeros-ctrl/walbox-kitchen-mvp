@@ -46,8 +46,11 @@ async function runRefresh(opts) {
   return [...calls];
 }
 const def = await runRefresh({});
-assert.deepEqual(def, ['kitchen_payments', 'kitchen_payments_provider_drift_candidates', 'kitchen_payments'],
-  'default: Q1+Q2+Q3 (Q4 solo se ci sono order_id)');
+// K6 (2026-11-08): con includeRecent si aggiungono log da riconciliare, chiusure e ruolo (kitchen_payments
+// degli ordini coinvolti e Q4 solo se ci sono order_id).
+assert.deepEqual(def, ['kitchen_payments', 'kitchen_payments_provider_drift_candidates', 'kitchen_payments',
+  'kitchen_action_log', 'kitchen_reconciliation_resolutions', 'kitchen_staff_members'],
+  'default: Q1+Q2+Q3 + letture K6 (Q4 solo se ci sono order_id)');
 console.log('PASS P3b-1: default (includeRecent=true) -> Q1+Q2+Q3, invariato');
 const off = await runRefresh({ includeRecent: false });
 assert.deepEqual(off, ['kitchen_payments', 'kitchen_payments_provider_drift_candidates'],
