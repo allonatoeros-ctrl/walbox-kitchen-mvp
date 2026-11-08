@@ -630,7 +630,7 @@ DO $$ DECLARE r record; res jsonb; BEGIN
   RAISE NOTICE 'PASS S15 riapertura di un ordine sigillato: UPDATE Kitchen senza errori, rilascio rifiutato (order_not_closed), nuovo attempt SumUp bloccato (food_club_order_sealed)';
 END $$;
 
--- S16 confirm (PAID tardivo su attempt esistente) e refund come su un gemello; record_counter su sigillato rifiutato (D1)
+-- S16 confirm (PAID tardivo su attempt esistente), refund e record_counter come su un gemello (fix D1: 20261109107000)
 DO $$ DECLARE r record; g record; res jsonb; s uuid := fc_test.new_staff(); rc_s text; rc_g text; rf_s text; rf_g text; BEGIN
   -- confirm tardivo (PAID dopo sigillo): buono used / consumed_on_late_charge, esattamente come VT2
   SELECT * INTO r FROM fc_test.mk_sealed('B');
@@ -657,11 +657,13 @@ DO $$ DECLARE r record; g record; res jsonb; s uuid := fc_test.new_staff(); rc_s
   PERFORM fc_test.set_ages(g.o, 1300);
   rc_s := fc_test.try(format('SELECT fc_test.pay_counter(%L, %L)', r.o, s));
   rc_g := fc_test.try(format('SELECT fc_test.pay_counter(%L, %L)', g.o, s));
-  -- D1: sul sigillato il banco e' rifiutato (il buono e' tornato al cliente), sul gemello non sigillato no.
-  ASSERT rc_s LIKE '%food_club_order_sealed%', format('S16 record_counter su sigillato rifiutato: %s', rc_s);
-  ASSERT rc_g NOT LIKE '%food_club_order_sealed%', format('S16 record_counter su gemello non sigillato: %s', rc_g);
+  -- FIX D1 (20261109107000): con il buono ancora riservato il sigillo non aggiunge blocchi al banco. Decide Kitchen,
+  -- come sul gemello (ordine PA: online_order_paid_status_conflict). Il blocco Club resta solo a buono restituito
+  -- (tests/db/food-club/90_d1_banco.sql D1-S1, 80_held_staff.sql D3).
+  ASSERT rc_s = rc_g, format('S16 record_counter: sigillato=%s gemello=%s', rc_s, rc_g);
+  ASSERT rc_s NOT LIKE '%food_club_order_sealed%', format('S16 record_counter su sigillato con buono riservato: %s', rc_s);
   ASSERT fc_test.vstatus(r.v) = 'reserved' AND NOT EXISTS (SELECT 1 FROM public.kitchen_payments WHERE order_id = r.o AND provider = 'cash'), 'S16 sigillato: nessun charge cash, buono invariato';
-  RAISE NOTICE 'PASS S16 confirm (PAID tardivo, doppio) e refund = gemello; record_counter su sigillato rifiutato [refund: %; record_counter: %]', left(rf_s, 40), left(rc_s, 40);
+  RAISE NOTICE 'PASS S16 confirm (PAID tardivo, doppio) e refund = gemello; record_counter su sigillato = gemello [refund: %; record_counter: %]', left(rf_s, 40), left(rc_s, 40);
 END $$;
 
 -- S17 P-A: attempt mai richiesto -> not_payable e rilascio anche con costanti false
