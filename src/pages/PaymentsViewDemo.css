@@ -516,3 +516,48 @@
 .kpd-page--kiosk .kpd-payment-row { padding: 16px 20px; }
 .kpd-page--kiosk .kpd-section-title { font-size: 14px; }
 .kpd-page--kiosk .kpd-sumup-badge { font-size: 13px; padding: 8px 14px; }
+
+/* ── DA RICONCILIARE (K6) ─────────────────────────── */
+.kpd-recon-title { color: #f59e0b; }
+.kpd-recon-card {
+  display: flex; flex-direction: column; gap: 6px;
+  background: #1a0f08; border: 1px solid #f59e0b55; border-left: 4px solid #f59e0b;
+  border-radius: 10px; padding: 14px 16px; min-width: 0; overflow-wrap: anywhere;
+}
+.kpd-recon-card--red { background: #1a0808; border-color: #ef444455; border-left-color: #ef4444; }
+.kpd-recon-card--amber { background: #1a1408; border-color: #f59e0b55; border-left-color: #f59e0b; }
+.kpd-recon-card--grey { background: #16181b; border-color: #9ca3af44; border-left-color: #9ca3af; }
+.kpd-recon-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.kpd-recon-badge { font-size: 11.5px; font-weight: 900; letter-spacing: 0.4px; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; }
+.kpd-recon-badge--red { background: #ef4444; color: #1a0808; }
+.kpd-recon-badge--amber { background: #f59e0b; color: #1a1408; }
+.kpd-recon-badge--grey { background: #9ca3af; color: #16181b; }
+.kpd-recon-when { font-size: 12px; color: rgba(245, 240, 232, 0.6); }
+.kpd-recon-order { font-size: 14px; font-weight: 900; color: #f5f0e8; }
+.kpd-recon-nick { font-weight: 600; color: rgba(245, 240, 232, 0.75); }
+.kpd-recon-lines { display: flex; flex-direction: column; gap: 2px; }
+.kpd-recon-line { font-size: 13px; color: #f5f0e8; line-height: 1.4; }
+.kpd-recon-instruction { font-size: 12.5px; color: rgba(245, 240, 232, 0.7); line-height: 1.4; }
+.kpd-recon-note { font-size: 12.5px; color: rgba(245, 240, 232, 0.55); font-style: italic; }
+.kpd-recon-more { font-size: 12.5px; font-weight: 700; color: rgba(245, 240, 232, 0.7); }
+.kpd-recon-btn {
+  align-self: flex-start; min-height: 44px; padding: 0 16px; font: inherit; font-size: 14px; font-weight: 800;
+  color: #f5f0e8; background: transparent; border: 1.5px solid rgba(245, 240, 232, 0.7); border-radius: 8px; cursor: pointer;
+}
+.kpd-recon-btn:disabled { opacity: 0.5; cursor: default; }
+.kpd-recon-btn--primary { background: #f5f0e8; color: #111; border-color: #f5f0e8; }
+.kpd-recon-btn--ghost { border-color: rgba(245, 240, 232, 0.35); color: rgba(245, 240, 232, 0.85); }
+.kpd-recon-form .kpd-recon-input,
+.kpd-recon-form .kpd-recon-counter { max-width: 520px; }
+.kpd-recon-form { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.kpd-recon-input {
+  width: 100%; box-sizing: border-box; min-height: 44px; padding: 8px 10px; font: inherit; font-size: 14px;
+  background: #0d0d0d; color: #f5f0e8; border: 1px solid rgba(245, 240, 232, 0.25); border-radius: 8px;
+}
+.kpd-recon-counter { font-size: 11.5px; color: rgba(245, 240, 232, 0.5); text-align: right; }
+.kpd-recon-error { font-size: 13px; font-weight: 700; color: #fca5a5; }
+.kpd-recon-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.kpd-recon-closed { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.kpd-recon-closed-title { font-size: 12px; font-weight: 900; letter-spacing: 0.4px; text-transform: uppercase; color: rgba(245, 240, 232, 0.6); }
+.kpd-recon-closed-row { font-size: 12.5px; color: rgba(245, 240, 232, 0.7); line-height: 1.4; overflow-wrap: anywhere; }
+.kpd-recon-closed-order { font-weight: 800; color: #f5f0e8; }

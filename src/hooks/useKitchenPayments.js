@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { serviceNightWindow, serviceNightWindowFor, summarizeServiceNightPayments, summarizePaymentsByMethod } from '../lib/kitchenServiceRules';
+import { RECONCILIATION_ACTIONS, buildReconciliationItems, validateResolution, resolveErrorMessage } from '../lib/kitchenReconciliation';
 
 const VENUE_ID = 'walrus-main';
 const RECENT_LIMIT = 30;
@@ -21,6 +22,10 @@ const POLL_MS = 15000;
 
 const EMPTY_SUMMARY = { incasso: 0, rimborsato: 0, netto: 0, inSospeso: 0, falliti: 0, incassiRiusciti: 0 };
 const EMPTY_BY_METHOD = { byMethod: {}, sumup: { succeeded: 0, pending: 0, failed: 0 } };
+// K6 "Da riconciliare": finestra di lettura dei log e di visibilita' delle chiuse.
+const EMPTY_RECONCILIATION = { open: [], closed: [], hiddenOpen: 0, resolutionsUnavailable: false };
+const RECONCILIATION_LOOKBACK_DAYS = 30;
+const RECONCILIATION_CLOSED_DAYS = 7;
 
 /**
  * Vero se `nightParam` risolve alla serata live/corrente (adesso). Pura, nessun side-effect —
@@ -80,6 +85,8 @@ export function useKitchenPayments({ night: nightParam = null, includeRecent = t
   const [paymentsByMethod, setPaymentsByMethod] = useState(EMPTY_BY_METHOD);
   const [anomalies, setAnomalies] = useState([]);
   const [recentPayments, setRecentPayments] = useState([]);
+  const [reconciliation, setReconciliation] = useState(EMPTY_RECONCILIATION);
+  const [isManager, setIsManager] = useState(false);
 
   const refresh = async () => {
     // Risolta e pubblicata SUBITO, prima di qualunque chiamata di rete: StoricoView usa
@@ -99,7 +106,8 @@ export function useKitchenPayments({ night: nightParam = null, includeRecent = t
       // `includeRecent:false` (P3b, KitchenSoloService): solo Q1 summary + Q2 drift. Niente "ultimi
       // 30" (Q3) ne' lookup order_code/nickname (Q4): quel consumer legge solo summary,
       // paymentsByMethod e il conteggio anomalie. Default true = PaymentsView invariata.
-      const [summaryRes, driftRes, recentRes] = await Promise.all([
+      const sinceIso = new Date(Date.now() - RECONCILIATION_LOOKBACK_DAYS * 86400000).toISOString();
+      const [summaryRes, driftRes, recentRes, reconLogsRes, resolutionsRes, roleRes] = await Promise.all([
         // !inner + filtro sulla colonna embedded: solo i pagamenti degli ordini APERTI dentro la
         // serata. Nessun filtro sul created_at del pagamento e nessun filtro su service_day.
         supabase
@@ -124,17 +132,55 @@ export function useKitchenPayments({ night: nightParam = null, includeRecent = t
             .order('created_at', { ascending: false })
             .limit(RECENT_LIMIT)
           : Promise.resolve({ data: [], error: null }),
+        // K6: segnalazioni da riconciliare, indipendenti dalla serata selezionata.
+        includeRecent
+          ? supabase
+            .from('kitchen_action_log')
+            .select('id, order_id, action, created_at, metadata')
+            .eq('venue_id', VENUE_ID)
+            .in('action', RECONCILIATION_ACTIONS)
+            .eq('metadata->>needs_manual_reconciliation', 'true')
+            .gte('created_at', sinceIso)
+            .order('created_at', { ascending: false })
+            .limit(200)
+          : Promise.resolve({ data: [], error: null }),
+        // Tabella solo proposta: se manca, lista vuota + flag (mai far fallire il refresh).
+        includeRecent
+          ? Promise.resolve(
+            supabase
+              .from('kitchen_reconciliation_resolutions')
+              .select('id, venue_id, source_log_id, order_id, outcome, note, refund_ref_tail, resolved_by, resolved_by_label, created_at')
+              .eq('venue_id', VENUE_ID)
+              .limit(500)
+          ).catch((e) => ({ data: null, error: e ?? new Error('resolutions_failed') }))
+          : Promise.resolve({ data: [], error: null }),
+        // Solo per mostrare/nascondere il pulsante: il controllo vero e' nella RPC.
+        includeRecent
+          ? Promise.resolve(
+            supabase
+              .from('kitchen_staff_members')
+              .select('role')
+              .eq('user_id', session.user?.id ?? '')
+              .eq('venue_id', VENUE_ID)
+              .maybeSingle()
+          ).catch((e) => ({ data: null, error: e ?? new Error('role_failed') }))
+          : Promise.resolve({ data: null, error: null }),
       ]);
 
       if (summaryRes.error) throw summaryRes.error;
       if (driftRes.error) throw driftRes.error;
       if (recentRes.error) throw recentRes.error;
+      if (reconLogsRes.error) throw reconLogsRes.error;
 
       const drift = driftRes.data ?? [];
       const recent = recentRes.data ?? [];
 
+      const reconLogs = reconLogsRes.data ?? [];
+      const resolutionsUnavailable = Boolean(resolutionsRes.error);
+      const resolutions = resolutionsUnavailable ? [] : (resolutionsRes.data ?? []);
+
       const orderIds = includeRecent
-        ? [...new Set([...drift, ...recent].map((r) => r.order_id).filter(Boolean))]
+        ? [...new Set([...drift, ...recent, ...reconLogs].map((r) => r.order_id).filter(Boolean))]
         : [];
       // `orderInfoById` porta anche `nickname` (Kitchen Analytics V1 — Cassa/Payment Hub filtri +
       // colonna cliente, 2026-09-22): stessa query read-only gia' esistente, solo una colonna in
@@ -148,6 +194,28 @@ export function useKitchenPayments({ night: nightParam = null, includeRecent = t
           .in('id', orderIds);
         if (ordersError) throw ordersError;
         orderInfoById = Object.fromEntries((orders ?? []).map((o) => [o.id, o]));
+      }
+
+      // K6: pagamenti degli ordini coinvolti (per rimborso automatico e importo del charge).
+      if (includeRecent) {
+        const reconOrderIds = [...new Set(reconLogs.map((l) => l.order_id).filter(Boolean))];
+        let reconPayments = [];
+        if (reconOrderIds.length > 0) {
+          const { data: pays, error: paysError } = await supabase
+            .from('kitchen_payments')
+            .select('id, order_id, direction, status, amount')
+            .in('order_id', reconOrderIds);
+          if (paysError) throw paysError;
+          reconPayments = pays ?? [];
+        }
+        const built = buildReconciliationItems({ logs: reconLogs, resolutions, payments: reconPayments, orderInfoById });
+        const closedSince = Date.now() - RECONCILIATION_CLOSED_DAYS * 86400000;
+        const closed = built.closed.filter((i) => {
+          const t = Date.parse(i.closedBy?.at ?? i.createdAt);
+          return Number.isNaN(t) || t >= closedSince;
+        });
+        setReconciliation({ open: built.open, closed, hiddenOpen: built.hiddenOpen, resolutionsUnavailable });
+        setIsManager(!roleRes.error && roleRes.data?.role === 'manager');
       }
 
       setTodaySummary(summarizeServiceNightPayments(summaryRes.data));
@@ -167,6 +235,26 @@ export function useKitchenPayments({ night: nightParam = null, includeRecent = t
     }
   };
 
+  // K6: chiusura di una segnalazione (solo manager, controllo vero nella RPC server-side).
+  const closeReconciliation = async (logId, { outcome, note, refundRefTail } = {}) => {
+    const v = validateResolution({ outcome, note });
+    if (!v.ok) return { ok: false, error: v.error };
+    try {
+      const { error: rpcError } = await supabase.rpc('kitchen_reconciliation_resolve', {
+        p_source_log_id: logId,
+        p_outcome: v.outcome,
+        p_note: v.note,
+        p_refund_ref_tail: refundRefTail ? String(refundRefTail).trim() || null : null,
+      });
+      if (rpcError) return { ok: false, error: resolveErrorMessage(rpcError.message) };
+      await refresh();
+      return { ok: true };
+    } catch (err) {
+      console.warn('[Walbox] closeReconciliation failed', err);
+      return { ok: false, error: 'Chiusura non riuscita — riprova.' };
+    }
+  };
+
   useEffect(() => {
     // Fetch on mount e ad ogni cambio di notte richiesta (selettore Storico/Cassa).
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -179,5 +267,5 @@ export function useKitchenPayments({ night: nightParam = null, includeRecent = t
     return startVisibilityAwarePoll(refresh, () => isLiveServiceNight(nightParam));
   }, [nightParam, includeRecent]);
 
-  return { loading, error, refresh, serviceNight, todaySummary, paymentsByMethod, anomalies, recentPayments };
+  return { loading, error, refresh, serviceNight, todaySummary, paymentsByMethod, anomalies, recentPayments, reconciliation, isManager, closeReconciliation };
 }

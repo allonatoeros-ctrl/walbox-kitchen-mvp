@@ -4,6 +4,7 @@ import { useSelectedServiceNight } from '../hooks/useSelectedServiceNight';
 import { useFullscreenToggle } from '../hooks/useFullscreenToggle';
 import { formatServiceNightLabel } from '../lib/kitchenServiceRules';
 import { supabase } from '../lib/supabaseClient';
+import { RESOLUTION_OUTCOMES, NOTE_MAX_LENGTH, CATEGORY, orderIdsWithOpenItems, validateResolution } from '../lib/kitchenReconciliation';
 import CassaControlSection from '../components/kitchen/CassaControlSection';
 import ServiceNightSelector from '../components/kitchen/ServiceNightSelector';
 import './PaymentsViewDemo.css';
@@ -249,6 +250,149 @@ async function liveCloseForCounterAction(orderId) {
   return { ok: true, ...closeForCounterOutcomeMessage(body) };
 }
 
+const EMPTY_RECONCILIATION = { open: [], closed: [], hiddenOpen: 0, resolutionsUnavailable: false };
+
+function isSameDay(iso) {
+  const d = new Date(iso);
+  return d.toDateString() === new Date().toDateString();
+}
+
+function formatWhen(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = formatTime(iso);
+  return isSameDay(iso) ? time : `${d.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit' })} ${time}`;
+}
+
+// K6: card "Da riconciliare". Mai UUID, metadata grezzi o classification in pagina.
+function ReconciliationCard({ item, isManager, resolutionsUnavailable, closeReconciliation }) {
+  const [formOpen, setFormOpen] = useState(false);
+  const [outcome, setOutcome] = useState('');
+  const [note, setNote] = useState('');
+  const [refTail, setRefTail] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState(null);
+
+  // "Rimborsato in Walbox" ha senso solo per i pagamenti dopo annullo/abbandono: sul doppio incasso il
+  // rimborso va fatto su SumUp (il server rifiuta comunque l'esito se il rimborso Walbox non esiste).
+  const outcomeOptions = Object.entries(RESOLUTION_OUTCOMES)
+    .filter(([k]) => k !== 'refunded_in_walbox' || item.category === CATEGORY.PAID_AFTER_CLOSE);
+
+  const submit = async () => {
+    const check = validateResolution({ outcome, note });
+    if (!check.ok) { setErr(check.error); return; }
+    setSubmitting(true);
+    setErr(null);
+    try {
+      const res = await closeReconciliation(item.logId, {
+        outcome,
+        note,
+        refundRefTail: outcome === 'refunded_on_sumup' ? refTail.trim() || null : null,
+      });
+      if (!res?.ok) setErr(res?.error ?? 'Chiusura non riuscita — riprova.');
+      else setFormOpen(false);
+    } catch {
+      setErr('Chiusura non riuscita — riprova.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className={`kpd-recon-card kpd-recon-card--${item.tone}`} data-testid={`recon-card-${item.logId}`}>
+      <div className="kpd-recon-head">
+        <span className={`kpd-recon-badge kpd-recon-badge--${item.tone}`}>{item.label}</span>
+        <span className="kpd-recon-when">{formatWhen(item.createdAt)}</span>
+      </div>
+      <div className="kpd-recon-order">
+        {item.orderCode ?? 'Ordine'}
+        {item.nickname && <span className="kpd-recon-nick"> · {item.nickname}</span>}
+      </div>
+      <div className="kpd-recon-lines">
+        {item.lines.map((l, i) => (
+          <div key={i} className="kpd-recon-line">
+            {l.label}
+            {l.amount != null ? ` · ${formatEuro(l.amount)}` : ''}
+            {l.ref ? ` · rif. …${l.ref}` : ''}
+          </div>
+        ))}
+      </div>
+      <div className="kpd-recon-instruction">{item.instruction}</div>
+
+      {isManager && resolutionsUnavailable && <div className="kpd-recon-note">Chiusura non ancora attiva</div>}
+
+      {isManager && !resolutionsUnavailable && !formOpen && (
+        <button type="button" className="kpd-recon-btn" data-testid={`recon-open-${item.logId}`} onClick={() => setFormOpen(true)}>
+          Chiudi segnalazione
+        </button>
+      )}
+
+      {isManager && !resolutionsUnavailable && formOpen && (
+        <div className="kpd-recon-form">
+          <select className="kpd-recon-input" aria-label="Esito" value={outcome} disabled={submitting} onChange={(e) => setOutcome(e.target.value)}>
+            <option value="">Scegli l'esito…</option>
+            {outcomeOptions.map(([k, label]) => (
+              <option key={k} value={k}>{label}</option>
+            ))}
+          </select>
+          <textarea
+            className="kpd-recon-input"
+            aria-label="Motivazione"
+            placeholder="Motivazione"
+            rows={2}
+            maxLength={NOTE_MAX_LENGTH}
+            value={note}
+            disabled={submitting}
+            onChange={(e) => setNote(e.target.value)}
+          />
+          <div className="kpd-recon-counter">{note.length}/{NOTE_MAX_LENGTH}</div>
+          {outcome === 'refunded_on_sumup' && (
+            <input
+              className="kpd-recon-input"
+              aria-label="Ultime 6 cifre rif. rimborso SumUp"
+              placeholder="Ultime 6 cifre rif. rimborso SumUp (facoltativo)"
+              inputMode="numeric"
+              maxLength={6}
+              value={refTail}
+              disabled={submitting}
+              onChange={(e) => setRefTail(e.target.value)}
+            />
+          )}
+          {err && <div className="kpd-recon-error" role="alert">{err}</div>}
+          <div className="kpd-recon-actions">
+            <button type="button" className="kpd-recon-btn kpd-recon-btn--primary" disabled={submitting} onClick={submit}>
+              {submitting ? 'Chiusura…' : 'Conferma'}
+            </button>
+            <button type="button" className="kpd-recon-btn kpd-recon-btn--ghost" disabled={submitting} onClick={() => { setFormOpen(false); setErr(null); }}>
+              Annulla
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function closedSummary(item) {
+  const c = item.closedBy;
+  if (!c) return '';
+  if (c.kind === 'auto') return 'Rimborso registrato ✓';
+  const parts = [`Chiuso dal manager — ${c.outcomeLabel}`];
+  if (c.who) parts.push(c.who);
+  if (c.at) parts.push(formatWhen(c.at));
+  if (c.note) parts.push(`“${c.note}”`);
+  return `${parts.join(' · ')} ${closedSourceNote(c.outcome)}`;
+}
+
+// Solo testo: chi garantisce l'esito. "Rimborsato in Walbox" lo controlla il server (serve un rimborso registrato);
+// gli esiti su SumUp sono dichiarazioni del manager, perché Walbox non vede l'app SumUp.
+function closedSourceNote(outcome) {
+  if (outcome === 'refunded_in_walbox') return '(rimborso registrato in Walbox, controllato dal sistema)';
+  if (outcome === 'seen') return '(dichiarato dal manager)';
+  return "(dichiarato dal manager: Walbox non vede l'app SumUp)";
+}
+
 /**
  * `usePaymentsData` e `refundAction` sono injection point opzionali: di default usano i dati/azioni
  * live (Supabase). Un harness demo può passare fixture locali + un'azione simulata senza toccare
@@ -272,7 +416,8 @@ export default function PaymentsView({
   // selettore non avrebbe nulla da far navigare — nessuna modifica al loro comportamento.
   const isLiveData = usePaymentsData === useKitchenPayments;
   const { selectedServiceNight } = useSelectedServiceNight();
-  const { loading, error, refresh, todaySummary, paymentsByMethod, anomalies, recentPayments, serviceNight } = usePaymentsData({ night: selectedServiceNight });
+  const { loading, error, refresh, todaySummary, paymentsByMethod, anomalies, recentPayments, serviceNight, reconciliation: reconciliationRaw, isManager = false, closeReconciliation } = usePaymentsData({ night: selectedServiceNight });
+  const reconciliation = reconciliationRaw ?? EMPTY_RECONCILIATION;
   // Stessa finestra dello Storico (06:00 -> 06:00): il titolo deve dire QUALE serata, altrimenti
   // dopo mezzanotte "oggi" e' ambiguo proprio quando serve di piu'. Gli harness demo non passano
   // serviceNight: in quel caso resta il titolo neutro.
@@ -280,9 +425,12 @@ export default function PaymentsView({
   const visiblePayments = visiblePaymentIds
     ? recentPayments.filter((payment) => visiblePaymentIds.includes(payment.id))
     : recentPayments;
-  const visibleAnomalies = visibleAnomalyIds
+  // K6: le card "Da riconciliare" vincono sulle anomalie drift dello stesso ordine.
+  const reconOrderIds = useMemo(() => orderIdsWithOpenItems(reconciliation.open), [reconciliation.open]);
+  const driftAnomalies = visibleAnomalyIds
     ? anomalies.filter((anomaly) => visibleAnomalyIds.includes(anomaly.order_id))
     : anomalies;
+  const visibleAnomalies = driftAnomalies.filter((a) => !reconOrderIds.has(a.order_id));
   // order_id -> { status: 'loading'|'done'|'error', message }
   const [refundState, setRefundState] = useState({});
   // order_id -> { status: 'loading'|'done'|'error', message }
@@ -466,6 +614,37 @@ export default function PaymentsView({
           {error}
         </div>
       )}
+
+      {/* DA RICONCILIARE — K6: tutto lo staff vede, solo il manager chiude (controllo vero nella RPC). */}
+      <div data-testid="recon-section">
+        <div className="kpd-section-title kpd-recon-title">DA RICONCILIARE</div>
+        {reconciliation.open.length === 0 ? (
+          <div className="kpd-attention-empty">Nessuna segnalazione 🟢</div>
+        ) : (
+          <div className="kpd-attention-list">
+            {reconciliation.open.map((item) => (
+              <ReconciliationCard
+                key={item.key}
+                item={item}
+                isManager={isManager && typeof closeReconciliation === 'function'}
+                resolutionsUnavailable={Boolean(reconciliation.resolutionsUnavailable)}
+                closeReconciliation={closeReconciliation}
+              />
+            ))}
+            {reconciliation.hiddenOpen > 0 && <div className="kpd-recon-more">+ altre {reconciliation.hiddenOpen}</div>}
+          </div>
+        )}
+        {reconciliation.closed.length > 0 && (
+          <div className="kpd-recon-closed">
+            <div className="kpd-recon-closed-title">Chiuse di recente</div>
+            {reconciliation.closed.map((item) => (
+              <div key={item.key} className="kpd-recon-closed-row">
+                <span className="kpd-recon-closed-order">{item.orderCode ?? 'Ordine'}</span> · {item.label} — {closedSummary(item)}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* DA CONTROLLARE — Kitchen Analytics V1 Fase 9B: rinominato da "⚠ Attenzione" per non
           confondersi con AttentionSection di StoricoView (contenuto diverso: qui solo anomalie
