@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { demoKitchenOrders } from '../data/kitchenMockData';
 import { supabase } from '../lib/supabaseClient';
 import { serviceNightWindow, STAFF_OPERATIONAL_STATUSES } from '../lib/kitchenServiceRules';
+import { isAlreadyPaidOnline, ALREADY_PAID_ONLINE_MESSAGE } from '../lib/kitchenReconciliation';
 
 // Storage cliente vs storage staff/cassa (privacy client-side, 2026-09-16).
 //
@@ -965,6 +966,7 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
     // succeeded payment (e.g. already paid via a different method/channel) instead of the counter
     // charge just requested. Trust the server-returned row, never the locally-clicked method.
     const resolvedMethod = data?.method ?? method;
+    const alreadyOnline = isAlreadyPaidOnline(data, method);
     const now = new Date().toISOString();
     setOrders((prev) => {
       const next = prev.map((o) => {
@@ -997,7 +999,7 @@ export function useKitchenOrders({ scope = 'staff' } = {}) {
         created_at:  now,
       });
     }
-    return { ok: true, method: resolvedMethod };
+    return { ok: true, method: resolvedMethod, alreadyPaidOnline: alreadyOnline, warning: alreadyOnline ? ALREADY_PAID_ONLINE_MESSAGE : null };
   };
 
   // Redemption staff-side del Personalità Discutibile Pass (V2, Opzione A). La RPC è l'unica

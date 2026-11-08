@@ -528,6 +528,7 @@ export function KitchenSoloServiceView({
     if (!order) return;
     if (kind === 'pay') {
       const result = await recordCounterPayment(order, method);
+      if (result?.alreadyPaidOnline) window.alert(result.warning);
       if (result?.ok) notifyCounterPayment(order.id);
       // Ritorno al focus precedente se il pagamento era una deviazione.
       if (returnFocusRef.current && returnFocusRef.current !== order.id) {

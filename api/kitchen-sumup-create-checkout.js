@@ -346,7 +346,9 @@ async function resolveExistingCheckout({ res, supabaseAdmin, attempt, sumupApiKe
 
   let result;
   try {
-    result = await applySumupCheckoutResult(supabaseAdmin, attempt, { ...checkout, id: attempt.provider_ref });
+    // Passo 4 (C1): il checkout passa cosi come arriva dalla GET. L'id non viene piu sovrascritto con
+    // attempt.provider_ref: la corrispondenza id/provider_ref la verifica applySumupCheckoutResult.
+    result = await applySumupCheckoutResult(supabaseAdmin, attempt, checkout);
   } catch (err) {
     console.error('[kitchen-sumup-create-checkout] confirm/fail RPC failed', err);
     return res.status(500).json({ error: 'internal_server_error' });
@@ -354,6 +356,16 @@ async function resolveExistingCheckout({ res, supabaseAdmin, attempt, sumupApiKe
 
   if (result.outcome === 'confirmed') {
     return res.status(409).json({ error: 'order_already_paid' });
+  }
+
+  if (result.outcome === 'lost_race') {
+    // K3 (Passo 4): SumUp ha incassato questo checkout ma un altro pagamento (es. banco) ha gia chiuso
+    // l'ordine. Mai restituire l'URL di un checkout pagato, mai crearne un altro: riconciliazione manuale
+    // (log payment_confirm_lost_race scritto dalla RPC).
+    console.error('[kitchen-sumup-create-checkout] SumUp PAID lost the succeeded-charge race — needs manual reconciliation', {
+      attemptId: attempt.id, orderId: attempt.order_id, winningPaymentId: result.winning_payment_id,
+    });
+    return res.status(409).json({ error: 'needs_manual_reconciliation' });
   }
 
   if (result.outcome === 'already_resolved') {

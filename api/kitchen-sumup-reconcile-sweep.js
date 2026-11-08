@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { runReconcileSweep } from './_lib/sumupReconcileSweep.js';
+import { readSweepConfig, runReconcileSweep } from './_lib/sumupReconcileSweep.js';
 
 // Kitchen Payment Hub V1 — SumUp Online — Autonomous Reconciliation — scheduler entry point.
 //
@@ -39,7 +39,8 @@ export default async function handler(req, res) {
 
   let summary;
   try {
-    summary = await runReconcileSweep({ supabaseAdmin, sumupApiKey });
+    // R3: limiti per giro (finestra tardiva, max attempt, budget, timeout) da env opzionali, default sicuri.
+    summary = await runReconcileSweep({ supabaseAdmin, sumupApiKey, ...readSweepConfig(process.env) });
   } catch (err) {
     console.error('[kitchen-sumup-reconcile-sweep] fatal error', err);
     return res.status(500).json({ error: 'internal_server_error' });

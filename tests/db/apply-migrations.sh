@@ -6,6 +6,8 @@ set -euo pipefail
 DB="${1:-walbox_fc_test}"
 : "${PGHOST:=/tmp}" ; : "${PGPORT:=54329}" ; : "${PGUSER:=postgres}"
 case "$PGHOST" in /*|127.0.0.1|localhost) ;; *) echo "rifiuto: PGHOST non locale ($PGHOST)" >&2; exit 2;; esac
+[ -z "${PGHOSTADDR:-}${PGSERVICE:-}${PGSERVICEFILE:-}" ] || { echo "rifiuto: PGHOSTADDR/PGSERVICE impostati" >&2; exit 2; }
+case "$DB" in ''|*[!A-Za-z0-9_]*) echo "rifiuto: nome DB non semplice ($DB)" >&2; exit 2;; esac
 export PGHOST PGPORT PGUSER
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 psql -qX -d postgres -c "DROP DATABASE IF EXISTS $DB WITH (FORCE)" >/dev/null

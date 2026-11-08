@@ -103,7 +103,6 @@ const OBJECT_POSITION_BY_ID = {
   'item-009': '100% 62%',
   'item-010': '100% 62%',
   'item-011': '100% 62%',
-  'item-059': '100% 62%', // Garpez: stessa foto con scatola a sinistra
 };
 // Scheda compatta: riquadro stretto, il panino sta nella metà destra della foto quadrata (scatola Walrus a sinistra).
 const COMPACT_OBJECT_POSITION = '72% 62%';
@@ -113,14 +112,12 @@ const PHOTO_ZOOM_BY_ID = {
   'item-009': 1,
   'item-010': 1,
   'item-011': 1,
-  'item-059': 1,
 };
 // Foto ingrandita (doppio tocco): ogni Peso Massimo ha la sua frase, mai la stessa del vicino.
 const ZOOM_QUOTE_BY_ID = {
   'item-009': 'GUARDALO BENE. POI MANGIALO.', // Pulled Pork
   'item-010': 'SÌ, È GRANDE COSÌ DAVVERO.', // Pastrami
   'item-011': 'NON LECCARE LO SCHERMO.', // Brisket
-  'item-059': 'QUESTO NON SI DIVIDE CON NESSUNO.', // Garpez
   'item-018': 'PESO MASSIMO. FAME ZERO.', // Box Pulled Pork
 };
 // H7: dopo l'aggiunta il pulsante mostra "AGGIUNTO ✓" ed e' spento per questo tempo (niente doppio tap = 2 menu).
