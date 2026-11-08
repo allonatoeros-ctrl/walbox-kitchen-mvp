@@ -1,0 +1,61 @@
+# CI Kitchen pagamenti (PR #15: K1 K2 K3 K4 K6 R3). Tutti i controlli stanno in tests/ci/kitchen-payments-ci.sh,
+# lo stesso script usato per la prova locale. Nessun secret, nessun DB remoto: Postgres 17 effimero come service
+# container, SumUp finto nei test, guardia di rete che blocca ogni host non loopback nei processi Node.
+name: Kitchen pagamenti
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: kitchen-payments-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  kitchen-payments:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          # Password del container usa-e-getta del job (esiste solo per la durata della CI): non e' un secret.
+          POSTGRES_PASSWORD: kp_ci_only
+        ports:
+          - 54329:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: '54329'
+      PGUSER: postgres
+      PGPASSWORD: kp_ci_only
+      KP_CI_OUT: ${{ runner.temp }}/kp-ci
+      KP_LINT_BASE: ${{ github.event.pull_request.base.sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Dipendenze (npm ci, unico passo con rete)
+        run: npm ci --no-audit --no-fund
+      - name: Guardie (DB locale, niente credenziali di produzione, rete bloccata)
+        run: bash tests/ci/kitchen-payments-ci.sh guard
+      - name: Lint (nessun problema nuovo nei file della PR)
+        run: bash tests/ci/kitchen-payments-ci.sh lint
+      - name: Unit (src/lib, api/_lib, tests/unit con 1 esclusione verificata)
+        run: bash tests/ci/kitchen-payments-ci.sh unit
+      - name: Testo migration K
+        run: bash tests/ci/kitchen-payments-ci.sh migrations
+      - name: SQL su Postgres 17 locale (P1-P6, P8, concorrenza P7, P7c-P7f, P8b)
+        run: bash tests/ci/kitchen-payments-ci.sh db
+      - name: Integrazione R3 (skip vietati)
+        run: bash tests/ci/kitchen-payments-ci.sh r3
+      - name: Build con Supabase locale finto
+        run: bash tests/ci/kitchen-payments-ci.sh build
