@@ -43,8 +43,8 @@ with_net_guard() { NODE_OPTIONS="--import=$(guard_url) ${NODE_OPTIONS:-}" "$@"; 
 check_net_log() { if [ -s "$KP_CI_NET_LOG" ]; then cat "$KP_CI_NET_LOG"; die "$1: tentata connessione verso host remoto (vedi sopra)"; fi; }
 
 # Conta da file TAP del test runner di Node: tests/pass/fail/skipped e nomi dei test saltati.
-tap_num() { grep -E "^# $2 [0-9]+$" "$1" | tail -1 | awk '{print $3}'; }
-tap_skips() { grep -E '^\s*ok [0-9]+ - .* # SKIP' "$1" | sed -E 's/^\s*ok [0-9]+ - (.*) # SKIP.*/\1/'; }
+tap_num() { grep -aE "^# $2 [0-9]+$" "$1" | tail -1 | awk '{print $3}'; }
+tap_skips() { grep -aE '^\s*ok [0-9]+ - .* # SKIP' "$1" | sed -E 's/^\s*ok [0-9]+ - (.*) # SKIP.*/\1/'; }
 run_tap() { # run_tap <nome> <file...>
   local name="$1"; shift
   with_net_guard node --test --test-reporter=spec --test-reporter-destination=stdout \
