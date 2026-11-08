@@ -7,6 +7,17 @@ import { recoverSumupProviderRef } from './_lib/sumupProviderRefRecovery.js';
 const SUMUP_GET_TIMEOUT_MS = 5000;
 const SUMUP_POST_TIMEOUT_MS = 8000;
 const POST_START_DEADLINE_MS = 6000;
+// Food Club Passo 2a: finestra di creazione (created_at + 4:30) e validita del checkout (created_at + 15 min).
+const FOOD_CLUB_CREATE_WINDOW_MS = 4 * 60 * 1000 + 30 * 1000;
+const FOOD_CLUB_CHECKOUT_VALIDITY_MS = 15 * 60 * 1000;
+
+// Food Club: true solo per uno sconto esattamente zero (numero 0 o stringa numeric PostgREST tipo "0" / "0.00").
+// null, undefined, '', negativi, NaN e qualunque altro valore -> false (l'ordine potrebbe avere un buono).
+function isExactlyZeroDiscount(value) {
+  if (typeof value === 'number') return value === 0;
+  if (typeof value === 'string') return /^0+(\.0+)?$/.test(value);
+  return false;
+}
 
 // Kitchen Payment Hub V1 — SumUp sandbox, create checkout.
 //
@@ -57,7 +68,7 @@ export default async function handler(req, res) {
 
   const { data: order, error: orderError } = await supabaseAdmin
     .from('kitchen_orders')
-    .select('id, customer_id, payment_status, total')
+    .select('id, customer_id, payment_status, total, created_at, status, discount_amount')
     .eq('id', order_id)
     .maybeSingle();
 
@@ -139,6 +150,42 @@ export default async function handler(req, res) {
     return resolveExistingCheckout({ res, supabaseAdmin, attempt, sumupApiKey });
   }
 
+  // Food Club Passo 2a: ordine con buono -> checkout con scadenza (valid_until) e nessun checkout nuovo
+  // oltre created_at + 4:30. Lettura con service_role; errore = fail closed (nessuna claim, nessuna fetch).
+  // Ordine senza buono: nessun cambiamento di comportamento.
+  // Isolamento: un buono puo stare su un ordine solo con discount_amount > 0 (create_order_v4 lo imposta nella
+  // stessa transazione; il trigger kitchen_orders_food_club_guard poi lo blocca). Sconto ESATTAMENTE zero ->
+  // nessun buono possibile, nessuna lettura del Club. Qualunque altro valore (positivo, negativo, null, non
+  // numerico) -> verifica del buono con fail closed.
+  let hasVoucher = false;
+  if (!isExactlyZeroDiscount(order.discount_amount)) {
+    const quotedOrderId = `"${String(order.id).replace(/[\\"]/g, '\\$&')}"`;
+    const { data: voucherRow, error: voucherError } = await supabaseAdmin
+      .from('food_club_vouchers')
+      .select('id')
+      .or(`and(reserved_order_id.eq.${quotedOrderId},status.eq.reserved),used_order_id.eq.${quotedOrderId}`)
+      .limit(1)
+      .maybeSingle();
+    if (voucherError) {
+      console.error('[kitchen-sumup-create-checkout] food club voucher lookup failed', voucherError);
+      return res.status(503).json({ error: 'food_club_lookup_failed' });
+    }
+    hasVoucher = Boolean(voucherRow?.id);
+  }
+  let voucherValidUntil = null;
+  if (hasVoucher) {
+    const createdAtMs = Date.parse(order.created_at);
+    if (Number.isNaN(createdAtMs)) {
+      console.error('[kitchen-sumup-create-checkout] food club order without valid created_at', { orderId: order.id });
+      return res.status(503).json({ error: 'food_club_lookup_failed' });
+    }
+    // Vale per qualunque status dell'ordine (la guardia SQL copre solo pending_online_payment).
+    if (Date.now() >= createdAtMs + FOOD_CLUB_CREATE_WINDOW_MS) {
+      return res.status(409).json({ error: 'online_payment_expired' });
+    }
+    voucherValidUntil = new Date(createdAtMs + FOOD_CLUB_CHECKOUT_VALIDITY_MS).toISOString();
+  }
+
   // No checkout created yet for this attempt: claim the "I create it" slot atomically before calling
   // SumUp. A plain application-level check-then-write here would race under a double-click or two
   // open tabs — two concurrent calls could both observe provider_ref IS NULL before either writes it.
@@ -150,7 +197,8 @@ export default async function handler(req, res) {
   if (claimError) {
     // S4: guardie S3 sull'ordine (abbandonato, o online oltre created_at + 4:30). Codici stabili, nessun checkout.
     const claimCode = claimError.message || '';
-    for (const code of ['order_payment_abandoned', 'online_payment_expired']) {
+    // Food Club Passo 3B: trigger B (migration 20261109104000) su ordine sigillato per il rilascio del buono.
+    for (const code of ['order_payment_abandoned', 'online_payment_expired', 'food_club_order_sealed']) {
       if (claimCode.includes(code)) return res.status(409).json({ error: code });
     }
     console.error('[kitchen-sumup-create-checkout] claim RPC failed', claimError);
@@ -176,6 +224,17 @@ export default async function handler(req, res) {
     return resolveLookupOutcome({ res, supabaseAdmin, attempt, sumupApiKey, lookup });
   }
 
+  // Food Club Passo 3B: intento pre-POST. Solo ordini con buono, dopo claim vinta e List-first 'not_found', PRIMA
+  // della POST. Il DB registra e restituisce valid_until (created_at + 15 min, troncato al secondo): e la prova
+  // (caso P-C) che questa POST portava quella scadenza. Qualsiasi dubbio -> nessuna POST (fail closed). Un retry
+  // successivo ripassa da claim + List-first + intento idempotente (stesso valid_until).
+  let postValidUntil = null;
+  if (hasVoucher) {
+    const intent = await recordFoodClubIntent({ supabaseAdmin, attemptId: attempt.id, expectedValidUntil: voucherValidUntil });
+    if (!intent.ok) return res.status(intent.status).json({ error: intent.error });
+    postValidUntil = intent.validUntil;
+  }
+
   if (Date.now() - claimedAt > POST_START_DEADLINE_MS) {
     console.error('[kitchen-sumup-create-checkout] POST start deadline exceeded, create not attempted');
     return outcomeUnknown(res);
@@ -184,22 +243,24 @@ export default async function handler(req, res) {
   try {
     let sumupRes;
     try {
+      const checkoutBody = {
+        checkout_reference: attempt.id,
+        amount: attempt.amount,
+        currency: 'EUR',
+        merchant_code: sumupMerchantCode,
+        description: `Walrus Pub — ordine ${order_id}`,
+        redirect_url: `${productionOrigin}/kitchen/status?orderId=${encodeURIComponent(order_id)}&sumup=return`,
+        return_url: `${productionOrigin}/api/kitchen-sumup-webhook`,
+        hosted_checkout: { enabled: true },
+      };
+      if (hasVoucher) checkoutBody.valid_until = postValidUntil;
       sumupRes = await fetch('https://api.sumup.com/v0.1/checkouts', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${sumupApiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          checkout_reference: attempt.id,
-          amount: attempt.amount,
-          currency: 'EUR',
-          merchant_code: sumupMerchantCode,
-          description: `Walrus Pub — ordine ${order_id}`,
-          redirect_url: `${productionOrigin}/kitchen/status?orderId=${encodeURIComponent(order_id)}&sumup=return`,
-          return_url: `${productionOrigin}/api/kitchen-sumup-webhook`,
-          hosted_checkout: { enabled: true },
-        }),
+        body: JSON.stringify(checkoutBody),
         signal: AbortSignal.timeout(SUMUP_POST_TIMEOUT_MS),
       });
     } catch (err) {
@@ -241,6 +302,18 @@ export default async function handler(req, res) {
       return outcomeUnknown(res);
     }
 
+    // Food Club Passo 2a/3B: SumUp deve confermare la scadenza inviata (valore del DB). Assente o diversa oltre 1 s:
+    // solo log (il checkout esiste gia; il Passo 3 non lo considera prova di non-pagabilita).
+    if (hasVoucher) {
+      const returned = sumupData?.valid_until;
+      const returnedMs = typeof returned === 'string' ? Date.parse(returned) : NaN;
+      if (Number.isNaN(returnedMs) || Math.abs(returnedMs - Date.parse(postValidUntil)) > 1000) {
+        console.warn('[kitchen-sumup-create-checkout] food_club_valid_until_mismatch', {
+          attemptId: attempt.id, sent: postValidUntil, received: returned ?? null,
+        });
+      }
+    }
+
     // S0.5 F7 (G4): appena l'id SumUp e noto, persisti provider_ref PRIMA di controllare l'URL, cosi un
     // retry futuro entra nel ramo di riuso invece di creare un secondo checkout. Best-effort: un
     // fallimento qui degrada la reconciliation a UNKNOWN (sicuro), non blocca il redirect.
@@ -272,6 +345,35 @@ export default async function handler(req, res) {
 // Fetch con timeout GET, iniettata nell'helper di recovery (List-by-checkout_reference).
 function sumupGetFetch(url, opts = {}) {
   return fetch(url, { ...opts, signal: AbortSignal.timeout(SUMUP_GET_TIMEOUT_MS) });
+}
+
+// Food Club Passo 3B: RPC food_club_record_checkout_intent. Ritorna { ok: true, validUntil } (stringa del DB) oppure
+// { ok: false, status, error } con codice stabile. Mai eccezioni. Log senza segreti (solo attemptId e codice).
+async function recordFoodClubIntent({ supabaseAdmin, attemptId, expectedValidUntil }) {
+  let data;
+  let error;
+  try {
+    ({ data, error } = await supabaseAdmin.rpc('food_club_record_checkout_intent', { p_attempt_id: attemptId }));
+  } catch (err) {
+    error = err;
+  }
+  if (error) {
+    const msg = String(error?.message || '');
+    if (msg.includes('food_club_order_sealed')) return { ok: false, status: 409, error: 'food_club_order_sealed' };
+    if (msg.includes('intent_too_late')) return { ok: false, status: 409, error: 'online_payment_expired' };
+    console.error('[kitchen-sumup-create-checkout] food club intent RPC failed', { attemptId, code: error?.code ?? null, message: msg.slice(0, 120) });
+    return { ok: false, status: 503, error: 'food_club_intent_failed' };
+  }
+  const validUntil = data?.valid_until;
+  const validMs = typeof validUntil === 'string' ? Date.parse(validUntil) : NaN;
+  const expectedMs = typeof expectedValidUntil === 'string' ? Date.parse(expectedValidUntil) : NaN;
+  if (Number.isNaN(validMs) || Number.isNaN(expectedMs) || Math.abs(validMs - expectedMs) > 1000) {
+    console.error('[kitchen-sumup-create-checkout] food club intent valid_until invalid or inconsistent', {
+      attemptId, received: typeof validUntil === 'string' ? validUntil.slice(0, 40) : null, expected: expectedValidUntil,
+    });
+    return { ok: false, status: 503, error: 'food_club_intent_failed' };
+  }
+  return { ok: true, validUntil };
 }
 
 // 4xx documentati e gia gestiti dal contratto corrente (failure HTTP esplicito).

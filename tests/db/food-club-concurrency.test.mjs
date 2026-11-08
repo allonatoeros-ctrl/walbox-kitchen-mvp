@@ -4,6 +4,7 @@
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const PGHOST = process.env.PGHOST || '/tmp';
 const PGPORT = process.env.PGPORT || '54329';
@@ -216,6 +217,17 @@ test('PC4b stesso client_request_id in parallelo (doppio tap): stesso ordine, sc
   assert.equal(sql(`SELECT count(*) FROM kitchen_orders WHERE customer_id='${m}'`), '1');
   assert.equal(sql(`SELECT count(*) FROM food_club_voucher_events WHERE voucher_id='${v}' AND event='reserved_on_order'`), '1');
   assert.equal(sql(`SELECT total FROM kitchen_orders WHERE customer_id='${m}'`), '8.9');
+});
+
+// ---- Passo 3A: rilascio sicuro del buono (sigillo/claim/confirm/refund/lock_timeout), sessioni psql reali su un clone ----
+// Lo script crea il clone <db>_p3c dal DB di test (nessun dato committato qui). Lento (~3 minuti): P3C_REPS (default 10).
+test('P3-C concorrenza del rilascio sicuro del buono (C1-C7 + S21, clone DB, >= 10 ripetizioni)', opts, () => {
+  const r = spawnSync(fileURLToPath(new URL('./food-club/p3c_release_concorrenza.sh', import.meta.url)), [DB, process.env.P3C_REPS || '10'],
+    { encoding: 'utf8', env: { ...process.env, PGHOST, PGPORT } });
+  assert.equal(r.status, 0, r.stdout.slice(-4000) + r.stderr.slice(-1000));
+  assert.match(r.stdout, /P3-C: OK/);
+  for (const sc of ['C1', 'C1b', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'S21']) assert.match(r.stdout, new RegExp(`RIEPILOGO ${sc}:`), sc);
+  assert.doesNotMatch(r.stdout, /deadlock\/lock_timeout=[1-9]/, 'nessun deadlock/lock_timeout inatteso');
 });
 
 // I test di concorrenza committano dati reali nel DB di test: i messaggi Club accodati sporcherebbero

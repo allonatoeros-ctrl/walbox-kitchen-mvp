@@ -56,9 +56,12 @@ function makeRes() {
 function makeAdmin({ attempt, order }) {
   const rpcCalls = [];
   const from = (table) => {
+    // Food Club Passo 2a: create-checkout legge food_club_vouchers (or/limit). Ordine senza buono -> riga nulla.
+    const rows = { kitchen_payments: attempt, kitchen_orders: order, food_club_vouchers: null };
+    if (!(table in rows)) throw new Error(`mock: tabella inattesa ${table}`);
     const b = {
-      select: () => b, eq: () => b,
-      maybeSingle: async () => ({ data: table === 'kitchen_payments' ? attempt : order, error: null }),
+      select: () => b, eq: () => b, or: () => b, limit: () => b,
+      maybeSingle: async () => ({ data: rows[table], error: null }),
     };
     return b;
   };

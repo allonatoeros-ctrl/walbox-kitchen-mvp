@@ -389,3 +389,27 @@ DO $$ DECLARE p0 numeric; f0 numeric; BEGIN
   ASSERT (SELECT food_unit_amount FROM public.kitchen_menu_items WHERE venue_id = 'walrus-main' AND item_id = 'item-040') = 5, 'FIX5 valore esplicito dell''admin rispettato';
   RAISE NOTICE 'PASS FIX5 combo segue il prezzo';
 END $$;
+
+-- R1.6 (Passo 2): ordine online con buono oltre created_at + 4:30 -> nessun attempt nuovo e nessuna claim del checkout
+-- (online_payment_expired). Prima del limite l'attempt nasce e la claim riesce; dopo, la claim e un secondo attempt_start rifiutano.
+DO $$ DECLARE m uuid := fc_test.new_member(); v uuid := fc_test.mkv(m); o public.kitchen_orders; a public.kitchen_payments; BEGIN
+  o := fc_test.order(m, '[{"item_id":"item-009","quantity":1}]', 'online', v);
+  a := fc_test.start_online(o.id);
+  ASSERT fc_test.ostatus(o.id) LIKE 'pending_online_payment|%', 'R16 precondizione: ordine online in attesa';
+  -- 4:20 dopo la creazione: la claim riesce
+  PERFORM fc_test.backdate(o.id, now() - interval '4 minutes 20 seconds');
+  PERFORM fc_test.as_service();
+  ASSERT (public.kitchen_payment_attempt_claim_checkout(a.id)).id = a.id, 'R16 claim ok prima di 4:30';
+  -- 4:40 dopo la creazione: claim e nuovo attempt rifiutati
+  PERFORM fc_test.backdate(o.id, now() - interval '4 minutes 40 seconds');
+  UPDATE public.kitchen_payments SET checkout_claim_at = NULL WHERE id = a.id;
+  PERFORM fc_test.expect_error(format('SELECT public.kitchen_payment_attempt_claim_checkout(%L::uuid)', a.id), 'online_payment_expired');
+  ASSERT (SELECT checkout_claim_at FROM public.kitchen_payments WHERE id = a.id) IS NULL, 'R16 nessuna claim scritta dopo 4:30';
+  PERFORM fc_test.as_user(m);
+  PERFORM fc_test.expect_error(
+    format('SELECT public.kitchen_payment_attempt_start(%L, %L, %L, %L, %s, %L)', o.id, 'app', 'sumup', 'sumup_online', o.total, gen_random_uuid()::text),
+    'online_payment_expired');
+  PERFORM fc_test.as_service();
+  ASSERT fc_test.vstatus(v) = 'reserved', 'R16 il buono non cambia stato';
+  RAISE NOTICE 'PASS R16 nessun checkout/attempt dopo created_at+4:30';
+END $$;

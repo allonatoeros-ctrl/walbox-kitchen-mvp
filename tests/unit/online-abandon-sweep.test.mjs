@@ -414,3 +414,94 @@ test('sweep doppio: abandon gia fatto (RPC idempotente) -> abbandonato senza err
   assert.deepEqual(b.summary.abandoned, ['o1']);
   assert.deepEqual(b.summary.errors, []);
 });
+
+// --- Food Club Passo 3B: fase Club in coda alla sweep, dietro FOOD_CLUB_RELEASE_ENABLED ---------------------------
+
+const withoutTimes = (body) => { const { startedAt: _s, finishedAt: _f, ...rest } = body; return rest; };
+const isClubUrl = (u) => /food_club|rpc\/food_club/.test(u);
+const KITCHEN_SCENARIO = {
+  orders: [ord('o1', 6), ord('o2', 7)],
+  attemptsByOrder: { o2: [attempt({ id: 'att-2', provider_ref: 'co-2' })] },
+  sumup: { get: { 'co-2': [co('co-2', 'att-2', 'EXPIRED')] } },
+};
+
+test('3B flag spento (assente, "1", "TRUE", "false"): risposta identica, nessuna query Club, stesse chiamate', async () => {
+  delete process.env.FOOD_CLUB_RELEASE_ENABLED;
+  const base = await callHandler({}, KITCHEN_SCENARIO);
+  assert.equal(base.res.statusCode, 200);
+  assert.equal('food_club' in base.res.body, false);
+  assert.deepEqual(Object.keys(base.res.body), ['startedAt', 'finishedAt', 'scanned', 'abandoned', 'paid', 'uncertain', 'skipped', 'stuck_logged', 'errors', 'deferred']);
+  for (const v of ['1', 'TRUE', 'false', ' true']) {
+    process.env.FOOD_CLUB_RELEASE_ENABLED = v;
+    const r = await callHandler({}, KITCHEN_SCENARIO);
+    assert.equal(r.res.statusCode, 200, v);
+    assert.deepEqual(withoutTimes(r.res.body), withoutTimes(base.res.body), v);
+    assert.deepEqual(Object.keys(r.res.body), Object.keys(base.res.body), v);
+    const norm = (c) => `${c.method} ${c.url.replace(/created_at=lt\.[^&]+/, 'created_at=lt.<cutoff>')}`;
+    assert.deepEqual(r.calls.map(norm), base.calls.map(norm), v);
+    assert.equal(r.calls.filter((c) => isClubUrl(c.url)).length, 0, v);
+  }
+});
+
+test('3B flag acceso e fase Club in errore totale: status 200 e summary Kitchen invariati, food_club con errore', async () => {
+  delete process.env.FOOD_CLUB_RELEASE_ENABLED;
+  const base = await callHandler({}, KITCHEN_SCENARIO);
+  process.env.FOOD_CLUB_RELEASE_ENABLED = 'true';
+  // il router finto LANCIA su ogni URL Club (food_club_vouchers non previsto): la fase deve assorbire l'errore
+  const r = await callHandler({}, KITCHEN_SCENARIO);
+  assert.equal(r.res.statusCode, 200);
+  const { food_club: fc, ...kitchen } = withoutTimes(r.res.body);
+  assert.deepEqual(kitchen, withoutTimes(base.res.body));
+  assert.deepEqual(fc.errors, [{ order_id: null, reason: 'phase_exception' }]);
+  assert.equal(fc.released.length, 0);
+  // la fase parte DOPO il lavoro Kitchen: la prima chiamata Club segue l'ultima chiamata Kitchen
+  const firstClub = r.calls.findIndex((c) => isClubUrl(c.url));
+  const lastKitchen = r.calls.map((c) => isClubUrl(c.url)).lastIndexOf(false);
+  assert.ok(firstClub > lastKitchen, 'nessuna chiamata Club prima della fine del lavoro Kitchen');
+});
+
+test('3B flag acceso, nessun buono riservato: una sola query Club, food_club vuoto', async () => {
+  process.env.FOOD_CLUB_RELEASE_ENABLED = 'true';
+  const calls = installFakeFetch({ orders: [] });
+  const inner = globalThis.fetch;
+  globalThis.fetch = async (input, init = {}) => {
+    const url = typeof input === 'string' ? input : input.url;
+    if (url.startsWith(`${SB}/rest/v1/food_club_vouchers`)) { calls.push({ method: 'GET', url }); return json(200, []); }
+    return inner(input, init);
+  };
+  const res = makeRes();
+  await handler({ method: 'POST', headers: { authorization: `Bearer ${SECRET}` } }, res);
+  assert.equal(res.statusCode, 200);
+  assert.deepEqual(res.body.food_club, { scanned: 0, sealed: 0, waiting: [], evidence_recorded: 0, released: [], not_released: [], errors: [], deferred: 0 });
+  assert.equal(calls.filter((c) => isClubUrl(c.url)).length, 1);
+});
+
+test('3B flag acceso ma Kitchen in errore: 500 come oggi e nessuna fase Club', async () => {
+  process.env.FOOD_CLUB_RELEASE_ENABLED = 'true';
+  const calls = [];
+  globalThis.fetch = async (input) => { calls.push(String(input)); return json(500, { message: 'db down' }); };
+  const res = makeRes();
+  await handler({ method: 'POST', headers: { authorization: `Bearer ${SECRET}` } }, res);
+  assert.equal(res.statusCode, 500);
+  assert.deepEqual(res.body, { error: 'internal_server_error' });
+  assert.equal(calls.filter((u) => isClubUrl(u)).length, 0);
+});
+
+test('3B flag acceso ma lavoro Kitchen gia oltre 12 s: fase saltata, nessuna query Club', async () => {
+  process.env.FOOD_CLUB_RELEASE_ENABLED = 'true';
+  const realNow = Date.now;
+  let shift = 0;
+  Date.now = () => realNow() + shift;
+  try {
+    const calls = installFakeFetch({ orders: [] });
+    const inner = globalThis.fetch;
+    globalThis.fetch = async (input, init) => { shift = 13000; return inner(input, init); };
+    const res = makeRes();
+    await handler({ method: 'POST', headers: { authorization: `Bearer ${SECRET}` } }, res);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual(res.body.food_club, { skipped: 'kitchen_elapsed' });
+    assert.equal(calls.filter((c) => isClubUrl(c.url)).length, 0);
+  } finally {
+    Date.now = realNow;
+  }
+});
