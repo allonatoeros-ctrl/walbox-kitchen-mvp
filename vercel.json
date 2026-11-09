@@ -2,7 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "feat/watchdog-observability": false
+      "feat/watchdog-observability": false,
+      "food-club-v1-p1": false,
+      "claude/*": false,
+      "claude/**": false
     }
   },
   "headers": [
