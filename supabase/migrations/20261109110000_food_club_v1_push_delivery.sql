@@ -20,14 +20,13 @@
 --   3) food_club_push_tick: chiama la funzione anche quando ci sono solo orfani da recuperare.
 --   4) Generatori categoria Promozioni: food_club_promo_enqueue (solo service_role/postgres, nessuna UI) e
 --      food_club_winback_enqueue (21 giorni senza visite, poi non prima di 60; solo con campagna attiva).
---   5) Job pg_cron:
---        food-club-push     ogni 5 minuti -> food_club_push_tick(URL funzione). Spento di fatto finché il secret
---                           'food_club_push_secret' non è in Vault: senza secret il tick scrive un WARNING e non chiama.
---        food-club-winback  ogni giorno alle 15:07 UTC (16:07/17:07 a Roma) -> solo righe in "Messaggi"; la consegna
---                           push segue le regole sopra.
+--   5) Job pg_cron food-club-push ogni 5 minuti -> food_club_push_tick(URL funzione). Spento di fatto finché il
+--      secret 'food_club_push_secret' non è in Vault: senza secret il tick scrive un WARNING e non chiama nulla.
+--      Il winback NON è schedulato (NEEDS_DECISION di Eros: messaggi promo automatici). Per attivarlo, migration
+--      dedicata: SELECT cron.schedule('food-club-winback', '7 15 * * *', $$SELECT public.food_club_winback_enqueue()$$);
 --
 -- Rollback (migration dedicata, gate di Eros):
---   SELECT cron.unschedule('food-club-push'); SELECT cron.unschedule('food-club-winback');
+--   SELECT cron.unschedule('food-club-push');
 --   le funzioni restano inerti (nessun job le chiama). Emergenza: togliere il secret Vault 'food_club_push_secret'.
 -- =========================================================================
 
@@ -321,8 +320,7 @@ GRANT EXECUTE ON FUNCTION public.food_club_push_claim_batch(integer), public.foo
   TO service_role;
 
 -- ---------------------------------------------------------------------------------------------------
--- 6) Job pg_cron (cron.schedule con nome = upsert: rieseguibile)
+-- 6) Job pg_cron (cron.schedule con nome = upsert: rieseguibile). Solo il tick push; winback non schedulato.
 -- ---------------------------------------------------------------------------------------------------
 SELECT cron.schedule('food-club-push', '*/5 * * * *',
   $cron$SELECT public.food_club_push_tick('https://pcrqfdzipotprqtuemso.supabase.co/functions/v1/send-food-club-push')$cron$);
-SELECT cron.schedule('food-club-winback', '7 15 * * *', $cron$SELECT public.food_club_winback_enqueue()$cron$);

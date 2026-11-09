@@ -223,8 +223,8 @@ END $$;
 DO $$ BEGIN
   ASSERT (SELECT schedule FROM cron.job WHERE jobname = 'food-club-push') = '*/5 * * * *', 'PD11 push ogni 5 minuti';
   ASSERT (SELECT command FROM cron.job WHERE jobname = 'food-club-push') LIKE '%food_club_push_tick(%/functions/v1/send-food-club-push%', 'PD11 comando push';
-  ASSERT (SELECT command FROM cron.job WHERE jobname = 'food-club-winback') LIKE '%food_club_winback_enqueue()%', 'PD11 comando winback';
-  RAISE NOTICE 'PASS PD11 cron food-club-push e food-club-winback';
+  ASSERT NOT EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'food-club-winback'), 'PD11 winback non schedulato (NEEDS_DECISION)';
+  RAISE NOTICE 'PASS PD11 cron food-club-push (winback non schedulato)';
 END $$;
 
 -- PD12 winback: 21 giorni senza visite, consenso valido, campagna attiva; poi non prima di 60 giorni

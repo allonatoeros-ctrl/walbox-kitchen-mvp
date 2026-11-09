@@ -82,8 +82,9 @@ test('permessi: claim_batch_at solo proprietario, generatori a service_role, nes
   assert.match(code, /GRANT EXECUTE ON FUNCTION[^;]*food_club_promo_enqueue[^;]*TO service_role;/);
 });
 
-test('cron: food-club-push ogni 5 minuti verso la funzione, winback giornaliero', () => {
+test('cron: solo food-club-push ogni 5 minuti verso la funzione; winback NON schedulato (decisione di Eros)', () => {
   const jobs = [...code.matchAll(/cron\.schedule\('([^']+)', '([^']+)'/g)].map((m) => [m[1], m[2]]);
-  assert.deepEqual(jobs, [['food-club-push', '*/5 * * * *'], ['food-club-winback', '7 15 * * *']]);
+  assert.deepEqual(jobs, [['food-club-push', '*/5 * * * *']]);
+  assert.match(raw, /winback NON è schedulato \(NEEDS_DECISION/);
   assert.match(code, /food_club_push_tick\('https:\/\/pcrqfdzipotprqtuemso\.supabase\.co\/functions\/v1\/send-food-club-push'\)/);
 });
