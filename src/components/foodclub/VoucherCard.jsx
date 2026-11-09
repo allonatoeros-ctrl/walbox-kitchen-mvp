@@ -12,7 +12,8 @@ function amountLabel(value) {
 
 const orderNo = (code) => (code ? <b style={{ fontSize: 'inherit', fontFamily: 'inherit' }}>#{code}</b> : null);
 
-export default function VoucherCard({ voucher, withCta = false, onUse = null, ctaTitle = 'USALO ORA', ctaSub = 'si applica nel sacco, prima di pagare' }) {
+// paused: Club in pausa (campagna spenta) -> il buono resta valido ma non si può usare ora: niente CTA "USALO ORA".
+export default function VoucherCard({ voucher, withCta = false, onUse = null, ctaTitle = 'USALO ORA', ctaSub = 'si applica nel sacco, prima di pagare', paused = false }) {
   if (!voucher) return null;
   const st = effectiveVoucherStatus(voucher);
   const released = st === 'available' && voucher.last_event === 'released';
@@ -28,6 +29,7 @@ export default function VoucherCard({ voucher, withCta = false, onUse = null, ct
   else if (st === 'revoked') chips.push(<span key="s" className="fc-chip fc-chip--line">REVOCATO</span>);
   else {
     chips.push(<span key="s" className="fc-chip fc-chip--white">DISPONIBILE</span>);
+    if (paused) chips.push(<span key="p" className="fc-chip fc-chip--line" data-testid="fc-voucher-paused">CLUB IN PAUSA</span>);
     if (left != null && left <= 7) chips.push(<span key="d" className="fc-chip">{left <= 0 ? 'SCADE OGGI' : `SCADE TRA ${left} GG`}</span>);
     if (voucher.source === 'referral') chips.push(<span key="r" className="fc-chip fc-chip--line">DA INVITO</span>);
   }
@@ -44,6 +46,8 @@ export default function VoucherCard({ voucher, withCta = false, onUse = null, ct
     foot = <span>Buono applicato all’ordine {orderNo(voucher.reserved_order_code)} — si conferma quando paghi · scade il {expires}</span>;
   } else if (released) {
     foot = <><span>Il tuo buono da {amount} è di nuovo disponibile. Puoi utilizzarlo sul prossimo ordine!<br />Valido fino al <b style={{ fontSize: 20 }}>{expires}</b></span><b>{voucher.code}</b></>;
+  } else if (paused) {
+    foot = <><span>Resta tuo fino al <b style={{ fontSize: 20 }}>{expires}</b>. Lo usi quando il Club riparte.</span><b>{voucher.code}</b></>;
   } else {
     foot = <><span>valido fino al <b style={{ fontSize: 20 }}>{expires}</b></span><b>{voucher.code}</b></>;
   }
@@ -61,7 +65,7 @@ export default function VoucherCard({ voucher, withCta = false, onUse = null, ct
         </div>
         <div className="fc-voucher-tear" />
         <div className="fc-voucher-foot">{foot}</div>
-        {withCta && st === 'available' ? (
+        {withCta && st === 'available' && !paused ? (
           <ClubCta title={ctaTitle} sub={ctaSub} onClick={onUse ?? (() => spaNavigate('/kitchen'))} />
         ) : null}
         {st === 'reserved' ? (

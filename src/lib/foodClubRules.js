@@ -56,6 +56,12 @@ export function availableVouchers(state, now = new Date()) {
   return (state?.vouchers ?? []).filter((v) => effectiveVoucherStatus(v, now) === 'available');
 }
 
+// Club in pausa: campagna esplicitamente spenta. Niente nuovi timbri; i buoni maturati restano validi fino alla scadenza
+// ma si usano solo quando la campagna torna attiva (il server rifiuta con voucher_campaign_inactive).
+export function clubPaused(state) {
+  return state?.campaign?.active === false;
+}
+
 // Il buono migliore da proporre nel carrello: quello che scade prima.
 // Campagna spenta (`campaign.active === false`): il server rifiuta la prenotazione (`voucher_campaign_inactive`),
 // quindi il carrello non lo propone. Il buono resta maturato e valido nella pagina Club (che non usa questa funzione).

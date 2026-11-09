@@ -8,7 +8,7 @@ import { useWebPushSubscription } from '../hooks/useWebPushSubscription';
 import { foodClubApi } from '../lib/foodClubApi';
 import { FOOD_CLUB_BASE_PATH } from '../lib/foodClubConfig';
 import {
-  availableVouchers, cardProgress, cardView, clubErrorMessage, DEFAULT_RULES, effectiveVoucherStatus, formatShortDate, rewardHistory,
+  availableVouchers, cardProgress, cardView, clubErrorMessage, clubPaused, DEFAULT_RULES, effectiveVoucherStatus, formatShortDate, rewardHistory,
 } from '../lib/foodClubRules';
 import { detectPlatform } from '../lib/installInvite';
 import { consumeFirstStandaloneOpen, isStandalone } from '../lib/pwaInstall';
@@ -369,10 +369,12 @@ function ClubHome({ club }) {
   const unread = Number(state?.unread_messages) || 0;
   const pushOn = useWebPushSubscription().status === 'subscribed';
   const prefs = state?.prefs ?? {};
+  const paused = clubPaused(state);
   return (
     <Page title="Food Club" back={MENU}>
       <Head kicker="Walrus Food Club" title={name ? <>CIAO, <em>{name.toUpperCase()}.</em></> : <>IL TUO <em>CLUB.</em></>} />
-      {v ? <VoucherCard voucher={v} withCta /> : null}
+      {paused ? <PausedNote /> : null}
+      {v ? <VoucherCard voucher={v} withCta paused={paused} /> : null}
       <StampCard state={state} sm title={<>La tua <em>tessera</em></>} onOpen={() => spaNavigate(`${BASE}/tessera`)} />
       <div className="fc-list">
         <button type="button" className="fc-btn-line" onClick={() => spaNavigate(`${BASE}/buoni`)}>
@@ -393,6 +395,16 @@ function ClubHome({ club }) {
       <div className="fc-cta-row"><ClubCta title="ORDINA ORA" onClick={() => spaNavigate(MENU)} /></div>
       <ClubInviteCard context="home" member hasVoucher={!!v} onPushChange={club.refresh} />
     </Page>
+  );
+}
+
+// Campagna spenta: niente nuovi timbri, i buoni maturati restano validi (si usano quando il Club riparte).
+function PausedNote() {
+  return (
+    <div className="fc-card" data-testid="fc-paused-note" role="status">
+      <div className="fc-card-head"><span className="fc-card-title">Club <em>in pausa</em></span></div>
+      <p className="fc-small">Per ora gli ordini non fanno timbro. I buoni che hai restano tuoi fino alla scadenza e li usi quando il Club riparte.</p>
+    </div>
   );
 }
 
@@ -423,6 +435,7 @@ function Tessera({ club }) {
   const history = rewardHistory(state);
   return (
     <Page title="Tessera" back={BASE}>
+      {clubPaused(state) ? <PausedNote /> : null}
       <div className="fc-card" style={{ marginTop: 18 }}>
         <div className="fc-label">Walrus Food Club · Melegnano</div>
         <div className="fc-card-head" style={{ marginTop: 6 }}>
@@ -452,7 +465,7 @@ function Tessera({ club }) {
         <div className="fc-empty">
           <img src="/assets/kitchen/walrus-chef.png" alt="" width="120" height="120" />
           <b>{view.mode === 'restart' ? 'Nuovo giro da aprire' : 'Ancora nessuna visita'}</b>
-          <p className="fc-small">Il primo ordine food da {r.stampMin} € fa timbro.</p>
+          <p className="fc-small">{clubPaused(state) ? 'I timbri ripartono quando riparte il Club.' : `Il primo ordine food da ${r.stampMin} € fa timbro.`}</p>
         </div>
       )}
       {history.length ? (
@@ -518,7 +531,8 @@ function Buoni({ club }) {
   return (
     <Page title="I miei buoni" back={BASE}>
       <div className="fc-seg" role="group" aria-label="Filtra buoni">{segBtn('disp', 'Validi')}{segBtn('usati', 'Usati')}{segBtn('scad', 'Scaduti')}</div>
-      {list.length ? list.map((v) => <VoucherCard key={v.id} voucher={v} withCta />) : empty}
+      {clubPaused(state) ? <PausedNote /> : null}
+      {list.length ? list.map((v) => <VoucherCard key={v.id} voucher={v} withCta paused={clubPaused(state)} />) : empty}
       <div className="fc-section">
         <div className="fc-label">Regole d’uso</div>
         <p className="fc-small">Un buono per ordine, non cumulabile, solo su un ordine Walbox con almeno {r.voucherMin} € di food al Walrus di Melegnano. Non è convertibile in denaro e non dà resto. Si usa nel sacco, prima di scegliere come pagare: il buono resta riservato finché il pagamento non è chiuso del tutto; se l’ordine viene annullato senza alcun pagamento, torna disponibile dopo la verifica del pagamento, con la stessa scadenza.</p>

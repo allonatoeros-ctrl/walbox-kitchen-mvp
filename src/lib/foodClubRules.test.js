@@ -4,7 +4,7 @@ import {
   cartFoodAmount, itemFoodUnitAmount, voucherCartStatus, stampForecast, effectiveVoucherStatus,
   pickVoucherForCart, availableVouchers, normalizeItalianPhone, cardProgress, clubErrorMessage, daysLeft,
   cardView, rewardHistory, staffCycleLabel, staffTotalVisits,
-  celebrationKey, shouldCelebrate, markCelebrated,
+  celebrationKey, shouldCelebrate, markCelebrated, clubPaused,
 } from './foodClubRules.js';
 
 test('food: bevande escluse, MENU con quota prudente come il server', () => {
@@ -140,4 +140,19 @@ test('celebrazione premio: una sola volta per buono, mai errori', () => {
   assert.equal(shouldCelebrate(null, 'v1'), false, 'storage assente');
   assert.equal(markCelebrated(st, undefined), false);
   assert.equal(celebrationKey(''), null);
+});
+
+test('campagna spenta: Club in pausa, buono maturato valido in pagina ma non proposto nel carrello, nessun timbro previsto', () => {
+  const v = { id: 'v1', status: 'available', value: 5, min_food: 12, expires_at: '2099-01-01T00:00:00Z' };
+  const off = { member: true, campaign: { active: false, stamp_min_food: 10, stamps_required: 2 }, vouchers: [v], card: { stamps: [] } };
+  const on = { ...off, campaign: { ...off.campaign, active: true } };
+  assert.equal(clubPaused(off), true);
+  assert.equal(clubPaused(on), false);
+  assert.equal(clubPaused(null), false, 'stato assente non e pausa');
+  assert.equal(clubPaused({ campaign: {} }), false, 'active non definito non e pausa');
+  assert.deepEqual(availableVouchers(off).map((x) => x.id), ['v1'], 'pagina Club: buono ancora valido');
+  assert.equal(pickVoucherForCart(off), null, 'carrello: buono non proposto');
+  assert.equal(pickVoucherForCart(on)?.id, 'v1');
+  assert.equal(stampForecast({ state: off, foodAmount: 30 }).willStamp, false, 'nessun timbro previsto');
+  assert.equal(stampForecast({ state: on, foodAmount: 30 }).willStamp, true);
 });

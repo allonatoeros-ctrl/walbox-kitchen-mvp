@@ -1,9 +1,9 @@
 // WALRUS FOOD CLUB V1 — striscia sotto la testata del menu.
 // Non iscritto: invito chiudibile (la chiusura resta su questo dispositivo). Iscritto: buono pronto oppure progresso
-// della tessera. Invisibile se il Club non è disponibile (flag spento, campagna spenta, RPC assenti).
+// della tessera; a campagna spenta solo il promemoria del buono maturato. Invisibile se il Club non è disponibile.
 import { useState } from 'react';
 import { spaNavigate } from '../../lib/spaNavigate';
-import { cardView, formatShortDate, pickVoucherForCart } from '../../lib/foodClubRules';
+import { availableVouchers, cardView, clubPaused, formatShortDate, pickVoucherForCart } from '../../lib/foodClubRules';
 import './ClubCheckout.css';
 
 const STRIP_CLOSED_KEY = 'walbox_fc_menu_strip_closed';
@@ -58,6 +58,23 @@ export default function ClubMenuStrip({ club }) {
             ×
           </button>
         </div>
+      </div>
+    );
+  }
+
+  // Club in pausa: nessuna promessa di timbri; se c'è un buono maturato lo ricordiamo (si usa quando riparte).
+  if (clubPaused(state)) {
+    const kept = availableVouchers(state).sort((a, b) => new Date(a.expires_at) - new Date(b.expires_at))[0];
+    if (!kept) return null;
+    return (
+      <div className="fc-scope" data-testid="fc-menu-strip" data-state="paused">
+        <button type="button" className="fc-strip" onClick={() => spaNavigate('/kitchen/club/buoni')}>
+          <span className="fc-strip-text">
+            <span className="fc-strip-title">Club in pausa · buono {euroShort(kept.value)} tuo</span>
+            <span className="fc-strip-sub">lo usi quando il Club riparte · scade il {formatShortDate(kept.expires_at)}</span>
+          </span>
+          {arrow}
+        </button>
       </div>
     );
   }
