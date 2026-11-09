@@ -3,6 +3,7 @@
 // Passo 'code': 6 caselle, reinvio dopo 60 s, cambia numero. Nessun invito installazione/notifiche qui.
 import { useEffect, useRef, useState } from 'react';
 import { clubErrorMessage } from '../../lib/foodClubRules';
+import { formatCountdown } from '../../lib/foodClubOtp';
 import { ClubCta } from './ClubCta';
 import './FoodClub.css';
 
@@ -124,7 +125,7 @@ export default function PhoneOtpForm({
           <p className="cx-help" style={{ marginTop: 12 }}>
             Non arriva?{' '}
             {secondsLeft > 0
-              ? <span>Puoi richiederlo di nuovo tra 0:{String(secondsLeft).padStart(2, '0')}</span>
+              ? <span>Puoi richiederlo di nuovo tra {formatCountdown(secondsLeft)}</span>
               : <button type="button" className="fc-link" onClick={send} disabled={busy}>Mandamelo di nuovo</button>}
           </p>
         </div>

@@ -6,15 +6,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 import { ensureCustomerSession, foodClubApi } from '../lib/foodClubApi';
-import { normalizeItalianPhone } from '../lib/foodClubRules';
-
-function errCode(err) {
-  const msg = `${err?.code ?? ''} ${err?.message ?? ''}`.toLowerCase();
-  if (msg.includes('phone_exists') || msg.includes('already been registered')) return 'phone_exists';
-  if (msg.includes('expired') || msg.includes('invalid') || msg.includes('otp')) return 'otp_invalid';
-  if (msg.includes('rate') || msg.includes('429') || msg.includes('too many')) return 'sms_rate_limited';
-  return err?.message || 'unknown_error';
-}
+import { requestOtp, confirmOtp } from '../lib/foodClubOtp';
 
 export function useFoodClubIdentity() {
   const [step, setStep] = useState('phone'); // phone | code | done
@@ -24,40 +16,25 @@ export function useFoodClubIdentity() {
   const modeRef = useRef(null); // 'phone_change' | 'sms'
   const ticketRef = useRef(null);
 
+  // Flusso e traduzione errori in src/lib/foodClubOtp.js (testati con node --test).
   const sendCode = useCallback(async (rawPhone) => {
     setError(null);
-    const e164 = normalizeItalianPhone(rawPhone);
-    if (!e164) { setError('invalid_phone'); return false; }
     setBusy(true);
+    ticketRef.current = null;
     try {
-      const session = await ensureCustomerSession();
-      const user = session?.user;
-      ticketRef.current = null;
-      if (user?.is_anonymous) {
-        const { error: upErr } = await supabase.auth.updateUser({ phone: e164 });
-        if (!upErr) {
-          modeRef.current = 'phone_change';
-        } else if (errCode(upErr) === 'phone_exists') {
-          // Il numero ha già un account: unione degli ordini di questo dispositivo dopo l'accesso.
-          try { ticketRef.current = await foodClubApi.createMergeTicket(e164); } catch { ticketRef.current = null; }
-          const { error: otpErr } = await supabase.auth.signInWithOtp({ phone: e164 });
-          if (otpErr) throw otpErr;
-          modeRef.current = 'sms';
-        } else {
-          throw upErr;
-        }
-      } else {
-        const { error: otpErr } = await supabase.auth.signInWithOtp({ phone: e164 });
-        if (otpErr) throw otpErr;
-        modeRef.current = 'sms';
-      }
-      setPhone(e164);
+      const res = await requestOtp({
+        rawPhone,
+        auth: supabase.auth,
+        ensureSession: ensureCustomerSession,
+        createMergeTicket: (e164) => foodClubApi.createMergeTicket(e164),
+      });
+      if (!res.ok) { setError(res.error); return false; }
+      modeRef.current = res.mode;
+      ticketRef.current = res.ticket;
+      setPhone(res.phone);
       setStep('code');
-      foodClubApi.track('otp_sent', modeRef.current);
+      foodClubApi.track('otp_sent', res.mode);
       return true;
-    } catch (err) {
-      setError(errCode(err));
-      return false;
     } finally {
       setBusy(false);
     }
@@ -66,23 +43,18 @@ export function useFoodClubIdentity() {
   // Ritorna { ok, merged } ; dopo ok la sessione è quella del numero verificato.
   const verifyCode = useCallback(async (code) => {
     setError(null);
-    const token = String(code ?? '').replace(/\D/g, '');
-    if (token.length < 6) { setError('otp_invalid'); return { ok: false }; }
     setBusy(true);
     try {
-      const { error: vErr } = await supabase.auth.verifyOtp({ phone, token, type: modeRef.current === 'phone_change' ? 'phone_change' : 'sms' });
-      if (vErr) throw vErr;
-      let merged = null;
-      if (ticketRef.current) {
-        try { merged = await foodClubApi.redeemMergeTicket(ticketRef.current); } catch { merged = null; }
-        ticketRef.current = null;
-      }
+      const res = await confirmOtp({
+        phone, code, mode: modeRef.current, ticket: ticketRef.current,
+        auth: supabase.auth,
+        redeemMergeTicket: (t) => foodClubApi.redeemMergeTicket(t),
+      });
+      if (!res.ok) { setError(res.error); return { ok: false }; }
+      ticketRef.current = null;
       setStep('done');
       foodClubApi.track('login_done', modeRef.current);
-      return { ok: true, merged, mode: modeRef.current };
-    } catch (err) {
-      setError(errCode(err));
-      return { ok: false };
+      return { ok: true, merged: res.merged, mode: modeRef.current };
     } finally {
       setBusy(false);
     }

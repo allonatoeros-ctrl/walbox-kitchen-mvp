@@ -174,7 +174,8 @@ export function normalizeItalianPhone(input) {
   let d = digits.startsWith('+') ? digits.slice(1) : digits;
   if (d.startsWith('00')) d = d.slice(2);
   if (!d.startsWith('39') && /^3\d{8,9}$/.test(d)) d = `39${d}`;
-  if (!/^39\d{9,10}$/.test(d)) return null;
+  // Solo cellulari (3xx): un fisso non riceve l'SMS del codice.
+  if (!/^393\d{8,9}$/.test(d)) return null;
   return `+${d}`;
 }
 
@@ -195,6 +196,9 @@ export function clubErrorMessage(code) {
     otp_invalid: 'Codice sbagliato o scaduto. Riprova.',
     sms_rate_limited: 'Troppi SMS: riprova tra qualche minuto.',
     invalid_phone: 'Numero non valido. Usa un cellulare italiano.',
+    sms_unavailable: 'Gli SMS non sono attivi in questo momento. Chiedi al banco.',
+    sms_send_failed: 'SMS non partito. Controlla il numero o riprova tra poco.',
+    network_error: 'Connessione assente. Controlla la rete e riprova.',
   };
   const key = Object.keys(map).find((k) => String(code ?? '').includes(k));
   return key ? map[key] : 'Qualcosa non ha funzionato. Riprova.';
