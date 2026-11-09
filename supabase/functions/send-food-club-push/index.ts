@@ -18,16 +18,12 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3';
 import {
-  TIME_BUDGET_MS,
   SEND_TIMEOUT_MS,
   BATCH_LIMIT,
-  buildPushPayload,
-  errorToKind,
-  aggregateOutcomes,
   hasVapidConfig,
   isAuthorized,
-  budgetExceeded,
   buildLogLine,
+  processBatch,
 } from './logic.js';
 
 type Subscription = { endpoint: string; p256dh: string; auth: string };
@@ -85,67 +81,36 @@ Deno.serve(async (req) => {
       webpush.setVapidDetails(vapid.subject!, vapid.publicKey!, vapid.privateKey!);
     } catch {
       // Chiavi presenti ma malformate: setVapidDetails lancia. Senza questo catch la funzione cadeva con 500 e i
-      // messaggi restavano 'sending' (il DB li recupera solo con tentativi < 3). Ora vengono riportati: il DB li
+      // messaggi restavano 'sending' (recuperati dal DB come orfani dopo 10 min). Ora vengono riportati: il DB li
       // rimette in coda e dopo 3 tentativi li segna 'failed'.
       vapidOk = false;
       vapidError = 'vapid_invalid';
     }
   }
 
-  let sent = 0;
-  for (const row of batch) {
-    if (!vapidOk) {
-      await report(supabase, row, { delivered: 0, goneEndpoints: [], error: vapidError }, 'config_error');
-      continue;
-    }
-    if (budgetExceeded(startedAt, Date.now(), TIME_BUDGET_MS)) {
-      // Fuori tempo: il messaggio torna in coda (il DB ritenta tra 5 min, max 3 tentativi).
-      await report(supabase, row, { delivered: 0, goneEndpoints: [], error: 'time_budget' }, 'deferred');
-      continue;
-    }
+  // Orchestrazione in logic.js (processBatch, testata con node --test): timeout per invio, budget, esiti, log.
+  const summary = await processBatch({
+    batch,
+    vapidOk,
+    vapidError,
+    startedAt,
+    now: Date.now,
+    sendOne: (sub: Subscription, payload: string) => webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      payload,
+      { timeout: SEND_TIMEOUT_MS, TTL: 12 * 60 * 60 },
+    ),
+    report: (row: ClaimRow, agg: { delivered: number; goneEndpoints: string[]; error: string | null }) =>
+      supabase.rpc('food_club_push_report', {
+        p_message_id: row.message_id,
+        p_delivered: agg.delivered,
+        p_gone_endpoints: agg.goneEndpoints,
+        p_error: agg.error,
+      }),
+    log,
+  });
 
-    const payload = JSON.stringify(buildPushPayload(row));
-    const subs = Array.isArray(row.subscriptions) ? row.subscriptions : [];
-    const outcomes = await Promise.all(subs.map(async (sub) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          payload,
-          { timeout: SEND_TIMEOUT_MS, TTL: 12 * 60 * 60 },
-        );
-        return { endpoint: sub.endpoint, ok: true };
-      } catch (err) {
-        return { endpoint: sub.endpoint, ok: false, ...errorToKind(err) };
-      }
-    }));
-
-    const agg = aggregateOutcomes(outcomes);
-    if (agg.delivered > 0) sent += 1;
-    await report(supabase, row, agg, agg.delivered > 0 ? 'sent' : 'not_delivered');
-  }
-
-  log(buildLogLine({ result: 'batch_done', delivered: sent, errorCode: vapidOk ? null : vapidError }));
+  log(buildLogLine({ result: 'batch_done', delivered: summary.sent, errorCode: vapidOk ? null : vapidError }));
   return new Response('ok', { status: 200 });
 });
 
-async function report(
-  supabase: ReturnType<typeof createClient>,
-  row: ClaimRow,
-  agg: { delivered: number; goneEndpoints: string[]; error: string | null },
-  result: string,
-) {
-  const { error } = await supabase.rpc('food_club_push_report', {
-    p_message_id: row.message_id,
-    p_delivered: agg.delivered,
-    p_gone_endpoints: agg.goneEndpoints,
-    p_error: agg.error,
-  });
-  log(buildLogLine({
-    messageId: row.message_id,
-    kind: row.kind,
-    result: error ? 'report_failed' : result,
-    delivered: agg.delivered,
-    gone: agg.goneEndpoints.length,
-    errorCode: error ? (error.code ?? 'report_failed') : agg.error,
-  }));
-}
