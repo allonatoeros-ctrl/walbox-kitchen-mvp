@@ -273,7 +273,7 @@ function Campaigns() {
     const next = !c.active;
     const text = next
       ? `Accendere "${c.name}"? I clienti iniziano a vedere il Club e a raccogliere timbri.`
-      : `Spegnere "${c.name}"? Il Club smette di dare timbri; i buoni già emessi restano validi.`;
+      : `Spegnere "${c.name}"? Il Club smette di dare timbri; i buoni già emessi restano validi, utilizzabili quando la campagna è attiva.`;
     if (!window.confirm(text)) return;
     setBusy(c.id); setMsg(null);
     try {
@@ -541,7 +541,7 @@ function HeldVouchers() {
             </div>
             <div className="fcs-end-amt">
               <small>ORE DAL RIFERIMENTO</small>
-              <b>{n(h.hours_since_reference).toLocaleString('it-IT', { maximumFractionDigits: 1 })} h</b>
+              <b>{Math.max(0, n(h.hours_since_reference)).toLocaleString('it-IT', { maximumFractionDigits: 1 })} h</b>
               <small>{h.seal_last_reason ? `ultimo esito: ${h.seal_last_reason}` : 'non ancora controllato'}{h.has_succeeded_charge ? ' · PAGAMENTO RIUSCITO' : ''}</small>
             </div>
             <div className="fcs-end-act">

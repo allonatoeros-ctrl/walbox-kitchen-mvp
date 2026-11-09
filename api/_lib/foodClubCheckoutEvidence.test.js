@@ -55,19 +55,44 @@ test('E-1 PAID su un checkout, altri incerti/terminali -> paid (anche attempt ca
   assert.equal(r.read_at, at(6).toISOString());
 });
 
-// E-2
-test('E-2 default (flag false): soli EXPIRED/CANCELLED -> uncertain anche dopo +17', async () => {
+// E-2 (fix fase A 2026-11-08: CANCELLED non e' uno stato di checkout SumUp documentato -> unknown)
+test('E-2 default (flag false): EXPIRED + CANCELLED -> uncertain anche dopo +17; CANCELLED letto come unknown', async () => {
   const f = makeFetch({ [getUrl('a')]: json(200, co('a', 'EXPIRED')), [getUrl('b')]: json(200, co('b', 'CANCELLED')) });
   const r = await read([att('a'), att('b')], f, at(30));
   assert.equal(r.verdict, 'uncertain');
-  assert.deepEqual(r.checkouts.map((c) => c.state), ['expired', 'cancelled']);
+  assert.deepEqual(r.checkouts.map((c) => c.state), ['expired', 'unknown']);
+  assert.equal(r.checkouts[1].reason, 'unknown_status');
 });
 
-test('E-2 flag true: EXPIRED/CANCELLED -> not_payable dopo +17, uncertain a +17 esatti e prima', async () => {
+test('E-2 flag true: EXPIRED -> not_payable dopo +17, uncertain a +17 esatti e prima', async () => {
+  const mk = () => makeFetch({ [getUrl('a')]: json(200, co('a', 'EXPIRED')) });
+  assert.equal((await read([att('a')], mk(), at(17, 1), true)).verdict, 'not_payable');
+  assert.equal((await read([att('a')], mk(), at(17), true)).verdict, 'uncertain');
+  assert.equal((await read([att('a')], mk(), at(16), true)).verdict, 'uncertain');
+});
+
+test('E-2c flag true: CANCELLED come stato checkout -> unknown/uncertain (da solo, con EXPIRED, due volte di fila)', async () => {
   const mk = () => makeFetch({ [getUrl('a')]: json(200, co('a', 'EXPIRED')), [getUrl('b')]: json(200, co('b', 'CANCELLED')) });
-  assert.equal((await read([att('a'), att('b')], mk(), at(17, 1), true)).verdict, 'not_payable');
-  assert.equal((await read([att('a'), att('b')], mk(), at(17), true)).verdict, 'uncertain');
-  assert.equal((await read([att('a'), att('b')], mk(), at(16), true)).verdict, 'uncertain');
+  const both = await read([att('a'), att('b')], mk(), at(40), true);
+  assert.equal(both.verdict, 'uncertain');
+  assert.deepEqual(both.checkouts.map((c) => c.state), ['expired', 'unknown']);
+  for (let i = 0; i < 2; i += 1) {
+    const solo = await read([att('b')], makeFetch({ [getUrl('b')]: json(200, co('b', 'CANCELLED')) }), at(40), true);
+    assert.equal(solo.verdict, 'uncertain');
+    assert.equal(solo.checkouts[0].state, 'unknown');
+  }
+  // classify puro: uno stato 'cancelled' passato a mano non e' mai releasable
+  assert.equal(classifyOrderEvidence({ order: ORDER, now: at(40), terminalStatesVerified: true,
+    checkouts: [{ state: 'cancelled', valid_until: VALID_UNTIL }] }), 'uncertain');
+});
+
+test('E-2d stati non documentati o di tipo errato -> unknown (flag true, dopo +17)', async () => {
+  for (const status of ['CANCELLED', 'cancelled', 'paid', 'SUCCESSFUL', 'REFUNDED', 'constructor', 'toString', '', 42, null, ['PAID'], { s: 'PAID' }]) {
+    const f = makeFetch({ [getUrl('a')]: json(200, co('a', status)) });
+    const r = await read([att('a')], f, at(40), true);
+    assert.equal(r.verdict, 'uncertain', `status ${JSON.stringify(status)}`);
+    assert.equal(r.checkouts[0].state, 'unknown', `status ${JSON.stringify(status)}`);
+  }
 });
 
 // E-3

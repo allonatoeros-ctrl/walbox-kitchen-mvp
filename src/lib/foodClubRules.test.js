@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   cartFoodAmount, itemFoodUnitAmount, voucherCartStatus, stampForecast, effectiveVoucherStatus,
-  pickVoucherForCart, normalizeItalianPhone, cardProgress, clubErrorMessage, daysLeft,
+  pickVoucherForCart, availableVouchers, normalizeItalianPhone, cardProgress, clubErrorMessage, daysLeft,
   cardView, rewardHistory, staffCycleLabel, staffTotalVisits,
   celebrationKey, shouldCelebrate, markCelebrated,
 } from './foodClubRules.js';
@@ -47,6 +47,12 @@ test('stato effettivo e scelta del buono: disponibile scaduto = scaduto, si prop
     { id: 'c', status: 'used', expires_at: '2026-11-11T00:00:00Z' },
   ] };
   assert.equal(pickVoucherForCart(st, now).id, 'b');
+  // campagna spenta: nessun buono nel carrello, ma il buono resta tra quelli disponibili (pagina Club)
+  const off = { ...st, campaign: { active: false } };
+  assert.equal(pickVoucherForCart(off, now), null);
+  assert.equal(availableVouchers(off, now).length, 2);
+  // campagna attiva o stato senza campagna (DB vecchio): comportamento invariato
+  assert.equal(pickVoucherForCart({ ...st, campaign: { active: true } }, now).id, 'b');
   assert.equal(daysLeft('2026-11-12T12:00:00Z', now), 2);
 });
 
@@ -69,6 +75,7 @@ test('telefono: normalizzazione E.164 italiana', () => {
 test('errori server tradotti', () => {
   assert.match(clubErrorMessage('P0001: voucher_food_below_minimum'), /12 €/);
   assert.match(clubErrorMessage('boh'), /Riprova/);
+  assert.match(clubErrorMessage('voucher_campaign_inactive'), /in pausa/);
 });
 
 const FUT = '2099-01-01T00:00:00Z';

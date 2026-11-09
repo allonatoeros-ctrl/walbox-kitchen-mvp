@@ -57,7 +57,10 @@ export function availableVouchers(state, now = new Date()) {
 }
 
 // Il buono migliore da proporre nel carrello: quello che scade prima.
+// Campagna spenta (`campaign.active === false`): il server rifiuta la prenotazione (`voucher_campaign_inactive`),
+// quindi il carrello non lo propone. Il buono resta maturato e valido nella pagina Club (che non usa questa funzione).
 export function pickVoucherForCart(state, now = new Date()) {
+  if (state?.campaign?.active === false) return null;
   return availableVouchers(state, now).sort((a, b) => new Date(a.expires_at) - new Date(b.expires_at))[0] ?? null;
 }
 
@@ -183,6 +186,7 @@ export function clubErrorMessage(code) {
     voucher_expired: 'Il buono è scaduto.',
     voucher_not_found: 'Buono non trovato.',
     voucher_not_combinable: 'Il buono non si somma ad altre promo.',
+    voucher_campaign_inactive: 'Il Club è in pausa: per ora il buono non si può usare. Resta tuo.',
     verified_phone_required: 'Serve il numero verificato con il codice SMS.',
     phone_already_member: 'Questo numero è già iscritto. Chiedi al banco.',
     service_consent_required: 'Per iscriverti serve accettare il regolamento.',

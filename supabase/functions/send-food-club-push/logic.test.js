@@ -102,3 +102,11 @@ test('log: whitelist, niente endpoint/titoli anche se passati per errore', () =>
   assert.deepEqual(Object.keys(line).sort(), ['delivered', 'error_code', 'event_type', 'gone', 'kind', 'message_id', 'result', 'timestamp']);
   assert.equal(line.event_type, 'food_club_push');
 });
+
+test('index.ts: setVapidDetails dentro try/catch (chiavi malformate non fanno cadere la funzione, errore vapid_invalid)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('./index.ts', import.meta.url), 'utf8');
+  assert.match(src, /try\s*\{\s*(\/\/[^\n]*\n\s*)*webpush\.setVapidDetails/);
+  assert.match(src, /vapidError = 'vapid_invalid'/);
+  assert.match(src, /error: vapidError/);
+});

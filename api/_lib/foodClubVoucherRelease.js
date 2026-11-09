@@ -118,10 +118,14 @@ function baseFields(read) {
 
 // List per checkout_reference. list_count = elementi con checkout_reference === attemptId (solo se body array);
 // esattamente 1 -> anche i campi di quell'elemento. Non-2xx o corpo illeggibile -> solo http_status + hash.
+// Fix fase A (SB-4): zero match ma corpo con ALTRI elementi (filtro per reference non applicato da SumUp, elementi non
+// oggetto) -> list_count omesso: una List non filtrata (senza paginazione documentata) non prova che il checkout manchi.
+// L'SQL tratta list_count assente come 'list_unexpected_count' (uncertain). Con >= 1 match il conteggio resta quello dei match.
 export function listEvidenceFields(read, attemptId) {
   const out = baseFields(read);
   if (read.status < 200 || read.status > 299 || !read.jsonOk || !Array.isArray(read.json)) return out;
   const matches = read.json.filter((c) => c && typeof c === 'object' && c.checkout_reference === attemptId);
+  if (matches.length === 0 && read.json.length > 0) return out;
   if (!isSmallInt(matches.length)) return out;
   out.list_count = matches.length;
   if (matches.length === 1) Object.assign(out, checkoutFields(matches[0]));

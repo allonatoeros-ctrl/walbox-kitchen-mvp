@@ -476,11 +476,16 @@ DO $$ DECLARE r record; res jsonb; ev jsonb; BEGIN
   PERFORM fc_test.ev(r.a, 'list', fc_test.lf(r.a, 0), 20);
   res := fc_test.release(r.o);
   ASSERT (res ->> 'released')::boolean AND fc_test.vstatus(r.v) = 'available', 'S11c: ' || res::text;
-  -- (d) P-C List con 1 checkout + due GET
+  -- (d) P-C List con 1 checkout + due GET (fase A, migration 20261109108000: CANCELLED non e' uno stato di checkout
+  -- documentato da SumUp -> la coppia terminale usa FAILED/EXPIRED; FAILED/CANCELLED resta incerta, vedi d2)
+  SELECT * INTO r FROM fc_test.mk_sealed('C');
+  PERFORM fc_test.std(r.a, 'FAILED', 'EXPIRED');
+  res := fc_test.release(r.o);
+  ASSERT (res ->> 'released')::boolean AND fc_test.vstatus(r.v) = 'available', 'S11d: ' || res::text;
   SELECT * INTO r FROM fc_test.mk_sealed('C');
   PERFORM fc_test.std(r.a, 'FAILED', 'CANCELLED');
   res := fc_test.release(r.o);
-  ASSERT (res ->> 'released')::boolean AND fc_test.vstatus(r.v) = 'available', 'S11d: ' || res::text;
+  ASSERT res ->> 'reason' = 'uncertain:states_not_concordant' AND fc_test.vstatus(r.v) = 'reserved', 'S11d2 CANCELLED: ' || res::text;
   -- (e) due attempt: P-B completo + riga extra mai richiesta (P-A)
   SELECT * INTO r FROM fc_test.mk_sealed('B', 'never');
   PERFORM fc_test.std(r.a, 'PENDING', 'PENDING');

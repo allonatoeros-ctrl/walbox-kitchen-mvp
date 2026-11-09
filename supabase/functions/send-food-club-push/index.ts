@@ -78,13 +78,24 @@ Deno.serve(async (req) => {
     privateKey: Deno.env.get('VAPID_PRIVATE_KEY'),
     subject: Deno.env.get('VAPID_SUBJECT'),
   };
-  const vapidOk = hasVapidConfig(vapid);
-  if (vapidOk) webpush.setVapidDetails(vapid.subject!, vapid.publicKey!, vapid.privateKey!);
+  let vapidOk = hasVapidConfig(vapid);
+  let vapidError = 'vapid_not_configured';
+  if (vapidOk) {
+    try {
+      webpush.setVapidDetails(vapid.subject!, vapid.publicKey!, vapid.privateKey!);
+    } catch {
+      // Chiavi presenti ma malformate: setVapidDetails lancia. Senza questo catch la funzione cadeva con 500 e i
+      // messaggi restavano 'sending' (il DB li recupera solo con tentativi < 3). Ora vengono riportati: il DB li
+      // rimette in coda e dopo 3 tentativi li segna 'failed'.
+      vapidOk = false;
+      vapidError = 'vapid_invalid';
+    }
+  }
 
   let sent = 0;
   for (const row of batch) {
     if (!vapidOk) {
-      await report(supabase, row, { delivered: 0, goneEndpoints: [], error: 'vapid_not_configured' }, 'config_error');
+      await report(supabase, row, { delivered: 0, goneEndpoints: [], error: vapidError }, 'config_error');
       continue;
     }
     if (budgetExceeded(startedAt, Date.now(), TIME_BUDGET_MS)) {
@@ -113,7 +124,7 @@ Deno.serve(async (req) => {
     await report(supabase, row, agg, agg.delivered > 0 ? 'sent' : 'not_delivered');
   }
 
-  log(buildLogLine({ result: 'batch_done', delivered: sent, errorCode: vapidOk ? null : 'vapid_not_configured' }));
+  log(buildLogLine({ result: 'batch_done', delivered: sent, errorCode: vapidOk ? null : vapidError }));
   return new Response('ok', { status: 200 });
 });
 

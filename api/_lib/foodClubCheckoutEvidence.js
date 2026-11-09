@@ -11,8 +11,11 @@
 import { getCheckoutVerified, SUMUP_GET_TIMEOUT_MS } from './sumupCheckout.js';
 import { recoverSumupProviderRef } from './sumupProviderRefRecovery.js';
 
-// EXPIRED/CANCELLED/FAILED non autorizzano ancora il rilascio finche la sandbox SumUp non prova che un
+// EXPIRED/FAILED non autorizzano ancora il rilascio finche la sandbox SumUp non prova che un
 // checkout in quello stato non e piu pagabile (R1.2). Con false: soli checkout terminali -> 'uncertain'.
+// Stati del CHECKOUT documentati da SumUp (create/get/list/deactivate): solo PENDING, FAILED, PAID, EXPIRED.
+// CANCELLED esiste solo per le transazioni (transactions[].status), non per il checkout: qualunque altro valore
+// (CANCELLED compreso) e' 'unknown' -> verdetto 'uncertain' (fix fase A, 2026-11-08).
 export const TERMINAL_STATES_SANDBOX_VERIFIED = false;
 
 const MIN = 60 * 1000;
@@ -59,7 +62,9 @@ export function classifyCheckoutData(attempt, data, expectedValidUntilMs) {
   const validUntil = typeof data?.valid_until === 'string' ? data.valid_until : null;
   if (data?.status === 'PAID') return entry(attempt, 'paid', 'sumup_paid', validUntil);
 
-  const base = { EXPIRED: 'expired', CANCELLED: 'cancelled', FAILED: 'failed', PENDING: 'pending' }[data?.status];
+  // Mappa chiusa sui soli stati documentati; Object.hasOwn evita chiavi ereditate (es. 'constructor').
+  const DOCUMENTED = { EXPIRED: 'expired', FAILED: 'failed', PENDING: 'pending' };
+  const base = typeof data?.status === 'string' && Object.hasOwn(DOCUMENTED, data.status) ? DOCUMENTED[data.status] : null;
   if (!base) return entry(attempt, 'unknown', 'unknown_status', validUntil);
 
   const vuMs = validUntil ? Date.parse(validUntil) : NaN;
@@ -84,7 +89,7 @@ export function classifyOrderEvidence({ order, checkouts, now = new Date(), term
   const releasable = (c) => {
     if (c.state === 'never_created') return true; // la prova (niente claim, finestra chiusa, List vuota) e gia nella lettura
     if (!terminalStatesVerified) return false;
-    if (c.state === 'expired' || c.state === 'cancelled') return true;
+    if (c.state === 'expired') return true; // 'cancelled' non e' uno stato di checkout documentato: mai releasable
     if (c.state === 'failed') {
       const vu = c.valid_until ? Date.parse(c.valid_until) : NaN;
       return !Number.isNaN(vu) && nowMs > vu;
