@@ -28,14 +28,20 @@ corso e il processo cade alla chiusura. Gli altri 17 file con lo stesso schema d
 Il test usa solo `ssrLoadModule`: l'ottimizzazione delle dipendenze per il browser non serve.
 
 ## Prova (copia del file con la sola riga aggiunta, fuori da `tests/`)
-| Variante | Esecuzioni | Fallite |
-|---|---|---|
-| originale | 20 | 10 (tutte SIGSEGV) |
-| con `optimizeDeps.noDiscovery` | 50 | 0 |
+| Variante | Node | Esecuzioni | Fallite |
+|---|---|---|---|
+| originale | 22.23 | 20 | 10 (tutte SIGSEGV) |
+| con `optimizeDeps.noDiscovery` | 22.23 | 50 | 0 |
+| originale (`node --test`) | 24.22 | 15 | 8 |
+| originale (eseguito direttamente) | 24.22 | 15 | 3 (Segmentation fault / Aborted) |
+| con `optimizeDeps.noDiscovery` (eseguito direttamente) | 24.22 | 15 | 0 |
 
 Comando: `for i in $(seq 1 20); do node --test tests/unit/sumup-refund-reliability.test.mjs | grep -q '^# fail 0' || echo FAIL; done`.
 
 ## Altri test segnalati
+- `tests/unit/sumup-reconcile-sweep.test.mjs`: con **Node 22** 15 casi su 29 vengono annullati («Promise resolution
+  is still pending but the event loop has already resolved», deterministico); con **Node 24** 29/29. Non è una
+  regressione: è la versione di Node. La CI e il Mac usano Node 24; nel cloud serve Node 24 (vedi CLOUD_HANDOFF §5).
 - `tests/unit/kitchen-analytics-service-night-selector.test.mjs`: 8/8 falliti, deterministico (data fissa,
   preesistente). Non intermittente: serve un task Kitchen separato.
 - Gli E2E reali Kitchen (`tests/e2e-real/kitchen-real-order.spec.js`) cercano `.pm-list .pc-cta:not(.pmx-menu-cta)`, che
