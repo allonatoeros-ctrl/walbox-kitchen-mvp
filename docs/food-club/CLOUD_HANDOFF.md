@@ -9,7 +9,9 @@ _Documento autosufficiente: chi lo legge nel cloud non ha accesso al Mac, a OrbS
   Supabase di produzione: `pcrqfdzipotprqtuemso`.
 - **Ogni branch pushato su GitHub crea una Preview Vercel pubblica che usa Supabase e SumUp di PRODUZIONE**
   (verificato: deployment GitHub `Preview` per ogni branch pushato; audit sicurezza F14). Nessun push di un branch
-  senza che `vercel.json` lo escluda (`git.deploymentEnabled`, vedi §10).
+  senza che `vercel.json` lo escluda (`git.deploymentEnabled`, vedi §13). Esclusi oggi: `food-club-v1-p1`,
+  `claude/*`, `claude/**`, `feat/watchdog-observability`. Un branch con un nome diverso NON è escluso: niente push.
+  Non togliere né mettere a `true` queste voci (con minimatch, se una regola che combacia è `true` il deploy parte).
 - Vietati senza autorizzazione esplicita di Eros, una per azione: push, PR, merge, `npx supabase db push`,
   `functions deploy`, `secrets set`, `cron.schedule`, `vercel`, chiamate SumUp (anche sandbox), SMS reali, push reali,
   qualsiasi accesso a Supabase produzione, modifiche a Vercel o GitHub Actions.
@@ -19,7 +21,7 @@ _Documento autosufficiente: chi lo legge nel cloud non ha accesso al Mac, a OrbS
 - Le regole complete del repo sono in `CLAUDE.md`, `api/CLAUDE.md`, `supabase/CLAUDE.md`, `ai-ops/SECURITY_POLICY.md`.
 
 ## 1. Stato attuale (verificato il 2026-11-09)
-- HEAD `1674fa0` sopra `4698ac9` (fix D1). Base Kitchen di produzione `ad08729` è antenata del branch.
+- Codice: `1674fa0` sopra `4698ac9` (fix D1); poi handoff ed esclusione Preview in `vercel.json` (`e15edf5`). Base Kitchen di produzione `ad08729` è antenata del branch.
 - Food Club V1 è **completo in locale** (DB, API, UI cliente e staff) dietro il flag `VITE_FOOD_CLUB_ENABLED` (spento).
 - Verdetto locale: **READY FOR SANDBOX**. Non pronto per la produzione: mancano prove sul provider SumUp (SB-1..SB-7),
   OTP/SMS reale e push reali; il cron delle push non esiste.
@@ -167,7 +169,8 @@ Configurazione da non cambiare finché non ci sono le prove: `food_club_release_
 `food_club_expected_merchant_code()` = NULL, `TERMINAL_STATES_SANDBOX_VERIFIED = false`.
 
 ## 12. Preparazione del rilascio (ogni passo = gate Eros)
-1. `vercel.json` del branch con `git.deploymentEnabled` per i branch Food Club e quelli creati dal cloud (§13).
+1. Fatto: `vercel.json` esclude `food-club-v1-p1` e `claude/*` dalle Preview (commit `e15edf5`). Al merge in `main` le
+   voci restano innocue per `main`; valutare con Eros se servirà una Preview isolata (env non di produzione).
 2. Sandbox SumUp SB-1..SB-7.
 3. Precheck `npx supabase migration list --linked`; controllare che la produzione non abbia una vecchia
    `food_club_staff_members` (nel demo la `103000` è fallita per questo); poi `db push` delle 10 migration
@@ -178,12 +181,13 @@ Configurazione da non cambiare finché non ci sono le prove: `food_club_release_
 7. Campagna accesa dalla pagina staff (solo manager).
 
 ## 13. Procedura per continuare con Claude Code Cloud
-1. **Prima di qualsiasi push** (Eros, dal Mac): aggiungere al `vercel.json` del branch, dentro
-   `git.deploymentEnabled`, le voci per `food-club-v1-p1` e per i branch che il cloud creerà (es. `claude/*`), poi
-   verificare che il primo push non produca un deployment GitHub `Preview`
-   (`gh api repos/allonatoeros-ctrl/walbox-kitchen-mvp/deployments?ref=<branch>`).
-   Precedente: `feat/watchdog-observability` è escluso così e non ha nessun deployment.
-2. Push di `food-club-v1-p1` (gate Eros).
+1. Fatto (2026-11-09, autorizzato da Eros): `vercel.json` esclude `food-club-v1-p1`, `claude/*`, `claude/**`.
+   Prova: `feat/watchdog-observability` è stato pushato la prima volta con l'esclusione già nel commit (`aa03cd2`) e
+   non ha deployment né stato Vercel. Verifica dopo un push: Vercel registra i deployment con `ref` = SHA, quindi
+   `gh api "repos/allonatoeros-ctrl/walbox-kitchen-mvp/deployments?sha=<sha>"` e
+   `gh api repos/allonatoeros-ctrl/walbox-kitchen-mvp/commits/<sha>/statuses` devono essere vuoti
+   (filtrare per nome del branch restituisce sempre 0 e non prova nulla).
+2. Push del solo branch `food-club-v1-p1` (autorizzato da Eros il 2026-11-09).
 3. Su claude.ai/code: scegliere il repo `allonatoeros-ctrl/walbox-kitchen-mvp` nel selettore sotto il campo di testo e
    il branch `food-club-v1-p1` nel controllo accanto; incollare il prompt di avvio. Prerequisiti (doc Anthropic
    claude-code-on-the-web / web-quickstart): piano Pro/Max/Team, GitHub collegato e Claude GitHub App installata sul
