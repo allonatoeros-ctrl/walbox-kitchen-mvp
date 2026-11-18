@@ -53,10 +53,10 @@ export function shouldSuggestEventSide({ cartIds = [], sandwichIds = [], sideId 
   return cartIds.some((id) => sandwichIds.includes(id));
 }
 
-// Orto Cattivo (foto su fondo scuro, decisione Eros 2026-10-15) è servito solo alla festa: a modalità
-// spenta esce dal menu. Il GARPEZ invece resta nel menu PESI MASSIMI anche dopo la festa
-// (decisione Eros 2026-10-17).
-export const EVENT_ONLY_ITEM_IDS = ['item-013'];
+// Item serviti solo alla festa: a modalità spenta escono dal menu. Il GARPEZ resta nel menu PESI MASSIMI
+// anche dopo la festa (decisione Eros 2026-10-17). L'Orto Cattivo era qui dal 2026-10-15; torna nel
+// menu normale (sezione PANINI) per decisione Eros 2026-11-18.
+export const EVENT_ONLY_ITEM_IDS = [];
 
 export function excludeEventOnlyItems(items) {
   return (items || []).filter((i) => !EVENT_ONLY_ITEM_IDS.includes(i?.id));

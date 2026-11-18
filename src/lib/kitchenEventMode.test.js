@@ -78,12 +78,12 @@ test('menu evento: entrano anche Orto Cattivo (veg) e Patate al Forno, solo per 
   assert.equal(EVENT_SIDE_ITEM_ID, 'item-058');
 });
 
-test('modalità spenta: Orto Cattivo sparisce dal menu normale, Patate restano', () => {
+test('modalità spenta: Orto Cattivo e Patate restano nel menu normale (decisione Eros 2026-11-18)', () => {
   const items = [
     { id: 'item-013', category: 'panini', tags: ['veg', 'v2'] },
     { id: 'item-058', category: 'contorni', tags: ['veg', 'v2'] },
   ];
-  assert.deepEqual(excludeEventOnlyItems(items).map((i) => i.id), ['item-058']);
+  assert.deepEqual(excludeEventOnlyItems(items).map((i) => i.id), ['item-013', 'item-058']);
 });
 
 test('chip patate: solo con un panino nel sacco, senza patate e senza un no', () => {
