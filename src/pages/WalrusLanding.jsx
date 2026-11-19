@@ -43,6 +43,7 @@ export default function WalrusLanding() {
       <nav className="wl-nav" aria-label="Menu di navigazione">
         <a href="#esperienze">Il locale</a>
         <a href="#kitchen">La cucina</a>
+        <a href="#instagram">Instagram</a>
         <a href="#dove-siamo">Dove siamo</a>
       </nav>
       <a className="wl-header-book" href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer">PRENOTA UN TAVOLO <Arrow /></a>
@@ -76,7 +77,7 @@ export default function WalrusLanding() {
 
       <section id="esperienze" className="wl-section wl-experiences" aria-labelledby="wl-experiences-title">
         <div className="wl-section-head">
-          <div><p className="wl-label">01 / DUE ANIME, UN SOLO WALRUS</p><h2 id="wl-experiences-title">DRINK SERI.<br/><i>PERSONALITÀ</i> DISCUTIBILE.</h2></div>
+          <div><p className="wl-label">01 / DUE ANIME, UN SOLO WALRUS</p><h2 id="wl-experiences-title">DAL PRIMO DRINK.<br/><i>ALL'ULTIMO MORSO.</i></h2></div>
           <p>Un locale, due buone scuse per uscire. Da una parte il bancone. Dall'altra la cucina. Il resto si decide lì.</p>
         </div>
         <div className="wl-experience-grid">
@@ -123,10 +124,44 @@ export default function WalrusLanding() {
         </div>
       </section>
 
+      <section className="wl-instagram" id="instagram" aria-labelledby="wl-instagram-title">
+        <div className="wl-instagram-head">
+          <div>
+            <p className="wl-label">03 / SEGUICI, CHE CI DIVERTIAMO</p>
+            <h2 id="wl-instagram-title">IL WALRUS<br/>NON SI RACCONTA.<br/><i>SI SEGUE.</i></h2>
+          </div>
+          <div className="wl-instagram-side">
+            <div className="wl-instagram-handle"><InstagramIcon/><span>@thewalruspub_</span></div>
+            <p>Drink fatti bene, piatti senza modestia, eventi e serate che iniziano con “solo uno”. Il resto lo trovi sul nostro Instagram.</p>
+            <a className="wl-button wl-button-primary wl-instagram-follow" href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" aria-label="Segui The Walrus Pub su Instagram: @thewalruspub_">
+              <InstagramIcon/> SEGUICI SU INSTAGRAM <Arrow/>
+            </a>
+          </div>
+        </div>
+        <div className="wl-instagram-gallery" aria-label="Uno sguardo all'atmosfera e ai piatti del Walrus">
+          <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="wl-instagram-tile wl-instagram-tile-first" aria-label="Il locale Walrus, vai su Instagram">
+            <img src={IMAGES.upper} alt="Uno scorcio degli interni del Walrus" loading="lazy" decoding="async" />
+            <span>01 / IL LOCALE <Arrow/></span>
+          </a>
+          <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="wl-instagram-tile" aria-label="La cucina Walrus, vai su Instagram">
+            <img src="/assets/kitchen/menu/hero/hero-pulled-pork-fumo.webp" alt="Panino Pulled Pork del Walrus" loading="lazy" decoding="async" />
+            <span>02 / LA FAME <Arrow/></span>
+          </a>
+          <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="wl-instagram-tile" aria-label="Il bancone del Walrus, vai su Instagram">
+            <img src={IMAGES.bar} alt="Il bancone del cocktail bar Walrus" loading="lazy" decoding="async" />
+            <span>03 / IL BERE <Arrow/></span>
+          </a>
+        </div>
+        <div className="wl-instagram-footer">
+          <span>IL TRICHECO È SOCIAL. TU?</span>
+          <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">SEGUI @THEWALRUSPUB_ <Arrow/></a>
+        </div>
+      </section>
+
       <section className="wl-reserve" id="prenota" aria-labelledby="wl-reserve-title">
         <div className="wl-reserve-check" aria-hidden="true"/>
         <div className="wl-reserve-content">
-          <p className="wl-label">03 / UN POSTO C'È. O LO TROVIAMO.</p>
+          <p className="wl-label">04 / UN POSTO C'È. O LO TROVIAMO.</p>
           <h2 id="wl-reserve-title">IL TAVOLO?<br/><i>TE LO TENIAMO.</i></h2>
           <p>Aperitivo con gli amici, cena, compleanno o festa privata. Tu scegli la compagnia, noi pensiamo al tavolo.</p>
           <div className="wl-reserve-actions">
@@ -140,7 +175,7 @@ export default function WalrusLanding() {
 
       <section className="wl-visit wl-section" id="dove-siamo">
         <div>
-          <p className="wl-label">04 / VIENI A TROVARCI</p>
+          <p className="wl-label">05 / VIENI A TROVARCI</p>
           <h2>IL TRICHECO<br/><i>TI ASPETTA.</i></h2>
           <p>Siamo a Melegnano. Passa per un drink, resta per mangiare. O fai il contrario: non giudichiamo.</p>
           <div className="wl-visit-buttons"><a className="wl-button wl-button-primary" href={MAPS_URL} target="_blank" rel="noopener noreferrer">OTTIENI INDICAZIONI <Arrow/></a><a className="wl-button wl-button-ghost" href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer"><InstagramIcon/> INSTAGRAM <Arrow/></a></div>
