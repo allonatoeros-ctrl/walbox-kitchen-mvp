@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import CustomerKitchenMenu from "./pages/CustomerKitchenMenu";
+import WalrusLanding from "./pages/WalrusLanding";
 import CustomerKitchenEntry from "./pages/CustomerKitchenEntry";
 import CustomerOrderStatus from "./pages/CustomerOrderStatus";
 import CustomerOrderPayment from "./pages/CustomerOrderPayment";
@@ -33,6 +34,9 @@ export default function App() {
     switch (currentPath) {
       case "/":
         return <CustomerKitchenEntry />;
+
+      case "/walrus":
+        return <WalrusLanding />;
 
       // === KITCHEN MODULE ROUTES ===
       case "/kitchen/entry":
