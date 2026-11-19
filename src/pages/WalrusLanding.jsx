@@ -34,7 +34,7 @@ export default function WalrusLanding() {
 
   return <div className="wl" id="inizio">
     <a className="wl-skip" href="#contenuto">Vai al contenuto</a>
-    <div className="wl-topbar"><span>MELEGNANO, ITALIA</span><span>GOOD DRINKS. GOOD FOOD. BAD DECISIONS.</span><span>THE WALRUS PUB</span></div>
+    <div className="wl-topbar"><span>MELEGNANO, ITALIA</span><span>PANINI SERI. DRINK SERI. PERSONALITÀ DISCUTIBILE.</span><span>THE WALRUS PUB</span></div>
     <header className="wl-header">
       <a href="#inizio" className="wl-logo" aria-label="The Walrus Pub, inizio pagina">
         <img src="/assets/kitchen/walrus-pub-logo.webp" alt="" width="44" height="44" />
@@ -54,28 +54,30 @@ export default function WalrusLanding() {
           <img src={IMAGES.hero} alt="Il nuovo bancone del The Walrus Pub, con neon rosso e atmosfera da cocktail bar" fetchPriority="high"/>
           <div className="wl-photo-shade" />
         </div>
+        <div className="wl-hero-food" aria-hidden="true"><img src="/assets/kitchen/menu/hero/hero-pulled-pork-fumo.webp" alt="" width="1080" height="991" /></div>
         <div className="wl-hero-content">
           <div className="wl-hero-kicker"><span className="wl-kicker-line"/> COCKTAIL BAR & KITCHEN · MELEGNANO</div>
-          <h1>BEVI BENE.<br/>MANGIA <i>FORTE.</i><br/>RESTA <span>FUORI.</span></h1>
-          <p className="wl-hero-intro">Un cocktail fatto come si deve. Qualcosa di serio da mangiare. E nessuna voglia di tornare a casa presto.</p>
+          <h1>PANINI SERI.<br/>DRINK SERI.<br/><span>PERSONALITÀ</span><br/><i>DISCUTIBILE.</i></h1>
+          <p className="wl-hero-intro">Cocktail fatti bene, Pesi Massimi e fame sistemata. Vieni per un drink. Resti per tutto il resto.</p>
           <div className="wl-hero-actions">
             <a className="wl-button wl-button-primary" href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"><WhatsAppIcon/> PRENOTA SU WHATSAPP <Arrow/></a>
-            <a className="wl-button wl-button-ghost" href={MENU_URL}>SCOPRI IL MENU <Arrow/></a>
+            <a className="wl-button wl-button-ghost" href={MENU_URL}>APRI WALBOX <Arrow/></a>
           </div>
         </div>
-        <div className="wl-hero-side" aria-hidden="true">EST. MELEGNANO / IL TRICHECO NON DELUDE MAI</div>
+        <div className="wl-hero-side" aria-hidden="true">IL TRICHECO NON DELUDE MAI / MELEGNANO</div>
+        <div className="wl-hero-sticker" aria-hidden="true">DRINK SERI.<br/>FAME VERA.</div>
         <div className="wl-hero-scroll" aria-hidden="true">SCOPRI IL WALRUS <span>↓</span></div>
       </section>
 
       <div className="wl-marquee" aria-hidden="true"><div>
-        <span>COCKTAIL SIGNATURE <b>✳</b> PESI MASSIMI <b>✳</b> APERITIVI SERI <b>✳</b> GOOD TIMES <b>✳</b> </span>
-        <span>COCKTAIL SIGNATURE <b>✳</b> PESI MASSIMI <b>✳</b> APERITIVI SERI <b>✳</b> GOOD TIMES <b>✳</b> </span>
+        <span>FAME VERA <b>✳</b> DRINK SERI <b>✳</b> PERSONALITÀ DISCUTIBILE <b>✳</b> PESI MASSIMI <b>✳</b> </span>
+        <span>FAME VERA <b>✳</b> DRINK SERI <b>✳</b> PERSONALITÀ DISCUTIBILE <b>✳</b> PESI MASSIMI <b>✳</b> </span>
       </div></div>
 
       <section id="esperienze" className="wl-section wl-experiences" aria-labelledby="wl-experiences-title">
         <div className="wl-section-head">
-          <div><p className="wl-label">01 / DUE ANIME, UN SOLO WALRUS</p><h2 id="wl-experiences-title">QUI SI FA <i>SUL SERIO.</i><br/>MA NON TROPPO.</h2></div>
-          <p>Dal primo aperitivo all’ultimo giro. Il Walrus è un posto da vivere, non da spiegare.</p>
+          <div><p className="wl-label">01 / DUE ANIME, UN SOLO WALRUS</p><h2 id="wl-experiences-title">DRINK SERI.<br/><i>PERSONALITÀ</i> DISCUTIBILE.</h2></div>
+          <p>Un locale, due buone scuse per uscire. Da una parte il bancone. Dall'altra la cucina. Il resto si decide lì.</p>
         </div>
         <div className="wl-experience-grid">
           <article className="wl-experience wl-experience-drinks">
@@ -83,8 +85,8 @@ export default function WalrusLanding() {
             <div className="wl-experience-shade"/>
             <div className="wl-experience-content">
               <span className="wl-index">01 / IL BERE</span>
-              <div><span className="wl-overline">L'APERITIVO È SOLO L'INIZIO</span><h3>COCKTAIL<br/>BAR<span>.</span></h3>
-                <p>Cocktail signature, circa 30 gin, bitter, vermouth, whisky e 4 spine a rotazione. DJ set ed eventi quando la serata chiama.</p>
+              <div><span className="wl-overline">IL PRIMO DRINK NON SI SCORDA</span><h3>COCKTAIL<br/>BAR<span>.</span></h3>
+                <p>Signature, circa 30 gin, bitter, vermouth e whisky. Quattro spine a rotazione. E qualche serata in cui alziamo anche il volume.</p>
                 <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="wl-text-link">VIVI IL WALRUS SU INSTAGRAM <Arrow/></a>
               </div>
             </div>
@@ -94,9 +96,9 @@ export default function WalrusLanding() {
             <div className="wl-experience-shade"/>
             <div className="wl-experience-content">
               <span className="wl-index">02 / IL MANGIARE</span>
-              <div><span className="wl-overline">QUANDO LA FAME NON SCHERZA</span><h3>WALRUS<br/>KITCHEN<span>.</span></h3>
-                <p>Panini, taglieri, cicchetti e i nostri Pesi Massimi. Esplora il menu e ordina direttamente con Walbox.</p>
-                <a href={MENU_URL} className="wl-text-link">APRI MENU & ORDINI <Arrow/></a>
+              <div><span className="wl-overline">FAME? ABBIAMO UN PROBLEMA (BELLO).</span><h3>WALRUS<br/>KITCHEN<span>.</span></h3>
+                <p>Pesi Massimi, panini seri, cicchetti e taglieri. Il menu è su Walbox: guardi, scegli e ordini. Senza fare la fila.</p>
+                <a href={MENU_URL} className="wl-text-link">APRI WALBOX · MENU & ORDINI <Arrow/></a>
               </div>
             </div>
           </article>
@@ -115,8 +117,8 @@ export default function WalrusLanding() {
           <img src={IMAGES.upper} alt="Vista degli interni del Walrus Pub rinnovato" loading="lazy"/>
         </div>
         <div className="wl-atmosphere-text"><p className="wl-label">02 / L'ATMOSFERA</p>
-          <h2>STREET<br/>NELL'ANIMA.<br/><i>PIÙ PETTINATI.</i></h2>
-          <p>Il Walrus ha cambiato faccia, non carattere. Neon rosso, spirito libero, drink ricercati e gente che ha voglia di stare bene.</p>
+          <h2>STREET<br/>NELL'ANIMA.<br/><i>ZERO POSE.</i></h2>
+          <p>Il Walrus ha cambiato faccia, non carattere. Una cucina che si fa rispettare, drink fatti bene e serate senza copione.</p>
           <a href={INSTAGRAM_URL} className="wl-inline-button" target="_blank" rel="noopener noreferrer"><InstagramIcon/> GUARDA COSA SUCCEDE <Arrow/></a>
         </div>
       </section>
@@ -125,8 +127,8 @@ export default function WalrusLanding() {
         <div className="wl-reserve-check" aria-hidden="true"/>
         <div className="wl-reserve-content">
           <p className="wl-label">03 / UN POSTO C'È. O LO TROVIAMO.</p>
-          <h2 id="wl-reserve-title">IL TAVOLO?<br/><i>CI PENSIAMO NOI.</i></h2>
-          <p>Un aperitivo in compagnia, una cena, un compleanno o una festa privata. Scrivici o chiamaci per organizzare la serata.</p>
+          <h2 id="wl-reserve-title">IL TAVOLO?<br/><i>TE LO TENIAMO.</i></h2>
+          <p>Aperitivo con gli amici, cena, compleanno o festa privata. Tu scegli la compagnia, noi pensiamo al tavolo.</p>
           <div className="wl-reserve-actions">
             <a className="wl-button wl-button-light" href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer"><WhatsAppIcon/> PRENOTA SU WHATSAPP <Arrow/></a>
             <a className="wl-button wl-button-outline" href={PHONE_URL}>CHIAMA IL WALRUS <Arrow/></a>
@@ -139,8 +141,8 @@ export default function WalrusLanding() {
       <section className="wl-visit wl-section" id="dove-siamo">
         <div>
           <p className="wl-label">04 / VIENI A TROVARCI</p>
-          <h2>CI VEDIAMO<br/>A <i>MELEGNANO.</i></h2>
-          <p>Dal drink dopo il lavoro al dopocena. Un salto al Walrus e la serata è già partita.</p>
+          <h2>IL TRICHECO<br/><i>TI ASPETTA.</i></h2>
+          <p>Siamo a Melegnano. Passa per un drink, resta per mangiare. O fai il contrario: non giudichiamo.</p>
           <div className="wl-visit-buttons"><a className="wl-button wl-button-primary" href={MAPS_URL} target="_blank" rel="noopener noreferrer">OTTIENI INDICAZIONI <Arrow/></a><a className="wl-button wl-button-ghost" href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer"><InstagramIcon/> INSTAGRAM <Arrow/></a></div>
         </div>
         <dl className="wl-info">
@@ -151,7 +153,7 @@ export default function WalrusLanding() {
         </dl>
       </section>
 
-      <section className="wl-outro" aria-label="Vai al menu"><span>NON RESTARE A GUARDARE.</span><h2>FAI IL <i>PRIMO PASSO.</i></h2><a href={MENU_URL} className="wl-button wl-button-light">APRI IL MENU WALBOX <Arrow/></a></section>
+      <section className="wl-outro" aria-label="Vai al menu"><span>HAI FAME? HAI SETE?</span><h2>IL MENU NON<br/><i>SI GUARDA DA SOLO.</i></h2><a href={MENU_URL} className="wl-button wl-button-light">APRI WALBOX · MENU & ORDINI <Arrow/></a></section>
     </main>
 
     <footer className="wl-footer">
