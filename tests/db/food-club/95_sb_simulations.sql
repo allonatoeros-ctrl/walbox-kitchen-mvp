@@ -439,6 +439,62 @@ DO $$ DECLARE r record; res jsonb; k text; got text := ''; BEGIN
   RAISE NOTICE 'PASS SB4-S1 GET EXPIRED con un campo mancante (8 campi) o formato diverso (valuta/merchant/reference) a regole accese -> uncertain [%]', trim(got);
 END $$;
 
+-- SB4-S3 (fix 2026-11-21, migration 20261121100000) DELETE SumUp (sandbox SB-4 VERIFICATO): status EXPIRED e valid_until
+-- RISCRITTO all'istante della cancellazione, con 9 decimali. Solo EXPIRED con valid_until tra created_at dell'attempt e
+-- il valid_until dell'intento vale come GET legata; FAILED/PENDING anticipati, EXPIRED dopo l'atteso o prima della
+-- creazione -> uncertain:get_missing_or_unbound. Regole spente -> mai rilascio.
+-- p_frac NULL = microsecondi esatti di created_at + p_offset; altrimenti secondi troncati + p_frac (es. 9 decimali SumUp).
+CREATE FUNCTION fc_test.vu_at(p_a uuid, p_offset interval, p_frac text DEFAULT '.087436801') RETURNS jsonb LANGUAGE sql AS $$
+  SELECT jsonb_build_object('valid_until', CASE WHEN p_frac IS NULL
+           THEN to_char((p.created_at + p_offset) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US')
+           ELSE to_char((p.created_at + p_offset) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS') || p_frac END || 'Z')
+    FROM public.kitchen_payments p WHERE p.id = p_a $$;
+DO $$ DECLARE r record; res jsonb; c text[]; got text := ''; BEGIN
+  PERFORM fc_test.rules_set(true, true, true, 'M-TEST');
+  -- (a) caso reale: due GET EXPIRED dopo DELETE a created + 5 min, 9 decimali -> rilascio terminal_state
+  SELECT * INTO r FROM fc_test.mk_sealed('B');
+  PERFORM fc_test.ev(r.a, 'list', fc_test.lf(r.a, 1), 20);
+  PERFORM fc_test.ev(r.a, 'get', fc_test.gf(r.a, 'EXPIRED', fc_test.vu_at(r.a, interval '5 minutes')), 110);
+  PERFORM fc_test.ev(r.a, 'get', fc_test.gf(r.a, 'EXPIRED', fc_test.vu_at(r.a, interval '5 minutes')), 30);
+  ASSERT (SELECT count(*) FROM public.food_club_checkout_evidence WHERE attempt_id = r.a AND kind = 'get'
+           AND valid_until = (fc_test.vu_at(r.a, interval '5 minutes') ->> 'valid_until')::timestamptz) = 2, 'SB4-S3 9 decimali salvati';
+  res := fc_test.release(r.o);
+  ASSERT (res ->> 'released')::boolean AND (res -> 'verdicts' -> 0 ->> 'reason') = 'terminal_state' AND fc_test.vstatus(r.v) = 'available',
+    'SB4-S3 EXPIRED dopo DELETE: ' || res::text;
+  -- (b) EXPIRED con valid_until = created_at esatto (limite incluso) -> rilascio
+  SELECT * INTO r FROM fc_test.mk_sealed('B');
+  PERFORM fc_test.ev(r.a, 'list', fc_test.lf(r.a, 1), 20);
+  PERFORM fc_test.ev(r.a, 'get', fc_test.gf(r.a, 'EXPIRED', fc_test.vu_at(r.a, interval '0', NULL)), 110);
+  PERFORM fc_test.ev(r.a, 'get', fc_test.gf(r.a, 'EXPIRED', fc_test.vu_at(r.a, interval '0', NULL)), 30);
+  res := fc_test.release(r.o);
+  ASSERT (res ->> 'released')::boolean AND fc_test.vstatus(r.v) = 'available', 'SB4-S3 limite = created_at: ' || res::text;
+  -- (c..f) restano incerti: [stato, scostamento da created_at]
+  FOREACH c SLICE 1 IN ARRAY ARRAY[
+      ['FAILED', '5 minutes'], ['PENDING', '5 minutes'],           -- anticipati ma non EXPIRED
+      ['EXPIRED', '-1 second'],                                    -- prima della creazione dell'attempt
+      ['EXPIRED', '16 minutes']] LOOP                              -- dopo l'atteso (intento = created + 15 min)
+    SELECT * INTO r FROM fc_test.mk_sealed('B');
+    PERFORM fc_test.ev(r.a, 'list', fc_test.lf(r.a, 1), 20);
+    PERFORM fc_test.ev(r.a, 'get', fc_test.gf(r.a, c[1], fc_test.vu_at(r.a, c[2]::interval)), 110);
+    PERFORM fc_test.ev(r.a, 'get', fc_test.gf(r.a, c[1], fc_test.vu_at(r.a, c[2]::interval)), 30);
+    res := fc_test.release(r.o);
+    ASSERT (res ->> 'released')::boolean = false AND res ->> 'reason' = 'uncertain:get_missing_or_unbound' AND fc_test.vstatus(r.v) = 'reserved',
+      format('SB4-S3 %s %s: %s', c[1], c[2], res);
+    got := got || c[1] || '@' || c[2] || ' ';
+  END LOOP;
+  -- (g) regole spente: EXPIRED dopo DELETE -> uncertain:terminal_rule_not_verified, buono trattenuto
+  PERFORM fc_test.rules_set(false, false, false, 'M-TEST');
+  SELECT * INTO r FROM fc_test.mk_sealed('B');
+  PERFORM fc_test.ev(r.a, 'list', fc_test.lf(r.a, 1), 20);
+  PERFORM fc_test.ev(r.a, 'get', fc_test.gf(r.a, 'EXPIRED', fc_test.vu_at(r.a, interval '5 minutes')), 110);
+  PERFORM fc_test.ev(r.a, 'get', fc_test.gf(r.a, 'EXPIRED', fc_test.vu_at(r.a, interval '5 minutes')), 30);
+  res := fc_test.release(r.o);
+  ASSERT (res ->> 'released')::boolean = false AND res ->> 'reason' = 'uncertain:terminal_rule_not_verified' AND fc_test.vstatus(r.v) = 'reserved',
+    'SB4-S3 regole spente: ' || res::text;
+  PERFORM fc_test.rules_set(false, false, false, NULL);
+  RAISE NOTICE 'PASS SB4-S3 EXPIRED dopo DELETE (valid_until anticipato, 9 decimali) -> terminal_state; restano uncertain [%] e regole spente', trim(got);
+END $$;
+
 -- SB4-S2 la RPC rifiuta campi di tipo sbagliato (evidence_bad_field) e la fase JS riprova senza quel campo: il campo tolto
 -- rende la GET "non legata" -> uncertain (E-E di 60_release.sql copre la whitelist; qui l'effetto sul verdetto)
 DO $$ DECLARE r record; res jsonb; BEGIN

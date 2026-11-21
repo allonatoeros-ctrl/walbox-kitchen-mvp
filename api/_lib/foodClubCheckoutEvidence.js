@@ -58,7 +58,10 @@ function entry(attempt, state, reason, validUntil = null) {
 }
 
 // Classifica il JSON di un GET gia verificato (id e checkout_reference controllati prima). Pura.
-export function classifyCheckoutData(attempt, data, expectedValidUntilMs) {
+// Eccezione DELETE (sandbox SB-4, 2026-11-21): la disattivazione SumUp mette EXPIRED e riscrive valid_until
+// all'istante della cancellazione. Solo per EXPIRED vale quindi anche un valid_until ANTICIPATO, purche' tra la
+// creazione dell'ordine (minValidUntilMs) e l'atteso + tolleranza. FAILED/PENDING: confronto con l'atteso come prima.
+export function classifyCheckoutData(attempt, data, expectedValidUntilMs, minValidUntilMs = NaN) {
   const validUntil = typeof data?.valid_until === 'string' ? data.valid_until : null;
   if (data?.status === 'PAID') return entry(attempt, 'paid', 'sumup_paid', validUntil);
 
@@ -69,9 +72,10 @@ export function classifyCheckoutData(attempt, data, expectedValidUntilMs) {
 
   const vuMs = validUntil ? Date.parse(validUntil) : NaN;
   if (!validUntil || Number.isNaN(vuMs)) return entry(attempt, 'unknown', 'valid_until_missing', validUntil);
-  if (!Number.isFinite(expectedValidUntilMs) || Math.abs(vuMs - expectedValidUntilMs) > VALID_UNTIL_TOLERANCE_MS) {
-    return entry(attempt, 'unknown', 'valid_until_mismatch', validUntil);
-  }
+  const expectedOk = Number.isFinite(expectedValidUntilMs) && Math.abs(vuMs - expectedValidUntilMs) <= VALID_UNTIL_TOLERANCE_MS;
+  const expiredEarlyOk = base === 'expired' && Number.isFinite(expectedValidUntilMs) && Number.isFinite(minValidUntilMs)
+    && vuMs >= minValidUntilMs && vuMs <= expectedValidUntilMs + VALID_UNTIL_TOLERANCE_MS;
+  if (!expectedOk && !expiredEarlyOk) return entry(attempt, 'unknown', 'valid_until_mismatch', validUntil);
   return entry(attempt, base, `sumup_${base}`, validUntil);
 }
 
@@ -106,7 +110,7 @@ async function readOneAttempt({ attempt, createdMs, nowMs, sumupApiKey, getFetch
     });
     if (verified.outcome !== 'ok') return entry({ ...attempt, provider_ref: providerRef }, 'unknown', 'sumup_get_unverified');
     if (verified.data?.id !== providerRef) return entry({ ...attempt, provider_ref: providerRef }, 'unknown', 'checkout_id_mismatch');
-    return classifyCheckoutData({ ...attempt, provider_ref: providerRef }, verified.data, expectedValidUntilMs);
+    return classifyCheckoutData({ ...attempt, provider_ref: providerRef }, verified.data, expectedValidUntilMs, createdMs);
   };
 
   if (attempt.provider_ref) return getVerified(attempt.provider_ref);

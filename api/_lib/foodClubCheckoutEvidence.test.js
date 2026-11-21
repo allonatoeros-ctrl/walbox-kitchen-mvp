@@ -133,7 +133,12 @@ test('E-5 risposte non affidabili -> uncertain (flag true, dopo +17)', async () 
     idDiverso: () => json(200, { ...co('a', 'EXPIRED'), id: 'co-altro' }),
     refDiversa: () => json(200, { ...co('a', 'EXPIRED'), checkout_reference: 'altro' }),
     validUntilAssente: () => json(200, { ...co('a', 'EXPIRED'), valid_until: undefined }),
-    validUntilDiverso: () => json(200, co('a', 'EXPIRED', { valid_until: at(14).toISOString() })),
+    // fix 2026-11-21: EXPIRED con valid_until ANTICIPATO e' la DELETE (SB-4) -> expired; qui i casi che restano unknown
+    validUntilDiverso: () => json(200, co('a', 'EXPIRED', { valid_until: at(16).toISOString() })),
+    failedAnticipato: () => json(200, co('a', 'FAILED', { valid_until: at(14).toISOString() })),
+    pendingAnticipato: () => json(200, co('a', 'PENDING', { valid_until: at(14).toISOString() })),
+    expiredPrimaDellOrdine: () => json(200, co('a', 'EXPIRED', { valid_until: new Date(CREATED.getTime() - 1000).toISOString() })),
+    expiredOltreTolleranza: () => json(200, co('a', 'EXPIRED', { valid_until: '2026-11-08T20:15:01.001Z' })),
     validUntilIllegibile: () => json(200, co('a', 'EXPIRED', { valid_until: 'boh' })),
     statoSconosciuto: () => json(200, co('a', 'WEIRD')),
   };
@@ -152,6 +157,22 @@ test('E-5 valid_until entro 1 s dall\'atteso e accettato', async () => {
   const f = makeFetch({ [getUrl('a')]: json(200, co('a', 'EXPIRED', { valid_until: new Date(CREATED.getTime() + 15 * MIN + 900).toISOString() })) });
   const r = await read([att('a')], f, at(40), true);
   assert.equal(r.verdict, 'not_payable');
+});
+
+// Fix 2026-11-21 (SB-4 sandbox): la DELETE SumUp mette EXPIRED e RISCRIVE valid_until all'istante della cancellazione,
+// con 9 decimali. Solo EXPIRED con valid_until tra la creazione dell'ordine e l'atteso (+1 s) vale come scaduto.
+test('E-5b EXPIRED dopo DELETE: valid_until anticipato (9 decimali) -> expired; flag true dopo +17 -> not_payable', async () => {
+  const deleted = '2026-11-08T20:03:38.087436801Z';
+  const mk = (vu) => makeFetch({ [getUrl('a')]: json(200, co('a', 'EXPIRED', { valid_until: vu })) });
+  const r = await read([att('a')], mk(deleted), at(40), true);
+  assert.equal(r.checkouts[0].state, 'expired');
+  assert.equal(r.checkouts[0].reason, 'sumup_expired');
+  assert.equal(r.checkouts[0].valid_until, deleted);
+  assert.equal(r.verdict, 'not_payable');
+  assert.equal((await read([att('a')], mk(deleted), at(40))).verdict, 'uncertain', 'flag false: nessun rilascio');
+  assert.equal((await read([att('a')], mk(deleted), at(17), true)).verdict, 'uncertain', '+17 esatti: ancora uncertain');
+  assert.equal((await read([att('a')], mk(CREATED.toISOString()), at(40), true)).checkouts[0].state, 'expired', 'limite: = creazione');
+  assert.equal((await read([att('a')], mk(VALID_UNTIL), at(40), true)).checkouts[0].state, 'expired', 'come oggi: = atteso');
 });
 
 test('E-5 provider_ref diverso dall\'id restituito -> uncertain', async () => {

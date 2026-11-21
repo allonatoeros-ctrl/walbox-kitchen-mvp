@@ -31,7 +31,9 @@ export const MAX_CANDIDATE_ORDERS_SCAN = 50;
 const LOG_TAG = 'food-club-voucher-release';
 const CLOSED_STATUSES = ['cancelled', 'payment_abandoned'];
 const CHECKOUT_ID_SHAPE = /^[A-Za-z0-9_-]{1,100}$/;
-const ISO_TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}:?\d{2})$/;
+// Fino a 9 decimali: dopo una DELETE SumUp riscrive valid_until con nanosecondi (SB-4, 2026-11-21); Postgres li
+// arrotonda ai microsecondi. Oltre 9 o stringa > 40: campo omesso come prima.
+const ISO_TS = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?(Z|[+-]\d{2}:?\d{2})$/;
 const AMOUNT_TEXT = /^\d{1,8}(\.\d{1,2})?$/;
 
 export function isFoodClubReleaseEnabled(env = process.env) {

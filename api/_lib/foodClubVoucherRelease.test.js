@@ -154,6 +154,10 @@ test('normalizzazione: campi di tipo sbagliato omessi, il resto (incluso PAID) r
   assert.deepEqual(checkoutFields({ amount: -1 }), {});
   assert.deepEqual(checkoutFields({ amount: 1e21 }), {});
   assert.deepEqual(checkoutFields({ valid_until: '2026-11-08T20:45:00+00:00' }), { valid_until: '2026-11-08T20:45:00+00:00' });
+  // fix 2026-11-21: dopo una DELETE SumUp riscrive valid_until con 9 decimali (SB-4): va salvato; 10+ decimali no.
+  assert.deepEqual(checkoutFields({ valid_until: '2026-11-21T15:03:38.087436801Z' }), { valid_until: '2026-11-21T15:03:38.087436801Z' });
+  assert.deepEqual(checkoutFields({ valid_until: '2026-11-21T15:03:38.0874368012Z' }), {});
+  assert.deepEqual(checkoutFields({ valid_until: '2026-11-21T15:03:38.Z' }), {});
   assert.deepEqual(checkoutFields(null), {});
   assert.deepEqual(checkoutFields([coBody()]), {});
 });
