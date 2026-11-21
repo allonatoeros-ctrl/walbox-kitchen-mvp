@@ -24,8 +24,8 @@ _Documento autosufficiente: chi lo legge nel cloud non ha accesso al Mac, a OrbS
 ## 1. Stato attuale (sessione cloud 2026-11-09)
 - Codice: 12 commit sopra `8000080` (push, OTP, campagna OFF, E2E, proposte Kitchen, doc). Base Kitchen di produzione
   `ad08729` antenata del branch. Nessun file Kitchen K1–K6, D1 o della regola dei 5 minuti modificato (VERIFICATO: diff).
-- Food Club V1 completo in locale dietro `VITE_FOOD_CLUB_ENABLED` (spento). Migration Club: **11** (`20261109100000`..
-  `20261109110000`), tutte SOLO LOCALI.
+- Food Club V1 completo in locale dietro `VITE_FOOD_CLUB_ENABLED` (spento). Migration Club: **12** (`20261109100000`..
+  `20261109110000` + `20261121100000` EXPIRED dopo DELETE SumUp, aggiunta il 2026-11-21), tutte SOLO LOCALI.
 - Verdetto: **READY FOR SANDBOX**, non pronto per la produzione. Mancano: prova push su telefoni veri, SMS reale con
   fornitore, SB-1..SB-7 su SumUp, «Confirm phone» attivo in produzione, decisioni aperte (§3, §8).
 - P-B e P-C spente (solo P-A attivo): invariato.
@@ -242,11 +242,12 @@ Configurazione da non cambiare finché non ci sono le prove: `food_club_release_
 3. Decisioni aperte (§3 e §8 NEEDS_DECISION) chiuse da Eros; testi legali (D-11).
 4. Precheck `npx supabase migration list --linked`; controllare che la produzione non abbia una vecchia
    `food_club_staff_members` (nel demo la `103000` è fallita per questo).
-5. `npx supabase db push --linked` delle **11** migration, in ordine:
+5. `npx supabase db push --linked` delle **12** migration, in ordine:
    `100000` schema · `101000` ordine-pagamento · `102000` identità/API/coda · `103000` staff/analytics · `104000`
    rilascio buoni · `105000` tick sweep (ri-schedula `kitchen-online-abandon-sweep`) · `106000` buoni in verifica ·
    `107000` incasso al banco su sigillato · `108000` stati checkout documentati · `109000` my_state · `110000` consegna
-   push (crea il job `food-club-push`, inerte senza secret).
+   push (crea il job `food-club-push`, inerte senza secret) · `20261121100000` checkout EXPIRED dopo DELETE SumUp
+   (ridefinisce solo `food_club_release_eval_attempt`).
    Postcheck: `migration list` senza pending; job cron (`food-club-expire-sweep`, `food-club-retention-sweep`,
    `food-club-push`, comando di `kitchen-online-abandon-sweep`); REVOKE (anon/authenticated non eseguono RPC staff,
    release, push); `food_club_release_verified_rules()` = false/false/false; nessun secret `food_club_push_secret`.
