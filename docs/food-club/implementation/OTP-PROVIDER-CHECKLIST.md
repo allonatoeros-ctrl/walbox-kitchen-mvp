@@ -1,5 +1,7 @@
 # OTP / SMS — checklist di collaudo provider (Food Club V1)
 
+> **Nota 2026-11-23 (decisione di Eros, D-23):** al lancio il canale OTP è **email** (codice a 6 cifre), non SMS. Questa checklist SMS vale per la **fase successiva**. Passi di lancio con email: `docs/food-club/CLOUD_HANDOFF.md` §12 punto 7.
+
 _Creato: 2026-11-09 (sessione cloud). Nessun SMS inviato da Claude. Ogni passo con il provider reale è un gate di Eros._
 Codice: `src/lib/foodClubOtp.js` (flusso e traduzione errori, test `src/lib/foodClubOtp.test.js`),
 `src/hooks/useFoodClubIdentity.js`, `src/components/foodclub/PhoneOtpForm.jsx`, `normalizeItalianPhone` in

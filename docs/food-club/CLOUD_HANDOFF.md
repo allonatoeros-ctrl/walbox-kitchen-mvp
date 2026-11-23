@@ -24,10 +24,12 @@ _Documento autosufficiente: chi lo legge nel cloud non ha accesso al Mac, a OrbS
 ## 1. Stato attuale (sessione cloud 2026-11-09)
 - Codice: 12 commit sopra `8000080` (push, OTP, campagna OFF, E2E, proposte Kitchen, doc). Base Kitchen di produzione
   `ad08729` antenata del branch. Nessun file Kitchen K1–K6, D1 o della regola dei 5 minuti modificato (VERIFICATO: diff).
-- Food Club V1 completo in locale dietro `VITE_FOOD_CLUB_ENABLED` (spento). Migration Club: **12** (`20261109100000`..
-  `20261109110000` + `20261121100000` EXPIRED dopo DELETE SumUp, aggiunta il 2026-11-21), tutte SOLO LOCALI.
+- Food Club V1 completo in locale dietro `VITE_FOOD_CLUB_ENABLED` (spento). Migration Club: **13** (`20261109100000`..
+  `20261109110000` + `20261121100000` EXPIRED dopo DELETE SumUp, aggiunta il 2026-11-21 + `20261123100000` identità email, 2026-11-23), tutte SOLO LOCALI.
 - Verdetto: **READY FOR SANDBOX**, non pronto per la produzione. Mancano: prova push su telefoni veri, SMS reale con
   fornitore, SB-1..SB-7 su SumUp, «Confirm phone» attivo in produzione, decisioni aperte (§3, §8).
+  Aggiornamento 2026-11-23 (D-23): al lancio l'OTP è via EMAIL, quindi al posto di «SMS reale» e «Confirm phone»
+  servono SMTP personalizzato e «Confirm email» ON (§12 punto 7). Push Kitchen già confermata sui telefoni da Eros.
 - P-B e P-C spente (solo P-A attivo): invariato.
 - Notifiche push: logica, migration del tick, gestione errori e prova Deno locale completate (§9). OTP: logica client
   corretta e testata, checklist provider pronta (§10). Campagna OFF: corretta un'incoerenza UI e provata in E2E (§8.4).
@@ -210,6 +212,7 @@ Da completare nel cloud, tutto in locale e con test:
    iPhone (PWA installata, iOS ≥ 16.4) e Android (`docs/food-club/implementation/RUNBOOK-push-food-club.md` §5).
 
 ## 10. OTP/SMS
+- **Dal 2026-11-23 (D-23) al lancio il canale è email**, non SMS; questa sezione descrive il ramo SMS (fase successiva). Passi di lancio con email: §12 punto 7.
 - Usa Supabase phone auth. Verificato sul Mac solo con GoTrue locale e numeri di prova (`GOTRUE_SMS_TEST_OTP`): invio,
   verifica, codice errato, rate limit 429, input non valido, `phone_exists`, iscrizione con consensi.
 - NON DIMOSTRATO: SMS reale, scadenza e consumo reali del codice. Servono fornitore (D-10/D-16, decide Eros),
@@ -242,18 +245,24 @@ Configurazione da non cambiare finché non ci sono le prove: `food_club_release_
 3. Decisioni aperte (§3 e §8 NEEDS_DECISION) chiuse da Eros; testi legali (D-11).
 4. Precheck `npx supabase migration list --linked`; controllare che la produzione non abbia una vecchia
    `food_club_staff_members` (nel demo la `103000` è fallita per questo).
-5. `npx supabase db push --linked` delle **12** migration, in ordine:
+5. `npx supabase db push --linked` delle **13** migration, in ordine:
    `100000` schema · `101000` ordine-pagamento · `102000` identità/API/coda · `103000` staff/analytics · `104000`
    rilascio buoni · `105000` tick sweep (ri-schedula `kitchen-online-abandon-sweep`) · `106000` buoni in verifica ·
    `107000` incasso al banco su sigillato · `108000` stati checkout documentati · `109000` my_state · `110000` consegna
    push (crea il job `food-club-push`, inerte senza secret) · `20261121100000` checkout EXPIRED dopo DELETE SumUp
-   (ridefinisce solo `food_club_release_eval_attempt`).
+   (ridefinisce solo `food_club_release_eval_attempt`) · `20261123100000` identità email (decisione di Eros 2026-11-23, D-23): `email_hash` + UNIQUE parziale, RPC `food_club_create_merge_ticket_email`, `my_state` esteso. **Attenzione**: fa DROP+CREATE di `food_club_staff_members`, `food_club_staff_vouchers`, `food_club_staff_referrals` (cambia il tipo di ritorno).
    Postcheck: `migration list` senza pending; job cron (`food-club-expire-sweep`, `food-club-retention-sweep`,
    `food-club-push`, comando di `kitchen-online-abandon-sweep`); REVOKE (anon/authenticated non eseguono RPC staff,
-   release, push); `food_club_release_verified_rules()` = false/false/false; nessun secret `food_club_push_secret`.
+   release, push); le 3 funzioni staff ridefinite con DROP+CREATE (`food_club_staff_members`, `food_club_staff_vouchers`, `food_club_staff_referrals`) esistono con la firma nuova e REVOKE/GRANT corretti (come sopra); `food_club_release_verified_rules()` = false/false/false; nessun secret `food_club_push_secret`.
 6. Deploy con `VITE_FOOD_CLUB_ENABLED` spento; poi flag ON, `FOOD_CLUB_RELEASE_ENABLED`, interruttore DB del tick
    di rilascio (migration dedicata).
-7. OTP: fornitore, «Confirm phone» attivo, prova reale (`OTP-PROVIDER-CHECKLIST.md`).
+7. OTP al lancio = **email** (D-23, `FOOD_CLUB_OTP_CHANNEL='email'`). Prima del lancio, in Supabase Auth (gate Eros):
+   - configurare **SMTP personalizzato** (quello incluso ha limiti bassi); fornitore SMTP ancora da decidere;
+   - «**Confirm email**» ON;
+   - template email (Magic Link / Change Email / Confirm) modificati per mostrare il codice `{{ .Token }}` a 6 cifre invece del link;
+   - decidere CAPTCHA al lancio sì/no (D-23);
+   - **prova reale** (NON ANCORA VERIFICATA su Supabase reale): iscrizione con email vera, codice ricevuto, `email_confirmed_at` valorizzato.
+   Fase successiva SMS: fornitore, «Confirm phone» attivo, prova reale (`OTP-PROVIDER-CHECKLIST.md`).
 8. Push: prova I-7 «ordine pronto» su due telefoni → `FOOD_CLUB_PUSH_SECRET` + VAPID nella funzione → deploy
    `send-food-club-push --no-verify-jwt` → secret Vault per ultimo → prova Club su due telefoni (runbook §5).
 9. Campagna accesa dalla pagina staff (solo manager).
@@ -266,7 +275,8 @@ Rollback (ogni voce = migration dedicata o azione di Eros):
   poi la funzione Club resta inerte; emergenza: env `FOOD_CLUB_RELEASE_ENABLED` su Vercel.
 - Club visibile ai clienti: `VITE_FOOD_CLUB_ENABLED` spento + redeploy; campagna spenta dalla pagina staff (i buoni
   maturati restano validi, ora mostrati come «in pausa»).
-- Le migration sono additive (nessun DROP di oggetti Kitchen usati dal codice live).
+- Le migration sono additive (nessun DROP di oggetti Kitchen usati dal codice live). Eccezione Club: la
+  `20261123100000` fa DROP+CREATE di 3 funzioni staff del Club (`food_club_staff_members/_vouchers/_referrals`).
 
 ## 13. Procedura per continuare con Claude Code Cloud
 1. Fatto (2026-11-09, autorizzato da Eros): `vercel.json` esclude `food-club-v1-p1`, `claude/*`, `claude/**`.
