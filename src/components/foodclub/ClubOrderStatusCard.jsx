@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { foodClubApi } from '../../lib/foodClubApi';
 import { cardProgress, formatEuro, formatShortDate, availableVouchers } from '../../lib/foodClubRules';
 import { spaNavigate } from '../../lib/spaNavigate';
+import { FOOD_CLUB_OTP_CHANNEL } from '../../lib/foodClubConfig';
 import { detectPlatform, installGuideSteps } from '../../lib/installInvite';
 import { isStandalone } from '../../lib/pwaInstall';
 import './ClubCheckout.css';
@@ -178,7 +179,7 @@ export default function ClubOrderStatusCard({ order, club }) {
       <div className="fc-scope" data-testid="fc-status-card" data-state="invite">
         <div className="fc-status-card">
           <Head kicker="Walrus Food Club · gratis" title="Il prossimo" em="può fare timbro." />
-          <p className="fc-p">{required} visite food in 30 giorni = {euroShort(campaign.voucher_value ?? 5)} sul prossimo ordine. Ti serve solo il numero di telefono.</p>
+          <p className="fc-p">{required} visite food in 30 giorni = {euroShort(campaign.voucher_value ?? 5)} sul prossimo ordine. Ti serve solo {FOOD_CLUB_OTP_CHANNEL === 'email' ? 'la tua email' : 'il numero di telefono'}.</p>
           <button type="button" className="fc-cta" onClick={() => spaNavigate('/kitchen/club')}>ENTRA NEL CLUB <span aria-hidden="true">→</span></button>
           <button
             type="button"

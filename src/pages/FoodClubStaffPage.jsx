@@ -367,7 +367,7 @@ function Vouchers() {
               : '—';
             return [
               <b key="c">{v.code}</b>,
-              `${v.member_name || 'Iscritto'} ${v.phone_masked || ''}`.trim(),
+              `${v.member_name || 'Iscritto'} ${v.email_masked || v.phone_masked || ''}`.trim(),
               formatEuro(v.value),
               formatShortDate(v.issued_at),
               formatShortDate(v.expires_at),
@@ -401,7 +401,7 @@ function Members() {
           className="fcs-input"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Nome o ultime cifre del telefono"
+          placeholder="Nome, inizio email o ultime cifre del telefono"
           aria-label="Cerca iscritto"
         />
         <button type="submit" className="fcs-chip">CERCA</button>
@@ -416,7 +416,7 @@ function Members() {
           empty={search ? 'Nessun iscritto trovato.' : 'Il Club non ha ancora iscritti.'}
           rows={rows.map((m) => [
             m.display_name || '—',
-            m.phone_masked || '—',
+            m.email_masked || m.phone_masked || '—',
             formatShortDate(m.joined_at),
             staffCycleLabel(m),
             staffTotalVisits(m),
@@ -456,8 +456,8 @@ function Referrals() {
             <Pill key="s" tone={tone}>{label}</Pill>,
             formatShortDate(r.created_at),
             r.rewarded_at ? formatShortDate(r.rewarded_at) : '—',
-            `${r.inviter_name || 'Iscritto'} ${r.inviter_phone || ''}`.trim(),
-            `${r.invitee_name || 'Iscritto'} ${r.invitee_phone || ''}`.trim(),
+            `${r.inviter_name || 'Iscritto'} ${r.inviter_email || r.inviter_phone || ''}`.trim(),
+            `${r.invitee_name || 'Iscritto'} ${r.invitee_email || r.invitee_phone || ''}`.trim(),
           ];
         })}
       />

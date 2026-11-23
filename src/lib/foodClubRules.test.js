@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   cartFoodAmount, itemFoodUnitAmount, voucherCartStatus, stampForecast, effectiveVoucherStatus,
-  pickVoucherForCart, availableVouchers, normalizeItalianPhone, cardProgress, clubErrorMessage, daysLeft,
+  pickVoucherForCart, availableVouchers, normalizeItalianPhone, normalizeEmail, cardProgress, clubErrorMessage, daysLeft,
   cardView, rewardHistory, staffCycleLabel, staffTotalVisits,
   celebrationKey, shouldCelebrate, markCelebrated, clubPaused,
 } from './foodClubRules.js';
@@ -70,6 +70,25 @@ test('telefono: normalizzazione E.164 italiana', () => {
   assert.equal(normalizeItalianPhone('0039 3475550001'), '+393475550001');
   assert.equal(normalizeItalianPhone('02 1234567'), null);
   assert.equal(normalizeItalianPhone('+44 7700 900123'), null);
+});
+
+test('email: trim e minuscole, alias gmail intatti, formati non plausibili rifiutati', () => {
+  assert.equal(normalizeEmail('  Mario.Rossi@Gmail.COM '), 'mario.rossi@gmail.com');
+  assert.equal(normalizeEmail('nome+tag@gmail.com'), 'nome+tag@gmail.com');
+  for (const bad of ['', null, undefined, 'mario', 'mario@', '@gmail.com', 'mario@gmail', 'mario@gmail.', 'mario@.com',
+    'mar io@gmail.com', 'a@b@c.it', 'a@b..it', 'mario@gmail.c', 'x'.repeat(250) + '@a.it']) {
+    assert.equal(normalizeEmail(bad), null, String(bad));
+  }
+});
+
+test('errori server email tradotti', () => {
+  assert.match(clubErrorMessage('P0001: email_already_member'), /email è già iscritta/);
+  assert.match(clubErrorMessage('invalid_email'), /Email non valida/);
+  assert.match(clubErrorMessage('P0001: verified_identity_required'), /verificata/);
+  assert.match(clubErrorMessage('ticket_email_mismatch'), /questa email/);
+  assert.match(clubErrorMessage('ticket_identity_mismatch'), /questo contatto/);
+  assert.match(clubErrorMessage('verified_phone_required'), /SMS/);
+  assert.match(clubErrorMessage('email_rate_limited'), /qualche minuto/);
 });
 
 test('errori server tradotti', () => {

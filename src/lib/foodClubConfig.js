@@ -10,3 +10,7 @@ export const FOOD_CLUB_TERMS_VERSION = 'club-v1-bozza-2026-11';
 export const FOOD_CLUB_PUSH_TEXT_VERSION = 'push-club-v1-bozza-2026-11';
 
 export const FOOD_CLUB_BASE_PATH = '/kitchen/club';
+
+// Canale del codice di verifica: 'email' (lancio: codice a 6 cifre via email) | 'phone' (SMS, ramo spento ma nel
+// codice, per quando ci sarà il provider SMS). Costante di build, niente variabile d'ambiente.
+export const FOOD_CLUB_OTP_CHANNEL = 'email';

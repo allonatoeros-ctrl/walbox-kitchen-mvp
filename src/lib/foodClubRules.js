@@ -185,6 +185,21 @@ export function normalizeItalianPhone(input) {
   return `+${d}`;
 }
 
+// Email per Supabase Auth: trim + minuscole + formato semplice (una @, dominio con punto, niente spazi).
+// NON si toccano punti/alias (+tag) di gmail: l'email inviata deve essere quella che l'utente legge nella posta
+// (la normalizzazione anti-alias per l'unicità la fa l'hash lato SQL). Ritorna null se non plausibile.
+export function normalizeEmail(input) {
+  const e = String(input ?? '').trim().toLowerCase();
+  if (!e || e.length > 254) return null;
+  if (!/^[^\s@]+@[^\s@]+$/.test(e)) return null;
+  const [local, domain] = e.split('@');
+  if (!local || local.length > 64) return null;
+  const labels = domain.split('.');
+  if (labels.length < 2 || labels.some((l) => !l)) return null;
+  if (labels[labels.length - 1].length < 2) return null;
+  return e;
+}
+
 // Messaggi d'errore server -> testo cliente.
 export function clubErrorMessage(code) {
   const map = {
@@ -196,12 +211,21 @@ export function clubErrorMessage(code) {
     voucher_campaign_inactive: 'Il Club è in pausa: per ora il buono non si può usare. Resta tuo.',
     verified_phone_required: 'Serve il numero verificato con il codice SMS.',
     phone_already_member: 'Questo numero è già iscritto. Chiedi al banco.',
+    email_already_member: 'Questa email è già iscritta. Chiedi al banco.',
+    verified_identity_required: 'Serve l’email (o il numero) verificata con il codice.',
+    ticket_email_mismatch: 'Il codice non corrisponde a questa email.',
+    ticket_identity_mismatch: 'Il codice non corrisponde a questo contatto.',
+    verified_email_required: 'Serve l’email verificata con il codice.',
     service_consent_required: 'Per iscriverti serve accettare il regolamento.',
     ticket_phone_mismatch: 'Il codice non corrisponde a questo numero.',
     merge_ticket_rate_limited: 'Troppi tentativi: riprova tra un po’.',
     otp_invalid: 'Codice sbagliato o scaduto. Riprova.',
     sms_rate_limited: 'Troppi SMS: riprova tra qualche minuto.',
     invalid_phone: 'Numero non valido. Usa un cellulare italiano.',
+    email_rate_limited: 'Troppe richieste: riprova tra qualche minuto.',
+    invalid_email: 'Email non valida. Controlla che sia scritta bene.',
+    email_unavailable: 'Le email non sono attive in questo momento. Chiedi al banco.',
+    email_send_failed: 'Email non partita. Controlla l’indirizzo o riprova tra poco.',
     sms_unavailable: 'Gli SMS non sono attivi in questo momento. Chiedi al banco.',
     sms_send_failed: 'SMS non partito. Controlla il numero o riprova tra poco.',
     network_error: 'Connessione assente. Controlla la rete e riprova.',

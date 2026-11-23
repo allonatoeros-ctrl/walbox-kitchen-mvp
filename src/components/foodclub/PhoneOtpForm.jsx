@@ -9,7 +9,7 @@ import './FoodClub.css';
 
 const RESEND_SECONDS = 60;
 
-function OtpBoxes({ value, onChange, invalid, disabled }) {
+export function OtpBoxes({ value, onChange, invalid, disabled }) {
   const refs = useRef([]);
   const digits = Array.from({ length: 6 }, (_, i) => value[i] ?? '');
 

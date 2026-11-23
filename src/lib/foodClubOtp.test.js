@@ -146,6 +146,107 @@ test('verifica ok: biglietto riscattato una volta; errore di riscatto non blocca
   assert.deepEqual(ko, { ok: true, merged: null });
 });
 
+// ---- Canale EMAIL ----
+const EE = {
+  exists: { code: 'email_exists', status: 422, message: 'A user with this email address has already been registered' },
+  rate: { code: 'over_email_send_rate_limit', status: 429, message: 'email rate limit exceeded' },
+  bad: { code: 'email_address_invalid', status: 400, message: 'Email address "x@y" is invalid' },
+  sendFail: { code: 'unexpected_failure', status: 500, message: 'Error sending confirmation email' },
+  expired: { code: 'otp_expired', status: 403, message: 'Email link is invalid or has expired' },
+};
+const reqE = (o) => requestOtp({ channel: 'email', createMergeTicket: async () => null, ...o });
+
+test('email: errori GoTrue tradotti (scaduto non diventa "email non valida")', () => {
+  assert.equal(otpErrorCode(EE.exists, 'email'), 'email_exists');
+  assert.equal(otpErrorCode(EE.rate, 'email'), 'email_rate_limited');
+  assert.equal(otpErrorCode({ status: 429, message: 'x' }, 'email'), 'email_rate_limited');
+  assert.equal(otpErrorCode({ status: 429, message: 'x' }, 'phone'), 'sms_rate_limited');
+  assert.equal(otpErrorCode(EE.bad, 'email'), 'invalid_email');
+  assert.equal(otpErrorCode(EE.sendFail, 'email'), 'email_send_failed');
+  assert.equal(otpErrorCode(EE.expired, 'email'), 'otp_invalid');
+  assert.equal(otpErrorCode(E.expired, 'email'), 'otp_invalid');
+  assert.equal(otpErrorCode({ code: 'email_provider_disabled', message: 'x' }, 'email'), 'email_unavailable');
+  assert.equal(otpErrorCode(E.offline, 'email'), 'network_error');
+  assert.equal(otpErrorCode(E.phoneExists), 'phone_exists');
+  const generic = clubErrorMessage('boh');
+  for (const c of ['email_rate_limited', 'invalid_email', 'email_unavailable', 'email_send_failed', 'email_already_member']) {
+    assert.notEqual(clubErrorMessage(c), generic, c);
+  }
+});
+
+test('email: invio con email non valida (spazi, senza @, senza dominio) -> nessuna chiamata ad Auth', async () => {
+  for (const bad of ['', 'mario', 'mario@', 'mario@gmail', 'ma rio@gmail.com']) {
+    const auth = fakeAuth();
+    assert.deepEqual(await reqE({ rawEmail: bad, auth, ensureSession: anon }), { ok: false, error: 'invalid_email' }, bad);
+    assert.equal(auth.calls.length, 0);
+  }
+});
+
+test('email: anonimo + email nuova -> updateUser({email}) con email normalizzata, mode email_change', async () => {
+  const auth = fakeAuth();
+  const res = await reqE({ rawEmail: '  Mario.Rossi@Gmail.COM ', auth, ensureSession: anon, createMergeTicket: async () => { throw new Error('no'); } });
+  assert.deepEqual(res, { ok: true, email: 'mario.rossi@gmail.com', mode: 'email_change', ticket: null });
+  assert.deepEqual(auth.calls, [['updateUser', { email: 'mario.rossi@gmail.com' }]]);
+});
+
+test('email: anonimo + email già registrata -> biglietto + signInWithOtp, mode email', async () => {
+  const auth = fakeAuth({ updateErr: EE.exists });
+  const tickets = [];
+  const res = await reqE({ rawEmail: 'a@b.it', auth, ensureSession: anon, createMergeTicket: async (v) => { tickets.push(v); return 'T-E'; } });
+  assert.deepEqual(res, { ok: true, email: 'a@b.it', mode: 'email', ticket: 'T-E' });
+  assert.deepEqual(tickets, ['a@b.it']);
+  assert.deepEqual(auth.calls, [['updateUser', { email: 'a@b.it' }], ['signInWithOtp', { email: 'a@b.it' }]]);
+});
+
+test('email: già iscritto (sessione non anonima, nuovo dispositivo) -> signInWithOtp diretto', async () => {
+  const auth = fakeAuth();
+  const res = await reqE({ rawEmail: 'a@b.it', auth, ensureSession: known });
+  assert.equal(res.mode, 'email');
+  assert.deepEqual(auth.calls, [['signInWithOtp', { email: 'a@b.it' }]]);
+});
+
+test('email: biglietto non creato -> accesso comunque possibile', async () => {
+  const res = await reqE({ rawEmail: 'a@b.it', auth: fakeAuth({ updateErr: EE.exists }), ensureSession: anon, createMergeTicket: async () => { throw new Error('x'); } });
+  assert.equal(res.ok, true);
+  assert.equal(res.ticket, null);
+});
+
+test('email: rate limit, invio fallito, provider spento, rete', async () => {
+  for (const [opts, session, expected] of [
+    [{ updateErr: EE.rate }, anon, 'email_rate_limited'],
+    [{ updateErr: EE.bad }, anon, 'invalid_email'],
+    [{ updateErr: EE.exists, otpErr: EE.rate }, anon, 'email_rate_limited'],
+    [{ otpErr: EE.sendFail }, known, 'email_send_failed'],
+    [{ otpErr: { code: 'email_provider_disabled', message: 'x' } }, known, 'email_unavailable'],
+  ]) {
+    assert.deepEqual(await reqE({ rawEmail: 'a@b.it', auth: fakeAuth(opts), ensureSession: session }), { ok: false, error: expected }, JSON.stringify(opts));
+  }
+  assert.deepEqual(await reqE({ rawEmail: 'a@b.it', auth: fakeAuth(), ensureSession: async () => { throw E.offline; } }), { ok: false, error: 'network_error' });
+});
+
+test('email: verifica con codice corto -> nessuna chiamata; tipo OTP coerente col modo', async () => {
+  const auth = fakeAuth();
+  const nr = async () => null;
+  assert.deepEqual(await confirmOtp({ email: 'a@b.it', code: '12345', mode: 'email', auth, redeemMergeTicket: nr }), { ok: false, error: 'otp_invalid' });
+  assert.deepEqual(await confirmOtp({ code: '123456', mode: 'email', auth, redeemMergeTicket: nr }), { ok: false, error: 'invalid_email' });
+  assert.equal(auth.calls.length, 0);
+  await confirmOtp({ email: 'a@b.it', code: '12 34 56', mode: 'email_change', auth, redeemMergeTicket: nr });
+  await confirmOtp({ email: 'a@b.it', code: '654321', mode: 'email', auth, redeemMergeTicket: nr });
+  assert.deepEqual(auth.calls, [
+    ['verifyOtp', { email: 'a@b.it', token: '123456', type: 'email_change' }],
+    ['verifyOtp', { email: 'a@b.it', token: '654321', type: 'email' }],
+  ]);
+});
+
+test('email: codice scaduto -> otp_invalid senza riscatto; ok -> riscatto una volta', async () => {
+  const redeemed = [];
+  const rd = async (t) => { redeemed.push(t); return { merged: true }; };
+  assert.deepEqual(await confirmOtp({ email: 'a@b.it', code: '000000', mode: 'email', ticket: 'T', auth: fakeAuth({ verifyErr: EE.expired }), redeemMergeTicket: rd }), { ok: false, error: 'otp_invalid' });
+  assert.deepEqual(redeemed, []);
+  assert.deepEqual(await confirmOtp({ email: 'a@b.it', code: '123456', mode: 'email', ticket: 'T1', auth: fakeAuth(), redeemMergeTicket: rd }), { ok: true, merged: { merged: true } });
+  assert.deepEqual(redeemed, ['T1']);
+});
+
 test('conto alla rovescia del reinvio', () => {
   assert.equal(formatCountdown(60), '1:00');
   assert.equal(formatCountdown(59), '0:59');

@@ -40,6 +40,7 @@ export const foodClubApi = {
   messages: (limit = 30) => rpc('food_club_my_messages', { p_limit: limit }),
   markMessage: (id, action) => rpc('food_club_message_mark', { p_message_id: id, p_action: action }),
   createMergeTicket: (phone) => rpc('food_club_create_merge_ticket', { p_phone: phone }),
+  createMergeTicketEmail: (email) => rpc('food_club_create_merge_ticket_email', { p_email: email }),
   redeemMergeTicket: (token) => rpc('food_club_redeem_merge_ticket', { p_token: token }),
   pushSubscribe: (row, scope) => rpc('food_club_push_subscribe', {
     p_venue_id: VENUE, p_endpoint: row.endpoint, p_p256dh: row.p256dh, p_auth_key: row.auth_key,

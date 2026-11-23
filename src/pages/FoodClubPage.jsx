@@ -6,7 +6,7 @@ import { useFoodClub } from '../hooks/useFoodClub';
 import { useFoodClubIdentity } from '../hooks/useFoodClubIdentity';
 import { useWebPushSubscription } from '../hooks/useWebPushSubscription';
 import { foodClubApi } from '../lib/foodClubApi';
-import { FOOD_CLUB_BASE_PATH } from '../lib/foodClubConfig';
+import { FOOD_CLUB_BASE_PATH, FOOD_CLUB_OTP_CHANNEL } from '../lib/foodClubConfig';
 import {
   availableVouchers, cardProgress, cardView, clubErrorMessage, clubPaused, DEFAULT_RULES, effectiveVoucherStatus, formatShortDate, rewardHistory,
 } from '../lib/foodClubRules';
@@ -20,6 +20,7 @@ import VoucherCard from '../components/foodclub/VoucherCard';
 import ClubInviteCard from '../components/foodclub/ClubInviteCard';
 import InstallGuideSheet from '../components/foodclub/InstallGuideSheet';
 import PhoneOtpForm from '../components/foodclub/PhoneOtpForm';
+import EmailOtpForm from '../components/foodclub/EmailOtpForm';
 import { stampSummary } from '../components/foodclub/clubText';
 import './CustomerKitchenMenu.css';
 import '../components/kitchen/CustomerCheckout.css';
@@ -28,6 +29,9 @@ import '../components/foodclub/FoodClub.css';
 const BASE = FOOD_CLUB_BASE_PATH;
 const MENU = '/kitchen';
 const PRIVACY = '/kitchen/privacy';
+// Testi legati al canale del codice (email al lancio, telefono/SMS quando ci sarà il provider).
+const EMAIL = FOOD_CLUB_OTP_CHANNEL === 'email';
+const ID_NOUN = EMAIL ? 'email' : 'numero';
 
 // Prima apertura standalone: letta una sola volta per caricamento (StrictMode chiama due volte gli inizializzatori).
 let firstStandaloneCache = null;
@@ -109,11 +113,11 @@ function ClubIntro({ state }) {
         <li><span className="fc-step-n" aria-hidden="true">2</span><div><b>Torna un’altra sera</b><span>Entro {r.windowDays} giorni dalla prima visita. Conta una visita per serata.</span></div></li>
         <li><span className="fc-step-n" aria-hidden="true">3</span><div><b>{r.value} € sul prossimo ordine</b><span>Lo usi su un ordine Walbox successivo con almeno {r.voucherMin} € di food. Vale {r.validDays} giorni.</span></div></li>
       </ol>
-      <div className="fc-cta-row"><ClubCta title="ISCRIVITI AL CLUB" sub="gratis · solo il numero di telefono" onClick={() => spaNavigate(`${BASE}/iscriviti`)} /></div>
+      <div className="fc-cta-row"><ClubCta title="ISCRIVITI AL CLUB" sub={EMAIL ? 'gratis · basta la tua email' : 'gratis · solo il numero di telefono'} onClick={() => spaNavigate(`${BASE}/iscriviti`)} /></div>
       <div className="fc-wrap">
-        <button type="button" className="fc-link" onClick={() => spaNavigate(`${BASE}/accedi`)}>Hai già la tessera? Entra col tuo numero</button><br />
+        <button type="button" className="fc-link" onClick={() => spaNavigate(`${BASE}/accedi`)}>Hai già la tessera? Entra con la tua {ID_NOUN}</button><br />
         <button type="button" className="fc-link fc-link--muted" onClick={() => spaNavigate(MENU)}>Ordina senza iscriverti</button>
-        <p className="fc-small">Valido solo al Walrus di Melegnano e solo sul food ordinato con Walbox. Il timbro vale per gli ordini che fai tu (online o al banco): quelli creati dallo staff in cassa non contano. L’iscrizione è gratuita; l’SMS serve solo per il codice di verifica.</p>
+        <p className="fc-small">Valido solo al Walrus di Melegnano e solo sul food ordinato con Walbox. Il timbro vale per gli ordini che fai tu (online o al banco): quelli creati dallo staff in cassa non contano. L’iscrizione è gratuita; {EMAIL ? 'l’email serve solo per il codice di verifica.' : 'l’SMS serve solo per il codice di verifica.'}</p>
       </div>
     </Page>
   );
@@ -124,7 +128,7 @@ function Bentornato() {
   return (
     <Page title="Walbox" back={MENU}>
       <Head kicker="Prima apertura dalla Home" title={<>BENTORNATO AL <em>WALRUS.</em></>}
-        sub="Su questa app la tessera va ritrovata una volta: entra col tuo numero." />
+        sub={`Su questa app la tessera va ritrovata una volta: entra con la tua ${ID_NOUN}.`} />
       <div className="fc-card">
         <div className="fc-inv-row">
           <PhoneIllustration width={56} />
@@ -134,7 +138,7 @@ function Bentornato() {
           </div>
         </div>
       </div>
-      <div className="fc-cta-row"><ClubCta title="ENTRA COL MIO NUMERO" sub="Hai già la tessera? ti mandiamo un codice via SMS" onClick={() => spaNavigate(`${BASE}/accedi`)} /></div>
+      <div className="fc-cta-row"><ClubCta title={EMAIL ? 'ENTRA CON LA MIA EMAIL' : 'ENTRA COL MIO NUMERO'} sub={EMAIL ? 'Hai già la tessera? ti mandiamo un codice in posta' : 'Hai già la tessera? ti mandiamo un codice via SMS'} onClick={() => spaNavigate(`${BASE}/accedi`)} /></div>
       <div className="fc-wrap"><button type="button" className="fc-link fc-link--muted" onClick={() => spaNavigate(MENU)}>Non ho la tessera → menu</button></div>
     </Page>
   );
@@ -149,7 +153,7 @@ function Consents({ consent, setConsent, marketing, setMarketing, name, setName,
         <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} aria-describedby="fc-consent-help" />
         <span className="fc-check-text">
           Accetto il regolamento del Food Club e ho letto l’<a href={PRIVACY} onClick={(e) => { e.preventDefault(); spaNavigate(PRIVACY); }} style={{ color: 'inherit' }}>informativa privacy</a>
-          <small id="fc-consent-help">Obbligatorio. Usiamo il numero per la tessera e i buoni.</small>
+          <small id="fc-consent-help">Obbligatorio. Usiamo {EMAIL ? 'l’email' : 'il numero'} per la tessera e i buoni.</small>
         </span>
       </label>
       <label className="fc-check">
@@ -256,8 +260,8 @@ function JoinFlow({ club, mode, showToast }) {
   if (phase === 'consents') {
     return (
       <Page title="Iscrizione" back={BASE}>
-        <Head sm kicker="Numero verificato ✓" title={<>NON SEI ANCORA <em>NEL CLUB</em></>}
-          sub="Questo numero non ha una tessera. Vuoi iscriverti adesso? È gratis." />
+        <Head sm kicker={EMAIL ? 'Email verificata ✓' : 'Numero verificato ✓'} title={<>NON SEI ANCORA <em>NEL CLUB</em></>}
+          sub={`${EMAIL ? 'Questa email non ha' : 'Questo numero non ha'} una tessera. Vuoi iscriverti adesso? È gratis.`} />
         <div className="cx-block" style={{ paddingTop: 10 }}>
           <Consents consent={consent} setConsent={setConsent} marketing={marketing} setMarketing={setMarketing} name={name} setName={setName} />
           <div aria-live="polite">{joinError ? <div className="fc-error" role="alert">{joinError}</div> : null}</div>
@@ -285,17 +289,18 @@ function JoinFlow({ club, mode, showToast }) {
     return <Page title="Accesso" back={BASE}><div className="fc-loading" aria-live="polite">Cerco la tua tessera…</div></Page>;
   }
 
+  const OtpForm = EMAIL ? EmailOtpForm : PhoneOtpForm;
   const isCode = identity.step === 'code';
   const isJoin = mode === 'join';
   const back = isCode ? null : BASE;
   const onBack = isCode ? identity.reset : null;
 
-  // Verifica riuscita ma iscrizione fallita: si riprova senza rifare l'SMS.
+  // Verifica riuscita ma iscrizione fallita: si riprova senza rifare il codice.
   if (identity.step === 'done' && isJoin) {
     return (
       <Page title="Iscrizione" back={BASE}>
         <Progress n={2} />
-        <Head sm kicker="Numero verificato ✓" title={<>QUASI <em>FATTO</em></>} sub="Manca solo l’ultimo passo." />
+        <Head sm kicker={EMAIL ? 'Email verificata ✓' : 'Numero verificato ✓'} title={<>QUASI <em>FATTO</em></>} sub="Manca solo l’ultimo passo." />
         <div className="fc-section" aria-live="polite">
           {joinError ? <div className="fc-error" role="alert">{joinError}</div> : <p className="fc-small">Sto creando la tua tessera…</p>}
         </div>
@@ -310,9 +315,9 @@ function JoinFlow({ club, mode, showToast }) {
       {isCode ? (
         <Head sm kicker={isJoin ? '2 di 3' : 'Accesso · codice'} title={<>IL <em>CODICE</em></>} sub="Sono 6 cifre, arrivano in pochi secondi." />
       ) : isJoin ? (
-        <Head sm kicker="1 di 3" title={<>IL TUO <em>NUMERO</em></>} sub="Ti mandiamo un codice via SMS. Niente password, niente app da scaricare." />
+        <Head sm kicker="1 di 3" title={EMAIL ? <>LA TUA <em>EMAIL</em></> : <>IL TUO <em>NUMERO</em></>} sub={EMAIL ? 'Ti mandiamo un codice a 6 cifre in posta. Niente password, niente app da scaricare.' : 'Ti mandiamo un codice via SMS. Niente password, niente app da scaricare.'} />
       ) : (
-        <Head sm kicker="Accesso · non è una nuova iscrizione" title={<>IL TUO <em>NUMERO</em></>} sub="Lo stesso con cui hai fatto la tessera. Ti mandiamo un codice via SMS." />
+        <Head sm kicker="Accesso · non è una nuova iscrizione" title={EMAIL ? <>LA TUA <em>EMAIL</em></> : <>IL TUO <em>NUMERO</em></>} sub={EMAIL ? 'La stessa con cui hai fatto la tessera. Ti mandiamo un codice a 6 cifre in posta.' : 'Lo stesso con cui hai fatto la tessera. Ti mandiamo un codice via SMS.'} />
       )}
       {isJoin && !isCode && referralEnabled && referral ? (
         <div className="fc-card fc-card--ok fc-ref">
@@ -327,7 +332,7 @@ function JoinFlow({ club, mode, showToast }) {
           </div>
         </div>
       ) : null}
-      <PhoneOtpForm
+      <OtpForm
         identity={identity}
         onVerified={onVerified}
         beforeSend={isJoin ? consentCheck : null}
@@ -345,11 +350,11 @@ function JoinFlow({ club, mode, showToast }) {
             ) : null}
           </>
         ) : null}
-      </PhoneOtpForm>
+      </OtpForm>
       {!isCode ? (
         <div className="fc-wrap">
           {isJoin
-            ? <button type="button" className="fc-link" onClick={() => spaNavigate(`${BASE}/accedi`)}>Hai già la tessera? Entra col tuo numero</button>
+            ? <button type="button" className="fc-link" onClick={() => spaNavigate(`${BASE}/accedi`)}>Hai già la tessera? Entra con la tua {ID_NOUN}</button>
             : null}
           <br />
           <button type="button" className="fc-link fc-link--muted" onClick={() => spaNavigate(MENU)}>{isJoin ? 'Puoi ordinare anche senza' : 'Non ho la tessera → vai al menu'}</button>
@@ -610,7 +615,7 @@ function Amici({ club, showToast }) {
       </div>
       <div className="fc-section">
         <div className="fc-label">Regole</div>
-        <p className="fc-small">Vale solo per nuovi iscritti, con telefono verificato: niente auto-inviti e niente numeri già iscritti. Il primo ordine dell’amico deve avere almeno {r.stampMin} € di food, essere pagato e creato da lui su Walbox. Massimo 5 premi da invito ogni 30 giorni. Il buono si usa su un ordine successivo, da almeno {r.voucherMin} € di food.</p>
+        <p className="fc-small">Vale solo per nuovi iscritti, con {EMAIL ? 'email verificata' : 'telefono verificato'}: niente auto-inviti e niente {EMAIL ? 'email già iscritte' : 'numeri già iscritti'}. Il primo ordine dell’amico deve avere almeno {r.stampMin} € di food, essere pagato e creato da lui su Walbox. Massimo 5 premi da invito ogni 30 giorni. Il buono si usa su un ordine successivo, da almeno {r.voucherMin} € di food.</p>
       </div>
     </Page>
   );
@@ -754,7 +759,7 @@ function Preferenze({ club, showToast }) {
             onClick={() => run('mk', () => foodClubApi.setPreferences({ marketing: false, notifPromo: false }), 'Consenso promo revocato')}>Revoca il consenso promo</button>
         )}
         <div className="fc-toggle-row">
-          <div><b>SMS</b><small>Solo per il codice di accesso. Mai promozioni.</small></div>
+          <div><b>{EMAIL ? 'Email' : 'SMS'}</b><small>Solo per il codice di accesso. Mai promozioni.</small></div>
           <span className="fc-chip fc-chip--line">SOLO CODICE</span>
         </div>
         <div aria-live="polite">{error ? <div className="fc-error" role="alert">{error}</div> : null}</div>
@@ -854,7 +859,7 @@ function NeedsMembership() {
     <Page title="Food Club" back={MENU}>
       <StateMessage title="Serve la tessera" text="Questa pagina è per gli iscritti al Food Club."
         ctaTitle="ISCRIVITI AL CLUB" onCta={() => spaNavigate(`${BASE}/iscriviti`)}
-        linkText="Hai già la tessera? Entra col tuo numero" onLink={() => spaNavigate(`${BASE}/accedi`)} />
+        linkText={`Hai già la tessera? Entra con la tua ${ID_NOUN}`} onLink={() => spaNavigate(`${BASE}/accedi`)} />
     </Page>
   );
 }
