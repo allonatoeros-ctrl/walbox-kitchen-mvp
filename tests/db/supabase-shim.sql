@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS auth.users (
   email text, phone text UNIQUE, is_anonymous boolean NOT NULL DEFAULT false,
   raw_app_meta_data jsonb DEFAULT '{}'::jsonb, raw_user_meta_data jsonb DEFAULT '{}'::jsonb,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz DEFAULT now(),
-  last_sign_in_at timestamptz, phone_confirmed_at timestamptz, deleted_at timestamptz
+  last_sign_in_at timestamptz, phone_confirmed_at timestamptz, email_confirmed_at timestamptz, deleted_at timestamptz
 );
 CREATE TABLE IF NOT EXISTS auth.sessions (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE, created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
 CREATE OR REPLACE FUNCTION auth.jwt() RETURNS jsonb LANGUAGE sql STABLE AS $$
